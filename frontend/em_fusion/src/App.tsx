@@ -1,18 +1,4 @@
-const operationalPicture = {
-  scenario: "GNSS Sector A",
-  dataMode: "Synthetic RF + Open Data Replay",
-  health: "Healthy",
-  hypothesis: {
-    title: "Possible localised GNSS degradation / interference",
-    confidence: "Medium Confidence",
-    severity: "High",
-    evidence: "3 Synthetic Sources",
-  },
-  detection: {
-    anomalyScore: "74.2%",
-    signalIntegrity: "0.92",
-  },
-};
+import { operationalPicture } from "./mocks/operationalPictureMock";
 
 function App() {
   return (
@@ -20,11 +6,13 @@ function App() {
       <header className="flex items-center justify-between border-b border-[#424754] bg-[#1d2027] px-6 py-4">
         <div>
           <p className="font-mono text-xs uppercase tracking-[0.05em] text-[#8c909f]">EM Fusion</p>
-          <h1 className="text-xl font-semibold">{operationalPicture.scenario}</h1>
+          <h1 className="text-xl font-semibold">{operationalPicture.scenario.name}</h1>
+        </div>
+        <div className="text-left font-mono text-sm">
+          <p className="text-[#4cd7f6]">{operationalPicture.scenario.dataMode}</p>
         </div>
         <div className="text-right font-mono text-sm">
-          <p className="text-[#4cd7f6]">{operationalPicture.health}</p>
-          <p className="text-[#ffb786]">{operationalPicture.dataMode}</p>
+          <p className="text-[#4cd7f6]">{operationalPicture.scenario.health}</p>
         </div>
       </header>
 
@@ -41,19 +29,19 @@ function App() {
           <section className="border border-[#424754] bg-[#1d2027] p-4">
             <h2 className="text-2xl font-semibold text-[#adc6ff]">Active Hypotheses</h2>
             <article className="mt-4 border-l-4 border-[#ffb4ab] bg-[#191b23] p-4">
-              <h3 className="text-xl font-semibold">{operationalPicture.hypothesis.title}</h3>
+              <h3 className="text-xl font-semibold">{operationalPicture.hypotheses[0].title}</h3>
               <dl className="mt-4 grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <dt className="font-mono uppercase text-[#8c909f]">Confidence</dt>
-                  <dd>{operationalPicture.hypothesis.confidence}</dd>
+                  <dd>{operationalPicture.hypotheses[0].confidence}</dd>
                 </div>
                 <div>
                   <dt className="font-mono uppercase text-[#8c909f]">Severity</dt>
-                  <dd>{operationalPicture.hypothesis.severity}</dd>
+                  <dd>{operationalPicture.hypotheses[0].severity}</dd>
                 </div>
                 <div className="col-span-2">
                   <dt className="font-mono uppercase text-[#8c909f]">Evidence</dt>
-                  <dd>{operationalPicture.hypothesis.evidence}</dd>
+                  <dd>{operationalPicture.hypotheses[0].evidence}</dd>
                 </div>
               </dl>
             </article>
@@ -64,11 +52,11 @@ function App() {
             <dl className="mt-4 space-y-3">
               <div className="flex justify-between">
                 <dt>Anomaly Score</dt>
-                <dd className="font-mono text-[#ffb786]">{operationalPicture.detection.anomalyScore}</dd>
+                <dd className="font-mono text-[#ffb786]">{operationalPicture.detectionSummary.anomalyScore}</dd>
               </div>
               <div className="flex justify-between">
                 <dt>Signal Integrity Score</dt>
-                <dd className="font-mono text-[#4cd7f6]">{operationalPicture.detection.signalIntegrity}</dd>
+                <dd className="font-mono text-[#4cd7f6]">{operationalPicture.detectionSummary.signalIntegrity}</dd>
               </div>
             </dl>
           </section>
