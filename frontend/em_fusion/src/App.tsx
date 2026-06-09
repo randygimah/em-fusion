@@ -1,27 +1,25 @@
 const operationalPicture = {
-  scenario: 'GNSS Sector A',
-  dataMode: 'Synthetic RF + Open Data Replay',
-  health: 'Healthy',
+  scenario: "GNSS Sector A",
+  dataMode: "Synthetic RF + Open Data Replay",
+  health: "Healthy",
   hypothesis: {
-    title: 'Possible localised GNSS degradation / interference',
-    confidence: 'Medium Confidence',
-    severity: 'High',
-    evidence: '3 Synthetic Sources',
+    title: "Possible localised GNSS degradation / interference",
+    confidence: "Medium Confidence",
+    severity: "High",
+    evidence: "3 Synthetic Sources",
   },
   detection: {
-    anomalyScore: '74.2%',
-    signalIntegrity: '0.92',
+    anomalyScore: "74.2%",
+    signalIntegrity: "0.92",
   },
-}
+};
 
 function App() {
   return (
     <main className="min-h-screen bg-[#0b0e15] text-[#e1e2ec]">
       <header className="flex items-center justify-between border-b border-[#424754] bg-[#1d2027] px-6 py-4">
         <div>
-          <p className="font-mono text-xs uppercase tracking-[0.05em] text-[#8c909f]">
-            EM Fusion
-          </p>
+          <p className="font-mono text-xs uppercase tracking-[0.05em] text-[#8c909f]">EM Fusion</p>
           <h1 className="text-xl font-semibold">{operationalPicture.scenario}</h1>
         </div>
         <div className="text-right font-mono text-sm">
@@ -32,9 +30,7 @@ function App() {
 
       <section className="grid gap-4 p-6 lg:grid-cols-[1fr_360px]">
         <div className="min-h-[480px] border border-[#424754] bg-black p-4">
-          <p className="font-mono text-xs uppercase tracking-[0.05em] text-[#8c909f]">
-            Operational Picture
-          </p>
+          <p className="font-mono text-xs uppercase tracking-[0.05em] text-[#8c909f]">Operational Picture</p>
           <div className="mt-20 border border-dashed border-[#df7412] p-8 text-center">
             <p className="font-mono text-sm text-[#ffb786]">AZ-402 Signal Noise</p>
             <p className="mt-2 text-[#4cd7f6]">Station Gamma</p>
@@ -64,9 +60,7 @@ function App() {
           </section>
 
           <section className="border border-[#424754] bg-[#1d2027] p-4">
-            <h2 className="font-mono text-sm uppercase tracking-[0.05em] text-[#c2c6d6]">
-              Detection Summary
-            </h2>
+            <h2 className="font-mono text-sm uppercase tracking-[0.05em] text-[#c2c6d6]">Detection Summary</h2>
             <dl className="mt-4 space-y-3">
               <div className="flex justify-between">
                 <dt>Anomaly Score</dt>
@@ -81,7 +75,7 @@ function App() {
         </aside>
       </section>
     </main>
-  )
+  );
 }
 
-export default App
+export default App;
