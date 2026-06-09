@@ -20,13 +20,13 @@ Use this as a learning checklist, not a rigid sprint plan. For each step, try th
 - [x] Add Testing Library setup for Vitest.
 - [x] Replace the starter smoke test with an analyst-visible test.
 - [x] Build the smallest operational-picture UI that passes the first test.
-- [ ] Remove remaining unused starter assets when you are comfortable using a deletion command.
+- [x] Remove remaining unused starter assets when you are comfortable using a deletion command.
 
 ## Phase 2: Contract-First Mock Data
 
-- [ ] Identify the operational-picture fields the UI needs for lesson one.
-- [ ] Extract the current inline scenario data into a small mock data module.
-- [ ] Define TypeScript types for the operational-picture contract.
+- [x] Identify the operational-picture fields the UI needs for lesson one.
+- [x] Extract the current inline scenario data into a small mock data module.
+- [x] Define TypeScript types for the operational-picture contract.
 - [ ] Update the test to prove the UI renders from the mock contract.
 - [ ] Add one extra assertion only if it represents analyst value.
 - [ ] Update README with the contract-first mock data approach.
