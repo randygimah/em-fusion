@@ -1,121 +1,86 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+const operationalPicture = {
+  scenario: 'GNSS Sector A',
+  dataMode: 'Synthetic RF + Open Data Replay',
+  health: 'Healthy',
+  hypothesis: {
+    title: 'Possible localised GNSS degradation / interference',
+    confidence: 'Medium Confidence',
+    severity: 'High',
+    evidence: '3 Synthetic Sources',
+  },
+  detection: {
+    anomalyScore: '74.2%',
+    signalIntegrity: '0.92',
+  },
+}
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
+    <main className="min-h-screen bg-[#0b0e15] text-[#e1e2ec]">
+      <header className="flex items-center justify-between border-b border-[#424754] bg-[#1d2027] px-6 py-4">
         <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
+          <p className="font-mono text-xs uppercase tracking-[0.05em] text-[#8c909f]">
+            EM Fusion
           </p>
+          <h1 className="text-xl font-semibold">{operationalPicture.scenario}</h1>
         </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
+        <div className="text-right font-mono text-sm">
+          <p className="text-[#4cd7f6]">{operationalPicture.health}</p>
+          <p className="text-[#ffb786]">{operationalPicture.dataMode}</p>
+        </div>
+      </header>
+
+      <section className="grid gap-4 p-6 lg:grid-cols-[1fr_360px]">
+        <div className="min-h-[480px] border border-[#424754] bg-black p-4">
+          <p className="font-mono text-xs uppercase tracking-[0.05em] text-[#8c909f]">
+            Operational Picture
+          </p>
+          <div className="mt-20 border border-dashed border-[#df7412] p-8 text-center">
+            <p className="font-mono text-sm text-[#ffb786]">AZ-402 Signal Noise</p>
+            <p className="mt-2 text-[#4cd7f6]">Station Gamma</p>
+          </div>
+        </div>
+
+        <aside className="space-y-4">
+          <section className="border border-[#424754] bg-[#1d2027] p-4">
+            <h2 className="text-2xl font-semibold text-[#adc6ff]">Active Hypotheses</h2>
+            <article className="mt-4 border-l-4 border-[#ffb4ab] bg-[#191b23] p-4">
+              <h3 className="text-xl font-semibold">{operationalPicture.hypothesis.title}</h3>
+              <dl className="mt-4 grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <dt className="font-mono uppercase text-[#8c909f]">Confidence</dt>
+                  <dd>{operationalPicture.hypothesis.confidence}</dd>
+                </div>
+                <div>
+                  <dt className="font-mono uppercase text-[#8c909f]">Severity</dt>
+                  <dd>{operationalPicture.hypothesis.severity}</dd>
+                </div>
+                <div className="col-span-2">
+                  <dt className="font-mono uppercase text-[#8c909f]">Evidence</dt>
+                  <dd>{operationalPicture.hypothesis.evidence}</dd>
+                </div>
+              </dl>
+            </article>
+          </section>
+
+          <section className="border border-[#424754] bg-[#1d2027] p-4">
+            <h2 className="font-mono text-sm uppercase tracking-[0.05em] text-[#c2c6d6]">
+              Detection Summary
+            </h2>
+            <dl className="mt-4 space-y-3">
+              <div className="flex justify-between">
+                <dt>Anomaly Score</dt>
+                <dd className="font-mono text-[#ffb786]">{operationalPicture.detection.anomalyScore}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt>Signal Integrity Score</dt>
+                <dd className="font-mono text-[#4cd7f6]">{operationalPicture.detection.signalIntegrity}</dd>
+              </div>
+            </dl>
+          </section>
+        </aside>
       </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+    </main>
   )
 }
 
