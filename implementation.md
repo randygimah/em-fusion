@@ -27,9 +27,9 @@ Use this as a learning checklist, not a rigid sprint plan. For each step, try th
 - [x] Identify the operational-picture fields the UI needs for lesson one.
 - [x] Extract the current inline scenario data into a small mock data module.
 - [x] Define TypeScript types for the operational-picture contract.
-- [ ] Update the test to prove the UI renders from the mock contract.
-- [ ] Add one extra assertion only if it represents analyst value.
-- [ ] Update README with the contract-first mock data approach.
+- [x] Update the test to prove the UI renders from the mock contract.
+- [x] Add one extra assertion only if it represents analyst value.
+- [x] Update README with the contract-first mock data approach.
 
 ## Phase 3: Operational Picture Layout
 
