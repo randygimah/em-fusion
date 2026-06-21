@@ -1,6 +1,6 @@
 import type { OperationalPicture } from "../types/operationalPicture";
 
-export const operationalPicture: OperationalPicture = {
+const operationalPicture: OperationalPicture = {
   scenario: {
     id: "scenario-001",
     name: "GNSS Sector A",
@@ -49,3 +49,4 @@ export const operationalPicture: OperationalPicture = {
     },
   ],
 };
+export default operationalPicture;
