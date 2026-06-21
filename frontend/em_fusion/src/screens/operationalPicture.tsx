@@ -1,4 +1,4 @@
-// import { operationalPicture } from "../mocks/operationalPictureMock";
+
 import type { OperationalPicture as OperationalPictureData } from "../types/operationalPicture";
 
 interface Props {
