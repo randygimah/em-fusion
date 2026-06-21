@@ -1,6 +1,7 @@
-import OperationalPicture from "./screens/operationalPicture";
+import operationalPicture from "./mocks/operationalPictureMock";
+import OperationalPictureScreen from "./screens/operationalPicture";
 
 const App = () => {
-  return <OperationalPicture />;
+  return <OperationalPictureScreen operationalPicture={operationalPicture} />;
 };
 export default App;
