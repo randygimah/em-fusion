@@ -14,6 +14,9 @@ Build the smallest operational-picture slice for the GNSS degradation scenario:
 
 Current test focus: the analyst can see the active GNSS degradation hypothesis, confidence, evidence count, and detection summary.
 
+## Data contract 
+The operational picture screen now receives contract-shaped mock data through props. This keeps the screen independent from the temporary mock source and prepares it for the future FastAPI response.
+
 ## Scripts
 
 - `npm run dev` starts the Vite dev server.
