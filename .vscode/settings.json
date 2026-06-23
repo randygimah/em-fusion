@@ -36,5 +36,7 @@
   "[markdown]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.formatOnSave": true
-  }
+  },
+  "terminal.integrated.suggest.enabled": false,
+  "js/ts.suggest.enabled": false
 }
