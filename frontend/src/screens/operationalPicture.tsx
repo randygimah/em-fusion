@@ -37,7 +37,7 @@ const OperationalPictureScreen = ({ operationalPicture }: Props) => {
         <aside className="space-y-4">
           <section className="border border-[#424754] bg-[#1d2027] p-4">
             <h2 className="text-2xl font-semibold text-[#adc6ff]">Active Hypotheses</h2>
-            {operationalPicture.hypotheses.length == 0 ? (
+            {operationalPicture.hypotheses.length === 0 ? (
               <p className="mt-4 text-sm text-[#8c909f]">No active hypotheses</p>
             ) : (
               operationalPicture.hypotheses.map((hypothesis) => (
