@@ -13,7 +13,7 @@ Use this as a learning checklist, not a rigid sprint plan. For each step, try th
 
 ## Phase 1: Frontend Foundation
 
-- [x] Create the Vite React TypeScript app in `frontend/em_fusion`.
+- [x] Create the Vite React TypeScript app in `frontend`.
 - [x] Install Tailwind, Vitest, and Testing Library.
 - [x] Wire Tailwind into Vite.
 - [x] Add `npm test` and `npm run test:watch`.
