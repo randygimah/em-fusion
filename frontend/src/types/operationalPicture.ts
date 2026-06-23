@@ -6,7 +6,7 @@ export interface Scenario {
   health: string;
 }
 
-export interface Hypotheses {
+export interface Hypothesis {
   id: string;
   title: string;
   confidence: string;
@@ -20,7 +20,7 @@ export interface DetectionSummary {
   signalIntegrity: number;
 }
 
-export interface RFSensors {
+export interface RFSensor {
   id: string;
   stationName: string;
   signalId: string;
@@ -29,7 +29,7 @@ export interface RFSensors {
   lon: number;
 }
 
-export interface AircraftTracks {
+export interface AircraftTrack {
   id: string;
   name: string;
   altitudeFt: number;
@@ -37,7 +37,7 @@ export interface AircraftTracks {
   lon: number;
 }
 
-export interface TimelineEvents {
+export interface TimelineEvent {
   id: string;
   time: string;
   event: string;
@@ -46,9 +46,9 @@ export interface TimelineEvents {
 
 export interface OperationalPicture {
   scenario: Scenario;
-  hypotheses: Hypotheses[];
+  hypotheses: Hypothesis[];
   detectionSummary: DetectionSummary;
-  rfSensors: RFSensors[];
-  aircraftTracks: AircraftTracks[];
-  timelineEvents: TimelineEvents[];
+  rfSensors: RFSensor[];
+  aircraftTracks: AircraftTrack[];
+  timelineEvents: TimelineEvent[];
 }
