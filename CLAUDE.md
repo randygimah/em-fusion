@@ -12,7 +12,7 @@ Development is deliberately incremental — see `implementation.md` for the phas
 
 ## Commands
 
-Package manager is pnpm (requires Node >= 22.13; run `nvm use v24.14.0` first if on an older default). All commands run from `frontend/`:
+Package manager is pnpm (requires Node >= 22.13). `frontend/.nvmrc` pins the version — run `nvm use` from `frontend/` first if your shell's default Node is older. All commands run from `frontend/`:
 
 - `pnpm install` — install dependencies
 - `pnpm dev` — start Vite dev server (port 1234, proxies `/api` to `http://localhost:8080`)
