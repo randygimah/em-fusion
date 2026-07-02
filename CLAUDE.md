@@ -12,14 +12,15 @@ Development is deliberately incremental — see `implementation.md` for the phas
 
 ## Commands
 
-All commands run from `frontend/`:
+Package manager is pnpm (requires Node >= 22.13; run `nvm use v24.14.0` first if on an older default). All commands run from `frontend/`:
 
-- `npm run dev` — start Vite dev server (port 1234, proxies `/api` to `http://localhost:8080`)
-- `npm run build` — typecheck (`tsc -b`) then production build
-- `npm run lint` — ESLint
-- `npm test` — run Vitest once (CI mode)
-- `npm run test:watch` — Vitest watch mode
-- Single test file: `npx vitest run src/test/operationalPicture.test.tsx`
+- `pnpm install` — install dependencies
+- `pnpm dev` — start Vite dev server (port 1234, proxies `/api` to `http://localhost:8080`)
+- `pnpm build` — typecheck (`tsc -b`) then production build
+- `pnpm lint` — ESLint
+- `pnpm test` — run Vitest once (CI mode)
+- `pnpm test:watch` — Vitest watch mode
+- Single test file: `pnpm exec vitest run src/test/operationalPicture.test.tsx`
 
 ## Architecture
 
@@ -38,3 +39,7 @@ The frontend is a contract-first React app: UI components are dumb renderers tha
 - Tests live in `src/test/` (Vitest + Testing Library + jsdom), not colocated with components, with one legacy exception (`src/App.test.tsx`).
 - Assert on analyst-visible behavior (rendered text/values from the data contract), not implementation details like CSS classes.
 - Render tests against the mock data module so assertions can reference `operationalPicture.*` fields directly instead of duplicating literals.
+
+## Git
+
+- Do not add a `Co-Authored-By:` trailer to commit messages.

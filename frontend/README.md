@@ -19,11 +19,11 @@ The operational picture screen now receives contract-shaped mock data through pr
 
 ## Scripts
 
-- `npm run dev` starts the Vite dev server.
-- `npm run build` checks TypeScript and creates a production build.
-- `npm run lint` runs ESLint.
-- `npm test` runs Vitest once.
-- `npm run test:watch` runs Vitest in watch mode.
+- `pnpm dev` starts the Vite dev server.
+- `pnpm build` checks TypeScript and creates a production build.
+- `pnpm lint` runs ESLint.
+- `pnpm test` runs Vitest once.
+- `pnpm test:watch` runs Vitest in watch mode.
 
 ## Mapbox
 
