@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>RF Observations | EM Fusion</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #10131a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #32353c;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #424754;
+        }
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 16px;
+        }
+        .glass-panel {
+            background: rgba(17, 24, 39, 0.7);
+            backdrop-filter: blur(8px);
+            border: 1px solid #1F2937;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "primary-fixed-dim": "#adc6ff",
+                      "on-primary-container": "#00285d",
+                      "on-primary-fixed-variant": "#004395",
+                      "surface-container-high": "#272a31",
+                      "surface-container-low": "#191b23",
+                      "surface-variant": "#32353c",
+                      "on-surface": "#e1e2ec",
+                      "surface-dim": "#10131a",
+                      "on-error": "#690005",
+                      "error": "#ffb4ab",
+                      "secondary-fixed-dim": "#4cd7f6",
+                      "tertiary-fixed": "#ffdcc6",
+                      "on-secondary-fixed": "#001f26",
+                      "secondary-container": "#03b5d3",
+                      "on-tertiary": "#502400",
+                      "on-secondary-container": "#00424e",
+                      "on-primary-fixed": "#001a42",
+                      "background": "#10131a",
+                      "surface-container": "#1d2027",
+                      "surface-tint": "#adc6ff",
+                      "on-primary": "#002e6a",
+                      "secondary": "#4cd7f6",
+                      "tertiary-container": "#df7412",
+                      "surface-container-highest": "#32353c",
+                      "on-secondary": "#003640",
+                      "primary": "#adc6ff",
+                      "outline-variant": "#424754",
+                      "error-container": "#93000a",
+                      "surface-bright": "#363941",
+                      "inverse-surface": "#e1e2ec",
+                      "primary-container": "#4d8eff",
+                      "on-secondary-fixed-variant": "#004e5c",
+                      "inverse-primary": "#005ac2",
+                      "surface": "#10131a",
+                      "on-surface-variant": "#c2c6d6",
+                      "tertiary": "#ffb786",
+                      "on-error-container": "#ffdad6",
+                      "primary-fixed": "#d8e2ff",
+                      "on-tertiary-fixed-variant": "#723600",
+                      "on-background": "#e1e2ec",
+                      "surface-container-lowest": "#0b0e15",
+                      "secondary-fixed": "#acedff",
+                      "on-tertiary-container": "#461f00",
+                      "on-tertiary-fixed": "#311400",
+                      "outline": "#8c909f",
+                      "inverse-on-surface": "#2e3038",
+                      "tertiary-fixed-dim": "#ffb786"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "unit": "4px",
+                      "stack-gap": "8px",
+                      "panel-padding": "12px",
+                      "margin-edge": "24px",
+                      "gutter": "16px"
+              },
+              "fontFamily": {
+                      "title-sm": ["Inter"],
+                      "data-mono-sm": ["JetBrains Mono"],
+                      "body-sm": ["Inter"],
+                      "display-lg": ["Inter"],
+                      "label-caps": ["Inter"],
+                      "body-md": ["Inter"],
+                      "data-mono": ["JetBrains Mono"],
+                      "headline-md": ["Inter"]
+              },
+              "fontSize": {
+                      "title-sm": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                      "data-mono-sm": ["11px", {"lineHeight": "14px", "fontWeight": "400"}],
+                      "body-sm": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+                      "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "label-caps": ["10px", {"lineHeight": "12px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                      "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "500"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}]
+              }
+            },
+          },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface font-body-md overflow-hidden">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center w-full px-margin-edge h-12 z-50 fixed top-0 bg-surface-container-high border-b border-outline-variant">
+<div class="flex items-center gap-4">
+<span class="text-title-sm font-title-sm font-bold text-primary">EM Fusion</span>
+<div class="h-4 w-px bg-outline-variant mx-2"></div>
+<span class="text-label-caps font-label-caps text-on-surface-variant uppercase tracking-widest">RF Observations</span>
+<span class="ml-4 px-2 py-0.5 bg-tertiary-container/20 text-tertiary border border-tertiary/30 text-[10px] font-bold rounded uppercase tracking-tighter">Decision Support Prototype</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary shadow-[0_0_8px_rgba(76,215,246,0.6)]"></span>
+<span class="text-body-sm font-body-sm text-secondary">Analyst Active</span>
+</div>
+<div class="h-4 w-px bg-outline-variant"></div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-variant p-1 transition-colors">settings_input_component</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-variant p-1 transition-colors">schedule</span>
+<div class="flex flex-col items-end">
+<span class="text-data-mono-sm font-data-mono-sm text-primary uppercase">Healthy</span>
+</div>
+</div>
+</div>
+</header>
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full flex flex-col pt-12 z-40 bg-surface-container-low border-r border-outline-variant w-[280px]">
+<div class="px-panel-padding py-4 border-b border-outline-variant/30">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-primary-container/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">satellite_alt</span>
+</div>
+<div>
+<div class="text-on-surface font-title-sm text-title-sm">Sector A</div>
+<div class="text-on-surface-variant font-body-sm text-body-sm">GNSS Monitoring</div>
+</div>
+</div>
+</div>
+<nav class="flex-1 py-4 overflow-y-auto">
+<div class="space-y-1">
+<a class="flex items-center gap-3 px-panel-padding py-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-all duration-150" href="#">
+<span class="material-symbols-outlined">map</span>
+<span class="text-label-caps font-label-caps">Operational Picture</span>
+</a>
+<a class="flex items-center gap-3 px-panel-padding py-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-all duration-150" href="#">
+<span class="material-symbols-outlined">biotech</span>
+<span class="text-label-caps font-label-caps">Hypotheses</span>
+</a>
+<a class="flex items-center gap-3 px-panel-padding py-2 text-primary bg-primary-container/10 border-l-2 border-primary font-bold" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">settings_input_antenna</span>
+<span class="text-label-caps font-label-caps">RF Observations</span>
+</a>
+<a class="flex items-center gap-3 px-panel-padding py-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-all duration-150" href="#">
+<span class="material-symbols-outlined">flight_takeoff</span>
+<span class="text-label-caps font-label-caps">Aircraft Tracks</span>
+</a>
+<a class="flex items-center gap-3 px-panel-padding py-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-all duration-150" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="text-label-caps font-label-caps">Timeline</span>
+</a>
+<a class="flex items-center gap-3 px-panel-padding py-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-all duration-150" href="#">
+<span class="material-symbols-outlined">tune</span>
+<span class="text-label-caps font-label-caps">Scenario Control</span>
+</a>
+<a class="flex items-center gap-3 px-panel-padding py-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-all duration-150" href="#">
+<span class="material-symbols-outlined">monitor_heart</span>
+<span class="text-label-caps font-label-caps">System Health</span>
+</a>
+<a class="flex items-center gap-3 px-panel-padding py-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-all duration-150" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-label-caps font-label-caps">Settings</span>
+</a>
+</div>
+</nav>
+<div class="mt-auto p-panel-padding border-t border-outline-variant/30 space-y-2">
+<div class="flex items-center justify-between text-body-sm font-body-sm text-on-surface-variant">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">sensors</span>
+<span>Connectivity</span>
+</div>
+<span class="text-secondary font-data-mono text-data-mono">98%</span>
+</div>
+<div class="flex items-center justify-between text-body-sm font-body-sm text-on-surface-variant">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">cloud_done</span>
+<span>Service Health</span>
+</div>
+<span class="text-primary font-data-mono text-data-mono">NOMINAL</span>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="ml-[280px] pt-12 h-screen overflow-y-auto bg-surface-dim">
+<div class="p-6 space-y-6 max-w-[1600px] mx-auto">
+<!-- Page Header -->
+<div class="flex justify-between items-end">
+<div>
+<h1 class="text-display-lg font-display-lg text-on-surface">Electromagnetic Spectrum Analysis</h1>
+<p class="text-body-md font-body-md text-on-surface-variant">Simulated/Replay RF Observation Monitoring for GNSS L1/L2 frequency bands.</p>
+</div>
+<div class="flex gap-2">
+<button class="flex items-center gap-2 bg-surface-container-high border border-outline-variant px-4 py-2 text-on-surface hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[20px]">filter_list</span>
+<span class="text-label-caps font-label-caps">Filter Signals</span>
+</button>
+<button class="flex items-center gap-2 bg-primary px-4 py-2 text-on-primary font-bold hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined text-[20px]">file_download</span>
+<span class="text-label-caps font-label-caps">Export Data</span>
+</button>
+</div>
+</div>
+<!-- Spectral Trend Grid -->
+<div class="grid grid-cols-12 gap-6">
+<!-- Primary Spectral Chart -->
+<div class="col-span-12 lg:col-span-8 bg-surface-container border border-outline-variant p-panel-padding relative overflow-hidden">
+<div class="flex justify-between items-start mb-6">
+<div>
+<span class="text-label-caps font-label-caps text-on-surface-variant uppercase">Spectral Density Trend (Replay)</span>
+<h3 class="text-title-sm font-title-sm text-primary">GNSS Signal Power (L1 Band)</h3>
+</div>
+<div class="flex gap-4">
+<div class="flex flex-col items-end">
+<span class="text-data-mono-sm font-data-mono-sm text-on-surface-variant">PEAK POWER</span>
+<div class="flex items-baseline gap-2">
+<span class="text-data-mono font-data-mono text-secondary">-112.4 dBm</span>
+<span class="text-[10px] text-on-surface-variant font-data-mono-sm">(Δ +0.2)</span>
+</div>
+</div>
+<div class="flex flex-col items-end border-l border-outline-variant pl-4">
+<span class="text-data-mono-sm font-data-mono-sm text-on-surface-variant">AVG NOISE</span>
+<div class="flex items-baseline gap-2">
+<span class="text-data-mono font-data-mono text-on-surface">-134.2 dBm</span>
+<span class="text-[10px] text-on-surface-variant font-data-mono-sm">(Δ -0.1)</span>
+</div>
+</div>
+</div>
+</div>
+<div class="h-[320px] w-full bg-surface-container-lowest border border-outline-variant relative group">
+<div class="absolute inset-0 grid grid-cols-12 pointer-events-none">
+<div class="border-r border-outline-variant/10"></div><div class="border-r border-outline-variant/10"></div><div class="border-r border-outline-variant/10"></div><div class="border-r border-outline-variant/10"></div><div class="border-r border-outline-variant/10"></div><div class="border-r border-outline-variant/10"></div><div class="border-r border-outline-variant/10"></div><div class="border-r border-outline-variant/10"></div><div class="border-r border-outline-variant/10"></div><div class="border-r border-outline-variant/10"></div><div class="border-r border-outline-variant/10"></div><div></div>
+</div>
+<div class="absolute inset-0 grid grid-rows-6 pointer-events-none">
+<div class="border-b border-outline-variant/10"></div><div class="border-b border-outline-variant/10"></div><div class="border-b border-outline-variant/10"></div><div class="border-b border-outline-variant/10"></div><div class="border-b border-outline-variant/10"></div><div></div>
+</div>
+<div class="absolute inset-0 p-4">
+<img alt="Spectral visualization" class="w-full h-full object-cover opacity-60 mix-blend-screen grayscale contrast-125" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAkstbOd5uXuKh8ePG8CUtWgEEpo9_VLTGiUL1V4vR22eBmijckQ9Vn2VRMxu19KgtPyRrNZrNgse61Elv_WVbjYmX4NJeu3ZPYO_z6J38KNVtXc2zTEkgA26h1qJlTlFkCmBjvIdu2Q5dTNW26hPFnjroxy0Qrdf_EcOyUVYxDgffBFxlcjqQCvQbcf6fcH1eVDN18SCr9A7ryhmRDMoBJDcoNH_Kyj33LZxA1zYeuHUmCoqHpXtBXRj5QbUhKom0c2nwHNjT8PkM"/>
+</div>
+<div class="absolute top-4 left-4">
+<span class="px-2 py-1 bg-primary/20 text-primary border border-primary/30 text-data-mono-sm font-data-mono-sm rounded">SYNTHETIC DATASET V2.1</span>
+</div>
+<div class="absolute bottom-4 right-4 flex gap-2">
+<span class="px-2 py-1 bg-surface-container-high/80 border border-outline-variant text-data-mono-sm font-data-mono-sm text-secondary">REPLAY MODE ACTIVE</span>
+<span class="px-2 py-1 bg-surface-container-high/80 border border-outline-variant text-data-mono-sm font-data-mono-sm text-on-surface-variant">AUTO-SCALE ON</span>
+</div>
+</div>
+</div>
+<!-- Frequency Distribution / Summary Side Panel -->
+<div class="col-span-12 lg:col-span-4 space-y-4">
+<div class="bg-surface-container border border-outline-variant p-panel-padding h-[180px]">
+<span class="text-label-caps font-label-caps text-on-surface-variant uppercase mb-4 block">Simulation Summary</span>
+<div class="space-y-3">
+<div class="flex justify-between items-center">
+<span class="text-body-sm font-body-sm text-on-surface-variant">Synthetic Signals Generated</span>
+<span class="text-data-mono font-data-mono text-primary text-title-sm">1,284</span>
+</div>
+<div class="w-full h-1.5 bg-surface-container-lowest rounded-full overflow-hidden">
+<div class="h-full bg-primary w-4/5"></div>
+</div>
+<div class="flex justify-between items-center pt-2">
+<span class="text-body-sm font-body-sm text-on-surface-variant">Anomaly Rate (Baseline Comp)</span>
+<span class="text-data-mono font-data-mono text-error">12.4%</span>
+</div>
+<div class="w-full h-1.5 bg-surface-container-lowest rounded-full overflow-hidden">
+<div class="h-full bg-error w-1/5"></div>
+</div>
+</div>
+</div>
+<div class="bg-surface-container border border-outline-variant p-panel-padding flex-1">
+<span class="text-label-caps font-label-caps text-on-surface-variant uppercase mb-4 block">Replay Data Distribution</span>
+<div class="flex items-center gap-4">
+<div class="relative w-24 h-24">
+<svg class="w-full h-full transform -rotate-90" viewbox="0 0 36 36">
+<circle class="stroke-surface-container-lowest" cx="18" cy="18" fill="none" r="16" stroke-width="4"></circle>
+<circle class="stroke-primary" cx="18" cy="18" fill="none" r="16" stroke-dasharray="60 100" stroke-width="4"></circle>
+<circle class="stroke-secondary" cx="18" cy="18" fill="none" r="16" stroke-dasharray="20 100" stroke-dashoffset="-60" stroke-width="4"></circle>
+<circle class="stroke-tertiary" cx="18" cy="18" fill="none" r="16" stroke-dasharray="15 100" stroke-dashoffset="-80" stroke-width="4"></circle>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center">
+<span class="text-data-mono-sm font-data-mono-sm text-on-surface">SYN</span>
+</div>
+</div>
+<div class="flex-1 space-y-1">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 bg-primary"></span>
+<span class="text-body-sm font-body-sm text-on-surface-variant">GNSS L1 (60%)</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 bg-secondary"></span>
+<span class="text-body-sm font-body-sm text-on-surface-variant">GNSS L2 (20%)</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 bg-tertiary"></span>
+<span class="text-body-sm font-body-sm text-on-surface-variant">Noise Floor (15%)</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Observations Data Table -->
+<div class="bg-surface-container border border-outline-variant overflow-hidden">
+<div class="px-panel-padding py-3 border-b border-outline-variant bg-surface-container-high flex justify-between items-center">
+<div class="flex items-center gap-3">
+<h3 class="text-label-caps font-label-caps text-on-surface uppercase">Replayed Observation Stream</h3>
+<span class="px-2 py-0.5 bg-surface-container-low border border-outline-variant text-[10px] text-on-surface-variant font-data-mono-sm rounded uppercase">Data Origin: Synthetic</span>
+</div>
+<div class="flex gap-4">
+<span class="text-data-mono-sm font-data-mono-sm text-on-surface-variant">LAST REPLAY STEP: <span class="text-on-surface">14:22:09.432 UTC</span></span>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low border-b border-outline-variant">
+<th class="px-4 py-3 text-label-caps font-label-caps text-on-surface-variant">Sensor ID</th>
+<th class="px-4 py-3 text-label-caps font-label-caps text-on-surface-variant">Sensor Health</th>
+<th class="px-4 py-3 text-label-caps font-label-caps text-on-surface-variant">Timestamp</th>
+<th class="px-4 py-3 text-label-caps font-label-caps text-on-surface-variant">Delta from Baseline</th>
+<th class="px-4 py-3 text-label-caps font-label-caps text-on-surface-variant text-right">Power (dBm)</th>
+<th class="px-4 py-3 text-label-caps font-label-caps text-on-surface-variant">Signal Type</th>
+<th class="px-4 py-3 text-label-caps font-label-caps text-on-surface-variant">Threshold Reason</th>
+<th class="px-4 py-3 text-label-caps font-label-caps text-on-surface-variant">Severity</th>
+<th class="px-4 py-3 text-label-caps font-label-caps text-on-surface-variant">Origin</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/30">
+<!-- Table Row 1 -->
+<tr class="hover:bg-surface-variant/30 transition-colors cursor-pointer group">
+<td class="px-4 py-3 font-data-mono text-data-mono text-primary">SDR-ALPHA-01</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-primary">check_circle</span>
+<span class="text-label-caps font-label-caps text-on-surface-variant">Operational</span>
+</div>
+</td>
+<td class="px-4 py-3 font-data-mono text-data-mono text-on-surface-variant">14:22:08.121</td>
+<td class="px-4 py-3 font-data-mono text-data-mono text-secondary">+0.04</td>
+<td class="px-4 py-3 font-data-mono text-data-mono text-right text-secondary">-114.2</td>
+<td class="px-4 py-3">
+<span class="px-2 py-0.5 bg-secondary/10 text-secondary border border-secondary/20 font-label-caps text-label-caps">GPS-L1C/A</span>
+</td>
+<td class="px-4 py-3 text-body-sm font-body-sm text-on-surface-variant">Within Tolerance</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+<span class="text-label-caps font-label-caps text-secondary">Nominal</span>
+</div>
+</td>
+<td class="px-4 py-3 text-label-caps font-label-caps text-on-surface-variant italic">REPLAYED</td>
+</tr>
+<!-- Table Row 2 -->
+<tr class="hover:bg-surface-variant/30 transition-colors cursor-pointer group bg-error/5">
+<td class="px-4 py-3 font-data-mono text-data-mono text-primary">SDR-BETA-04</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-error">warning</span>
+<span class="text-label-caps font-label-caps text-error">Intermittent</span>
+</div>
+</td>
+<td class="px-4 py-3 font-data-mono text-data-mono text-on-surface-variant">14:22:07.892</td>
+<td class="px-4 py-3 font-data-mono text-data-mono text-error">+32.1</td>
+<td class="px-4 py-3 font-data-mono text-data-mono text-right text-error">-82.1</td>
+<td class="px-4 py-3">
+<span class="px-2 py-0.5 bg-error/10 text-error border border-error/20 font-label-caps text-label-caps">INTERFERENCE</span>
+</td>
+<td class="px-4 py-3 text-body-sm font-body-sm text-error">Noise Floor Exceeded</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-error animate-pulse shadow-[0_0_8px_#ffb4ab]"></span>
+<span class="text-label-caps font-label-caps text-error">Critical</span>
+</div>
+</td>
+<td class="px-4 py-3 text-label-caps font-label-caps text-error font-bold">SYNTHETIC</td>
+</tr>
+<!-- Table Row 3 -->
+<tr class="hover:bg-surface-variant/30 transition-colors cursor-pointer group">
+<td class="px-4 py-3 font-data-mono text-data-mono text-primary">SDR-GAMMA-09</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-primary">check_circle</span>
+<span class="text-label-caps font-label-caps text-on-surface-variant">Operational</span>
+</div>
+</td>
+<td class="px-4 py-3 font-data-mono text-data-mono text-on-surface-variant">14:22:06.443</td>
+<td class="px-4 py-3 font-data-mono text-data-mono text-on-surface-variant">-1.20</td>
+<td class="px-4 py-3 font-data-mono text-data-mono text-right text-on-surface">-118.9</td>
+<td class="px-4 py-3">
+<span class="px-2 py-0.5 bg-on-surface-variant/10 text-on-surface-variant border border-on-surface-variant/20 font-label-caps text-label-caps">GPS-L2P(Y)</span>
+</td>
+<td class="px-4 py-3 text-body-sm font-body-sm text-on-surface-variant">Signal Fade Detected</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-on-surface-variant"></span>
+<span class="text-label-caps font-label-caps text-on-surface-variant">Low</span>
+</div>
+</td>
+<td class="px-4 py-3 text-label-caps font-label-caps text-on-surface-variant italic">REPLAYED</td>
+</tr>
+<!-- Table Row 4 -->
+<tr class="hover:bg-surface-variant/30 transition-colors cursor-pointer group bg-tertiary-container/5">
+<td class="px-4 py-3 font-data-mono text-data-mono text-primary">SDR-ALPHA-02</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-tertiary">error</span>
+<span class="text-label-caps font-label-caps text-tertiary">Recalibrating</span>
+</div>
+</td>
+<td class="px-4 py-3 font-data-mono text-data-mono text-on-surface-variant">14:22:05.110</td>
+<td class="px-4 py-3 font-data-mono text-data-mono text-tertiary">+11.8</td>
+<td class="px-4 py-3 font-data-mono text-data-mono text-right text-tertiary">-102.4</td>
+<td class="px-4 py-3">
+<span class="px-2 py-0.5 bg-tertiary/10 text-tertiary border border-tertiary/20 font-label-caps text-label-caps">NARROWBAND</span>
+</td>
+<td class="px-4 py-3 text-body-sm font-body-sm text-tertiary">Baseline Deviation</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span>
+<span class="text-label-caps font-label-caps text-tertiary">Elevated</span>
+</div>
+</td>
+<td class="px-4 py-3 text-label-caps font-label-caps text-tertiary font-bold">SYNTHETIC</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Table Footer/Pagination -->
+<div class="px-panel-padding py-3 border-t border-outline-variant bg-surface-container-low flex items-center justify-between">
+<span class="text-body-sm font-body-sm text-on-surface-variant">Showing 1-25 of 1,284 replayed observations</span>
+<div class="flex items-center gap-2">
+<button class="p-1 hover:bg-surface-variant rounded transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<span class="text-data-mono-sm font-data-mono-sm px-2 text-on-surface">REPLAY PAGE 1 / 52</span>
+<button class="p-1 hover:bg-surface-variant rounded transition-colors text-on-surface">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Map/Signal Floating Layer -->
+<div class="fixed bottom-6 right-6 w-64 aspect-video glass-panel rounded-lg overflow-hidden border border-primary/30 z-50 pointer-events-none opacity-80">
+<div class="absolute inset-0">
+<img alt="Hardware visualization" class="w-full h-full object-cover blur-[2px] opacity-40" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCxPQB5pM1uaTTF2SUsyNDEwLBDVDGPF1KuAPia6iGRRDhNoJToj8MYwixDb55uuHK-uxvPxeQ_Q8zzwozhW8jdzchmRATWD7k3szoJdtAfHa0F0Gz3KMF8dCwv_qW6qG2b0AbK1DwOV-CoA9WT-XJ-dKNpjK6IhcUHJyGmjLOxI8RAnH-GBkHL7XQbfogXnJPE-D6IBGvES-jgzJ0CzMtvTkoc0AEiUYrTJx9ajG03j4wvPlRDylFFk_ttT2bPJjQ7DPP-ewUgb80"/>
+</div>
+<div class="absolute inset-0 p-3 flex flex-col justify-between">
+<div class="flex justify-between items-start">
+<span class="text-label-caps font-label-caps text-primary uppercase">Dataset Scan</span>
+<span class="material-symbols-outlined text-primary text-sm">fullscreen</span>
+</div>
+<div class="space-y-1">
+<div class="text-data-mono-sm font-data-mono-sm text-secondary uppercase">MODE: SIMULATION REPLAY</div>
+<div class="h-1 bg-surface-container-lowest rounded-full overflow-hidden">
+<div class="h-full bg-secondary w-1/2 animate-[pulse_2s_infinite]"></div>
+</div>
+</div>
+</div>
+</div>
+<script>
+        // Simple atmosphere effect: update the timestamp every second
+        function updateTimestamp() {
+            const now = new Date();
+            const timeString = now.toISOString().split('T')[1].split('Z')[0] + ' UTC';
+            // Placeholder for time update if needed
+        }
+        setInterval(updateTimestamp, 100);
+
+        // Add a pulsing effect to random data points for "liveness"
+        const powerValues = document.querySelectorAll('.text-secondary, .text-error, .text-tertiary');
+        setInterval(() => {
+            const randomIdx = Math.floor(Math.random() * powerValues.length);
+            const originalText = powerValues[randomIdx].innerText;
+            if (originalText.includes('-') || originalText.includes('+')) {
+                const isNegative = originalText.includes('-');
+                const val = parseFloat(originalText.replace('+', ''));
+                const jitter = (Math.random() - 0.5) * 0.2;
+                const result = (val + jitter).toFixed(1);
+                powerValues[randomIdx].innerText = (result > 0 && !isNegative ? '+' : '') + result;
+            }
+        }, 800);
+    </script>
+</body></html>
