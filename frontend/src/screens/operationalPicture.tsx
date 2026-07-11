@@ -1,4 +1,3 @@
-
 import type { OperationalPicture as OperationalPictureData } from "../types/operationalPicture";
 
 interface Props {
@@ -27,7 +26,10 @@ const OperationalPictureScreen = ({ operationalPicture }: Props) => {
         <div className="min-h-[480px] border border-[#424754] bg-black p-4">
           <p className="font-mono text-xs uppercase tracking-[0.05em] text-[#8c909f]">Operational Picture</p>
           {operationalPicture.rfSensors.map((sensor) => (
-            <div key={sensor.id} className="mt-4 border border-dashed border-[#df7412] p-8 text-center">
+            <div
+              key={sensor.id}
+              className="mt-4 border border-dashed border-[#df7412] p-8 text-center"
+            >
               <p className="font-mono text-sm text-[#ffb786]">{sensor.signalId} Signal Noise</p>
               <p className="mt-2 text-[#4cd7f6]">{sensor.stationName}</p>
             </div>

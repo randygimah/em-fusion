@@ -17,7 +17,8 @@ Package manager is pnpm (requires Node >= 22.13). `frontend/.nvmrc` pins the ver
 - `pnpm install` — install dependencies
 - `pnpm dev` — start Vite dev server (port 1234, proxies `/api` to `http://localhost:8080`)
 - `pnpm build` — typecheck (`tsc -b`) then production build
-- `pnpm lint` — ESLint
+- `pnpm lint` — Biome lint
+- `pnpm format` — Biome format (writes)
 - `pnpm test` — run Vitest once (CI mode)
 - `pnpm test:watch` — Vitest watch mode
 - Single test file: `pnpm exec vitest run src/test/operationalPicture.test.tsx`

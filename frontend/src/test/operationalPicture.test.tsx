@@ -1,5 +1,5 @@
-import { describe, it, beforeEach, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it } from "vitest";
 import operationalPicture from "../mocks/operationalPictureMock";
 import OperationalPictureScreen from "../screens/operationalPicture";
 
