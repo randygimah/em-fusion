@@ -1,18 +1,18 @@
 .PHONY: lint format type-check test clean install-dev
 
 install-dev:
-	pip install -r requirements.txt
+	pip install -r requirements-dev.txt
 
 format:
-	black backend/
-	isort backend/
+	black app/
+	isort app/
 
 lint:
-	flake8 backend/
-	isort --check-only --diff backend/
+	flake8 app/
+	isort --check-only --diff app/
 
 type-check:
-	mypy backend/
+	mypy app/
 
 test:
 	pytest --tb=short
