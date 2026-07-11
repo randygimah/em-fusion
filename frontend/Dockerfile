@@ -2,16 +2,19 @@
 #  Build the React app     
 # ======================= 
 
-FROM node:20-alpine AS build
+FROM node:24-alpine AS build
+
+# Enable corepack so the pnpm version pinned in package.json is used
+RUN corepack enable
 
 # Set working dir
 WORKDIR /app
 
-# Copy dependency manifest
-COPY package*.json ./
+# Copy dependency manifests
+COPY package.json pnpm-lock.yaml ./
 
-# Install project depencies
-RUN pnpm ci
+# Install project dependencies
+RUN pnpm install --frozen-lockfile
 
 # Copy the rest of the application source code
 COPY . .
