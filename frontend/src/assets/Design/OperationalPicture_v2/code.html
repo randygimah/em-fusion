@@ -1,0 +1,366 @@
+<!DOCTYPE html><html lang="en" class="dark"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet"><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script><script id="tailwind-config">try{
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "error-container": "#93000a",
+                    "on-primary": "#002e6a",
+                    "tertiary-container": "#df7412",
+                    "secondary-fixed": "#acedff",
+                    "on-secondary-container": "#00424e",
+                    "surface-variant": "#32353c",
+                    "on-surface-variant": "#c2c6d6",
+                    "primary-fixed": "#d8e2ff",
+                    "on-primary-fixed": "#001a42",
+                    "surface-container-low": "#191b23",
+                    "on-tertiary-fixed-variant": "#723600",
+                    "secondary-container": "#03b5d3",
+                    "tertiary-fixed": "#ffdcc6",
+                    "primary-container": "#4d8eff",
+                    "background": "#10131a",
+                    "on-tertiary": "#502400",
+                    "on-tertiary-fixed": "#311400",
+                    "inverse-primary": "#005ac2",
+                    "outline": "#8c909f",
+                    "on-secondary-fixed-variant": "#004e5c",
+                    "secondary-fixed-dim": "#4cd7f6",
+                    "surface-dim": "#10131a",
+                    "surface-tint": "#adc6ff",
+                    "surface-bright": "#363941",
+                    "primary-fixed-dim": "#adc6ff",
+                    "tertiary-fixed-dim": "#ffb786",
+                    "on-primary-container": "#00285d",
+                    "inverse-on-surface": "#2e3038",
+                    "surface": "#10131a",
+                    "outline-variant": "#424754",
+                    "on-error-container": "#ffdad6",
+                    "secondary": "#4cd7f6",
+                    "surface-container-lowest": "#0b0e15",
+                    "error": "#ffb4ab",
+                    "surface-container-high": "#272a31",
+                    "on-primary-fixed-variant": "#004395",
+                    "primary": "#adc6ff",
+                    "on-surface": "#e1e2ec",
+                    "on-secondary-fixed": "#001f26",
+                    "tertiary": "#ffb786",
+                    "on-error": "#690005",
+                    "on-background": "#e1e2ec",
+                    "surface-container": "#1d2027",
+                    "inverse-surface": "#e1e2ec",
+                    "on-secondary": "#003640",
+                    "on-tertiary-container": "#461f00",
+                    "surface-container-highest": "#32353c"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "panel-padding": "12px",
+                    "unit": "4px",
+                    "stack-gap": "8px",
+                    "margin-edge": "24px",
+                    "gutter": "16px"
+            },
+            "fontFamily": {
+                    "data-mono": ["JetBrains Mono"],
+                    "body-md": ["Inter"],
+                    "data-mono-sm": ["JetBrains Mono"],
+                    "label-caps": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "title-sm": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "body-sm": ["Inter"]
+            },
+            "fontSize": {
+                    "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "500"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "data-mono-sm": ["11px", {"lineHeight": "14px", "fontWeight": "400"}],
+                    "label-caps": ["10px", {"lineHeight": "12px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "title-sm": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                    "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-sm": ["12px", {"lineHeight": "16px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    }catch(_e){}</script><meta charset="utf-8"></head><body class="font-body-md text-body-md selection:bg-primary-container selection:text-on-primary-container">
+<!-- Top Bar -->
+<header class="fixed top-0 left-0 right-0 h-12 bg-surface-container-low border-b border-outline-variant z-50 flex items-center justify-between px-margin-edge">
+<div class="flex items-center gap-6">
+<span class="font-title-sm text-title-sm font-bold text-on-surface">EM Fusion</span>
+<div class="h-4 w-px bg-outline-variant"></div>
+<div class="flex items-center gap-4 text-on-surface-variant font-data-mono text-data-mono">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">location_on</span>
+<span class="">Sector: GNSS-Alpha</span>
+</div>
+<div class="flex items-center gap-1.5 text-primary">
+<span class="material-symbols-outlined text-[16px]">play_circle</span>
+<span class="">Scenario: Active Replay</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="flex items-center gap-2 pl-2 border-l border-outline-variant">
+<img class="w-8 h-8 rounded-full border border-outline-variant" data-alt="Analyst avatar profile photo, professional male in his 40s with glasses, neutral background, cinematic lighting, corporate professional style, blue and dark grey tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCQLER-Owu5dnIc--NYkgF3AQuPdkcq77CbaQL9RtD1rgtPJK9zY-EUy_WWEqytjrmdvhhZC84xOCFGkmr2qMp9bdhJNj32dqONuWeDZ9DB1CwBMS0NpDzV_UNOvkfUmid7jf25d37O8rB-tupwR71V25SgSe7fmpnTjvyCU5wjFnwX6oDL1MY0ukFKrt6VOtfdJUsar3lvy6JOGhQHOk0QBQBFWdO4m2ljmHoFP7PVGENvBaCcrjjQAIcUXiW829YIXgUN8_jtXXo">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Analyst 09</span>
+</div>
+</div>
+</header>
+<!-- Side Navigation -->
+<aside class="fixed left-0 top-12 bottom-0 w-[280px] bg-surface-container-lowest border-r border-outline-variant py-panel-padding flex flex-col justify-between z-40">
+<nav class="flex flex-col gap-unit">
+<a class="flex items-center gap-3 px-4 py-3 text-secondary border-l-2 border-secondary bg-surface-container-high font-label-caps text-label-caps tracking-widest transition-all duration-200 uppercase" href="#">
+<span class="material-symbols-outlined" data-icon="radar">radar</span>
+                Operational Picture
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:text-on-surface hover:bg-surface-container font-label-caps text-label-caps tracking-widest transition-all duration-200 uppercase" href="#">
+<span class="material-symbols-outlined" data-icon="query_stats">query_stats</span>
+                Hypotheses
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:text-on-surface hover:bg-surface-container font-label-caps text-label-caps tracking-widest transition-all duration-200 uppercase" href="#">
+<span class="material-symbols-outlined" data-icon="settings_input_component">settings_input_component</span>
+                Scenario Control
+            </a>
+</nav>
+<div class="px-4 space-y-4">
+<div class="flex flex-col gap-2 p-3 bg-surface-container rounded border border-outline-variant">
+<div class="flex items-center justify-between">
+<span class="font-label-caps text-label-caps text-on-surface-variant">SYSTEM STATUS</span>
+<span class="px-1.5 py-0.5 bg-primary/10 text-primary border border-primary/20 text-[9px] font-bold rounded">SYNTHETIC</span>
+</div>
+<div class="space-y-2 pt-1">
+<div class="flex items-center justify-between text-[11px] font-data-mono">
+<span class="text-on-surface-variant">Connectivity</span>
+<div class="flex gap-0.5">
+<div class="w-1.5 h-1.5 rounded-full bg-secondary"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-secondary"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-secondary"></div>
+</div>
+</div>
+<div class="flex items-center justify-between text-[11px] font-data-mono">
+<span class="text-on-surface-variant">Service</span>
+<div class="w-1.5 h-1.5 rounded-full bg-secondary"></div>
+</div>
+</div>
+</div>
+<div class="text-on-surface-variant font-data-mono-sm text-data-mono-sm flex justify-between items-center opacity-60">
+<span class="">V.2.4.0-STABLE</span>
+<span class="">99.9% UPTIME</span>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="fixed left-[280px] top-12 right-0 bottom-8 flex">
+<!-- Left: Map Region (55%) -->
+<section class="w-[55%] relative border-r border-outline-variant overflow-hidden">
+<!-- Simulated Map Canvas -->
+<div class="absolute inset-0 bg-[#080B12] map-grid">
+<!-- Anomaly Zone -->
+<div class="absolute top-[30%] left-[25%] w-[280px] h-[220px] rounded-[40px] border-2 border-dashed border-tertiary/50 bg-tertiary/5 flex items-center justify-center glow-pulse">
+<div class="bg-surface-container-highest px-3 py-1.5 border border-tertiary/30 rounded flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-tertiary shadow-[0_0_5px_rgba(255,183,134,1)]"></span>
+<span class="font-data-mono text-tertiary text-[11px]">AZ-402 SIGNAL NOISE</span>
+</div>
+</div>
+<!-- Aircraft 1 -->
+<div class="absolute top-[20%] left-[45%] flex flex-col items-center">
+<span class="material-symbols-outlined text-secondary text-[20px] rotate-45" style="font-variation-settings: 'FILL' 1;">flight</span>
+<div class="mt-1 bg-surface-container-low/90 backdrop-blur-sm border border-outline-variant px-2 py-0.5 rounded text-[10px] font-data-mono flex flex-col">
+<span class="text-on-surface">DLH420</span>
+<span class="text-on-surface-variant">32k ft • 410kts</span>
+</div>
+</div>
+<!-- Aircraft 2 -->
+<div class="absolute top-[55%] left-[60%] flex flex-col items-center">
+<span class="material-symbols-outlined text-secondary text-[20px] rotate-[130deg]" style="font-variation-settings: 'FILL' 1;">flight</span>
+<div class="mt-1 bg-surface-container-low/90 backdrop-blur-sm border border-outline-variant px-2 py-0.5 rounded text-[10px] font-data-mono flex flex-col">
+<span class="text-on-surface">BAW192</span>
+<span class="text-on-surface-variant">28k ft • 395kts</span>
+</div>
+</div>
+<!-- Sensor Nodes -->
+<div class="absolute bottom-[35%] left-[15%]">
+<span class="material-symbols-outlined text-secondary text-[18px]">cell_tower</span>
+<div class="absolute -top-1 -right-1 w-2 h-2 bg-secondary rounded-full border border-background"></div>
+</div>
+<div class="absolute top-[15%] right-[25%]">
+<span class="material-symbols-outlined text-error text-[18px]">cell_tower</span>
+<div class="absolute -top-1 -right-1 w-2 h-2 bg-error rounded-full border border-background"></div>
+</div>
+</div>
+<!-- Map Overlays -->
+<div class="absolute top-4 left-4 z-10">
+<div class="bg-surface-container-highest/80 backdrop-blur px-3 py-1 border border-outline-variant flex items-center gap-2">
+<span class="w-1.5 h-1.5 bg-primary rounded-full"></span>
+<span class="font-label-caps text-label-caps text-on-surface">SYNTHETIC ENVIRONMENT DATA</span>
+</div>
+</div>
+<div class="absolute top-4 right-4 z-10 flex flex-col gap-unit">
+<div class="flex flex-col bg-surface-container-high border border-outline-variant">
+<button class="w-8 h-8 flex items-center justify-center hover:bg-surface-variant transition-colors border-b border-outline-variant">
+<span class="material-symbols-outlined text-[18px]">add</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[18px]">remove</span>
+</button>
+</div>
+<button class="w-8 h-8 flex items-center justify-center bg-surface-container-high border border-outline-variant hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[18px]">layers</span>
+</button>
+</div>
+<!-- Bottom Gradient -->
+<div class="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent pointer-events-none"></div>
+</section>
+<!-- Right: Control Rail (25%) -->
+<section class="flex-1 bg-surface-container-lowest flex flex-col p-4 gap-4 overflow-y-auto">
+<div class="flex items-center justify-between">
+<h2 class="font-title-sm text-title-sm text-on-surface">Active Hypotheses</h2>
+<span class="text-on-surface-variant font-data-mono-sm">TOTAL: 02</span>
+</div>
+<!-- Hypothesis Card 1 -->
+<div class="bg-surface-container-high border border-outline-variant p-4 space-y-3 group hover:border-primary/50 transition-colors cursor-pointer">
+<div class="flex justify-between items-start">
+<span class="bg-primary/20 text-primary text-[10px] font-bold px-1.5 py-0.5 rounded border border-primary/30 uppercase">New</span>
+<div class="flex gap-0.5">
+<span class="w-4 h-1 bg-primary"></span>
+<span class="w-4 h-1 bg-primary"></span>
+<span class="w-4 h-1 bg-outline-variant"></span>
+</div>
+</div>
+<h3 class="text-on-surface font-semibold leading-tight">Possible localised GNSS interference</h3>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<div class="text-on-surface-variant text-[10px] font-label-caps uppercase">Confidence</div>
+<div class="text-on-surface font-data-mono text-sm">Medium</div>
+</div>
+<div>
+<div class="text-on-surface-variant text-[10px] font-label-caps uppercase">Severity</div>
+<div class="text-error font-data-mono text-sm">High</div>
+</div>
+</div>
+</div>
+<!-- Hypothesis Card 2 -->
+<div class="bg-surface-container-high border border-outline-variant p-4 space-y-3 group hover:border-primary/50 transition-colors cursor-pointer">
+<div class="flex justify-between items-start">
+<span class="bg-surface-variant text-on-surface-variant text-[10px] font-bold px-1.5 py-0.5 rounded border border-outline-variant uppercase">Review</span>
+<div class="flex gap-0.5">
+<span class="w-4 h-1 bg-primary"></span>
+<span class="w-4 h-1 bg-primary"></span>
+<span class="w-4 h-1 bg-primary"></span>
+</div>
+</div>
+<h3 class="text-on-surface font-semibold leading-tight">Possible RF sensor fault</h3>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<div class="text-on-surface-variant text-[10px] font-label-caps uppercase">Confidence</div>
+<div class="text-on-surface font-data-mono text-sm">High</div>
+</div>
+<div>
+<div class="text-on-surface-variant text-[10px] font-label-caps uppercase">Severity</div>
+<div class="text-on-surface font-data-mono text-sm">Low</div>
+</div>
+</div>
+</div>
+<div class="mt-auto bg-error-container/10 border border-error/20 p-4 space-y-2"><div class="flex items-center justify-between mb-2"><span class="font-label-caps text-label-caps text-on-surface-variant">DETECTION SUMMARY</span><span class="bg-error text-on-error text-[10px] font-bold px-2 py-0.5 rounded uppercase">High</span></div><div class="space-y-3"><div class="flex justify-between items-center"><span class="text-[11px] text-on-surface-variant">Anomaly Level</span><div class="flex gap-0.5"><span class="w-4 h-1 bg-error"></span><span class="w-4 h-1 bg-error"></span><span class="w-4 h-1 bg-error"></span></div></div><p class="text-[11px] text-on-surface-variant italic border-t border-outline-variant/30 pt-2">Anomaly level reflects concurrent RF degradation and flight path deviations in sector GNSS-Alpha.</p></div></div>
+</section>
+<!-- Dynamic Visual Asset Placeholder -->
+
+</main>
+<!-- Bottom Exception Panel -->
+<section class="fixed bottom-8 left-[280px] right-0 h-48 bg-surface-container-lowest border-t border-outline-variant z-30 flex flex-col">
+<div class="flex bg-surface-container-low border-b border-outline-variant">
+<button class="px-6 py-2 border-b-2 border-primary text-primary font-label-caps text-label-caps flex items-center gap-2">
+                RF (2 ANOMALOUS)
+            </button>
+<button class="px-6 py-2 text-on-surface-variant hover:text-on-surface font-label-caps text-label-caps transition-colors flex items-center gap-2">
+                TRACKS (1 DEGRADED)
+            </button>
+<button class="px-6 py-2 text-on-surface-variant hover:text-on-surface font-label-caps text-label-caps transition-colors flex items-center gap-2">
+                EVENTS
+            </button>
+</div>
+<div class="flex-1 overflow-y-auto">
+<table class="w-full text-left font-data-mono text-sm border-collapse">
+<thead>
+<tr class="text-[10px] font-label-caps text-on-surface-variant border-b border-outline-variant">
+<th class="px-gutter py-2 font-bold uppercase">Sensor ID</th>
+<th class="px-gutter py-2 font-bold uppercase">Status</th>
+<th class="px-gutter py-2 font-bold uppercase">Last Signal</th>
+<th class="px-gutter py-2 font-bold uppercase">Noise Floor</th>
+<th class="px-gutter py-2 font-bold uppercase">Severity</th>
+</tr>
+</thead>
+<tbody class="text-on-surface">
+<tr class="border-b border-outline-variant/30 hover:bg-surface-container transition-colors">
+<td class="px-gutter py-3 text-secondary">SNS-Alpha-092</td>
+<td class="px-gutter py-3">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-error"></span>
+<span class="">Interference detected</span>
+</div>
+</td>
+<td class="px-gutter py-3">14:02:11 Z</td>
+<td class="px-gutter py-3">-92.4 dBm</td>
+<td class="px-gutter py-3 text-error">HIGH</td>
+</tr>
+<tr class="border-b border-outline-variant/30 hover:bg-surface-container transition-colors">
+<td class="px-gutter py-3 text-secondary">SNS-Alpha-014</td>
+<td class="px-gutter py-3">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+<span class="">Unstable Gain</span>
+</div>
+</td>
+<td class="px-gutter py-3">14:03:02 Z</td>
+<td class="px-gutter py-3">-104.1 dBm</td>
+<td class="px-gutter py-3 text-tertiary">MED</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="h-8 bg-surface-container px-gutter flex items-center justify-between border-t border-outline-variant">
+<span class="text-on-surface-variant font-data-mono-sm">+3 nominal sensors hidden</span>
+<button class="text-secondary font-label-caps text-label-caps hover:underline">VIEW ALL →</button>
+</div>
+</section>
+<!-- Footer -->
+<footer class="fixed bottom-0 left-[280px] right-0 h-8 bg-surface-container-lowest border-t border-outline-variant px-gutter flex items-center justify-between z-50">
+<div class="flex items-center gap-4 text-secondary font-data-mono-sm">
+<span class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+                SYSTEM ALPHA-9 LIVE
+            </span>
+</div>
+<div class="flex items-center gap-6 text-on-surface-variant font-data-mono-sm">
+<span class="">Uptime: 99.9%</span>
+<span class="">2026-07-19 19:43:12 Z</span>
+</div>
+</footer>
+<script class="">
+        // Simple interactive elements for high-end feel
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('mousedown', () => btn.classList.add('opacity-80'));
+            btn.addEventListener('mouseup', () => btn.classList.remove('opacity-80'));
+        });
+
+        // Simulating live data update every 5 seconds
+        setInterval(() => {
+            const time = new Date().toISOString().replace('T', ' ').substring(0, 19) + ' Z';
+            const footerTime = document.querySelector('footer div:last-child span:last-child');
+            if (footerTime) footerTime.textContent = time;
+        }, 1000);
+    </script>
+
+</body></html>

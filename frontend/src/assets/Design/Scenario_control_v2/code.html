@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>EM Fusion | Scenario Control</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed-dim": "#ffb786",
+                        "on-secondary-fixed-variant": "#004e5c",
+                        "on-secondary": "#003640",
+                        "inverse-primary": "#005ac2",
+                        "surface-variant": "#32353c",
+                        "surface-dim": "#10131a",
+                        "error": "#ffb4ab",
+                        "outline-variant": "#424754",
+                        "on-error-container": "#ffdad6",
+                        "on-tertiary-fixed": "#311400",
+                        "on-background": "#e1e2ec",
+                        "tertiary": "#ffb786",
+                        "on-primary-fixed": "#001a42",
+                        "surface-container-highest": "#32353c",
+                        "primary-fixed-dim": "#adc6ff",
+                        "on-tertiary": "#502400",
+                        "on-primary-container": "#00285d",
+                        "inverse-on-surface": "#2e3038",
+                        "surface-container-high": "#272a31",
+                        "surface-container": "#1d2027",
+                        "on-surface-variant": "#c2c6d6",
+                        "secondary-container": "#03b5d3",
+                        "on-primary": "#002e6a",
+                        "on-tertiary-fixed-variant": "#723600",
+                        "on-tertiary-container": "#461f00",
+                        "error-container": "#93000a",
+                        "background": "#10131a",
+                        "primary-fixed": "#d8e2ff",
+                        "on-secondary-fixed": "#001f26",
+                        "surface-tint": "#adc6ff",
+                        "surface-bright": "#363941",
+                        "outline": "#8c909f",
+                        "on-secondary-container": "#00424e",
+                        "surface-container-lowest": "#0b0e15",
+                        "primary-container": "#4d8eff",
+                        "surface": "#10131a",
+                        "inverse-surface": "#e1e2ec",
+                        "primary": "#adc6ff",
+                        "surface-container-low": "#191b23",
+                        "tertiary-fixed": "#ffdcc6",
+                        "on-primary-fixed-variant": "#004395",
+                        "on-error": "#690005",
+                        "secondary-fixed": "#acedff",
+                        "secondary": "#4cd7f6",
+                        "tertiary-container": "#df7412",
+                        "secondary-fixed-dim": "#4cd7f6",
+                        "on-surface": "#e1e2ec"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "unit": "4px",
+                        "margin-edge": "24px",
+                        "gutter": "16px",
+                        "stack-gap": "8px",
+                        "panel-padding": "12px"
+                    },
+                    "fontFamily": {
+                        "title-sm": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "display-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "data-mono-sm": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "title-sm": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "label-caps": ["10px", {"lineHeight": "12px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "500"}],
+                        "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-sm": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "data-mono-sm": ["11px", {"lineHeight": "14px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #0b0e15;
+            color: #e1e2ec;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #10131a;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #32353c;
+        }
+        .glass-panel {
+            background: rgba(17, 24, 39, 0.7);
+            backdrop-filter: blur(8px);
+        }
+        .status-dot-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+    </style>
+</head>
+<body class="font-body-md selection:bg-primary/30">
+<div class="flex h-screen overflow-hidden">
+<!-- SideNavBar -->
+<aside class="flex flex-col h-full w-[280px] border-r border-outline-variant bg-surface-container sticky left-0 shrink-0">
+<div class="p-panel-padding mb-8">
+<h1 class="font-headline-md text-headline-md font-bold text-primary">EM Fusion</h1>
+<p class="text-on-surface-variant font-label-caps text-label-caps mt-1">Sector: 07-Alpha</p>
+</div>
+<nav class="flex-1 space-y-unit">
+<a class="flex items-center px-margin-edge py-3 text-on-surface-variant font-label-caps text-label-caps uppercase tracking-widest hover:bg-surface-container-high transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined mr-3">radar</span>
+                    Operational Picture
+                </a>
+<a class="flex items-center px-margin-edge py-3 text-on-surface-variant font-label-caps text-label-caps uppercase tracking-widest hover:bg-surface-container-high transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined mr-3">query_stats</span>
+                    Hypotheses
+                </a>
+<a class="flex items-center px-margin-edge py-3 text-secondary border-l-2 border-secondary bg-secondary-container/10 font-label-caps text-label-caps uppercase tracking-widest transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined mr-3">settings_input_component</span>
+                    Scenario Control
+                </a>
+</nav>
+<div class="mt-auto p-panel-padding">
+<button class="w-full py-3 bg-secondary-container text-on-secondary-container font-label-caps text-label-caps uppercase tracking-widest font-bold rounded-lg mb-6 hover:brightness-110 active:scale-95 transition-all">
+                    SYNTHETIC DATA
+                </button>
+<div class="space-y-2 border-t border-outline-variant pt-4">
+<div class="flex items-center justify-between text-on-surface-variant font-label-caps text-label-caps px-2">
+<div class="flex items-center">
+<span class="material-symbols-outlined text-[14px] mr-2">sensors</span>
+                            System Health
+                        </div>
+<span class="w-2 h-2 rounded-full bg-secondary shadow-[0_0_5px_#4cd7f6]"></span>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-label-caps text-label-caps px-2">
+<div class="flex items-center">
+<span class="material-symbols-outlined text-[14px] mr-2">wifi_tethering</span>
+                            Connectivity
+                        </div>
+<span class="w-2 h-2 rounded-full bg-secondary shadow-[0_0_5px_#4cd7f6]"></span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 flex flex-col min-w-0 bg-background relative overflow-hidden">
+<!-- TopNavBar (Integrated) -->
+<header class="flex justify-between items-center w-full px-margin-edge h-16 bg-surface-container-lowest border-b border-outline-variant sticky top-0 z-20">
+<div class="flex items-center gap-4">
+<span class="font-title-sm text-title-sm text-primary">Scenario Control Panel</span>
+<span class="h-4 w-[1px] bg-outline-variant"></span>
+<span class="font-data-mono text-data-mono text-on-surface-variant">NODE_SIM_0x44</span>
+</div>
+<div class="flex items-center gap-6">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors">notifications</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors">settings</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors">help</span>
+<div class="h-8 w-8 rounded-full border border-primary/20 bg-surface-container overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A macro portrait of a serious intelligence analyst with short dark hair, wearing a high-tech headset with subtle glowing status lights, soft blue rim lighting against a dark navy office background, cinematic and sharp focus." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDJFXuV3K_Iy8sFpq6UDObVQcmdiiFCWj56uxJ4KkTdIjioh5vYhazqbZx8bh9YwH4XaoVztt1adjDgQy9rnAkRQ3rD-ZXBqX9XAtv-2Guqg1-hpthQf3eTP9A-BzMXQNiKm7BwcyKZh-r5BDAyoFxd8CKZPykCV5glPOFcvlfTaanG6Q-9zZvXdeJCmBuvqQjI6nL6au376_0D2o-G2D5ab3H-TDjaGnoh8BcDNQ4YYwwQKaw9QWMCA7LpOfY6NlidC7h768_0b3c"/>
+</div>
+</div>
+</header>
+<!-- Workspace Grid -->
+<div class="flex-1 overflow-hidden flex p-6 gap-gutter">
+<!-- Left Column: Scenario Library -->
+<section class="w-[40%] flex flex-col gap-stack-gap h-full overflow-hidden">
+<div class="flex items-center justify-between mb-2">
+<h2 class="font-title-sm text-title-sm text-on-surface uppercase tracking-tight">Scenario Library</h2>
+<span class="text-on-surface-variant font-data-mono-sm text-data-mono-sm">TOTAL: 5</span>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-3 pr-2">
+<!-- Card 1 -->
+<div class="p-4 bg-surface-container-low border border-outline-variant rounded-lg hover:border-outline transition-colors cursor-pointer group">
+<div class="flex justify-between items-start mb-2">
+<h3 class="font-title-sm text-on-surface group-hover:text-primary transition-colors">Normal baseline</h3>
+<span class="bg-surface-container-highest text-on-surface-variant px-2 py-0.5 rounded font-label-caps text-label-caps">[NOMINAL]</span>
+</div>
+<p class="text-on-surface-variant text-body-sm">Standard operating environment with default RF noise floor and verified sensor feeds.</p>
+</div>
+<!-- Card 2: Selected -->
+<div class="p-4 bg-secondary-container/5 border-2 border-secondary rounded-lg cursor-pointer relative shadow-[0_0_15px_rgba(76,215,246,0.05)]">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-secondary"></div>
+<div class="flex justify-between items-start mb-2">
+<h3 class="font-title-sm text-secondary">GNSS signal degradation</h3>
+<span class="bg-secondary/20 text-secondary px-2 py-0.5 rounded font-label-caps text-label-caps">[STRESS TEST]</span>
+</div>
+<p class="text-on-surface-variant text-body-sm">Simulated L1/L2 interference across multiple constellations to test positioning resilience.</p>
+</div>
+<!-- Card 3 -->
+<div class="p-4 bg-surface-container-low border border-outline-variant rounded-lg hover:border-outline transition-colors cursor-pointer group">
+<div class="flex justify-between items-start mb-2">
+<h3 class="font-title-sm text-on-surface group-hover:text-primary transition-colors">RF sensor fault</h3>
+<span class="bg-error-container/20 text-error px-2 py-0.5 rounded font-label-caps text-label-caps">[HARDWARE]</span>
+</div>
+<p class="text-on-surface-variant text-body-sm">Localised sensor hardware failure mimicking front-end saturation or component burnout.</p>
+</div>
+<!-- Card 4 -->
+<div class="p-4 bg-surface-container-low border border-outline-variant rounded-lg hover:border-outline transition-colors cursor-pointer group">
+<div class="flex justify-between items-start mb-2">
+<h3 class="font-title-sm text-on-surface group-hover:text-primary transition-colors">Data-source coverage gap</h3>
+<span class="bg-tertiary-container/20 text-tertiary px-2 py-0.5 rounded font-label-caps text-label-caps">[INFRASTRUCTURE]</span>
+</div>
+<p class="text-on-surface-variant text-body-sm">Intermittent feed latency and packet loss from remote satellite downlinks.</p>
+</div>
+<!-- Card 5 -->
+<div class="p-4 bg-surface-container-low border border-outline-variant rounded-lg hover:border-outline transition-colors cursor-pointer group">
+<div class="flex justify-between items-start mb-2">
+<h3 class="font-title-sm text-on-surface group-hover:text-primary transition-colors">Ambiguous mixed evidence</h3>
+<span class="bg-surface-container-highest text-on-surface-variant px-2 py-0.5 rounded font-label-caps text-label-caps">[ANALYTICAL]</span>
+</div>
+<p class="text-on-surface-variant text-body-sm">Fused data conflict test utilizing contradictory reports from EW and SIGINT platforms.</p>
+</div>
+</div>
+</section>
+<!-- Right Column: Configuration and Status -->
+<section class="w-[60%] flex flex-col gap-gutter overflow-y-auto custom-scrollbar pr-1">
+<!-- Parameter Controls Panel -->
+<div class="bg-surface-container border border-outline-variant rounded-lg p-panel-padding">
+<div class="flex items-center gap-2 mb-6 border-b border-outline-variant pb-3">
+<span class="material-symbols-outlined text-secondary">tune</span>
+<h2 class="font-title-sm text-title-sm text-on-surface uppercase tracking-tight">Run Configuration</h2>
+</div>
+<div class="grid grid-cols-2 gap-x-gutter gap-y-6">
+<!-- Noise Amplitude -->
+<div class="space-y-2">
+<div class="flex justify-between">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase">Noise Amplitude</label>
+<span class="font-data-mono text-data-mono text-secondary">-75 dBm</span>
+</div>
+<input class="w-full h-1 bg-surface-variant rounded-lg appearance-none cursor-pointer accent-secondary" max="-20" min="-120" type="range" value="-75"/>
+<div class="flex justify-between font-data-mono-sm text-data-mono-sm text-outline">
+<span>-120 dBm</span>
+<span>-20 dBm</span>
+</div>
+</div>
+<!-- Affected Sensor Count -->
+<div class="space-y-2">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase">Affected Sensor Count</label>
+<div class="flex items-center gap-3">
+<button class="w-10 h-10 border border-outline-variant bg-surface-container-low flex items-center justify-center text-on-surface hover:bg-surface-container-high transition-colors">-</button>
+<input class="flex-1 bg-surface-container-lowest border border-outline-variant text-center font-data-mono text-data-mono py-2 text-primary focus:ring-1 focus:ring-primary focus:outline-none" type="text" value="4"/>
+<button class="w-10 h-10 border border-outline-variant bg-surface-container-low flex items-center justify-center text-on-surface hover:bg-surface-container-high transition-colors">+</button>
+</div>
+</div>
+<!-- Gap Duration -->
+<div class="space-y-2">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase">Gap Duration</label>
+<div class="relative">
+<input class="w-full bg-surface-container-lowest border border-outline-variant font-data-mono text-data-mono py-2 pl-3 pr-12 text-primary focus:ring-1 focus:ring-primary focus:outline-none" type="text" value="45s"/>
+<span class="absolute right-3 top-1/2 -translate-y-1/2 text-outline font-data-mono-sm">SEC</span>
+</div>
+</div>
+<!-- Random Seed -->
+<div class="space-y-2">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase">Random Seed</label>
+<div class="relative">
+<input class="w-full bg-surface-container-lowest border border-outline-variant font-data-mono text-data-mono py-2 pl-3 text-primary focus:ring-1 focus:ring-primary focus:outline-none" type="text" value="0xA4F2"/>
+<span class="absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline text-[18px] cursor-pointer hover:text-secondary">refresh</span>
+</div>
+</div>
+<!-- Batch Count -->
+<div class="space-y-2 col-span-2">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase">Runs in Batch</label>
+<div class="flex items-center gap-4">
+<input class="w-32 bg-surface-container-lowest border border-outline-variant font-data-mono text-data-mono py-2 pl-3 text-primary focus:ring-1 focus:ring-primary focus:outline-none" max="100" min="1" type="number" value="1"/>
+<div class="flex-1 h-[1px] bg-outline-variant"></div>
+<span class="text-on-surface-variant italic text-body-sm">Sequential test execution enabled</span>
+</div>
+</div>
+</div>
+<!-- Run Controls -->
+<div class="grid grid-cols-4 gap-4 mt-8 pt-6 border-t border-outline-variant">
+<button class="bg-secondary text-on-secondary-container font-label-caps text-label-caps font-bold py-4 rounded-lg flex items-center justify-center gap-2 hover:brightness-110 active:scale-95 transition-all">
+<span class="material-symbols-outlined">play_arrow</span> START
+                            </button>
+<button class="border border-tertiary text-tertiary font-label-caps text-label-caps font-bold py-4 rounded-lg flex items-center justify-center gap-2 hover:bg-tertiary/10 active:scale-95 transition-all">
+<span class="material-symbols-outlined">pause</span> PAUSE
+                            </button>
+<button class="border border-outline-variant text-on-surface-variant font-label-caps text-label-caps font-bold py-4 rounded-lg flex items-center justify-center gap-2 hover:bg-surface-variant/50 active:scale-95 transition-all">
+<span class="material-symbols-outlined">replay</span> RESET
+                            </button>
+<button class="border border-outline-variant text-on-surface-variant font-label-caps text-label-caps font-bold py-4 rounded-lg flex items-center justify-center gap-2 hover:bg-surface-variant/50 active:scale-95 transition-all">
+<span class="material-symbols-outlined">fast_forward</span> REPLAY
+                            </button>
+</div>
+</div>
+<!-- Run Status & Live Feed -->
+<div class="grid grid-cols-2 gap-gutter">
+<div class="bg-surface-container-low border border-outline-variant rounded-lg p-4">
+<div class="flex items-center justify-between mb-4">
+<h3 class="font-label-caps text-label-caps text-on-surface-variant uppercase">Current Status</h3>
+<div class="flex items-center gap-2 px-2 py-1 bg-tertiary-container/20 text-tertiary rounded-full">
+<span class="w-1.5 h-1.5 bg-tertiary rounded-full status-dot-pulse shadow-[0_0_5px_#ffb786]"></span>
+<span class="font-data-mono-sm text-data-mono-sm">IN PROGRESS</span>
+</div>
+</div>
+<div class="space-y-3">
+<div class="flex justify-between items-center border-b border-outline-variant/30 pb-2">
+<span class="text-body-sm text-on-surface-variant">Elapsed Time</span>
+<span class="font-data-mono text-data-mono text-on-surface">00:04:32</span>
+</div>
+<div class="flex justify-between items-center border-b border-outline-variant/30 pb-2">
+<span class="text-body-sm text-on-surface-variant">Active Seed</span>
+<span class="font-data-mono text-data-mono text-on-surface">0xA4F2</span>
+</div>
+<div class="flex justify-between items-center border-b border-outline-variant/30 pb-2">
+<span class="text-body-sm text-on-surface-variant">Iter Count</span>
+<span class="font-data-mono text-data-mono text-on-surface">1 / 1</span>
+</div>
+</div>
+</div>
+<div class="bg-surface-container border border-outline-variant rounded-lg overflow-hidden relative">
+
+<div class="relative z-10 p-4 h-full flex flex-col justify-between">
+<span class="font-label-caps text-label-caps text-secondary uppercase">Live Signal Map</span>
+<div class="text-on-surface-variant text-[10px] font-data-mono uppercase space-y-1">
+<div>LAT: 48.8584</div>
+<div>LNG: 2.2945</div>
+<div class="text-secondary">SNR: DEGRADING...</div>
+</div>
+</div>
+</div>
+</div>
+<!-- History Table -->
+<div class="bg-surface-container border border-outline-variant rounded-lg overflow-hidden">
+<div class="px-4 py-3 border-b border-outline-variant bg-surface-container-high flex justify-between items-center">
+<h3 class="font-label-caps text-label-caps text-on-surface uppercase">Run History</h3>
+<span class="material-symbols-outlined text-outline text-[18px] cursor-pointer hover:text-on-surface">download</span>
+</div>
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-outline-variant bg-surface-container-low">
+<th class="px-4 py-2 font-label-caps text-label-caps text-outline uppercase">Scenario Type</th>
+<th class="px-4 py-2 font-label-caps text-label-caps text-outline uppercase">Seed</th>
+<th class="px-4 py-2 font-label-caps text-label-caps text-outline uppercase">Outcome</th>
+<th class="px-4 py-2 font-label-caps text-label-caps text-outline uppercase text-right">Result</th>
+</tr>
+</thead>
+<tbody class="font-data-mono text-data-mono text-on-surface-variant">
+<tr class="border-b border-outline-variant/30 hover:bg-surface-variant/20 transition-colors">
+<td class="px-4 py-2">GNSS Signal Deg.</td>
+<td class="px-4 py-2">0xB991</td>
+<td class="px-4 py-2">
+<span class="text-secondary flex items-center gap-1">
+<span class="w-1.5 h-1.5 bg-secondary rounded-full"></span> SUCCESS
+                                        </span>
+</td>
+<td class="px-4 py-2 text-right">
+<span class="material-symbols-outlined text-secondary text-[16px]">check_circle</span>
+</td>
+</tr>
+<tr class="border-b border-outline-variant/30 hover:bg-surface-variant/20 transition-colors">
+<td class="px-4 py-2">RF Sensor Fault</td>
+<td class="px-4 py-2">0xF002</td>
+<td class="px-4 py-2">
+<span class="text-error flex items-center gap-1">
+<span class="w-1.5 h-1.5 bg-error rounded-full"></span> FAIL
+                                        </span>
+</td>
+<td class="px-4 py-2 text-right">
+<span class="material-symbols-outlined text-outline text-[16px]">cancel</span>
+</td>
+</tr>
+<tr class="border-b border-outline-variant/30 hover:bg-surface-variant/20 transition-colors">
+<td class="px-4 py-2">Normal Baseline</td>
+<td class="px-4 py-2">0x112C</td>
+<td class="px-4 py-2">
+<span class="text-secondary flex items-center gap-1">
+<span class="w-1.5 h-1.5 bg-secondary rounded-full"></span> SUCCESS
+                                        </span>
+</td>
+<td class="px-4 py-2 text-right">
+<span class="material-symbols-outlined text-secondary text-[16px]">check_circle</span>
+</td>
+</tr>
+<tr class="border-b border-outline-variant/30 hover:bg-surface-variant/20 transition-colors">
+<td class="px-4 py-2">Coverage Gap</td>
+<td class="px-4 py-2">0xD41A</td>
+<td class="px-4 py-2">
+<span class="text-secondary flex items-center gap-1">
+<span class="w-1.5 h-1.5 bg-secondary rounded-full"></span> SUCCESS
+                                        </span>
+</td>
+<td class="px-4 py-2 text-right">
+<span class="material-symbols-outlined text-secondary text-[16px]">check_circle</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-variant/20 transition-colors">
+<td class="px-4 py-2">Ambiguous Evidence</td>
+<td class="px-4 py-2">0x77E1</td>
+<td class="px-4 py-2">
+<span class="text-tertiary flex items-center gap-1">
+<span class="w-1.5 h-1.5 bg-tertiary rounded-full"></span> ABORTED
+                                        </span>
+</td>
+<td class="px-4 py-2 text-right">
+<span class="material-symbols-outlined text-outline text-[16px]">block</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</div>
+</main>
+</div>
+<!-- Micro-interaction for slider update and dashboard vibes -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const range = document.querySelector('input[type="range"]');
+            const rangeValue = document.querySelector('.text-secondary.font-data-mono');
+            
+            range.addEventListener('input', (e) => {
+                rangeValue.textContent = `${e.target.value} dBm`;
+            });
+
+            // Random seed generator logic for the UI icon
+            const seedIcon = document.querySelector('.material-symbols-outlined.text-outline.cursor-pointer');
+            const seedInput = document.querySelector('input[value="0xA4F2"]');
+            
+            seedIcon.addEventListener('click', () => {
+                const newSeed = '0x' + Math.floor(Math.random()*16777215).toString(16).toUpperCase();
+                seedInput.value = newSeed;
+                seedInput.classList.add('text-secondary');
+                setTimeout(() => seedInput.classList.remove('text-secondary'), 300);
+            });
+        });
+    </script>
+</body></html>
