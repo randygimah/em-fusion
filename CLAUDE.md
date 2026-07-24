@@ -4,13 +4,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-EM Fusion is a prototype for AI-assisted electromagnetic situational awareness: synthetic/replayed observations, explainable anomaly hypotheses, and human analyst validation. It is decision support, not autonomous decision-making.
+EM Fusion is a human-in-the-loop AI prototype for explainable electromagnetic situational awareness: it fuses replayed aviation telemetry and synthetic RF observations through a Data Abstraction Layer, detects deviations deterministically, and turns evidence bundles into schema-validated, grounding-checked AI hypotheses for human analyst review. It is decision support, not autonomous decision-making. Confidence is always Low/Medium/High — never a percentage or decimal score — and that rule applies to any score shown in the UI.
 
-Development is deliberately incremental — see `implementation.md` for the phase-by-phase build checklist (currently mid-way through Phase 3, Operational Picture Layout). Only `frontend/` has real code today. `backend/`, `ai/`, `docs/`, `infrastructure/`, and `scenarios/` are empty placeholders reserved for the planned FastAPI backend, ML/classification code, docs, Docker/deploy configs, and scenario fixtures respectively (see `em_fusion.md` section 21 for the target layout, and section 12 for the intended tech stack: FastAPI/Pydantic/SQLAlchemy/PostGIS on the backend).
+Development is deliberately incremental — see `docs/implementation.md` for the phase-by-phase build checklist (currently mid-way through Phase 3, Operational Picture Layout, 3-screen model). `frontend/` has real code; `backend/` has a minimal FastAPI skeleton (`app/main.py` with `/health` only, plus lint/type/test tooling — see Commands below). `ai/`, `infrastructure/`, and `scenarios/` are still empty placeholders reserved for ML/classification code, Docker/deploy configs, and scenario fixtures respectively.
 
-`em_fusion.md` is the full project scope/PRD (data sources, fusion engine, hypothesis engine, DB design, milestones, v2 roadmap). `DESIGN.md` is the design system spec (colors, typography, spacing, component styling) — front-matter contains the raw design tokens.
+Scope is v2: exactly three screens (Operational Picture, Hypotheses, Scenario Control) — no TimescaleDB, no WebSockets (frontend polls), no multi-agent AI, no Isolation Forest/DBSCAN. Anomaly detection is deterministic only (threshold rules, rolling averages, z-score, PostGIS spatial clustering). The AI hypothesis layer is constrained: template generator first (fallback + evaluation baseline), then an AI generator, both schema-validated and grounding-checked before an analyst sees them.
+
+Docs, in order of authority for technical detail:
+- `docs/em_fusion_v2.md` — current build-facing scope/PRD (data sources, architecture, DB design, tech stack, milestones, out-of-scope list, v2+ future work). Wins over the docx on technical detail; the docx (`EM-Fusion-Project-Scope-v2.docx`, not in this repo) wins on academic framing/research questions.
+- `docs/research_scope.md` — the coding-relevant extract of the docx (research questions, objectives, architecture rationale, AI-layer validation/grounding detail, canonical data model, scenario types, evaluation metrics, success criteria). Use this to check *why* a build decision matters to the thesis; the docx itself stays outside the repo.
+- `docs/implementation.md` — the phase-by-phase build checklist; treat it as a learning checklist, not a rigid sprint plan.
+- `docs/thesis_notes.md` — a skeleton (Methodology, System Design and Architecture, Implementation, Evaluation) that the user fills in while building, to become the dissertation write-up. When a phase in `implementation.md` completes, offer to help draft the corresponding section here rather than leaving it for later reconstruction from git history.
+- `docs/em_fusion.md` — the **old v1 PRD, superseded by `em_fusion_v2.md`**. Kept for history only; do not use it as a scope reference (e.g. its RF/IQ ML classifier, Isolation Forest/DBSCAN, WebSockets, and multi-screen nav are all cut from v2).
+
+`DESIGN.md` is the design system spec (colors, typography, spacing, component styling) — front-matter contains the raw design tokens.
 
 ## Commands
+
+### Frontend
 
 Package manager is pnpm (requires Node >= 22.13). `frontend/.nvmrc` pins the version — run `nvm use` from `frontend/` first if your shell's default Node is older. All commands run from `frontend/`:
 
@@ -23,7 +34,21 @@ Package manager is pnpm (requires Node >= 22.13). `frontend/.nvmrc` pins the ver
 - `pnpm test:watch` — Vitest watch mode
 - Single test file: `pnpm exec vitest run src/test/operationalPicture.test.tsx`
 
+### Backend
+
+Python, managed with a venv (`backend/.venv`) and a Makefile. All commands run from `backend/`:
+
+- `pip install -r requirements-dev.txt` (or `make install-dev`) — install dependencies
+- `uvicorn app.main:app --reload --port 8080` — run the dev server
+- `make format` — Black + isort (writes)
+- `make lint` — flake8 + isort --check-only
+- `make type-check` — mypy
+- `make test` — pytest
+- `make check` — format + lint + type-check + test
+
 ## Architecture
+
+### Frontend
 
 The frontend is a contract-first React app: UI components are dumb renderers that accept a typed data prop, decoupled from where that data comes from.
 
@@ -34,6 +59,12 @@ The frontend is a contract-first React app: UI components are dumb renderers tha
 - `src/components/em/` — shared UI primitives prefixed `Em*` (e.g. `EmButton`), built with `class-variance-authority` (`cva`) for variants and `cn` (`src/lib/utils.ts`, `clsx` + `tailwind-merge`) for class merging. Follow this cva+cn pattern for new styled components.
 - Tailwind v4 is wired via the `@tailwindcss/vite` plugin (no separate `tailwind.config.js`); colors/spacing/type scale should follow the tokens in `DESIGN.md` rather than ad hoc values.
 - A `MapView` boundary component (not yet built) is intended to be the only place Mapbox GL JS is touched, so it can be mocked in tests and the rest of the app stays map-library-agnostic.
+- Left nav has exactly three entries — Operational Picture, Hypotheses, Scenario Control. System health is a compact status strip in the nav footer, not a screen. Drill-down tables (full RF stream, full track inventory) are reached from panels on Operational Picture, not from the nav — they're cheap views over the same data, not separate screens.
+- No WebSockets: the frontend polls the (future) FastAPI backend. Don't introduce push/streaming infrastructure.
+
+### Backend
+
+`backend/app/main.py` currently only exposes `/health` (FastAPI, CORS configured for the Vite dev server). Per `docs/implementation.md` Phase 5, next is `/operational-picture` returning the same shape as `src/types/operationalPicture.ts`, then the frontend swaps its mock import for a fetch call behind a small API function. Target stack per `docs/em_fusion_v2.md` section 10: Pydantic, SQLAlchemy, PostgreSQL + PostGIS, Uvicorn, Pytest — no Celery/APScheduler, a simple loop or on-demand replay is enough.
 
 ## Testing conventions
 
