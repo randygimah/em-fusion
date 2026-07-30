@@ -48,6 +48,16 @@ Two sources at launch, a third added late as a measured extensibility demonstrat
 
 Aviation data provides: location, altitude, velocity, track, update gaps, dropout behaviour, continuity scores.
 
+**Aviation data acquisition — decided.** Use OpenSky's **static snapshot download** (published tables as of 2026-03-01: every Monday's complete state vectors at 10-second intervals, one file per hour, CSV/Avro/JSON), not the Trino/MinIO query interface. The Trino interface is free to university-affiliated researchers but requires an application with justification and an unbounded approval wait, and its documentation explicitly discourages the bulk extraction pattern. The snapshot needs no application and is available immediately, which protects the build schedule. Registering for Trino access in the background as a contingency is optional and must never gate a phase.
+
+The snapshot carries every field the detection rules need — `lat`/`lon`, `baroaltitude`/`geoaltitude`, `velocity`, `heading`, plus `lastposupdate` and `lastcontact`. The delta between `time` and `lastposupdate` is position staleness: a directly measured field, not an inferred one, and the basis of the "aircraft update frequency drops" rule.
+
+Three constraints follow from this choice:
+
+- **Mondays-only is not a limitation.** Scenario variation comes from the seeded synthetic generator (type + parameters + seed), not from data diversity. The aviation telemetry is a deterministic backdrop; one representative slice is the requirement.
+- **Filter on ingest.** Raw hourly files are global (millions of rows, hundreds of MB). Download one hour, filter to a bounding box, archive the filtered extract as the replay corpus — plus a manifest recording source URL, hour, download date, licence, and checksum of the original, so the extract is reproducible without committing the raw file.
+- **Choose a densely covered region.** OpenSky sensor coverage is uneven, and a sparse region produces genuine dropouts and coverage gaps that confound injected synthetic ones, making ground truth ambiguous and the false-positive rate meaningless. Central Europe has the densest coverage. Acceptance check: run the `Normal baseline` scenario against the extract — if dropouts appear before anything is injected, move the bounding box.
+
 Synthetic RF data provides: frequency band, signal power, SNR, bandwidth, signal type, sensor location, baseline delta, observation time.
 
 **Removed from v1:** the public RF/IQ classification dataset and ML signal classifier. It was a separate ML workflow bolted onto the side of the thesis argument. It moves to future work.
@@ -148,7 +158,7 @@ Every evidence item must trace to a stored anomaly or observation.
 Two generators, same output schema:
 
 - **Template-based generator** — built first. It is both the fallback and the evaluation comparison baseline.
-- **AI generator** — a hosted LLM called with the evidence bundle, fixed low temperature, JSON-only output.
+- **AI generator** — a **locally-hosted open-weight LLM** called with the evidence bundle, fixed seed, temperature 0, schema-constrained decoding. Runs on the developer machine via Ollama (or `llama-cpp-python` with a GBNF grammar where tighter control is needed); the backend reaches it over HTTP behind a single provider-agnostic service module. See section 10 for the rationale and the retained hosted-comparison option.
 
 Output schema (Pydantic-enforced):
 
@@ -164,8 +174,10 @@ recommended_human_action
 
 Validation pipeline:
 
-1. Schema validation; invalid JSON → bounded retry → fall back to template generator.
+1. **Schema conformance is a generation-time guarantee, not a post-hoc check.** Constrained decoding (a grammar compiled from the JSON Schema) makes structurally invalid output unrepresentable — malformed JSON, missing required fields, and out-of-enum confidence values cannot be emitted. Pydantic validation still runs as defence-in-depth and to enforce what a grammar cannot express (cross-field constraints, referential checks against the bundle); on failure, bounded retry → fall back to template generator. Retry rate is expected to be near zero and is logged so that assumption is evidenced rather than asserted.
 2. **Automated grounding check**: every supporting-evidence string must trace back to the evidence bundle. Ungrounded hypotheses are flagged or rejected, and the catch rate is logged — it is a reportable evaluation result, not just a safety net.
+
+Step 1 constrains *shape*; step 2 constrains *truth*. Constrained decoding guarantees `supporting_evidence` is a well-formed list of correctly-typed items — it says nothing about whether the rule IDs inside those items exist in the bundle. The grounding check is therefore the load-bearing safeguard, and its catch rate is the more interesting measurement of the two.
 
 Confidence is always Low/Medium/High. Never `Confidence: 87%` — unfounded precision, and it contradicts the thesis argument. The same rule applies to every score shown in the UI: no decimal "signal integrity" or percentage "anomaly score" badges unless backed by a real, documented computation.
 
@@ -256,6 +268,7 @@ Additional context sources (weather, space weather, maritime, AIS)
 Knowledge graph
 Bayesian hypothesis updating
 Kubernetes / Terraform / cloud deployment
+Data lakehouse substrate (Iceberg / Trino / object storage / REST catalog)
 Role-based access control, audit logging
 Security scanning beyond a basic dependency audit
 ```
@@ -397,19 +410,39 @@ erDiagram
     ANOMALIES }o--|| EVIDENCE_BUNDLES : grouped_into
 ```
 
-Track/RF/source-health specialisations live in the observation `payload` (typed via Pydantic), keeping the canonical table stable as sources are added. `hypotheses.generator` ("template" | "ai") and `grounding_passed` exist so the evaluation harness can query comparisons directly.
+Track/RF/source-health specialisations live in the observation `payload` (typed via Pydantic), keeping the canonical table stable as sources are added. `hypotheses.generator` and `grounding_passed` exist so the evaluation harness can query comparisons directly.
+
+`hypotheses.generator` takes **`"template" | "local" | "hosted"`** — widened from the original `"template" | "ai"`. Set the three values now, while the table is unpopulated: `"local"` is the v1 AI arm, and `"hosted"` reserves the contingency comparison arm described in section 10 without a later migration. Recording *which* AI backend produced a hypothesis, not merely that one did, is what makes the comparison queryable if a third arm is ever run.
 
 ---
 
 ## 10. Tech Stack
 
-**Frontend:** React, TypeScript, Vite, Tailwind, Vitest + Testing Library, Zustand (if needed), Mapbox GL JS behind a `MapView` adapter (graceful placeholder when `VITE_MAPBOX_TOKEN` is missing), Recharts.
+**Frontend:** React, TypeScript, Vite, Tailwind, Vitest + Testing Library, Zustand (if needed), **MapLibre GL JS** behind a `MapView` adapter (graceful placeholder when no tile source is configured), Recharts.
+
+*Map library — decided.* MapLibre GL JS replaces Mapbox GL JS. It is the open-source fork with a near-identical API, needs no account or access token, and can be pointed at free tile sources. This removes the last hosted third-party dependency from the stack and keeps the project's running cost at zero. The `MapView` adapter boundary is what makes the choice cheap and reversible: no other component imports a map library directly, so switching back to Mapbox (for a specific basemap style, say) is a one-file change. Decide before building `MapView`, not after.
 
 **Backend:** Python, FastAPI, Pydantic, SQLAlchemy, Uvicorn, Pytest. No Celery, no APScheduler complexity — a simple loop or on-demand replay is enough.
 
 **Data:** PostgreSQL + PostGIS.
 
-**AI:** One hosted LLM API (named in the proposal), called from a single service module. Pandas/NumPy for the evaluation harness.
+**AI:** A **locally-hosted open-weight LLM** (Ollama, or `llama-cpp-python` + GBNF grammar), called from a single provider-agnostic service module. Pandas/NumPy for the evaluation harness.
+
+*AI hosting — decided.* The AI generator runs locally rather than against a hosted API. Rationale, in order of weight to the thesis:
+
+1. **Reproducibility.** Pinned weights + fixed seed + temperature 0 is near-deterministic and will still be reproducible at viva. Hosted models are deprecated on published schedules and cannot be pinned indefinitely.
+2. **Offline demo.** Satisfies the section 12 reliability requirement (no live-API dependency in demos) for the AI layer, not just the data layer. No API key, no network needed in an exam room.
+3. **Zero marginal cost** across hundreds of evaluation runs, and no data egress.
+
+Cost is the weakest of the three and should not be overstated in the write-up: a full hosted evaluation campaign would have been on the order of £20–30 with prompt caching and batch pricing, not a prohibitive figure.
+
+Implementation constraints:
+
+- **The model runs on the host, not in a container.** Docker Desktop on macOS does not pass through Metal, so a containerised runtime silently falls back to CPU at roughly an order of magnitude less throughput. Ollama runs natively; the backend container reaches it via `host.docker.internal`. It is a Compose *config value*, not a Compose service.
+- **Batch throughput is the real constraint, not quality.** Hypotheses are short and constrained-decoded, but a full campaign is still hours of wall time. Iterate against a small fast model; run the final campaign against the chosen model overnight. Plan this into the M9 schedule rather than discovering it late.
+- **The service module stays provider-agnostic** — interface is `evidence_bundle → validated hypothesis`, provider behind a config value. This keeps the hosted-comparison option (below) open at near-zero cost, and doubles as a second data point for the RQ1 extensibility claim.
+
+*Known risk.* A local open-weight model produces weaker *prose* — title, uncertainty statement, alternative explanations — than a frontier hosted model. Schema validity and grounding are unaffected (both are checked deterministically), but the blind-scored hypothesis-quality rubric may show a narrower or null template-vs-AI gap than a frontier model would. Two mitigations: (a) a null result is a legitimate, reportable finding, particularly when paired with grounding-check catch rates; (b) a small contingency budget (~£5) allows one additional hosted arm over the same evidence bundles if the comparison looks marginal at analysis time. Mitigation (b) only works if the service module is provider-agnostic from the start — which is why that is a build constraint above and not an aspiration.
 
 **DevOps:** Docker, Docker Compose, GitHub Actions (backend tests, frontend tests/build, lint), Ruff, Black, ESLint. Basic dependency audit only.
 
@@ -441,7 +474,7 @@ As a researcher, I want template and AI hypotheses stored with a generator flag 
 
 ## 12. Non-Functional Requirements
 
-**Reliability:** replay mode is the default (no live-API dependency in demos); the backend handles missing/malformed data by quarantining, not crashing; the UI always shows the data mode (synthetic/replayed).
+**Reliability:** replay mode is the default (no live-API dependency in demos); the backend handles missing/malformed data by quarantining, not crashing; the UI always shows the data mode (synthetic/replayed). With a local model and a tokenless map library, the whole system demos offline — no API key, no network, no third-party account. The one runtime dependency outside the Compose stack is the model server on the host; the UI must degrade gracefully (fall back to the template generator, surface the state) when it is unreachable, rather than erroring.
 
 **Explainability:** every hypothesis includes supporting evidence, uncertainty, and alternatives; every supporting-evidence item is machine-traceable to the bundle; confidence levels are categorical and their meaning documented.
 
@@ -516,6 +549,18 @@ WebSocket live feed
 TimescaleDB time-series optimisation
 Cloud deployment (ECS Fargate, Terraform), RBAC, audit logging
 Confidence calibration and analyst agreement-rate tracking
+Hosted frontier-model comparison arm (`generator = "hosted"`) over the same
+  evidence bundles, to quantify how much of the hypothesis-quality gap is
+  attributable to model capability vs. to the constrained-generation design.
+  Retained as a contingency in v1 (see section 10) rather than promised
+Trino/MinIO OpenSky access for date- or region-specific replay corpora beyond
+  the static snapshot's Monday-only coverage
+Lakehouse storage substrate beneath the DAL at operational ingest volumes:
+  Parquet on object storage (MinIO/S3) under an Iceberg table format with a
+  REST catalog (e.g. Lakekeeper), Trino for cross-run analytical queries;
+  PostgreSQL retained for the transactional hypothesis/feedback tables.
+  Rejected for v1 on workload grounds, not capability grounds — see the
+  storage-substrate subsection in `thesis_notes.md`
 ```
 
 ---

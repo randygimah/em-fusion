@@ -50,18 +50,19 @@ Scope v2 changes: three screens only (Operational Picture, Hypothesis Detail, Sc
 - [ ] Improve the top status bar using the design tokens from `DESIGN.md`; include data-mode badge, scenario badge, and a compact system-health strip (not a screen).
 - [ ] Create a map placeholder component with aircraft, RF sensor, and anomaly-zone labels.
 - [ ] Add RF observations and aircraft tracks as panels/tabs inside the Operational Picture — not separate screens.
-- [ ] Keep Mapbox behind a future `MapView` boundary rather than spreading map logic through the app.
+- [ ] Keep the map library behind a future `MapView` boundary rather than spreading map logic through the app.
 - [ ] Add a timeline strip with two or three scenario events.
 - [ ] Test the main analyst story, not the exact layout mechanics.
 
-## Phase 4: Mapbox Boundary
+## Phase 4: MapView Boundary
 
-- [ ] Install Mapbox GL JS only when the placeholder no longer teaches enough.
-- [ ] Add `.env.example` with `VITE_MAPBOX_TOKEN`.
-- [ ] Create a small `MapView` adapter component.
-- [ ] Show a graceful placeholder if the token is missing.
+- [ ] Install MapLibre GL JS only when the placeholder no longer teaches enough. (MapLibre, not Mapbox — no account or token needed; see `em_fusion_v2.md` section 10.)
+- [ ] Pick a free tile source and add `.env.example` with its URL.
+- [ ] Create a small `MapView` adapter component — the only file that imports the map library.
+- [ ] Show a graceful placeholder if no tile source is configured.
 - [ ] Mock `MapView` in React tests.
 - [ ] Manually verify the real map in the browser.
+- [ ] Record the diff size for the boundary — it is a cheap second data point for the RQ1 substitutability argument (`thesis_notes.md`).
 
 ## Phase 5: FastAPI Contract Mirror
 
