@@ -155,10 +155,18 @@ Every evidence item must trace to a stored anomaly or observation.
 
 #### 5. Constrained AI Hypothesis Layer
 
-Two generators, same output schema:
+**Three generators, one output schema.** All three are called with the evidence bundle and nothing else, at temperature 0 with schema-constrained output, behind a single provider-agnostic service module (`evidence_bundle → validated hypothesis`, provider selected by config):
 
-- **Template-based generator** — built first. It is both the fallback and the evaluation comparison baseline.
-- **AI generator** — a **locally-hosted open-weight LLM** called with the evidence bundle, fixed seed, temperature 0, schema-constrained decoding. Runs on the developer machine via Ollama (or `llama-cpp-python` with a GBNF grammar where tighter control is needed); the backend reaches it over HTTP behind a single provider-agnostic service module. See section 10 for the rationale and the retained hosted-comparison option.
+- **Template generator** (`generator = "template"`) — built first. It is the correctness fallback *and* the evaluation comparison baseline. No model involved.
+- **Hosted AI generator** (`generator = "hosted"`) — **the primary AI arm.** A frontier model via API, using native JSON-schema-constrained output so schema conformance stays a generation-time guarantee (see the validation pipeline below). A dated model ID is pinned, never a moving alias.
+- **Local AI generator** (`generator = "local"`) — **the second evaluation arm and the availability fallback.** A locally-hosted open-weight model via Ollama (or `llama-cpp-python` + GBNF grammar), running on the host and reached over HTTP. Same bundles, same schema, same grounding check.
+
+Two distinct fallbacks, easy to conflate — keep them separate in code and in the write-up:
+
+- **Availability fallback:** hosted unreachable (no network, no key, rate limited) → local. Restores the offline-demo guarantee in section 12.
+- **Correctness fallback:** schema or grounding failure after bounded retry → template. Applies identically to either model arm.
+
+Running both model arms over identical evidence bundles is the design, not a contingency. See section 10 for the rationale and the research question it upgrades.
 
 Output schema (Pydantic-enforced):
 
@@ -174,7 +182,7 @@ recommended_human_action
 
 Validation pipeline:
 
-1. **Schema conformance is a generation-time guarantee, not a post-hoc check.** Constrained decoding (a grammar compiled from the JSON Schema) makes structurally invalid output unrepresentable — malformed JSON, missing required fields, and out-of-enum confidence values cannot be emitted. Pydantic validation still runs as defence-in-depth and to enforce what a grammar cannot express (cross-field constraints, referential checks against the bundle); on failure, bounded retry → fall back to template generator. Retry rate is expected to be near zero and is logged so that assumption is evidenced rather than asserted.
+1. **Schema conformance is a generation-time guarantee, not a post-hoc check** — on *both* model arms. The hosted arm uses the API's native JSON-schema-constrained output; the local arm uses a grammar compiled from the same JSON Schema. Either way, structurally invalid output is unrepresentable: malformed JSON, missing required fields, and out-of-enum confidence values cannot be emitted. One schema, two enforcement mechanisms, identical guarantee — so this is not a property the project gains or loses by choosing a provider. Pydantic validation still runs as defence-in-depth and to enforce what a schema cannot express (cross-field constraints, referential checks against the bundle); on failure, bounded retry → fall back to template generator. Retry rate is expected to be near zero and is logged per arm so that assumption is evidenced rather than asserted.
 2. **Automated grounding check**: every supporting-evidence string must trace back to the evidence bundle. Ungrounded hypotheses are flagged or rejected, and the catch rate is logged — it is a reportable evaluation result, not just a safety net.
 
 Step 1 constrains *shape*; step 2 constrains *truth*. Constrained decoding guarantees `supporting_evidence` is a well-formed list of correctly-typed items — it says nothing about whether the rule IDs inside those items exist in the bundle. The grounding check is therefore the load-bearing safeguard, and its catch rate is the more interesting measurement of the two.
@@ -243,7 +251,8 @@ A first-class deliverable, not an afterthought:
 - Batch runner: 20–30 randomised runs per scenario type from parameters + seeds
 - Computes precision, recall, F1, false positive rate, false negative rate, detection latency (simulated time)
 - Exports CSV/JSON for thesis tables and charts
-- Generates anonymised template-vs-AI hypothesis pairs for blind rubric scoring; produces N AI generations per bundle and records grounding variance
+- Generates anonymised hypotheses from all three generators over identical bundles for blind rubric scoring — hosted-vs-template at full N as the primary comparison, local-vs-hosted as a smaller secondary sample (scoring is human time, and three arms is 3× the pairs)
+- Produces N generations per bundle per model arm and records grounding variance and retry rate per arm
 - Dry-run the full evaluation once in early October before the real runs
 
 ---
@@ -380,6 +389,9 @@ erDiagram
         int id
         int bundle_id
         string generator
+        string model_id
+        json generation_params
+        text raw_response
         string title
         string confidence
         string status
@@ -412,7 +424,9 @@ erDiagram
 
 Track/RF/source-health specialisations live in the observation `payload` (typed via Pydantic), keeping the canonical table stable as sources are added. `hypotheses.generator` and `grounding_passed` exist so the evaluation harness can query comparisons directly.
 
-`hypotheses.generator` takes **`"template" | "local" | "hosted"`** — widened from the original `"template" | "ai"`. Set the three values now, while the table is unpopulated: `"local"` is the v1 AI arm, and `"hosted"` reserves the contingency comparison arm described in section 10 without a later migration. Recording *which* AI backend produced a hypothesis, not merely that one did, is what makes the comparison queryable if a third arm is ever run.
+`hypotheses.generator` takes **`"template" | "local" | "hosted"`** — widened from the original `"template" | "ai"`. All three are populated in v1: `"hosted"` is the primary AI arm, `"local"` the second arm and availability fallback, `"template"` the baseline. Recording *which* backend produced a hypothesis, not merely that one did, is what makes the three-way comparison queryable.
+
+Three further hypothesis columns exist for reproducibility rather than for the UI: **`model_id`** (the exact dated model identifier, never an alias), **`generation_params`** (temperature, seed, max tokens), and **`raw_response`** (the model's verbatim output before parsing). `raw_response` is the mitigation for hosted-model retirement — the evaluation artefacts survive as stored evidence even when the model behind them no longer exists. It costs one `TEXT` column and is not retrofittable after a campaign has run.
 
 ---
 
@@ -420,29 +434,36 @@ Track/RF/source-health specialisations live in the observation `payload` (typed 
 
 **Frontend:** React, TypeScript, Vite, Tailwind, Vitest + Testing Library, Zustand (if needed), **MapLibre GL JS** behind a `MapView` adapter (graceful placeholder when no tile source is configured), Recharts.
 
-*Map library — decided.* MapLibre GL JS replaces Mapbox GL JS. It is the open-source fork with a near-identical API, needs no account or access token, and can be pointed at free tile sources. This removes the last hosted third-party dependency from the stack and keeps the project's running cost at zero. The `MapView` adapter boundary is what makes the choice cheap and reversible: no other component imports a map library directly, so switching back to Mapbox (for a specific basemap style, say) is a one-file change. Decide before building `MapView`, not after.
+*Map library — decided.* MapLibre GL JS replaces Mapbox GL JS. It is the open-source fork with a near-identical API, needs no account or access token, and can be pointed at free tile sources. That keeps the data and presentation layers free of any hosted dependency — the AI layer is the sole exception and the sole running cost. The `MapView` adapter boundary is what makes the choice cheap and reversible: no other component imports a map library directly, so switching back to Mapbox (for a specific basemap style, say) is a one-file change. Decide before building `MapView`, not after.
 
 **Backend:** Python, FastAPI, Pydantic, SQLAlchemy, Uvicorn, Pytest. No Celery, no APScheduler complexity — a simple loop or on-demand replay is enough.
 
 **Data:** PostgreSQL + PostGIS.
 
-**AI:** A **locally-hosted open-weight LLM** (Ollama, or `llama-cpp-python` + GBNF grammar), called from a single provider-agnostic service module. Pandas/NumPy for the evaluation harness.
+**AI:** A **hosted frontier LLM via API** as the primary generator, with a **locally-hosted open-weight model** (Ollama, or `llama-cpp-python` + GBNF grammar) as the second evaluation arm and availability fallback. Both called from a single provider-agnostic service module. Pandas/NumPy for the evaluation harness.
 
-*AI hosting — decided.* The AI generator runs locally rather than against a hosted API. Rationale, in order of weight to the thesis:
+*AI hosting — decided.* The primary AI generator is a hosted frontier model; the local model is retained as a real, exercised second arm rather than dead code. Rationale, in order of weight to the thesis:
 
-1. **Reproducibility.** Pinned weights + fixed seed + temperature 0 is near-deterministic and will still be reproducible at viva. Hosted models are deprecated on published schedules and cannot be pinned indefinitely.
-2. **Offline demo.** Satisfies the section 12 reliability requirement (no live-API dependency in demos) for the AI layer, not just the data layer. No API key, no network needed in an exam room.
-3. **Zero marginal cost** across hundreds of evaluation runs, and no data egress.
+1. **It protects RQ3.** The central AI research question compares a constrained AI generator against a template baseline. A weaker model narrows that gap for reasons that have nothing to do with the architecture under study, making a null result ambiguous — was it the constraint design, or just a small model? A frontier model removes that confound: whatever gap appears (or fails to) is attributable to the design rather than to capability starvation.
+2. **Schedule.** Batch throughput was the binding constraint on the M9 campaign under a local-only plan — hours of wall time, effectively one attempt. With batch pricing and request concurrency the campaign becomes short enough to re-run after finding a bug, which in a time-boxed dissertation is worth more than the fee.
+3. **Development velocity.** No model server to operate, quantise, or tune during the phases where the *pipeline* is the thing being built. Native schema-constrained output works from the first call.
 
-Cost is the weakest of the three and should not be overstated in the write-up: a full hosted evaluation campaign would have been on the order of £20–30 with prompt caching and batch pricing, not a prohibitive figure.
+**Cost is accepted, not minimised.** A full campaign is on the order of £20–30 with prompt caching and batch pricing; the local arm adds no marginal cost. This is a deliberate spend, and the write-up should say so plainly rather than dressing it up as a technical constraint.
+
+**What this gives up, and how it is covered.** Reproducibility at viva was the original argument for local-primary, and it was overweighted. Evaluation artefacts are *persisted* — every hypothesis is stored with its `model_id`, `generation_params`, and `raw_response` — so results are defensible as recorded evidence even after a model is retired. What is genuinely lost is the ability to *regenerate* the hosted arm from scratch years later; the deterministic pipeline (seed → data → detection → evidence bundle) is unaffected, and the local arm remains fully regenerable indefinitely. That is an acceptable trade, but it is a trade, and it holds only if the persistence above is built *before* the campaign runs.
+
+*Why the local arm stays — it is not just insurance.* Running both models over identical evidence bundles upgrades the research question from "does an AI generator beat a template?" to **"how much of hypothesis quality comes from model capability versus from the constrained-generation architecture?"** Both outcomes are informative: if the local arm approaches the hosted one, the finding is that the architecture carries the quality and the system runs offline on commodity hardware; if the hosted arm leads clearly, the capability contribution is quantified. The two-arm design could only produce one interesting result; the three-arm design produces one either way. The marginal cost is a second generation pass over bundles that already exist.
 
 Implementation constraints:
 
-- **The model runs on the host, not in a container.** Docker Desktop on macOS does not pass through Metal, so a containerised runtime silently falls back to CPU at roughly an order of magnitude less throughput. Ollama runs natively; the backend container reaches it via `host.docker.internal`. It is a Compose *config value*, not a Compose service.
-- **Batch throughput is the real constraint, not quality.** Hypotheses are short and constrained-decoded, but a full campaign is still hours of wall time. Iterate against a small fast model; run the final campaign against the chosen model overnight. Plan this into the M9 schedule rather than discovering it late.
-- **The service module stays provider-agnostic** — interface is `evidence_bundle → validated hypothesis`, provider behind a config value. This keeps the hosted-comparison option (below) open at near-zero cost, and doubles as a second data point for the RQ1 extensibility claim.
+- **The service module is provider-agnostic and this is now load-bearing**, not insurance. Interface is `evidence_bundle → validated hypothesis`; provider, model ID, and generation params come from config. It doubles as a second data point for the RQ1 extensibility claim.
+- **Pin a dated model ID, never a moving alias**, and record it per hypothesis. An alias silently changing mid-campaign would invalidate the comparison without any visible failure.
+- **Persist raw responses verbatim** alongside the parsed hypothesis. This is the reproducibility mitigation above and cannot be added retroactively.
+- **Hard spend cap configured at the provider console**, plus a run-level call budget in the harness. The realistic route to an unexpected bill is a retry loop, not the campaign itself.
+- **The local arm runs on the host, not in a container.** Docker Desktop on macOS does not pass through Metal, so a containerised runtime silently falls back to CPU at roughly an order of magnitude less throughput. Ollama runs natively; the backend container reaches it via `host.docker.internal`. It is a Compose *config value*, not a Compose service.
+- **Exercise the fallback deliberately.** The offline-demo requirement in section 12 is now satisfied *only* through the local arm. An untested fallback path is an unbacked claim — see the Track 0 and Phase 9 checks in `implementation.md`.
 
-*Known risk.* A local open-weight model produces weaker *prose* — title, uncertainty statement, alternative explanations — than a frontier hosted model. Schema validity and grounding are unaffected (both are checked deterministically), but the blind-scored hypothesis-quality rubric may show a narrower or null template-vs-AI gap than a frontier model would. Two mitigations: (a) a null result is a legitimate, reportable finding, particularly when paired with grounding-check catch rates; (b) a small contingency budget (~£5) allows one additional hosted arm over the same evidence bundles if the comparison looks marginal at analysis time. Mitigation (b) only works if the service module is provider-agnostic from the start — which is why that is a build constraint above and not an aspiration.
+*Known risks.* Two, both manageable: (a) **human scoring load** — three arms is 3× the blind-rubric pairs, which may not fit 3–6 participants, so hosted-vs-template is the primary comparison at full N and local-vs-hosted a smaller secondary sample, decided before M9 rather than during; (b) **data egress** — evidence bundles now leave the machine. All content is synthetic or replayed open data, so this is expected to be a non-issue, but it intersects the employer clearance conversation already in Track 0 and is cheaper to confirm early than to discover late.
 
 **DevOps:** Docker, Docker Compose, GitHub Actions (backend tests, frontend tests/build, lint), Ruff, Black, ESLint. Basic dependency audit only.
 
@@ -467,14 +488,17 @@ As an analyst, I want to confirm, reject, or mark a hypothesis as needing more e
 As an engineer, I want every scenario run reproducible from type + parameters + seed so that evaluation results can be regenerated exactly.
 As an engineer, I want the AI layer to receive only structured evidence bundles so that hypotheses cannot be based on invented evidence.
 As a researcher, I want batch runs with exported metrics so that detection performance has statistical weight.
-As a researcher, I want template and AI hypotheses stored with a generator flag so that blind comparison is queryable.
+As a researcher, I want template, hosted-AI, and local-AI hypotheses stored with a generator flag and model ID so that three-way blind comparison is queryable.
+As a researcher, I want raw model responses persisted so that results stay defensible after a hosted model is retired.
 ```
 
 ---
 
 ## 12. Non-Functional Requirements
 
-**Reliability:** replay mode is the default (no live-API dependency in demos); the backend handles missing/malformed data by quarantining, not crashing; the UI always shows the data mode (synthetic/replayed). With a local model and a tokenless map library, the whole system demos offline — no API key, no network, no third-party account. The one runtime dependency outside the Compose stack is the model server on the host; the UI must degrade gracefully (fall back to the template generator, surface the state) when it is unreachable, rather than erroring.
+**Reliability:** replay mode is the default (no live-API dependency for *data* in demos); the backend handles missing/malformed data by quarantining, not crashing; the UI always shows the data mode (synthetic/replayed). The data and map layers have no hosted dependency at all — archived replay, tokenless tiles.
+
+The AI layer is the one component with a network dependency, and it degrades in two steps rather than failing: **hosted unreachable → local model → template generator.** This must hold without an error state reaching the analyst, and the UI must surface *which* generator produced a hypothesis rather than hiding the degradation. With the local arm configured, the whole system still demos offline — no API key, no network, no third-party account — which is the requirement that makes the local arm non-optional regardless of its evaluation role. Both fallback hops are tested paths, not theoretical ones.
 
 **Explainability:** every hypothesis includes supporting evidence, uncertainty, and alternatives; every supporting-evidence item is machine-traceable to the bundle; confidence levels are categorical and their meaning documented.
 
@@ -549,10 +573,9 @@ WebSocket live feed
 TimescaleDB time-series optimisation
 Cloud deployment (ECS Fargate, Terraform), RBAC, audit logging
 Confidence calibration and analyst agreement-rate tracking
-Hosted frontier-model comparison arm (`generator = "hosted"`) over the same
-  evidence bundles, to quantify how much of the hypothesis-quality gap is
-  attributable to model capability vs. to the constrained-generation design.
-  Retained as a contingency in v1 (see section 10) rather than promised
+Additional model arms beyond the two in v1 (e.g. a mid-size open-weight model
+  between the local and hosted arms) to place the capability/architecture
+  trade-off on a curve rather than at two points
 Trino/MinIO OpenSky access for date- or region-specific replay corpora beyond
   the static snapshot's Monday-only coverage
 Lakehouse storage substrate beneath the DAL at operational ingest volumes:

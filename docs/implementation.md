@@ -20,6 +20,7 @@ Scope v2 changes: three screens only (Operational Picture, Hypothesis Detail, Sc
 - [ ] Submit the university ethics application for the user study (approval can take 4–8 weeks — do not wait until October).
 - [ ] Get written employer confirmation: colleague participation, thesis screenshots, repo visibility (public vs private-with-examiner-access).
 - [ ] Confirm in writing whether the employer requires pre-submission review of EW/GNSS-related material.
+- [ ] Confirm the employer's position on **data egress to a hosted AI API** — evidence bundles will leave the machine. Content is synthetic or replayed open data, so this is expected to be a non-issue, but fold it into the clearance conversation rather than discovering it after the campaign. Blocks the hosted arm, not the build.
 - [ ] Download and archive the OpenSky historical dataset once; record licence/attribution requirements.
 - [ ] Define detection latency precisely (simulated scenario time, not wall clock) before any measurement code exists.
 - [ ] Recruit 3–6 user-study participants by early October.
@@ -77,6 +78,7 @@ Scope v2 changes: three screens only (Operational Picture, Hypothesis Detail, Sc
 
 - [ ] Add PostgreSQL + PostGIS via Docker Compose (backend + db services now; frontend service can join in Phase 11).
 - [ ] Create the core schema: observations, track/RF/source-health payloads, anomaly events, hypotheses, analyst feedback.
+- [ ] Include the reproducibility columns on `hypotheses` now: `generator` (`template|local|hosted`), `model_id`, `generation_params`, `raw_response`. Cheap while the table is empty; a migration plus an un-rerunnable campaign afterwards.
 - [ ] Add a repository layer; keep SQL/spatial logic out of route handlers.
 - [ ] Implement at least one real spatial query (track discontinuities within N km of an RF anomaly zone) — this is the PostGIS justification.
 - [ ] Add a migration approach (even a simple ordered-SQL-files convention) and document it.
@@ -101,15 +103,46 @@ Scope v2 changes: three screens only (Operational Picture, Hypothesis Detail, Sc
 - [ ] Build the evidence bundle builder: grouped anomalies, source lineage, rule IDs, known uncertainties.
 - [ ] Test: every evidence item in a bundle traces to a stored anomaly/observation.
 
+## Phase 8.5: AI Layer Prerequisites (gate — settle before writing model code)
+
+None of this blocks the **template generator**, which is the first thing built in Phase 9 and needs no model at all. It gates the two *model* arms. The point of a gate is that these are all cheap now and expensive-to-impossible after a campaign has run.
+
+**Decisions to fix and write down (no code):**
+
+- [ ] Choose the hosted model and **pin a dated model ID, not a moving alias**. An alias changing mid-campaign invalidates the comparison with no visible failure.
+- [ ] Choose the local model and quantisation; confirm it loads on the host and emits schema-valid output before committing to it as the second arm.
+- [ ] Fix generation parameters once — temperature 0, seed, max tokens — and freeze them across arms. Different params across arms make the comparison meaningless.
+- [ ] Decide **N generations per bundle per arm**. This multiplies both cost and campaign wall-time, and drives the grounding-variance measurement. Pick it deliberately, not by drifting upward.
+- [ ] Decide the **total spend ceiling** for the project and the expected campaign cost within it.
+- [ ] Decide the blind-scoring split — hosted-vs-template at full N, local-vs-hosted as a smaller secondary sample. Fix before M9; adjusting it after seeing results is a validity problem, not a scheduling one.
+- [ ] Confirm the Track 0 data-egress item is closed.
+
+**Implementation prerequisites (build before the first real call):**
+
+- [ ] Define the provider-agnostic service interface (`evidence_bundle → validated hypothesis`) **before** either provider is written, so neither provider's shape leaks into it. Provider, model ID, and params come from config.
+- [ ] API key in an environment variable with a `.env.example` entry — never committed, never in a fixture.
+- [ ] **Hard spend cap set at the provider console.** Do this before the first call, not after the first surprise.
+- [ ] **Run-level call budget in the code** that aborts the run when exceeded. The console cap is the backstop; this is the thing that catches a retry loop in minutes rather than at the billing boundary.
+- [ ] Bounded retry with an explicit ceiling and no unbounded recursion — the realistic route to an unexpected bill is a loop bug, not the campaign.
+- [ ] Per-call logging of tokens and cost from the very first call. Retrofitting this loses the development-phase spend data that makes the campaign estimate credible.
+- [ ] Verify the `hypotheses` reproducibility columns from Phase 6 exist and are actually populated end to end.
+- [ ] Verify the backend container reaches the host model server via `host.docker.internal` — Docker Desktop on macOS does not pass Metal through, so the model server runs on the host as a Compose config value, never as a Compose service.
+- [ ] Smoke-test on **3 bundles before scaling to any batch** — read the output by hand. Cheapest possible check that the prompt and schema are right.
+
 ## Phase 9: Constrained AI Hypothesis Layer (RQ3 — core deliverable)
 
 - [ ] Define the hypothesis output schema in Pydantic (title, confidence Low/Medium/High only, summary, supporting evidence, uncertainty, alternatives, recommended action).
-- [ ] Build the template-based hypothesis generator first — it is both the fallback and the evaluation comparison baseline.
-- [ ] Implement the AI call: fixed low temperature, evidence bundle in, JSON out, bounded retry on invalid JSON, fall back to template generator on repeated failure.
-- [ ] Implement the automated grounding check: every supporting-evidence item must trace back to the bundle; flag or reject ungrounded hypotheses; log the catch rate (this is a reportable result).
-- [ ] Keep confidence as Low, Medium, or High — no fake numerical precision.
-- [ ] Test with mocked AI responses: valid output passes, invalid JSON retries then falls back, ungrounded claims are caught.
-- [ ] Update README with the constrained-AI design and why it is safer.
+- [ ] Build the template-based hypothesis generator first — it is the correctness fallback *and* the evaluation baseline. No model dependency; nothing in Phase 8.5 blocks it.
+- [ ] Implement the hosted AI generator (primary arm) using native JSON-schema-constrained output, so schema conformance is a generation-time guarantee rather than a post-hoc check.
+- [ ] Implement the local AI generator (second arm) against the *same* schema via a GBNF grammar. One schema, two enforcement mechanisms, identical guarantee.
+- [ ] Persist `generator`, `model_id`, `generation_params`, and verbatim `raw_response` on every hypothesis, both arms.
+- [ ] Implement the two fallbacks as **separate** paths and keep them separate in code: **availability** (hosted unreachable → local) and **correctness** (schema/grounding failure after bounded retry → template).
+- [ ] Implement the automated grounding check: every supporting-evidence item must trace back to the bundle; flag or reject ungrounded hypotheses; log the catch rate **per arm** (this is a reportable result).
+- [ ] Keep confidence as Low, Medium, or High — no fake numerical precision. The constrained schema should make anything else unrepresentable rather than merely rejected.
+- [ ] Surface the producing generator in the UI — a hypothesis produced by a fallback must be visibly distinguishable, not silently substituted.
+- [ ] Test with mocked responses: valid output passes; invalid output retries then falls back to template; hosted-unreachable falls back to local; ungrounded claims are caught.
+- [ ] **Exercise the offline path deliberately** — network off, no API key, full pipeline still produces hypotheses via the local arm. The section 12 reliability claim now rests entirely on this, and an untested fallback is an unbacked claim.
+- [ ] Update README with the constrained-AI design, the three generators, and why the arrangement is safer.
 
 ## Phase 10: Analyst Feedback and Scenario Control
 
@@ -124,7 +157,9 @@ Scope v2 changes: three screens only (Operational Picture, Hypothesis Detail, Sc
 - [ ] Batch runner: execute 20–30 randomised runs per scenario type from parameters + seeds.
 - [ ] Compute precision, recall, F1, false positive rate, false negative rate, and detection latency (in simulated time, per the Track 0 definition).
 - [ ] Export results to CSV/JSON for thesis tables and charts.
-- [ ] Generate hypothesis pairs (template vs AI) per bundle, anonymised for blind rubric scoring; produce N AI generations per bundle and record grounding variance.
+- [ ] Generate hypotheses from all three generators over identical bundles, anonymised for blind rubric scoring; primary comparison hosted-vs-template at full N, secondary local-vs-hosted at reduced N (per the Phase 8.5 decision).
+- [ ] Produce N generations per bundle per model arm; record grounding catch rate, grounding variance, and retry rate **per arm**.
+- [ ] Record actual campaign cost and wall-time per arm — both are write-up material, and the cost figure is what makes the "deliberate spend" claim in `thesis_notes.md` concrete.
 - [ ] Late-project extensibility demonstration: add a third source adapter and record files touched, lines changed, and hours taken (RQ1 evidence).
 - [ ] Dry-run the full evaluation once in early October before the real runs.
 

@@ -116,62 +116,90 @@ deviations, the third-adapter extensibility measurement for RQ1 (files touched /
 hours taken), AI integration details (prompt design, schema validation, retry/fallback logic,
 grounding-check implementation). -->
 
-### AI hosting: a locally-hosted open-weight model
+### AI hosting: a hosted frontier model, with a local model as a second arm
 
-The proposal specified a hosted LLM API. The implementation uses a locally-hosted open-weight model
-instead, run via Ollama on the development machine (Apple silicon, 48 GB unified memory) behind a
-provider-agnostic service module. The justification is ordered deliberately, because the weakest
-argument is the one most likely to be over-claimed:
+The design went through a reversal worth recording, because the reasoning behind the reversal is
+more useful to the write-up than either endpoint. An intermediate design made a locally-hosted
+open-weight model the sole AI generator, on reproducibility grounds. The implemented design uses a
+**hosted frontier model as the primary generator and retains the local model as a genuine second
+evaluation arm** rather than as dead-code insurance. Both run behind one provider-agnostic service
+module over identical evidence bundles.
 
-1. **Reproducibility.** Pinned weights plus a fixed seed at temperature 0 is near-deterministic and
-   will still be reproducible at viva. Hosted models are deprecated on published retirement
-   schedules and cannot be pinned indefinitely — a result generated against a hosted model months
-   before submission may not be regenerable at examination time. For a dissertation whose central
-   evaluation claim rests on reproducible seeded runs, this is the substantive argument.
-2. **Offline demonstration.** Extends the existing no-live-API reliability requirement from the data
-   layer to the AI layer. The complete system — replay, detection, hypothesis generation, map —
-   demonstrates with no network, no API key, and no third-party account.
-3. **Cost and data locality.** Zero marginal cost across hundreds of evaluation runs, and no data
-   egress.
+**Why the local-only design was reconsidered.** Its lead argument was that pinned weights plus a
+fixed seed remain reproducible at viva, whereas hosted models are retired on published schedules.
+That argument was overweighted, and identifying why is itself a methodological point: evaluation
+artefacts are *persisted*, not regenerated on demand. Every hypothesis is stored with its
+`model_id`, `generation_params`, and verbatim `raw_response`, and the harness exports them. The
+reproducibility that the evaluation actually depends on is reproducibility of the **deterministic
+pipeline** — seed → replayed and synthetic data → detection → evidence bundle — which is entirely
+unaffected by where the model runs. What a hosted model genuinely forfeits is the ability to
+*regenerate* that arm from scratch after retirement; the stored artefacts, and the fully regenerable
+local arm, cover the rest. This is a real trade rather than a dismissed one, and it holds only
+because the persistence was built before the campaign ran.
 
-**Do not overstate the cost argument.** A full hosted evaluation campaign was costed at roughly
-£20–30 using prompt caching and batch pricing — real but not prohibitive. Presenting cost as the
-driver would be an inaccurate account of the decision and weaker than the reproducibility argument
-it would displace.
+**Why hosted-primary, in order of weight:**
 
-**Known risk, and why it is acceptable.** A local open-weight model produces weaker prose — the
-hypothesis title, uncertainty statement, and alternative explanations — than a frontier hosted
-model. Schema validity and grounding are unaffected, as both are enforced deterministically
-(below), but the blind-scored hypothesis-quality rubric may show a narrower or null template-vs-AI
-gap than a frontier model would have produced. This is a direct threat to one research question and
-is recorded as such rather than discovered at analysis time. Two mitigations: a null result is a
-legitimate and reportable finding, particularly when reported alongside grounding-check catch rates
-(the negative result "a locally-hosted constrained model did not measurably outperform a
-well-constructed template baseline on analyst-rated quality" is itself informative about where the
-value in this architecture actually sits); and a small contingency budget permits one additional
-hosted arm over identical evidence bundles if the comparison looks marginal. The contingency is only
-exercisable because the service module is provider-agnostic and `hypotheses.generator` was widened
-to `"template" | "local" | "hosted"` before the table was populated — a decision made cheaply up
-front that would have been a migration later.
+1. **It protects the research question.** The AI research question compares constrained AI
+   generation against a template baseline. A capability-starved model narrows that gap for reasons
+   unrelated to the architecture under study, so a null result would be uninterpretable — attributable
+   either to the constraint design or simply to model size. A frontier model removes the confound:
+   whatever gap emerges is attributable to the design.
+2. **Schedule.** Batch throughput, not quality, was the binding constraint under the local-only plan
+   — a full campaign was hours of wall time, effectively affording one attempt. Batch pricing and
+   request concurrency make the campaign re-runnable after a bug is found, which in a time-boxed
+   project is worth more than the fee.
+3. **Development velocity.** No model server to operate or tune during the phases where the pipeline
+   itself is what is being built.
 
-**Implementation constraints worth recording.** Docker Desktop on macOS does not pass Metal through
+**Cost is accepted, not minimised.** Roughly £20–30 for a full campaign with prompt caching and
+batch pricing. This should be stated plainly as a deliberate spend. Presenting it as anything else
+would misdescribe the decision — as would the earlier framing, which leaned on cost avoidance to
+support a choice made on other grounds.
+
+**Why the local arm is retained — and why it is not merely a fallback.** Running both models over
+identical bundles changes the question from *"does an AI generator beat a template?"* to **"how much
+of hypothesis quality comes from model capability versus from the constrained-generation
+architecture?"** — which is the more interesting question for a thesis whose subject is constraint.
+The outcomes are informative in both directions: if the local arm approaches the hosted one, the
+finding is that the architecture carries the quality and the system runs offline on commodity
+hardware; if the hosted arm leads clearly, the capability contribution is quantified. The two-arm
+design could only yield one interesting result; the three-arm design yields one either way. The
+local arm additionally satisfies the offline-demonstration requirement, which the hosted arm cannot.
+
+This was cheap only because `hypotheses.generator` was widened to `"template" | "local" | "hosted"`
+while the table was still unpopulated — a decision taken speculatively that turned out to be
+load-bearing, and that would have been a migration had it been deferred.
+
+**Two risks recorded in advance rather than discovered at analysis time.** First, **human scoring
+load**: three arms is three times the blind-rubric pairs, which may exceed what 3–6 participants can
+score. The plan is hosted-vs-template at full N as the primary comparison with local-vs-hosted as a
+smaller secondary sample, fixed before the campaign rather than adjusted after seeing results.
+Second, **data egress**: evidence bundles now leave the machine. All content is synthetic or
+replayed open data, so this is expected to be immaterial, but it intersects the employer-clearance
+track and was confirmed early rather than late.
+
+**Implementation constraint on the local arm.** Docker Desktop on macOS does not pass Metal through
 to containers, so a containerised model runtime silently falls back to CPU at roughly an order of
-magnitude less throughput; the model server therefore runs on the host and is reached from the
-backend container via `host.docker.internal`, making it a Compose config value rather than a Compose
-service. Separately, the binding constraint on local inference proved to be **batch throughput, not
-quality** — hypotheses are short and constrained-decoded, but a full campaign is still hours of wall
-time, which shapes the M9 schedule (iterate against a small model, run the final campaign against
-the chosen model overnight). *(Record the model finally used, quantisation, and measured
-tokens/sec and campaign wall-time here.)*
+magnitude less throughput. The model server therefore runs on the host (Apple silicon, 48 GB unified
+memory) and is reached from the backend container via `host.docker.internal` — a Compose config
+value, not a Compose service. *(Record the hosted model ID and the local model, quantisation, and
+measured tokens/sec here, along with actual campaign cost and wall-time.)*
 
 ### Schema conformance as a generation-time guarantee
 
 The original design treated schema validation as a post-hoc check with bounded retry and fallback.
-The implementation strengthens this: constrained decoding compiles the JSON Schema into a grammar,
-making structurally invalid output *unrepresentable* rather than merely detectable. Malformed JSON,
-missing required fields, and out-of-enum confidence values cannot be emitted at all. Notably, this
-also enforces the project's categorical-confidence rule mechanically — `Confidence: 87%` is not a
-value the decoder is able to produce.
+The implementation strengthens this: generation is constrained to the schema, making structurally
+invalid output *unrepresentable* rather than merely detectable. Malformed JSON, missing required
+fields, and out-of-enum confidence values cannot be emitted at all. Notably, this also enforces the
+project's categorical-confidence rule mechanically — `Confidence: 87%` is not a value the decoder is
+able to produce.
+
+Worth noting for the architecture argument: **one schema, two enforcement mechanisms, identical
+guarantee.** The hosted arm uses the API's native JSON-schema-constrained output; the local arm
+compiles the same schema into a GBNF grammar. Because the guarantee is a property of the schema
+rather than of a provider, the two model arms are comparable on prose quality without a confound
+from differing structural reliability — which is precisely what the three-way comparison requires.
+It also means the choice of provider carried no risk to this safeguard.
 
 Pydantic validation is retained as defence-in-depth and to enforce constraints a grammar cannot
 express (cross-field consistency, referential checks against the bundle), with bounded retry and
@@ -183,14 +211,16 @@ Constrained decoding guarantees `supporting_evidence` is a well-formed list of c
 items; it says nothing about whether the rule IDs inside those items exist in the evidence bundle.
 Hallucinated-but-well-formed evidence is exactly the failure mode the grounding check exists to
 catch, and it is the one a schema cannot address. This makes the grounding-check catch rate the more
-interesting of the two measurements, and it applies equally to a hosted model — the safeguard is not
-a workaround for using a smaller model.
+interesting of the two measurements. It applies identically to both model arms — the safeguard is a
+property of the architecture, not a compensation for model weakness — which makes per-arm grounding
+catch rates directly comparable and is one of the more useful numbers the three-arm design produces.
 
 ### Map library: MapLibre GL JS
 
 Mapbox GL JS was replaced with MapLibre GL JS — the open-source fork, near-identical API, no account
-or access token, usable with free tile sources. This removed the last hosted third-party dependency
-and brought the project's running cost to zero, consistent with the local-model decision above.
+or access token, usable with free tile sources. The data and presentation layers therefore carry no
+hosted dependency at all — archived replay, tokenless tiles — leaving the AI layer as the single
+deliberate exception and the project's only running cost.
 
 The point worth making in the write-up is architectural rather than about the library: the swap was
 a single-file change because the `MapView` adapter boundary was specified before any map code was
@@ -201,7 +231,9 @@ once the swap lands; it is a cheap second data point alongside the third-adapter
 
 ## Evaluation
 
-<!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency), hypothesis
-quality rubric results (template vs AI, blind scoring, inter-rater agreement if applicable),
-grounding-check catch rate, user study results (NASA-TLX, task completion, qualitative feedback),
-limitations encountered. -->
+<!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency); hypothesis
+quality rubric results across the three arms (template / local / hosted, blind scoring, inter-rater
+agreement if applicable) — primary comparison hosted-vs-template at full N, secondary
+local-vs-hosted at reduced N; grounding-check catch rate, grounding variance, and retry rate per
+arm; campaign cost and wall-time per arm; user study results (NASA-TLX, task completion,
+qualitative feedback); limitations encountered. -->
