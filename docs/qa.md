@@ -1,0 +1,409 @@
+# Concepts Q&A
+
+Running explanations of concepts used across the EM Fusion docs, written for reference while
+building and writing up. **This document is explanatory, not authoritative** — where it touches
+scope or technical decisions, `em_fusion_v2.md` is the source of truth and this file paraphrases it.
+Append new questions as they come up rather than rewriting old answers.
+
+---
+
+## 1. Will the synthetic RF data be designed to simulate specific EM anomalies?
+
+**Yes — but at the level of *observations*, not physics.**
+
+The distinction matters and is worth stating explicitly in the write-up, because it is a limitation
+someone will ask about.
+
+A real RF sensor does not emit radio waves into a database. It emits **summary measurements** taken
+over some window: "on band X, centred at frequency F, I measured signal power P, signal-to-noise
+ratio S, over bandwidth B, at time T, from location L." The synthetic generator produces records of
+exactly that shape (`em_fusion_v2.md` section 5) — it is a **sensor-report generator**, not an RF
+propagation simulator. There is no waveform synthesis, no IQ sample generation, no path-loss or
+multipath modelling, no antenna pattern. Those belong to the RF/IQ classifier work that was cut to
+future work.
+
+What "designed to simulate specific EM anomalies" means concretely is that each scenario type has a
+distinct **signature** — a characteristic pattern across sensors, space, and time that the
+deterministic detectors are meant to pick up:
+
+| Scenario type | RF signature the generator injects | Why it is distinguishable |
+|---|---|---|
+| Normal baseline | Nothing. Sensors report near-baseline values with normal jitter. | The control condition. A detector firing here is a false positive. |
+| GNSS degradation / possible interference | Noise floor raised near the GNSS L1 band (1575.42 MHz), across **several** sensors, **co-located** in a region, for a bounded window — so SNR drops on the affected band. | Multi-sensor + spatially coherent + band-specific + correlated with aircraft position degradation. |
+| RF sensor fault | Abnormal readings on **one** sensor while its geographic neighbours stay nominal. | Spatially incoherent — the anomaly does not propagate to nearby sensors, which is not how a real emission behaves. |
+| Aircraft coverage gap | **No RF anomaly at all.** Only the aviation side degrades. | The absence of an RF signature is itself the evidence: track dropouts without corroborating RF point at a data-source problem, not interference. |
+| Ambiguous mixed evidence | Partial, weak, or conflicting signatures — e.g. a mild RF rise that does not fully align in time or space with the track degradation. | Deliberately under-determined. Tests whether the hypothesis layer expresses uncertainty rather than over-committing. |
+
+Two things follow that are worth carrying into the thesis:
+
+- **The anomaly is the deviation from baseline, not the absolute value.** The generator produces a
+  normal-behaviour baseline first, then applies a parameterised perturbation on top. This is why
+  `baseline delta` is a first-class field in the RF observation model — the detector's job is
+  comparison, not recognition.
+- **The scenario types are designed to be *confusable in the right ways*.** GNSS interference and a
+  sensor fault both produce "an RF sensor reporting abnormal noise"; what separates them is whether
+  neighbouring sensors agree. Coverage gap and GNSS interference both produce "aircraft tracks going
+  discontinuous"; what separates them is whether an RF anomaly is present in the same place and
+  window. This is the point of the whole system: no single stream disambiguates, the **fusion** does.
+  A scenario set where every type was trivially separable by one field would not test anything.
+
+**Limitation to state honestly.** Because the RF data is synthetic and generated at observation
+level, detection performance measures how well the pipeline recovers *the anomalies it was told to
+inject*. It is not evidence about real-world jamming detection, and the write-up should not claim it
+is. What it does legitimately evaluate is the architecture: whether the DAL, fusion, and constrained
+hypothesis layer behave correctly and are measurable against known ground truth.
+
+---
+
+## 2. For open aviation telemetry, are state vectors just the data fields returned?
+
+**Essentially yes.** "State vector" is standard tracking/aerospace terminology, not OpenSky jargon:
+the complete instantaneous **state** of a tracked object expressed as a **vector** of values — where
+it is, how fast, which direction, at one specific instant.
+
+So one state vector = **one aircraft, at one timestamp, as one row.** What you see hovering over an
+aircraft on `map.opensky-network.org` is a rendering of that aircraft's most recent state vector.
+The historical dataset is the same data model, just every row ever recorded rather than only the
+latest one per aircraft.
+
+The historical table (`state_vectors_data4`) gives, per aircraft per 10 seconds:
+
+| Field | Meaning | Used for |
+|---|---|---|
+| `time` | Timestamp of this state vector | Replay ordering, time-window alignment |
+| `icao24` | Unique 24-bit aircraft transponder address | The **track identity** — groups rows into a trajectory |
+| `lat`, `lon` | Position (WGS84 degrees) | Map rendering, bounding-box filter, spatial clustering |
+| `baroaltitude` | Barometric altitude (m) | Altitude behaviour |
+| `geoaltitude` | GNSS-derived altitude (m) | Altitude behaviour; divergence from `baroaltitude` is itself a GNSS signal |
+| `velocity` | Ground speed (m/s) | Kinematic plausibility |
+| `heading` | Track angle (degrees) | Kinematic plausibility |
+| `vertrate` | Climb/descent rate (m/s) | Kinematic plausibility |
+| `onground` | Ground flag | Filtering out taxiing aircraft |
+| `callsign` | Flight identifier | Display only |
+| `lastposupdate` | Timestamp of the last *position* update received | **Position staleness** — the core detection input |
+| `lastcontact` | Timestamp of the last *any* message received | Contact loss vs position loss |
+| `hour` | Partition key (hour bucket) | File organisation |
+
+Three clarifications that are easy to trip over:
+
+**A state vector is a snapshot; a track is a sequence.** Detection does not operate on individual
+state vectors — it operates on **tracks**: the time-ordered series of state vectors sharing an
+`icao24`. "Track discontinuity" means gaps or jumps within that series. This is why `icao24` is
+load-bearing and why the canonical observation model has to preserve it.
+
+**`time` minus `lastposupdate` is the measurement that matters.** OpenSky publishes a row every 10
+seconds whether or not fresh position data arrived. If the aircraft's position has not been updated
+for 40 seconds, the row still exists but `lastposupdate` is 40 seconds behind `time`. That delta is
+**position staleness**, and it is *directly measured rather than inferred* — you do not have to
+guess at degradation from missing rows, the dataset tells you. This is the basis of the
+"aircraft update frequency drops" rule and is why the static snapshot was judged to cost nothing in
+capability (see `thesis_notes.md`, Methodology).
+
+**Live API vs historical snapshot is a delivery difference, not a data-model difference.** Both
+return state vectors with the same semantics. The project uses the archived snapshot so replays are
+reproducible, offline, and immune to rate limits — the same data you would get live, frozen.
+
+---
+
+## 3. What is the parameterised scenario generator, and won't it be deterministic?
+
+This question conflates two different determinisms, and separating them is the whole answer.
+
+### What the generator is
+
+A function of three inputs:
+
+```
+(scenario_type, parameters, seed) → a complete synthetic scenario run
+```
+
+- **`scenario_type`** — the *qualitative* shape. One of the five. Decides which signature gets
+  injected (see Q1).
+- **`parameters`** — the *quantitative* configuration. Noise amplitude, gap duration, number of
+  affected sensors, affected-area size, event timing.
+- **`seed`** — the initial value for the pseudo-random number generator that fills in everything the
+  parameters leave open: which specific sensors, exactly where in the region, exact onset time
+  within the allowed window, and the per-sample random jitter.
+
+### Why determinism is the *point*, not the problem
+
+> "won't this be deterministic, meaning we will end up with the same outputs for each run?"
+
+Determinism here is **per seed**, not across seeds.
+
+- Same type + same parameters + **same seed** → byte-identical run, every time. This is
+  **reproducibility**, and it is a deliberate requirement: a result in the thesis can be regenerated
+  exactly, by an examiner, months later.
+- Same type + same parameters + **different seed** → a *different* run of the same kind. Different
+  sensors affected, different onset, different jitter — but the same underlying scenario type, so
+  the ground-truth label is still known.
+
+The useful analogy is a **shuffled deck of cards**. Shuffling with seed 42 always produces the same
+order — that is determinism. But seeds 42, 43, 44 produce three genuinely different orders. You are
+not stuck with one deck; you have as many decks as you have seeds, and you can always get any one of
+them back.
+
+So "20–30 randomised runs per scenario type" means 20–30 **different seeds**, not 20–30 repeats of
+one run. What varies is the data; what stays fixed is the recipe.
+
+### Why this matters for the evaluation
+
+With one run per scenario type, precision and recall are 1.0 or 0.0. That is an anecdote, not a
+result — you cannot tell a robust detector from a lucky one.
+
+With 25 seeded runs per type you get a **distribution**: a detection rate with variance, false
+positives across varied conditions, latency spread. You can say "the GNSS detector achieved recall
+of 0.92 across 25 runs" and defend it. You can also see *where* it fails — e.g. that recall collapses
+when `gap_duration` falls below the rolling-average window, which is a finding rather than a bug.
+
+### Three determinisms in the system, and which one is allowed to vary
+
+Worth keeping straight, because they get discussed as one thing:
+
+1. **The generator** is deterministic given a seed. → Reproducibility. Intended.
+2. **The detectors** are deterministic given data — threshold rules, z-scores, and spatial queries
+   have no randomness at all. Same observations always produce the same anomalies. → This is the
+   deterministic-detection scope decision, and it is why detection results are trustworthy: any
+   variation across runs comes from the *data*, never from the detector being moody.
+3. **The AI hypothesis layer** is the one component that is *not* strictly deterministic, even at
+   temperature 0 and a fixed seed — floating-point non-associativity in batched inference means
+   identical inputs can occasionally produce different tokens. This is why the evaluation harness
+   generates **N hypotheses per evidence bundle and records grounding variance**
+   (`em_fusion_v2.md` section 5, Evaluation Harness) rather than assuming one generation is
+   representative.
+
+Variation enters the pipeline in exactly one place — the seed — and is measured in exactly one other
+— the AI layer. Everything between is deterministic by design.
+
+---
+
+## 4. What are rolling averages, z-score deviation, and spatial clustering?
+
+These are the deterministic detection methods (`em_fusion_v2.md` section 5). Two of them establish
+"what normal looks like"; one establishes "did these things happen together."
+
+### Rolling average (moving average)
+
+The mean of the last *N* samples, recomputed as the window slides forward.
+
+```
+readings:        94  96  95  97  95  96  120  118  121
+rolling mean(5):              95.4  95.8  96.6  ...
+```
+
+Two jobs:
+
+- **Smoothing.** A single spurious reading barely moves a 5-sample mean, so the detector does not
+  fire on one bad sample. Genuine sustained change does move it.
+- **Producing the baseline.** In this project the baseline engine computes rolling averages over
+  **normal-scenario runs** (`implementation.md` Phase 8) — RF noise per sensor, aircraft update rate
+  per region — to establish the reference the detectors compare against.
+
+Note the structural point: rolling averages are listed alongside the detectors but are really the
+**baseline engine feeding them**. A rolling average does not, by itself, decide anything. It
+produces the μ that the threshold rules and z-scores are measured against.
+
+The tuning trade-off worth recording: a **short window** reacts fast but is noisy (false positives);
+a **long window** is stable but slow to react and can absorb a short anomaly entirely. An anomaly
+shorter than the window may never register — which is why `gap_duration` is a scenario parameter, so
+the evaluation can find where that boundary sits rather than guessing.
+
+### Z-score deviation
+
+How many standard deviations a value sits from the mean:
+
+```
+z = (x − μ) / σ
+```
+
+where μ is the baseline mean and σ the baseline standard deviation. Conventionally |z| > 3 is an
+outlier (~99.7% of normally distributed values fall within ±3σ).
+
+**Why this is better than a fixed threshold here:** it is *self-calibrating per sensor*. Suppose two
+RF sensors:
+
+| | baseline μ | baseline σ | reading | z | verdict |
+|---|---|---|---|---|---|
+| Quiet rural sensor | −95 dBm | 2 dB | −85 dBm | **+5.0** | anomalous |
+| Noisy urban sensor | −95 dBm | 6 dB | −85 dBm | +1.7 | normal |
+
+Same absolute reading, correctly different verdicts. A fixed threshold at −88 dBm would flag both,
+drowning the urban sensor in false positives. The z-score encodes "unusual **for this sensor**",
+which is exactly the semantics an analyst wants.
+
+**Two caveats to record as limitations:**
+
+- **It needs a clean baseline.** μ and σ must be estimated from a period known to be normal. If the
+  anomaly is inside the baseline window it inflates σ and *hides itself* — the anomaly raises the bar
+  it has to clear. Hence baselines come from **normal-scenario runs**, not from the run under test.
+- **It assumes roughly normal, roughly stationary data.** Heavily skewed distributions or a drifting
+  baseline break the ±3σ interpretation. At prototype scale this is acceptable and stated, not
+  solved.
+
+### Spatial clustering
+
+Grouping observations by geographic proximity — asking whether things that happened are *near each
+other*, rather than scattered.
+
+In this project it is deliberately the **simple form**: not DBSCAN or k-means (explicitly cut to
+future work), but a proximity/containment query — *"are the track discontinuities clustered within
+N km of the RF anomaly zone, in the same time window?"* — executed as an indexed PostGIS predicate
+(`ST_DWithin`), which is the concrete justification for using PostGIS at all (see Q6).
+
+ST_DWithin is a spatial SQL function that evaluates if two geometries are within a specified distance of each other, returning true or false. It utilizes spatial indexes, making it significantly faster and more accurate than generating geometric buffers
+
+**This is the component that makes the system fusion rather than two dashboards side by side.**
+Consider the difference:
+
+```
+RF noise elevated somewhere.            → weak. Could be a sensor fault.
+Aircraft tracks degraded somewhere.     → weak. Could be a feed problem.
+RF noise elevated AND tracks degraded
+  in the SAME 20 km area
+  in the SAME 15-minute window.         → strong. Co-location is the evidence.
+```
+
+Neither stream alone supports the hypothesis. Their **coincidence in space and time** does, and
+quantifying that coincidence is what spatial clustering contributes. It is also what distinguishes
+scenario 2 (GNSS interference — spatially coherent across sensors) from scenario 3 (sensor fault —
+one sensor anomalous, neighbours nominal), and what makes scenario 4 (coverage gap) identifiable by
+the *absence* of a co-located RF anomaly.
+
+This is why `FUSION-SPATIAL-003` appears as a rule ID in the example evidence bundle: the spatial
+correlation is itself a piece of traceable evidence, produced by the fusion engine rather than by
+either source.
+
+---
+
+## 5. What is a bounding box?
+
+A **bounding box** is a rectangle in coordinate space, defined by four numbers: minimum and maximum
+latitude, minimum and maximum longitude.
+
+```
+lat_min = 45.0, lat_max = 55.0
+lon_min =  0.0, lon_max = 15.0     ← roughly Central Europe
+```
+
+Any point is inside it if `lat_min ≤ lat ≤ lat_max` and `lon_min ≤ lon ≤ lon_max`. That is the
+entire concept — two comparisons per axis, which is why it is used everywhere: it is the cheapest
+possible spatial test.
+
+**It is not the map viewport.** It does not change when you zoom or pan, and it is not derived from
+what is currently rendered. It is a fixed geographic filter, chosen once and recorded. (In GIS
+generally, "bounding box" can also mean the smallest axis-aligned rectangle that *bounds* a given
+set of features — hence the name — but in this project it is chosen up front rather than computed.)
+
+### Its two roles here
+
+**1. Ingest filter — making the data tractable.** OpenSky's raw hourly files are *global*: millions
+of rows, hundreds of MB per hour. Applying the bounding box on ingest keeps only rows inside the
+study region, producing an extract small enough to archive and version alongside a manifest
+(`em_fusion_v2.md` section 5).
+
+**2. Study-region definition — a validity control.** This is the important one and is already
+recorded as a threat to validity in `thesis_notes.md`. OpenSky's coverage comes from volunteer
+ground receivers and is geographically uneven. In a sparsely covered region, aircraft genuinely drop
+out because *nobody is listening* — and those dropouts are **indistinguishable, to the detector,
+from the synthetic ones being injected**. Ground truth would be contaminated and the false-positive
+rate uninterpretable. Choosing a densely covered box (Central Europe) is what prevents this, and the
+acceptance check — run `Normal baseline` against the extract and confirm no dropouts appear before
+injection — is what verifies it.
+
+### Where it shows up again
+
+Bounding boxes are also how spatial **indexes** work internally. A GiST index does not store complex
+polygons at every node; it stores their bounding boxes. A query first eliminates candidates with
+cheap rectangle comparisons, then runs exact geometry maths only on the few survivors. So the same
+primitive that filters the download also makes the PostGIS queries in Q6 fast.
+
+In PostGIS a box is constructed with `ST_MakeEnvelope(lon_min, lat_min, lon_max, lat_max, 4326)`.
+
+---
+
+## 6. What is PostGIS — just a Postgres store for geospatial data?
+
+That is the right instinct but understates it. PostGIS is an **extension** to PostgreSQL that turns
+it into a spatial database. It adds three things, and the third is where the actual value is.
+
+### 1. Spatial types
+
+Real column types — `POINT`, `LINESTRING`, `POLYGON`, and so on — instead of two loose `float`
+columns. Each carries an **SRID** (spatial reference identifier) declaring the coordinate system:
+`4326` is WGS84, the lat/lon system GPS and OpenSky use.
+
+This is why `observations.location` and `anomalies.affected_area` are `geometry` in the schema
+(`em_fusion_v2.md` section 9) — an anomaly's affected area is a *polygon*, not a pair of numbers, and
+the database understands that.
+
+### 2. Spatial functions
+
+Several hundred `ST_*` functions expressing spatial relationships declaratively:
+
+```sql
+ST_DWithin(a, b, 20000)   -- is a within 20 km of b?
+ST_Contains(zone, point)  -- is the point inside the zone?
+ST_Distance(a, b)         -- how far apart?
+ST_Intersects(a, b)       -- do they overlap at all?
+```
+
+The alternative is pulling every candidate row into Python and computing haversine distances by
+hand — more code, slower, and impossible for the database to optimise.
+
+### 3. Spatial indexes — the actual reason
+
+PostGIS adds **GiST** indexes over geometry columns. Without one, "find all track discontinuities
+within 20 km of this RF zone" is a full table scan computing a distance for every row. With one,
+the index eliminates almost everything using bounding-box comparisons (see Q5) before any real
+geometry maths runs.
+
+This is the load-bearing point, and it is the reason the lakehouse alternative was rejected:
+**Trino has `ST_*` functions but no comparable indexed spatial join, and Iceberg has no spatial
+partitioning** (`thesis_notes.md`, storage substrate). The functions are the easy part to replicate;
+the index is not.
+
+### Why the project genuinely needs it
+
+The justification is one specific query — clustering track discontinuities within N km of an RF
+anomaly zone (Q4) — which is one of the four detection methods and the mechanism behind the
+`FUSION-SPATIAL-003` evidence item. It is not "we might want maps later." Adopting PostGIS for a
+prototype needs a load-bearing reason, and that query is it.
+
+### Two traps worth knowing before writing spatial code
+
+- **`geometry` vs `geography`.** On a `geometry` column with SRID 4326, distances are computed in
+  **degrees**, not metres — so `ST_DWithin(a, b, 20000)` asks for 20,000 *degrees*, which is
+  nonsense and will silently match everything. Either cast to `geography` (`ST_DWithin` then works in
+  metres over a spheroid, slower but correct) or project to a metric CRS. Decide this once in the
+  repository layer and keep it consistent.
+- **The index must match the query.** A GiST index on `geometry` is not used by a query that casts to
+  `geography` at runtime. Index the expression you actually query on, and check with `EXPLAIN` that
+  the index is being hit rather than assuming it is.
+
+---
+
+## Appendix: quick glossary
+
+| Term | Short definition |
+|---|---|
+| **State vector** | One tracked object's complete state (position, velocity, attributes) at one instant; one row. |
+| **Track** | The time-ordered sequence of state vectors sharing an `icao24` — an aircraft's trajectory. |
+| **`icao24`** | Unique 24-bit transponder address identifying an aircraft; the track identity key. |
+| **Position staleness** | `time − lastposupdate`: how long since a fresh position was actually received. |
+| **GNSS** | Global Navigation Satellite System — the general term (GPS, Galileo, GLONASS, BeiDou). |
+| **GNSS L1** | The 1575.42 MHz band carrying civil GPS/Galileo signals; the band the interference scenario targets. |
+| **SNR** | Signal-to-noise ratio — signal strength relative to background noise. Falls when noise rises. |
+| **Noise floor** | Background RF power with no signal present; the reference that "elevated noise" is elevated above. |
+| **dBm** | Power in decibels relative to 1 milliwatt. Logarithmic; +10 dB is 10× the power. Less negative = stronger. |
+| **Baseline delta** | An observation's deviation from its expected normal value — the quantity detectors act on. |
+| **Seed** | The pseudo-random generator's starting value; makes a "random" run exactly repeatable. |
+| **Ground truth** | What the generator actually injected — the known-correct answer detection is scored against. |
+| **Precision / recall** | Precision: of the anomalies flagged, how many were real. Recall: of the real anomalies, how many were flagged. |
+| **False positive** | Flagging an anomaly that was not injected. The `Normal baseline` scenario exists to measure this. |
+| **Detection latency** | Simulated time from event onset to anomaly emission — never wall clock. |
+| **Bounding box** | A lat/lon rectangle used as a geographic filter; also how spatial indexes pre-filter internally. |
+| **SRID 4326** | WGS84 — the lat/lon coordinate system used by GPS and OpenSky. |
+| **GiST** | The PostgreSQL index type PostGIS uses for spatial columns. |
+| **Evidence bundle** | The structured, traceable anomaly summary that is the *only* input the AI layer sees. |
+| **Grounding check** | Verifying every claim in a generated hypothesis traces back to the evidence bundle. |
+| **Constrained decoding** | Restricting generation to a grammar so invalid output is unrepresentable, not merely detectable. |
