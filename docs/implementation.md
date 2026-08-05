@@ -25,6 +25,18 @@ Scope v2 changes: three screens only (Operational Picture, Hypothesis Detail, Sc
 - [ ] Define detection latency precisely (simulated scenario time, not wall clock) before any measurement code exists.
 - [ ] Recruit 3–6 user-study participants by early October.
 
+### C4 architecture model (Structurizr)
+
+Feeds the **System Design and Architecture** chapter of `thesis_notes.md`. Non-code and non-blocking, but do the first pass early: a container diagram that is awkward to draw usually means the boundaries are wrong, and that is cheaper to learn now than at Phase 7. Revisit at the end so the thesis shows the architecture *as built*, not as planned — and record any divergence, since the divergence is itself write-up material.
+
+- [ ] Write the model as **Structurizr DSL** (`workspace.dsl`) and keep it in the repo under `docs/architecture/`. Text, not a drawing tool — it diffs, reviews, and regenerates, and diagrams that cannot be regenerated go stale silently.
+- [ ] **Level 1 — System Context.** EM Fusion as one box. External actors and systems: the analyst, the archived OpenSky corpus, the hosted AI provider, the host-resident local model server. This diagram is where the decision-support framing shows: the analyst is the terminal node, not the system.
+- [ ] **Level 2 — Containers.** React dashboard, FastAPI backend, PostgreSQL/PostGIS, the local model server as a *host process* rather than a Compose service (per `em_fusion_v2.md` §10). Show polling on the frontend-to-backend edge — the absence of a push channel is a deliberate decision and should be visible.
+- [ ] **Level 3 — Components (backend only).** Adapters, DAL, baseline and anomaly engines, evidence bundle builder, the provider-agnostic hypothesis service with its three generators, repositories, API routes. This is the level that carries the RQ1 extensibility argument: the adapter/DAL seam and the generator seam should be legible as seams.
+- [ ] **Skip Level 4 (Code).** C4 treats it as optional and it rots fastest; the type definitions and `docs/em_fusion_v2.md` §9 already serve that purpose.
+- [ ] Render with **Structurizr Lite via Docker** rather than the hosted service — no account, consistent with the project's stance that the hosted AI generator is the sole hosted dependency. The hosted structurizr.com workspace is a fallback if Lite proves awkward, not the default.
+- [ ] Export PNG/SVG for the thesis, and note in `thesis_notes.md` where the model diverges from the planned architecture in `em_fusion_v2.md` §7.
+
 ## Phase 1: Frontend Foundation — DONE
 
 - [x] Create the Vite React TypeScript app in `frontend`.
