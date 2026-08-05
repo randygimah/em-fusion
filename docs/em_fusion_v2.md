@@ -210,8 +210,10 @@ Left nav has exactly three entries. System health is a compact status strip in t
 **Screen 1 — Operational Picture**
 - Map (behind a `MapView` adapter boundary): aircraft, RF sensors, anomaly zones; "SYNTHETIC ENVIRONMENT DATA" badge
 - Right rail: active hypotheses cards + detection summary (Low/Med/High)
-- Bottom: a single **tabbed exception panel** — `RF (n anomalous)` / `Tracks (n degraded)` / `Events` — showing only anomalous rows, with "+n nominal hidden · View all →" footers
-- "View all →" opens full drill-down tables (full RF observation stream, full track inventory). Drill-downs are reached from panels, not from the nav — they are cheap views over the same API, not screens
+- Bottom: a single **tabbed exception panel** — `RF (n anomalous)` / `Tracks (n degraded)` / `Events` — showing only anomalous rows by default, with "+n nominal hidden · View all →" footers
+- **View filter** — `Anomalous only` / `Nominal only` / `All`, defaulting to anomalous-only. One control drives the map and the exception panel together so the two never disagree. Filtering happens **server-side** via a `view` query parameter, not by fetching everything and discarding client-side; the response carries suppressed counts as metadata so the "+n nominal hidden" footer stays truthful once the rows stop arriving. The default preserves the exception-first design; the toggle exists because judging an anomaly often requires seeing it against nominal traffic in the same frame, and forcing the analyst to infer that contrast is a worse failure than a slightly busier map.
+- **Playback transport** — play / pause / speed / scrub over the run's **simulated** time. The map renders aircraft at the interpolated cursor position with a trailing path, anomalous track segments distinct, and anomaly zones appearing and clearing as their windows enter and leave the cursor. This runs on **polled data with client-side interpolation between buffered frames** — the frontend requests a span of positions and animates locally, so the request rate is decoupled from the frame rate and the no-WebSockets rule holds without compromise. A static snapshot cannot show *where* continuity broke; playback is what makes a track dropout legible as an event rather than a missing row.
+- "View all →" opens full drill-down tables (full RF observation stream, full track inventory). Drill-downs are reached from panels, not from the nav — they are cheap views over the same API, not screens. Drill-downs are **not** subject to the view filter; they are the show-everything view by definition
 
 **Screen 2 — Hypothesis Detail / Analyst Workbench**
 - Title, status, confidence pips, affected area, time window
@@ -230,8 +232,9 @@ FastAPI, modular monolith. Example endpoints:
 
 ```
 GET  /health
-GET  /operational-picture
+GET  /operational-picture?view=anomalous|nominal|all
 GET  /aircraft
+GET  /aircraft/track-window?run_id=&from=&to=
 GET  /rf-observations
 GET  /anomalies
 GET  /hypotheses
@@ -242,7 +245,11 @@ POST /scenario/reset
 GET  /scenario/runs
 ```
 
-**No WebSockets in v1.** The frontend polls. A replay-based prototype does not need push infrastructure, and polling is one sentence to defend in the thesis. WebSockets are future work.
+`view` filters server-side and defaults to `anomalous`; an unrecognised value is a 422, never a silent fall-through to `all`. Filtered responses carry per-collection suppressed counts as metadata.
+
+`track-window` returns aircraft positions across a span of **simulated** time for playback buffering, ordered by time per aircraft. The span is bounded server-side to cap payload size; an over-long request is rejected or truncated with the truncation reported, never silently served in full.
+
+**No WebSockets in v1.** The frontend polls. A replay-based prototype does not need push infrastructure, and polling is one sentence to defend in the thesis. WebSockets are future work. Note that map playback does **not** weaken this: it buffers spans over ordinary polled requests and interpolates client-side, so smooth motion is achieved without coupling the request rate to the frame rate. Playback is a rendering concern, not a transport one.
 
 #### 9. Evaluation Harness
 
@@ -466,6 +473,8 @@ Implementation constraints:
 *Known risks.* Two, both manageable: (a) **human scoring load** — three arms is 3× the blind-rubric pairs, which may not fit 3–6 participants, so hosted-vs-template is the primary comparison at full N and local-vs-hosted a smaller secondary sample, decided before M9 rather than during; (b) **data egress** — evidence bundles now leave the machine. All content is synthetic or replayed open data, so this is expected to be a non-issue, but it intersects the employer clearance conversation already in Track 0 and is cheaper to confirm early than to discover late.
 
 **DevOps:** Docker, Docker Compose, GitHub Actions (backend tests, frontend tests/build, lint), Ruff, Black, ESLint. Basic dependency audit only.
+
+*Command surface.* A **root `Makefile`** wraps the Compose stack as the single entry point: `generate` (run a scenario batch), `demo` (generate, then bring the stack up with a build), `build`, `test` (backend and frontend suites in containers), `up`, `down`. Every target delegates to `docker compose`, so the root Makefile needs no host toolchain beyond Docker — which is what makes the demo reproducible on a machine that is not the development one. `backend/Makefile` is retained unchanged for local venv work; the two are deliberately not merged, because one targets containers and the other targets a developer's virtualenv.
 
 **Deployment:** Local Docker Compose. That is the v1 target. Cloud is future work.
 

@@ -2,6 +2,18 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Agent instructions (read first, always follow)
+
+**All new code follows the spec → test → code workflow below. No exceptions.** Do not write implementation code before a spec item exists and tests are written and proven to fail.
+
+**Code is the source of truth.** Do not re-read source files you have already read in this session unless you have reason to believe they changed. Use the repo map below to navigate; read source files on demand when a task requires it.
+
+**Read documents progressively.** The documents table below lists every doc and when to read it. Read a doc only when its trigger applies. Do not load all docs upfront.
+
+**Keep the repo map current.** Update the folder map and documents table whenever you add, remove, or rename a file that belongs there.
+
+**Capture thesis material as you go.** See Thesis Notes below — findings, rationale, and references go into `docs/thesis_notes.md` while they are fresh, not at write-up time.
+
 ## Project
 
 EM Fusion is a human-in-the-loop AI prototype for explainable electromagnetic situational awareness: it fuses replayed aviation telemetry and synthetic RF observations through a Data Abstraction Layer, detects deviations deterministically, and turns evidence bundles into schema-validated, grounding-checked AI hypotheses for human analyst review. It is decision support, not autonomous decision-making. Confidence is always Low/Medium/High — never a percentage or decimal score — and that rule applies to any score shown in the UI.
@@ -10,15 +22,119 @@ Development is deliberately incremental — see `docs/implementation.md` for the
 
 Scope is v2: exactly three screens (Operational Picture, Hypotheses, Scenario Control) — no TimescaleDB, no WebSockets (frontend polls), no multi-agent AI, no Isolation Forest/DBSCAN. Anomaly detection is deterministic only (threshold rules, rolling averages, z-score, PostGIS spatial clustering). The AI hypothesis layer is constrained: template generator first (fallback + evaluation baseline), then an AI generator, both schema-validated and grounding-checked before an analyst sees them.
 
-Docs, in order of authority for technical detail:
-- `docs/em_fusion_v2.md` — current build-facing scope/PRD (data sources, architecture, DB design, tech stack, milestones, out-of-scope list, v2+ future work). Wins over the docx on technical detail; the docx (`EM-Fusion-Project-Scope-v2.docx`, not in this repo) wins on academic framing/research questions.
-- `docs/research_scope.md` — the coding-relevant extract of the docx (research questions, objectives, architecture rationale, AI-layer validation/grounding detail, canonical data model, scenario types, evaluation metrics, success criteria). Use this to check *why* a build decision matters to the thesis; the docx itself stays outside the repo.
-- `docs/implementation.md` — the phase-by-phase build checklist; treat it as a learning checklist, not a rigid sprint plan.
-- `docs/thesis_notes.md` — a skeleton (Methodology, System Design and Architecture, Implementation, Evaluation) that the user fills in while building, to become the dissertation write-up. When a phase in `implementation.md` completes, offer to help draft the corresponding section here rather than leaving it for later reconstruction from git history.
-- `docs/qa.md` — running Q&A explaining concepts used across the other docs (RF/EM terms, OpenSky state vectors, the scenario generator's determinism model, detection methods, bounding boxes, PostGIS), written for the user to refer to while writing up. **Explanatory, not authoritative** — it paraphrases decisions rather than making them, so when scope or technical detail changes, update `em_fusion_v2.md` and re-check this file follows. Append new questions here as they come up.
-- `docs/em_fusion.md` — the **old v1 PRD, superseded by `em_fusion_v2.md`**. Kept for history only; do not use it as a scope reference (e.g. its RF/IQ ML classifier, Isolation Forest/DBSCAN, WebSockets, and multi-screen nav are all cut from v2).
+## Repo Map
 
-`DESIGN.md` is the design system spec (colors, typography, spacing, component styling) — front-matter contains the raw design tokens.
+A contents page for the repo. Use it to find the right file before searching; it is not a substitute for reading the file.
+
+### Folders
+
+**`frontend/`** — React + TypeScript + Vite dashboard. The only part of the repo with substantial code.
+
+| Path | What's in it |
+|---|---|
+| `frontend/src/App.tsx` | Wires the mock into the screen. **The seam** where a real API call replaces the mock import. |
+| `frontend/src/main.tsx` | React entry point. |
+| `frontend/src/index.css` | Tailwind v4 entry (no `tailwind.config.js`) plus design tokens. |
+| `frontend/src/types/operationalPicture.ts` | The `OperationalPicture` contract — scenario, hypotheses, detectionSummary, rfSensors, aircraftTracks, timelineEvents. Mirrors the future `/operational-picture` response shape. |
+| `frontend/src/mocks/operationalPictureMock.ts` | Mock satisfying that contract. Currently the app's only data source. |
+| `frontend/src/screens/operationalPicture.tsx` | The main screen. Takes `operationalPicture` as a prop; never imports the mock. |
+| `frontend/src/components/em/` | Shared `Em*` UI primitives (`EmButton.tsx`) built with `cva` + `cn`. New styled components follow this pattern. |
+| `frontend/src/lib/utils.ts` | The `cn` helper (`clsx` + `tailwind-merge`). |
+| `frontend/src/test/` | Vitest home — `operationalPicture.test.tsx`, `setup.ts`. All frontend tests go here. |
+| `frontend/src/App.test.tsx` | Legacy colocated test — the one exception to `src/test/`. Don't add more. |
+| `frontend/src/assets/Design/OperationalPicture_v2/` | Generated design reference for screen 1: `DESIGN.md`, `code.html`, `screen.png`. |
+| `frontend/src/assets/Design/Hypothesis_analysis_v2/` | Same, for screen 2 (Hypothesis Detail / Analyst Workbench). |
+| `frontend/src/assets/Design/Scenario_control_v2/` | Same, for screen 3 (Scenario Control). |
+
+**`backend/`** — FastAPI skeleton plus lint/type/test tooling.
+
+| Path | What's in it |
+|---|---|
+| `backend/app/main.py` | The whole backend today: FastAPI app, `/health` only, CORS for the Vite dev server. |
+| `backend/app/__init__.py` | Package marker. |
+| `backend/tests/` | Pytest home (`pytest.ini` sets `testpaths = tests`). **Does not exist yet** — create it with the first backend spec. |
+
+**`docs/`** — all project documentation. See the Documents table below.
+
+**Empty placeholders** — reserved, no code yet:
+
+| Path | Reserved for |
+|---|---|
+| `ai/` | AI hypothesis layer / evaluation code (per `docs/em_fusion_v2.md` §5.5, §5.9). |
+| `infrastructure/` | Docker Compose, CI, deploy config. |
+| `scenarios/` | Scenario fixtures (the five scenario types). |
+
+### Documents
+
+| Path | Read it when |
+|---|---|
+| `docs/requirements.md` | **Start here for "what must this do".** Numbered user stories (US-*), functional requirements (FR-*), non-functional requirements (NFR-*), out-of-scope list, and acceptance criteria (AC-*). Every spec item traces to a requirement here. |
+| `docs/spec.jsonl` | **The executable backlog.** One JSON object per line: `id`, `description` (inputs, outputs, constraints, at least one failure case, cross-refs), `passes`. Read before starting any capability; write to it before writing tests. See the workflow section below. |
+| `docs/em_fusion_v2.md` | The authority on technical detail: data sources, architecture, DB design, tech stack, milestones, out-of-scope list, future work. Wins over the docx on technical detail; the docx (`EM-Fusion-Project-Scope-v2.docx`, not in this repo) wins on academic framing and research questions. Read when a requirement or spec item is ambiguous. |
+| `docs/research_scope.md` | The coding-relevant extract of the docx: research questions, objectives, architecture rationale, AI-layer validation/grounding detail, canonical data model, scenario types, evaluation metrics, success criteria. Read to check *why* a build decision matters to the thesis. |
+| `docs/implementation.md` | The phase-by-phase build checklist and the current position in it (mid-Phase 3). Read to find what comes next and which phase a spec item belongs to. A learning checklist, not a rigid sprint plan. |
+| `docs/thesis_notes.md` | **Write to it continuously, not just when read.** Dissertation skeleton and evidence base — Methodology, System Design and Architecture, Implementation, Evaluation. Every design decision, reversal, measurement, threat to validity, reference, and limitation goes here while fresh. See the Thesis Notes section below for what to capture and how to structure it. |
+| `docs/qa.md` | Running Q&A on concepts used elsewhere — RF/EM terms, OpenSky state vectors, the generator's determinism model, detection methods, bounding boxes, PostGIS. **Explanatory, not authoritative**: it paraphrases decisions rather than making them. When scope changes, update `em_fusion_v2.md` and re-check this follows. Append new questions as they arise. |
+| `docs/proposal_draft.md` | The submitted project proposal. Read for the agreed framing; not a build reference. |
+| `docs/em_fusion.md` | The **superseded v1 PRD**. History only. Its RF/IQ ML classifier, Isolation Forest/DBSCAN, WebSockets, and multi-screen nav are all cut from v2 — never use it as a scope reference. |
+| `DESIGN.md` | The design system spec — colors, typography, spacing, component styling. Front-matter holds the raw tokens. Read before writing any styled component. |
+| `README.md` | Setup and run instructions. Update it whenever setup, scripts, scope, or behavior changes. |
+| `frontend/src/assets/Design/*/DESIGN.md` | Per-screen generated design references, alongside `code.html` and `screen.png`. Read when implementing that specific screen. |
+| `frontend/package.json` | Scripts and dependencies. `frontend/pnpm-lock.yaml` is the lockfile; `frontend/.nvmrc` pins Node. |
+| `frontend/biome.json` | Biome lint + format config. |
+| `frontend/tsconfig.json`, `tsconfig.app.json`, `tsconfig.node.json` | TypeScript project references. |
+| `frontend/vite.config.ts` | Vite config — dev port 1234, `/api` proxy to `:8080`, Tailwind plugin, Vitest setup. |
+| `frontend/index.html`, `frontend/nginx.conf`, `frontend/Dockerfile` | Build and container config for the frontend. |
+| `backend/Makefile` | The backend command surface (`format`, `lint`, `type-check`, `test`, `check`). Read before running backend tooling by hand. |
+| `backend/pyproject.toml`, `.flake8`, `mypy.ini`, `pytest.ini` | Black/isort, flake8, mypy, and pytest config respectively. |
+| `backend/requirements.txt`, `requirements-dev.txt` | Runtime and dev dependencies. |
+| `backend/.env.example` | Template for backend env vars. Secrets never get committed — add new keys here, not to a fixture. |
+| `backend/Dockerfile`, `.dockerignore` | Backend container config. |
+| `.claude/settings.local.json` | Local Claude Code permissions. Not project scope. |
+| `.vscode/settings.json` | Editor settings. |
+
+## Spec-Driven Development — mandatory
+
+Every new capability follows **spec → test → code**, no matter how small. No implementation lands without a spec item and failing tests preceding it. If a change feels too small to spec, it still gets a spec item.
+
+### 1. Spec
+
+Add one line per capability to `docs/spec.jsonl`:
+
+```json
+{"id": "anom-001", "description": "...", "passes": false}
+```
+
+- **`id`** — unique kebab-case slug, area-prefixed (`nav-`, `op-`, `ui-`, `map-`, `api-`, `db-`, `dal-`, `adp-`, `scn-`, `anom-`, `evb-`, `ai-`, `hyp-`, `fbk-`, `eval-`, `ops-`).
+- **`description`** — inputs, outputs, constraints, **at least one failure case**, and references to other spec IDs, `FR-*`/`NFR-*`/`US-*`/`AC-*` requirement IDs, or doc files.
+- **`passes`** — **always `false` when first written.** Set to `true` only after proving the tests pass.
+
+**Get the user's agreement on spec items before proceeding to tests.**
+
+Commit: `git commit -m "spec: add <id>[, <id>]"`
+
+### 2. Test
+
+Write unit tests only — frontend in `frontend/src/test/`, backend in `backend/tests/`.
+
+- Every test includes a comment citing its spec ID, e.g. `// spec: anom-001`.
+- **Write no implementation at this stage.**
+
+Commit: `git commit -m "test: add tests for <id>[, <id>]"`
+
+### 3. Prove the tests fail
+
+Run them. **Every new test must fail.** A test that passes before the implementation exists is a wrong test — fix the test before continuing. Report the failure output; don't assert it happened.
+
+### 4. Code
+
+Implement the capability. Read relevant source files on demand rather than up front. **Ask the user for review after implementing each feature.** Do not set `passes: true` yet. Independent spec items may be worked in parallel — see Parallelism under Git below.
+
+### 5. Prove the tests pass
+
+All tests for the item must pass with **at least 90% coverage**. Fix failures before anything else. Only then set `"passes": true` on those items in `docs/spec.jsonl`.
+
+Commit: `git commit -m "feat(<id>): <short-description> - tests pass"` — `feat`, `fix`, or `refactor` as appropriate.
 
 ## Commands
 
@@ -51,28 +167,97 @@ Python, managed with a venv (`backend/.venv`) and a Makefile. All commands run f
 
 ### Frontend
 
-The frontend is a contract-first React app: UI components are dumb renderers that accept a typed data prop, decoupled from where that data comes from.
+*File-by-file locations are in the Repo Map above; this section is the rationale behind them.*
 
-- `src/types/operationalPicture.ts` — the `OperationalPicture` contract (scenario, hypotheses, detectionSummary, rfSensors, aircraftTracks, timelineEvents). This type is meant to mirror the future FastAPI `/operational-picture` response shape exactly.
-- `src/mocks/operationalPictureMock.ts` — a mock object satisfying that contract, currently the app's only data source.
-- `src/screens/operationalPicture.tsx` — the main screen; receives `operationalPicture: OperationalPicture` as a prop rather than importing the mock directly, so it can later take real API data with no change to the component.
-- `src/App.tsx` — wires the mock into the screen; this is the seam where a real API call will replace the mock import.
-- `src/components/em/` — shared UI primitives prefixed `Em*` (e.g. `EmButton`), built with `class-variance-authority` (`cva`) for variants and `cn` (`src/lib/utils.ts`, `clsx` + `tailwind-merge`) for class merging. Follow this cva+cn pattern for new styled components.
-- Tailwind v4 is wired via the `@tailwindcss/vite` plugin (no separate `tailwind.config.js`); colors/spacing/type scale should follow the tokens in `DESIGN.md` rather than ad hoc values.
-- A `MapView` boundary component (not yet built) is intended to be the only place MapLibre GL JS is touched, so it can be mocked in tests and the rest of the app stays map-library-agnostic. MapLibre (not Mapbox) is the decided choice — no account or access token, keeping the data and presentation layers free of hosted dependencies (the hosted AI generator is the sole exception and the sole running cost).
-- Left nav has exactly three entries — Operational Picture, Hypotheses, Scenario Control. System health is a compact status strip in the nav footer, not a screen. Drill-down tables (full RF stream, full track inventory) are reached from panels on Operational Picture, not from the nav — they're cheap views over the same data, not separate screens.
-- No WebSockets: the frontend polls the (future) FastAPI backend. Don't introduce push/streaming infrastructure.
+**Contract-first.** UI components are dumb renderers that accept a typed data prop, decoupled from where the data comes from. The `OperationalPicture` type mirrors the future `/operational-picture` response shape exactly, screens take it as a prop, and `App.tsx` is the single seam where a real fetch replaces the mock — so swapping the data source changes one file and no component.
+
+**Styling.** Shared `Em*` primitives use `class-variance-authority` for variants and `cn` for class merging; follow that cva+cn pattern for new styled components. Tailwind v4 is wired through the `@tailwindcss/vite` plugin, so there is no `tailwind.config.js` — colors, spacing, and type scale come from the `DESIGN.md` tokens, not ad hoc values.
+
+**Map boundary.** A `MapView` component (not yet built) is the only place MapLibre GL JS may be touched, so it can be mocked wholesale in tests and the rest of the app stays map-library-agnostic. MapLibre, not Mapbox: no account or access token, which keeps the data and presentation layers free of hosted dependencies — the hosted AI generator is the sole exception and the sole running cost.
+
+**Navigation.** Exactly three entries: Operational Picture, Hypotheses, Scenario Control. System health is a compact strip in the nav footer, not a screen. Drill-down tables (full RF stream, full track inventory) are reached from panels on Operational Picture — they're cheap views over the same data, not separate screens.
+
+**Transport.** No WebSockets. The frontend polls the FastAPI backend. Don't introduce push or streaming infrastructure.
 
 ### Backend
 
-`backend/app/main.py` currently only exposes `/health` (FastAPI, CORS configured for the Vite dev server). Per `docs/implementation.md` Phase 5, next is `/operational-picture` returning the same shape as `src/types/operationalPicture.ts`, then the frontend swaps its mock import for a fetch call behind a small API function. Target stack per `docs/em_fusion_v2.md` section 10: Pydantic, SQLAlchemy, PostgreSQL + PostGIS, Uvicorn, Pytest — no Celery/APScheduler, a simple loop or on-demand replay is enough.
+The backend exposes `/health` only today. Per `docs/implementation.md` Phase 5, next is `/operational-picture` returning the same shape as the frontend contract, after which the frontend swaps its mock import for a fetch behind a small API function. Target stack per `docs/em_fusion_v2.md` §10: Pydantic, SQLAlchemy, PostgreSQL + PostGIS, Uvicorn, Pytest — no Celery or APScheduler, a simple loop or on-demand replay is enough. SQL and spatial logic belong in a repository layer, never in route handlers.
 
 ## Testing conventions
 
-- Tests live in `src/test/` (Vitest + Testing Library + jsdom), not colocated with components, with one legacy exception (`src/App.test.tsx`).
+- Frontend tests live in `frontend/src/test/` (Vitest + Testing Library + jsdom), not colocated with components, with one legacy exception (`src/App.test.tsx`). Backend tests live in `backend/tests/` (pytest; `pytest.ini` sets `testpaths = tests`).
+- Every test carries a comment citing the spec ID it proves, e.g. `// spec: op-004` or `# spec: dal-002`.
 - Assert on analyst-visible behavior (rendered text/values from the data contract), not implementation details like CSS classes.
 - Render tests against the mock data module so assertions can reference `operationalPicture.*` fields directly instead of duplicating literals.
+- A correct non-detection is a first-class test, not an omission — see `anom-008` in `docs/spec.jsonl`.
+
+## Thesis Notes
+
+`docs/thesis_notes.md` is the skeleton and evidence base for the dissertation write-up. It is not a changelog and not a summary of the code — it is where the *reasoning* lives, captured while it is still fresh rather than reconstructed from git history months later. Treat keeping it current as part of the work, not as an afterthought.
+
+### What goes in
+
+- **Design rationale** — why a decision was made, what the alternatives were, and why they lost. Rejected options are as valuable as chosen ones; a decision with no recorded alternative reads as an accident.
+- **Reversals** — when a decision is overturned, record the original position, the reason for the change, and what the reversal reveals. The reasoning behind a reversal is usually more useful to the write-up than either endpoint.
+- **Measurements** — the third-adapter extensibility figures (files touched, lines changed, hours taken), `MapView` boundary diff size, grounding catch rates per arm, campaign cost and wall-time, detection metrics. Record the number *and* the conditions under which it was taken.
+- **Threats to validity** — anything that could undermine a result: coverage gaps confounding ground truth, scoring-load limits, confounds in a comparison. Record these in advance of the analysis, not after.
+- **References** — citations, licence and attribution requirements, dataset provenance, model IDs and versions, external sources consulted. Capture the full reference when first used; chasing a half-remembered source later is wasted time.
+- **Limitations** — state them honestly and specifically. A named limitation is a stronger position than an unmentioned one.
+
+### Structure
+
+Four top-level sections, fixed: **Methodology**, **System Design and Architecture**, **Implementation**, **Evaluation**. Each carries an HTML comment listing what belongs there — read it before adding.
+
+- Add a `###` subsection per topic with a descriptive title stating the decision, not the area (e.g. "Data acquisition: OpenSky static snapshot rather than the Trino interface", not "Data acquisition").
+- Write prose in full sentences, not bullet fragments. This is draft dissertation text, not a scratchpad — the target is material that survives into the write-up with editing, not rewriting.
+- Mark gaps explicitly with a parenthetical italic note, e.g. *(Record the bounding box chosen and the result of this check here once run.)* An acknowledged gap is actionable; a silent one is invisible.
+- Cross-reference `docs/research_scope.md` for which research question a decision serves, and `docs/em_fusion_v2.md` for the technical detail, rather than duplicating either.
+
+### When to write
+
+- **When a decision is made** — immediately, in the relevant section, including decisions that were considered and rejected.
+- **When a phase in `docs/implementation.md` completes** — offer to draft the matching section rather than leaving it.
+- **When a measurement is taken** — with its conditions, before moving on.
+- **When something goes wrong** — deviations, dead ends, and surprises are Implementation-chapter material, not embarrassments to omit.
 
 ## Git
 
 - Do not add a `Co-Authored-By:` trailer to commit messages.
+- Commit message conventions per workflow stage are in the Spec-Driven Development section above: `spec: add <id>`, `test: add tests for <id>`, `feat(<id>): <description> - tests pass`.
+
+### Branches and worktrees
+
+Agent work happens on branches, isolated using git worktrees.
+
+Start a branch:
+
+```bash
+git worktree add .worktrees/<id> -b <id>
+```
+
+Finish a branch:
+
+```bash
+# 1. Inspect the diff before merging
+git fetch origin main
+git diff main...<id> -- <changed-files>
+
+# 2. Deconflict any overlap, amend the branch commit if needed
+
+# 3. Merge, push, clean up
+git checkout main
+git merge --no-ff <id> -m "merge: <id> — <short description>"
+git push origin main
+git worktree remove .worktrees/<id>
+git branch -d <id>
+```
+
+Local and remote `main` must be in sync after every merge.
+
+### Parallelism
+
+Spec items with no shared file or data dependencies may be coded in parallel.
+
+- **Present the parallelism plan to the user first** — which items, and why they are independent — and get agreement before spawning sub-agents.
+- Each parallel item gets its own worktree and branch.
+- Deconfliction happens at merge, per the sequence above.

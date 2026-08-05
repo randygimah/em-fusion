@@ -65,6 +65,17 @@ Scope v2 changes: three screens only (Operational Picture, Hypothesis Detail, Sc
 - [ ] Manually verify the real map in the browser.
 - [ ] Record the diff size for the boundary — it is a cheap second data point for the RQ1 substitutability argument (`thesis_notes.md`).
 
+### Playback (specs `op-008`, `map-004`, `api-008`)
+
+Added after the original checklist was written — a static snapshot cannot show *where* track continuity broke, so playback is what makes a dropout legible as an event rather than a missing row. Build it after the `MapView` boundary exists, never before: playback that reaches around the adapter would undo the substitutability argument the boundary is there to make.
+
+- [ ] Add a playback transport to Operational Picture: play, pause, speed, scrub — over **simulated** scenario time, consistent with the Track 0 latency definition. Never wall clock.
+- [ ] Render aircraft at the interpolated cursor position with a trailing path; anomalous track segments visually distinct; anomaly zones appear and clear as their windows enter and leave the cursor.
+- [ ] Buffer spans of positions ahead of the cursor and interpolate client-side. **The request rate must not be coupled to the frame rate** — this is what keeps playback inside the no-WebSockets decision rather than quietly reopening it.
+- [ ] Add the backing time-window query (`GET /aircraft/track-window`), bounded server-side so an over-long span is rejected or truncated with the truncation reported, never silently served in full. Until Phase 5 lands, buffer from the mock.
+- [ ] Test: a track whose buffer has not yet loaded holds its last known position and is marked stale — it must not jump to a default coordinate or vanish.
+- [ ] Test: the same cursor renders the same data at 1x and 4x. Playback speed must not alter the simulated time of a rendered position.
+
 ## Phase 5: FastAPI Contract Mirror
 
 - [ ] Create the smallest FastAPI app with `/health`.
