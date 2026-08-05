@@ -55,6 +55,18 @@ Scope v2 changes: three screens only (Operational Picture, Hypothesis Detail, Sc
 - [ ] Add a timeline strip with two or three scenario events.
 - [ ] Test the main analyst story, not the exact layout mechanics.
 
+### View filter (specs `op-007`, `api-007`, amends `op-004`)
+
+Added after the original checklist was written. The exception-first default stands — anomalous-only is still what the analyst sees first — but judging an anomaly usually means seeing it against nominal traffic, and forcing that contrast to be inferred is a worse failure than a busier map.
+
+- [ ] Add a three-state view filter — `Anomalous only` / `Nominal only` / `All` — defaulting to anomalous-only.
+- [ ] One control drives the map and the exception panel together. They must never disagree about what is shown.
+- [ ] Leave drill-down tables unfiltered. They are the show-everything view by definition.
+- [ ] Filter server-side via a `view` query parameter, not by fetching everything and discarding client-side. Until Phase 5 lands, filter the mock behind the same function signature the API call will use.
+- [ ] Carry per-collection suppressed counts in the response. Once the backend filters, the excluded rows never arrive, so the "+n nominal hidden" footer can no longer be computed from the payload — this amends the panel built above.
+- [ ] Test: the selection persists across poll ticks rather than resetting to the default.
+- [ ] Test: the hidden count stays truthful when the backend filtered, not zero.
+
 ## Phase 4: MapView Boundary
 
 - [ ] Install MapLibre GL JS only when the placeholder no longer teaches enough. (MapLibre, not Mapbox — no account or token needed; see `em_fusion_v2.md` section 10.)
