@@ -17,13 +17,15 @@ Scope v2 changes: three screens only (Operational Picture, Hypothesis Detail, Sc
 ## Track 0: Non-Code (runs in parallel — start now)
 
 - [ ] Submit the project proposal.
-- [ ] Submit the university ethics application for the user study (approval can take 4–8 weeks — do not wait until October).
-- [ ] Get written employer confirmation: colleague participation, thesis screenshots, repo visibility (public vs private-with-examiner-access).
+- [ ] **Confirm with the supervisor that the task-based user study is withdrawn** and that the revised aims and objectives are agreed. The proposal was submitted with it; dropping a stated objective is a conversation, not a silent edit. See the reversal entry in `thesis_notes.md`.
+- [ ] Confirm with the supervisor or the ethics committee **whether blind rubric scoring by a supervisor or colleague requires ethics approval**. Scoring anonymised machine output is not obviously human-participant research, but the answer decides whether an application is needed at all — and if it is, the 4–8 week wait still applies, so ask now rather than in October.
+- [ ] Secure the **second blind scorer** and agree their time budget in advance (~30% overlap of 25–30 triads, roughly 45–60 minutes plus a calibration round). The agreement is what sizes the campaign, so get it before fixing N.
+- [ ] Get written employer confirmation: thesis screenshots, repo visibility (public vs private-with-examiner-access), and — only if the second blind scorer is a colleague rather than the supervisor — their participation.
 - [ ] Confirm in writing whether the employer requires pre-submission review of EW/GNSS-related material.
 - [ ] Confirm the employer's position on **data egress to a hosted AI API** — evidence bundles will leave the machine. Content is synthetic or replayed open data, so this is expected to be a non-issue, but fold it into the clearance conversation rather than discovering it after the campaign. Blocks the hosted arm, not the build.
 - [ ] Download and archive the OpenSky historical dataset once; record licence/attribution requirements.
 - [ ] Define detection latency precisely (simulated scenario time, not wall clock) before any measurement code exists.
-- [ ] Recruit 3–6 user-study participants by early October.
+- [ ] Write and **pre-register `docs/scoring_rubric.md`** — dimensions, worded 1/3/5 anchors, calibration procedure, adjudication rule. Commit it before the campaign runs and cite the commit hash in the thesis. A rubric fixed after seeing output is not a blind instrument.
 
 ### C4 architecture model (Structurizr)
 

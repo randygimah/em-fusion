@@ -8,8 +8,47 @@ reasoning is still fresh, rather than reconstructing it from git history later.
 ## Methodology
 
 <!-- Design rationale: why a modular monolith, why deterministic detection precedes AI, how the
-evaluation was designed (batch runs + blind rubric + user study), ethics/employer-clearance
-process notes as they happen. -->
+evaluation was designed (batch runs + blind rubric), ethics/employer-clearance process notes as
+they happen. -->
+
+### Evaluation design: withdrawing the task-based user study, retaining blind rubric scoring
+
+The evaluation was originally designed with three strands: automated detection metrics against
+generator ground truth, blind rubric scoring of hypothesis quality against a template baseline, and
+an ethics-approved task-based study with three to six participants measuring task completion time,
+triage accuracy, and perceived workload. The third strand has been withdrawn. The decision was taken
+in August 2026, before the ethics application was submitted, which is the point at which withdrawal
+was cheapest — the application itself was the sunk cost being avoided, along with a four-to-eight
+week approval wait that gated the strand.
+
+The reason was capacity rather than value. The plan estimated 254 hours against roughly 240
+available, and the study accounted for fourteen hours of session work plus recruitment and the
+ethics application. Withdrawing it moved the plan from fourteen hours over to a small positive
+margin. The contingency was not improvised: TOR 7 of the submitted proposal had already named the
+user study as the strand to shed under the low-availability case, on the reasoning that the
+evaluation would remain defensible on the other two. What changed was the assessment that the
+planned case, not merely the low case, was too tight to carry it.
+
+Two things are worth recording about how the decision was reasoned, because both are more
+interesting than the outcome. First, "user study" turned out to name two separable things that were
+being treated as one: the task-based study, and the human blind scoring of hypothesis quality. Only
+the former was withdrawn. Dropping both would have left the central AI research question resting on
+the author scoring his own system's output, which is not a defensible position and was very nearly
+adopted by accident through imprecise language. The distinction is now made explicitly wherever the
+evaluation is described. Second, the withdrawal creates a gap that must be stated rather than
+elided: with the study gone, nothing in the evaluation measures analyst *utility*. Detection metrics
+measure whether the pipeline finds what was injected; blind rubric scoring measures whether
+hypotheses are rated better than a template baseline by two independent raters. Neither establishes
+that an analyst completes a triage task faster or more accurately with the system than without it.
+That is a real limitation of the contribution, it is named as such in the Evaluation chapter, and it
+is the first item of future work.
+
+A secondary consequence sits outside the research argument. The apprenticeship KSB on negotiating
+and closing with senior stakeholders was evidenced partly by ethics approval and participant
+recruitment; both are gone. Employer clearance and securing an independent second rater remain, but
+the evidence is thinner, and that is a supervisor conversation rather than a silent re-tick.
+
+*(Record the date of supervisor agreement to the revised objective 6 here once obtained.)*
 
 ### Data acquisition: OpenSky static snapshot rather than the Trino interface
 
@@ -235,5 +274,5 @@ once the swap lands; it is a cheap second data point alongside the third-adapter
 quality rubric results across the three arms (template / local / hosted, blind scoring, inter-rater
 agreement if applicable) — primary comparison hosted-vs-template at full N, secondary
 local-vs-hosted at reduced N; grounding-check catch rate, grounding variance, and retry rate per
-arm; campaign cost and wall-time per arm; user study results (NASA-TLX, task completion,
-qualitative feedback); limitations encountered. -->
+arm; campaign cost and wall-time per arm; limitations encountered — including the absence of any
+analyst-utility measurement following the withdrawal of the task-based user study. -->

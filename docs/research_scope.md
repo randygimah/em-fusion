@@ -114,10 +114,12 @@ first-class evaluation result, not a non-event.
   explanations, uncertainty handling, consistency with stated confidence, usefulness, absence of
   unsupported claims), scored **blind** (scorer doesn't know template vs AI), comparing the two
   generators. The automated grounding check catch-rate is the objective complement to this rubric.
-- **User evaluation**: 3–6 technical participants, within-subject (raw tables vs EM Fusion
-  dashboard), measuring task completion time, accuracy, confidence, NASA-TLX workload, perceived
-  usefulness. Requires university ethics approval (4–8 week lead time — see Track 0 in
-  `implementation.md`) and written employer clearance (participation, screenshots, repo visibility).
+- **User evaluation** — **withdrawn from v1.** A within-subject task study with 3–6 technical
+  participants (raw tables vs EM Fusion dashboard) measuring task completion time, accuracy,
+  confidence, NASA-TLX workload, and perceived usefulness was scoped originally and has been dropped
+  on capacity grounds. Consequently **no strand measures analyst utility**; the two surviving strands
+  measure detection correctness and hypothesis quality, and the gap is a stated limitation. See the
+  Methodology entry in `thesis_notes.md` and Future Work in `em_fusion_v2.md` section 15.
 
 ## Success Criteria (build must ultimately demonstrate)
 

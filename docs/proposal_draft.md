@@ -24,12 +24,20 @@ EPA assessor, not only by a software engineer. Technical terms are introduced in
 | **TOR 6. Knowledge and behaviours** | ~150 | **Drafted** |
 | **TOR 7. Resources** | ~200 | **Drafted** |
 | **TOR 8. Unmet business need** | ~200 | **Drafted** |
-| **TOR 9. Ethics, social, legal, professional** | ~300 | **Drafted** |
-| **TOR 10. Project plan / Gantt** | ~150 | **Drafted — capacity is tight, see the note** |
+| **TOR 9. Ethics, social, legal, professional** | ~300 | **Drafted — over length at ~386, trim guidance in the section** |
+| **TOR 10. Project plan / Gantt** | ~150 | **Drafted — now fits capacity, see the note** |
 | **References (Harvard)** | — | **Drafted — three need verification** |
 | **Appendix — KSB checkboxes** | — | **Drafted, with two flagged as weak** |
 
 **Word limits:** treated as ±10%. Going over is acceptable; the author trims.
+
+> **Scope revision after submission — needs supervisor sign-off.** The **task-based user study has
+> been withdrawn** on capacity grounds. Blind rubric scoring of hypothesis quality survives, now
+> double-scored by two independent raters against a pre-registered rubric. Affected sections: TOR 3
+> (aims), TOR 4 (objective 6), TOR 5 (skills), TOR 7 (resources), TOR 9 (ethics), TOR 10 (plan and
+> Gantt), Part 1 (schedule), and the KSB appendix. Rationale and the resulting limitation are
+> recorded in `thesis_notes.md`. This changes a stated objective in a submitted document — agree it
+> with the supervisor before the revision is relied on.
 
 ---
 
@@ -115,14 +123,15 @@ latter has a baseline to be measured against.
 
 | Period | Focus |
 |---|---|
-| **August** | Proposal, ethics application, employer clearance; OpenSky data acquisition; map boundary and API contract |
+| **August** | Proposal, employer clearance; OpenSky data acquisition; map boundary and API contract |
 | **September** | Database persistence, scenario generator, source adapters, Data Abstraction Layer |
 | **October** | Detection engine, evidence bundles, constrained AI hypothesis layer; **writing begins** |
-| **November** | Evaluation harness, third adapter, evaluation campaign, user study; writing continues |
+| **November** | Evaluation harness, third adapter, evaluation campaign, blind scoring; writing continues |
 | **December** | Final writing, supervisor feedback, revision, submission |
 
-Approximately 254 hours across twenty-one weeks. The ethics application starts immediately: approval
-takes four to eight weeks and gates the user study.
+Approximately 236 hours across twenty-one weeks. Employer clearance starts immediately, as does the
+question of whether blind rubric scoring requires ethics approval — if it does, that carries a
+four-to-eight-week wait.
 
 ## Conclusions (50 words)
 
@@ -271,9 +280,10 @@ analyst to accept, reject, or challenge.
 
 A second aim, equally weighted, is to evaluate the prototype rather than merely demonstrate it:
 to measure how reliably it detects what it should, how well it avoids claiming more than the
-evidence supports, and whether its explanations are genuinely useful to an analyst.
+evidence supports, and whether its explanations are rated better than those of a deterministic
+template baseline under blind, independently-scored comparison.
 
-*(149 words)*
+*(151 words)*
 
 ---
 
@@ -294,10 +304,11 @@ evidence supports, and whether its explanations are genuinely useful to an analy
    of ungrounded claims caught by an automated grounding check.
 5. **Human-in-the-loop interface.** Deliver three screens in which an analyst's verdict changes a
    hypothesis's recorded status.
-6. **Evaluation.** Blind-score hypothesis quality against a template baseline, and run an
-   ethics-approved study with 3–6 participants measuring task time, accuracy, and perceived workload.
+6. **Evaluation.** Blind-score hypothesis quality against a deterministic template baseline across a
+   stratified sample of evidence bundles, double-scored by two independent raters against a
+   pre-registered rubric, reporting per-dimension means and inter-rater agreement.
 
-*(178 words — trimmable to ~150 by cutting the parenthetical detail in objective 1 if the limit is
+*(176 words — trimmable to ~150 by cutting the parenthetical detail in objective 1 if the limit is
 enforced strictly.)*
 
 ---
@@ -323,15 +334,15 @@ is committed.
 will be developed by building the deterministic template generator first, so that the AI layer has a
 working comparison to be measured against rather than being assessed on its own terms.
 
-*Empirical evaluation design* — defining ground truth, selecting metrics, and controlling for bias
-through blind scoring — is a research skill rather than an engineering one, and will be developed
-with supervisor guidance.
+*Empirical evaluation design* — defining ground truth, selecting metrics, designing a pre-registered
+rubric, and controlling for bias through blind double-scoring and inter-rater agreement — is a
+research skill rather than an engineering one, and will be developed with supervisor guidance.
 
-*Stakeholder negotiation* will be exercised in obtaining written employer clearance, securing
-university ethics approval, and recruiting study participants — engagements with defined outcomes
-rather than informal conversations.
+*Stakeholder negotiation* will be exercised in obtaining written employer clearance on data egress
+and repository visibility, and in securing an independent second rater for the blind scoring —
+engagements with defined outcomes rather than informal conversations.
 
-*(213 words)*
+*(214 words)*
 
 ---
 
@@ -387,12 +398,24 @@ checksum manifest, removing any ongoing external dependency.
 cap configured in advance. *If unavailable or over budget:* the locally-run model and the
 deterministic template generator are already built as fallbacks.
 
-**People** — 3–6 colleagues for the user study, subject to written employer clearance; university
-supervisor; university ethics committee. *If unavailable:* the evaluation has three independent
-strands, so the thesis remains defensible on detection metrics and blind-scored hypothesis quality
-should the user study shrink or be lost.
+**People** — one independent second rater for the blind hypothesis scoring, expected to be the
+university supervisor, requiring roughly ninety minutes plus a short calibration round; university
+supervisor for research-design guidance. A task-based user study was scoped originally and has been
+withdrawn on capacity grounds — see the note below. *If the second rater is unavailable:* scoring
+falls back to a single rater with no inter-rater agreement figure, which is a declared limitation
+rather than a lost strand; detection metrics and grounding statistics are machine-computed and
+unaffected either way.
 
-*(228 words)*
+*(233 words)*
+
+> **Withdrawn scope — task-based user study.** The original plan included an ethics-approved study
+> with 3–6 participants measuring task time, accuracy, and perceived workload. It has been withdrawn
+> to protect the build and writing schedule: it accounted for roughly twenty hours plus a four-to-
+> eight-week ethics approval gate, against a plan already estimated at fourteen hours over capacity.
+> The evaluation retains two independent strands — automated detection metrics against known ground
+> truth at full N, and blind double-scored hypothesis quality against a template baseline — and the
+> thesis argument rests on those. Analyst utility measured under task conditions moves to future
+> work, and is named as a limitation rather than left implicit.
 
 ---
 
@@ -431,13 +454,16 @@ constrained AI hypothesis generation is safe and useful enough to pursue at scal
 > *Template guidance: consider any ethics, social, legal and professional issues that might arise.
 > Refer to university guidance on Ethics and Integrity.*
 
-**Ethics.** The user evaluation involves human participants and requires university ethics approval,
-which will be submitted alongside this proposal — approval can take four to eight weeks, and a late
-application risks losing the study entirely. Participants will be colleagues, which introduces a
-power dynamic that must be managed rather than ignored: participation will be genuinely voluntary,
-recruitment will avoid anyone in a line-management relationship with me, no record will be kept of
-who declines, and participants may withdraw without giving a reason. Only task times, accuracy and
-workload ratings are collected, and results are reported anonymised.
+**Ethics.** The project collects no data from human participants. A task-based user study was scoped
+originally and has been withdrawn on capacity grounds; the evaluation now rests on automated
+detection metrics and on blind rubric scoring of machine-generated text. The one remaining human
+involvement is a second independent rater — expected to be my supervisor — scoring anonymised
+hypotheses against a pre-registered rubric. Whether that constitutes human-participant research is a
+question for the university ethics committee rather than an assumption of mine, and it will be put to
+them early: if approval is required, the four-to-eight-week wait still applies. No personal data is
+collected from the rater; only their scores are retained, and they are reported in aggregate. Should
+the rater be a colleague rather than my supervisor, participation will be genuinely voluntary, will
+avoid anyone in a line-management relationship with me, and may be withdrawn without reason.
 
 **Social.** The project sits in a defence context and is deliberately bounded: it uses only open,
 replayed and synthetic data, makes no claim to detect real interference, and performs no emitter
@@ -457,10 +483,13 @@ project.
 **Professional.** Work follows the BCS Code of Conduct, particularly competence and acting in the
 public interest. Results will be reported honestly, including negative ones — a finding that the AI
 layer does not outperform the template baseline is a legitimate result and will be reported as such.
-Prompts, schemas and validation code are included in the repository so results can be independently
-checked.
+Because I am both the system's author and one of its two raters, the scoring rubric is committed to
+the repository before the evaluation campaign runs and its commit hash cited in the thesis, so the
+instrument demonstrably predates the results. Prompts, schemas and validation code are included in
+the repository so results can be independently checked.
 
-*(327 words)*
+*(386 words — over the 300 guide; trim the colleague-rater sentence in the Ethics paragraph if the
+limit is enforced strictly, since the supervisor is the expected rater.)*
 
 ---
 
@@ -472,24 +501,25 @@ checked.
 
 The project runs from August to the end of December, approximately twenty-one weeks. Available effort
 is 5–10 hours per week initially, rising to 10–15 hours per week from September, giving a planned
-budget of roughly 240 hours against an estimated requirement of 254.
+budget of roughly 240 hours against an estimated requirement of 236.
 
-Three scheduling decisions follow. First, the non-code track — ethics application and employer
-clearance — starts immediately, because ethics approval takes four to eight weeks and gates the user
-study. Second, writing begins in October alongside the final build phases rather than after them; the
-draft is not left until the build is finished. Third, December is treated as working time with
-contingency inside it, not as pure buffer.
+Three scheduling decisions follow. First, the non-code track — employer clearance and the ethics
+question on blind scoring — starts immediately, because if approval turns out to be required it
+carries a four-to-eight-week wait. Second, writing begins in October alongside the final build phases
+rather than after them; the draft is not left until the build is finished. Third, December is treated
+as working time with contingency inside it, not as pure buffer.
 
-Phases already complete (frontend foundation and contract-first mock data) are excluded from the
-estimate.
+The task-based user study has been withdrawn on capacity grounds (see TOR 7), removing eighteen hours
+and one external dependency from the plan. Phases already complete (frontend foundation and
+contract-first mock data) are excluded from the estimate.
 
-*(153 words)*
+*(163 words)*
 
 ### Task breakdown
 
 | # | Task | Objective served | Hours | Elapsed |
 |---|---|---|---|---|
-| 1 | Track 0: proposal, ethics application, employer clearance | All | 10 | 3 wks |
+| 1 | Track 0: proposal, employer clearance, ethics question on blind scoring | All | 6 | 3 wks |
 | 2 | OpenSky acquisition: download, bounding-box filter, archive + manifest | 1 | 5 | 1 wk |
 | 3 | MapView boundary and map integration | 5 | 8 | 2 wks |
 | 4 | FastAPI contract mirror and frontend polling | 5 | 8 | 2 wks |
@@ -501,17 +531,16 @@ estimate.
 | 10 | Analyst feedback workflow and Scenario Control screen | 5 | 12 | 2 wks |
 | 11 | Evaluation harness and third adapter (extensibility measurement) | 1, 6 | 18 | 2 wks |
 | 12 | Docker Compose, CI, linting, polish | — | 8 | 1 wk |
-| 13 | Evaluation campaign: batch runs, blind scoring, analysis | 3, 4, 6 | 14 | 2 wks |
-| 14 | User study: recruitment, sessions, analysis | 6 | 14 | 3 wks |
-| 15 | Thesis writing (10,000 words) | All | 65 | 12 wks |
-| 16 | Supervisor feedback, revision, final edits | All | 12 | 3 wks |
-| | **Total** | | **254** | |
+| 13 | Evaluation campaign: batch runs, blind double-scoring, analysis | 3, 4, 6 | 14 | 2 wks |
+| 14 | Thesis writing (10,000 words) | All | 65 | 12 wks |
+| 15 | Supervisor feedback, revision, final edits | All | 12 | 3 wks |
+| | **Total** | | **236** | |
 
 ### Gantt (half-month blocks)
 
 | # | Task | Aug<br>1 | Aug<br>2 | Sep<br>1 | Sep<br>2 | Oct<br>1 | Oct<br>2 | Nov<br>1 | Nov<br>2 | Dec<br>1 | Dec<br>2 |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | Track 0 (ethics, clearance) | ▓ | ▓ | ▓ | | | | | | | |
+| 1 | Track 0 (clearance, ethics query) | ▓ | ▓ | ▓ | | | | | | | |
 | 2 | OpenSky acquisition | | ▓ | | | | | | | | |
 | 3 | MapView boundary | ▓ | ▓ | | | | | | | | |
 | 4 | FastAPI contract mirror | | ▓ | ▓ | | | | | | | |
@@ -524,20 +553,19 @@ estimate.
 | 11 | Evaluation harness + 3rd adapter | | | | | | | ▓ | ▓ | | |
 | 12 | Docker, CI, polish | | | | | | | | ▓ | | |
 | 13 | Evaluation campaign | | | | | | | | ▓ | ▓ | |
-| 14 | User study | | | | | | ▓ | ▓ | ▓ | | |
-| 15 | Thesis writing | | | | | ▓ | ▓ | ▓ | ▓ | ▓ | |
-| 16 | Feedback, revision, final edits | | | | | | | | | ▓ | ▓ |
+| 14 | Thesis writing | | | | | ▓ | ▓ | ▓ | ▓ | ▓ | |
+| 15 | Feedback, revision, final edits | | | | | | | | | ▓ | ▓ |
 
 ### Capacity note — read before submitting
 
-The estimate of **254 hours** should be compared against three availability cases across the
+The estimate of **236 hours** should be compared against three availability cases across the
 twenty-one weeks:
 
 | Case | Assumption | Available | Verdict |
 |---|---|---|---|
-| Low | 5 h/wk throughout Aug–Sep, 10 h/wk Oct–Dec | ~170 h | **Does not fit.** The user study is the strand to drop — the evaluation stays defensible on detection metrics and blind-scored hypothesis quality |
-| Planned | 7.5 h/wk Aug, 10 h/wk Sep, 13 h/wk Oct–Dec | ~240 h | **Marginal — 14 hours short.** Workable if writing genuinely starts in October and December is working time |
-| High | 10 h/wk Aug–Sep, 15 h/wk Oct–Dec | ~275 h | Fits with ~20 hours of contingency |
+| Low | 5 h/wk throughout Aug–Sep, 10 h/wk Oct–Dec | ~170 h | **Still does not fit.** The next strand to shed is the third-adapter extensibility measurement (task 11), which costs an RQ1 result; the two evaluation strands are load-bearing and are not candidates |
+| Planned | 7.5 h/wk Aug, 10 h/wk Sep, 13 h/wk Oct–Dec | ~240 h | **Fits, with ~4 hours of contingency** — it was 14 hours short before the user study was withdrawn. Still assumes writing genuinely starts in October and December is working time |
+| High | 10 h/wk Aug–Sep, 15 h/wk Oct–Dec | ~275 h | Fits with ~39 hours of contingency |
 
 The plan assumes the ramp to 10 h/wk happens in **September, not October**. Holding 5 h/wk through
 September costs roughly 20 hours at the point in the schedule where the DAL and detection work sits,
@@ -547,8 +575,9 @@ and pushes the AI layer into November — which in turn compresses writing.
 
 ## Appendix — KSB checklist mapping
 
-Which boxes to tick, and where each is evidenced. **Two are weak for this project and should be a
-conversation with your supervisor rather than a silent tick.**
+Which boxes to tick, and where each is evidenced. **Three are weak for this project and should be a
+conversation with your supervisor rather than a silent tick** — the third became weak when the
+task-based user study was withdrawn.
 
 ### Core KSBs assessed by Project Report (all four in the template's checklist)
 
@@ -557,7 +586,7 @@ conversation with your supervisor rather than a silent tick.**
 | Identify, document, review and design complex IT-enabled business processes… systematic approach to improving those processes | ✅ | The analyst triage workflow *is* the business process being redesigned: raw feeds → normalised observations → detected anomalies → evidence bundles → reviewed hypotheses → recorded verdict |
 | Professionally present specialism plans and solutions in a well-structured business report | ✅ | The thesis itself, plus this TOR |
 | Demonstrate self-direction and originality in solving problems; act autonomously | ✅ | Solo project, self-defined scope, documented design decisions and reversals |
-| Be competent at negotiating and closing techniques with senior internal and external stakeholders | ✅ | Employer clearance obtained in writing; university ethics approval; participant recruitment — each a negotiation with a defined close |
+| Be competent at negotiating and closing techniques with senior internal and external stakeholders | ⚠️ | Employer clearance obtained in writing (including data egress to a hosted AI API and repository visibility); securing an independent second rater. **Thinner since the user study was withdrawn** — participant recruitment and ethics approval were two of the three defined closes. Raise with the supervisor rather than ticking silently |
 
 ### Software Engineering specialism — Skills (6)
 

@@ -521,7 +521,7 @@ The AI layer is the one component with a network dependency, and it degrades in 
 
 ## 13. Milestone Plan
 
-Aligned with `implementation.md` phases. Track 0 (non-code) runs in parallel from day one: ethics application, employer clearance in writing, OpenSky download + licence notes, latency definition, participant recruitment.
+Aligned with `implementation.md` phases. Track 0 (non-code) runs in parallel from day one: employer clearance in writing, the ethics question on blind scoring, OpenSky download + licence notes, latency definition, securing the second rater, pre-registering the scoring rubric.
 
 ```
 M1  Frontend foundation + contract-first mock data          [done]
@@ -582,6 +582,11 @@ WebSocket live feed
 TimescaleDB time-series optimisation
 Cloud deployment (ECS Fargate, Terraform), RBAC, audit logging
 Confidence calibration and analyst agreement-rate tracking
+Task-based user study with practising analysts — task completion time, triage
+  accuracy, and perceived workload (NASA-TLX) against a no-AI control.
+  Withdrawn from v1 on capacity grounds, not on value grounds: it is the only
+  strand that would measure analyst *utility* rather than hypothesis quality,
+  and its absence is a stated limitation
 Additional model arms beyond the two in v1 (e.g. a mid-size open-weight model
   between the local and hosted arms) to place the capability/architecture
   trade-off on a curve rather than at two points
@@ -599,4 +604,4 @@ Lakehouse storage substrate beneath the DAL at operational ingest volumes:
 
 ## 16. Scope Statement
 
-> EM Fusion is a full-stack prototype for AI-assisted electromagnetic situational awareness. It fuses replayed open aviation telemetry with synthetic RF sensor observations through a canonical Data Abstraction Layer, detects deviations from baseline behaviour using deterministic methods, and converts structured evidence bundles into explainable hypotheses via a constrained, schema-validated, grounding-checked AI layer. A human analyst inspects, challenges, and validates every hypothesis through a three-screen geospatial dashboard. The prototype uses only open, replayed, and synthetic data, is evaluated through batch scenario runs with known ground truth, blind-scored hypothesis quality comparison, and a small ethics-approved user study, and is explicitly non-operational decision support.
+> EM Fusion is a full-stack prototype for AI-assisted electromagnetic situational awareness. It fuses replayed open aviation telemetry with synthetic RF sensor observations through a canonical Data Abstraction Layer, detects deviations from baseline behaviour using deterministic methods, and converts structured evidence bundles into explainable hypotheses via a constrained, schema-validated, grounding-checked AI layer. A human analyst inspects, challenges, and validates every hypothesis through a three-screen geospatial dashboard. The prototype uses only open, replayed, and synthetic data, is evaluated through batch scenario runs with known ground truth and a blind, double-scored hypothesis quality comparison against a deterministic template baseline, and is explicitly non-operational decision support.
