@@ -50,6 +50,55 @@ the evidence is thinner, and that is a supervisor conversation rather than a sil
 
 *(Record the date of supervisor agreement to the revised objective 6 here once obtained.)*
 
+### Scored arms: withdrawing the local model from the evaluation while keeping it in the system
+
+The AI hypothesis layer was specified with three generators — template, hosted frontier model, and
+local open-weight model — and all three were to be blind-scored. The scored comparison has since been
+reduced to two: hosted against template. The local generator remains in the system, but it does not
+appear in any results table.
+
+The original argument for the third arm is recorded in the Implementation chapter below and was a
+good one on its own terms: running an open-weight and a frontier model over identical evidence
+bundles would have upgraded the research question from "does a constrained AI generator beat a
+deterministic template?" to "how much of hypothesis quality comes from model capability as against
+the constrained-generation architecture?" — a question with an informative answer in either
+direction. Two things overturned it.
+
+The first is that it answers a question the project does not ask. The research question concerns
+whether a constrained AI layer can produce explainable, evidence-grounded hypotheses that a template
+baseline cannot match. Open-weight against frontier is a capability comparison, and a substantial one
+in its own right; annexing it to an architecture study widens the contribution without deepening it.
+The scope document had already conceded this implicitly by demoting local-versus-hosted to "a smaller
+secondary sample" on scoring-load grounds — a secondary comparison at reduced N that nobody would
+have been able to draw a conclusion from.
+
+The second is statistical, and is the stronger reason. Human rubric scoring is the binding constraint
+on the evaluation: it costs a second rater's time, and the corpus is therefore on the order of twenty
+evidence bundles. Splitting that budget three ways yields two underpowered comparisons; spending it
+all on hosted-versus-template yields one adequately powered comparison, on the axis that bears
+directly on the research question. Withdrawing the arm is not a concession to schedule pressure so
+much as a correction — the three-arm design was spending scarce measurement capacity on the wrong
+contrast.
+
+What the project gives up is the ability to say anything about the capability-versus-architecture
+split, and that should be stated rather than left as an unexplored implication. It is the second item
+of future work, and it is unusually cheap to add later: the local generator is built, exercised, and
+producing schema-valid output against the same bundles, so the marginal cost is a second generation
+pass and a larger scoring budget.
+
+The local generator stays for reasons that were always independent of evaluation, and separating
+those from the evaluation argument is what made the decision tractable. It is the availability
+fallback when the hosted API is unreachable; it is what allows the whole system to be demonstrated
+offline with AI-generated rather than template hypotheses, with no API key, network, or third-party
+account; and it is the second consumer of the provider-agnostic service interface, which is what
+makes that interface demonstrably load-bearing rather than a speculative abstraction — a point that
+feeds the extensibility claim. It is nonetheless time-boxed: if local model selection, quantisation,
+and grammar-constrained output do not come together in about a day, it is cut, the template generator
+becomes the sole fallback, and the offline demonstration shows template output.
+
+*(Record the actual time spent standing up the local arm here, and whether the time-box held. If it
+was cut, record that too — a time-box that fires is a result about estimation, not a failure.)*
+
 ### Data acquisition: OpenSky static snapshot rather than the Trino interface
 
 OpenSky offers two routes to historical state vectors. The **Trino/MinIO SQL interface** is free to
@@ -155,7 +204,14 @@ deviations, the third-adapter extensibility measurement for RQ1 (files touched /
 hours taken), AI integration details (prompt design, schema validation, retry/fallback logic,
 grounding-check implementation). -->
 
-### AI hosting: a hosted frontier model, with a local model as a second arm
+### AI hosting: a hosted frontier model, with a local model as fallback
+
+> **Partially superseded.** The argument below for retaining the local model as a *scored second
+> evaluation arm* was subsequently withdrawn — see "Scored arms: withdrawing the local model from the
+> evaluation while keeping it in the system" in Methodology. It is left in place unedited because the
+> reversal is only legible against the position it reversed, and because everything else in this
+> section — the case for hosted-primary, the reproducibility trade, the deliberate spend — still
+> stands. Read the two together.
 
 The design went through a reversal worth recording, because the reasoning behind the reversal is
 more useful to the write-up than either endpoint. An intermediate design made a locally-hosted
@@ -210,10 +266,14 @@ while the table was still unpopulated — a decision taken speculatively that tu
 load-bearing, and that would have been a migration had it been deferred.
 
 **Two risks recorded in advance rather than discovered at analysis time.** First, **human scoring
-load**: three arms is three times the blind-rubric pairs, which may exceed what 3–6 participants can
-score. The plan is hosted-vs-template at full N as the primary comparison with local-vs-hosted as a
-smaller secondary sample, fixed before the campaign rather than adjusted after seeing results.
-Second, **data egress**: evidence bundles now leave the machine. All content is synthetic or
+load**: three arms is three times the blind-rubric pairs, which may exceed what the available raters
+can score. The plan at the time was hosted-vs-template at full N as the primary comparison with
+local-vs-hosted as a smaller secondary sample, fixed before the campaign rather than adjusted after
+seeing results. *This risk was subsequently resolved by withdrawing the third arm entirely — see the
+Methodology entry. Recording it here is worthwhile precisely because it shows the constraint was
+visible in advance and initially met with a partial mitigation that, on reflection, would not have
+produced an interpretable secondary result.* Second, **data egress**: evidence bundles now leave the
+machine. All content is synthetic or
 replayed open data, so this is expected to be immaterial, but it intersects the employer-clearance
 track and was confirmed early rather than late.
 
@@ -270,9 +330,12 @@ once the swap lands; it is a cheap second data point alongside the third-adapter
 
 ## Evaluation
 
-<!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency); hypothesis
-quality rubric results across the three arms (template / local / hosted, blind scoring, inter-rater
-agreement if applicable) — primary comparison hosted-vs-template at full N, secondary
-local-vs-hosted at reduced N; grounding-check catch rate, grounding variance, and retry rate per
-arm; campaign cost and wall-time per arm; limitations encountered — including the absence of any
-analyst-utility measurement following the withdrawal of the task-based user study. -->
+<!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;
+hypothesis quality rubric results for the two scored arms (hosted vs template) over a stratified
+sample of ~20 evidence bundles, fully double-scored — per-dimension means and quadratic-weighted
+Cohen's kappa; the residual blinding threat from the template arm's distinctive style;
+grounding-check catch rate, grounding variance, and retry rate per arm over all generations, and
+local-arm fallback frequency; campaign cost and wall-time per arm; limitations encountered —
+including the absence of any analyst-utility measurement following the withdrawal of the task-based
+user study, and the absence of a capability-versus-architecture split following the withdrawal of
+the local arm from scoring. -->

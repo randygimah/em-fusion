@@ -252,8 +252,11 @@ because one detection rule — clustering aircraft track discontinuities within 
 radio anomaly — requires indexed geographic queries that a general-purpose database cannot perform
 efficiently. React and TypeScript for the dashboard, with MapLibre GL JS for mapping because it needs
 no commercial account. For hypothesis generation, a hosted frontier language model accessed by API is
-the primary generator, with a locally-run open-weight model serving both as a fallback when the API
-is unavailable and as a second arm in the evaluation. Docker Compose runs the whole system locally.
+the generator under evaluation, measured against the deterministic template baseline. A locally-run
+open-weight model is retained solely as a fallback for when the API is unavailable, which keeps the
+system demonstrable offline; it is not itself evaluated, because comparing open-weight against
+frontier models is a capability question rather than the architectural one this project asks. Docker
+Compose runs the whole system locally.
 
 Scope is bounded deliberately: no real radio hardware, no classified data, no claims about detecting
 real-world jamming, no machine-learning detectors, and no autonomous decisions. These exclusions
@@ -383,8 +386,8 @@ evidence that discussion draws on.
 **Hardware** — personal laptop (Apple M4 Pro, 48 GB unified memory), already owned; sufficient memory
 to run a local open-weight model alongside the full application stack. *If unavailable:* everything
 except the local model runs on any 16 GB machine via Docker Compose and Git, and the local model is
-itself a fallback component, so its loss degrades the evaluation's second arm rather than the
-prototype.
+itself a fallback component that is not evaluated, so its loss costs the offline demonstration rather
+than any result.
 
 **Software** — all open-source and free of licence cost: Python and FastAPI, PostgreSQL with PostGIS,
 React and TypeScript, Docker Desktop, MapLibre GL JS, Ollama, Git and GitHub Actions. No procurement

@@ -76,7 +76,8 @@ the database, in API responses, and on every screen.
 - **US-R2** — As a researcher, I want batch runs with exported metrics, so that detection performance
   has statistical weight instead of one data point per scenario.
 - **US-R3** — As a researcher, I want template, hosted-AI, and local-AI hypotheses stored with a
-  generator flag and model ID, so that three-way blind comparison is queryable.
+  generator flag and model ID, so that the hosted-vs-template blind comparison is queryable and any
+  fallback to the local or template generator is visible in the data rather than inferred.
 - **US-R4** — As a researcher, I want raw model responses persisted verbatim, so that results stay
   defensible after a hosted model is retired.
 - **US-R5** — As a researcher, I want a correct non-detection on a normal-baseline run treated as a
@@ -217,8 +218,9 @@ the database, in API responses, and on every screen.
 | FR-1001 | A batch runner shall execute 20–30 randomised runs per scenario type from parameters and seeds. |
 | FR-1002 | The harness shall compute precision, recall, F1, false positive rate, false negative rate, and detection latency in simulated time. |
 | FR-1003 | The harness shall export results to CSV and JSON. |
-| FR-1004 | The harness shall generate hypotheses from all three generators over identical bundles, anonymised for blind rubric scoring. |
-| FR-1005 | The harness shall record grounding catch rate, grounding variance, retry rate, campaign cost, and wall-time per arm. |
+| FR-1004 | The harness shall generate hypotheses from the hosted and template generators over a stratified sample of identical bundles, and export them anonymised, identically formatted, and in randomised within-bundle order for blind rubric scoring, with the arm key held separately. The local generator is not blind-scored. |
+| FR-1005 | The harness shall record grounding catch rate, grounding variance, retry rate, campaign cost, and wall-time per arm, over all generations rather than only the scored sample. |
+| FR-1006 | The harness shall ingest completed score sheets from two independent raters and report per-dimension means per arm together with quadratic-weighted Cohen's κ across the double-scored corpus. |
 
 ### FR-11xx — Build and Delivery
 

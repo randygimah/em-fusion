@@ -147,11 +147,11 @@ None of this blocks the **template generator**, which is the first thing built i
 **Decisions to fix and write down (no code):**
 
 - [ ] Choose the hosted model and **pin a dated model ID, not a moving alias**. An alias changing mid-campaign invalidates the comparison with no visible failure.
-- [ ] Choose the local model and quantisation; confirm it loads on the host and emits schema-valid output before committing to it as the second arm.
+- [ ] Choose the local model and quantisation; confirm it loads on the host and emits schema-valid output. **Time-box this to about a day.** The local arm is the availability fallback and offline-demo guarantee only — it is not scored, and nothing downstream depends on it. If it fights you, cut it, let the template generator be the sole fallback, and record that the offline demo shows template output.
 - [ ] Fix generation parameters once — temperature 0, seed, max tokens — and freeze them across arms. Different params across arms make the comparison meaningless.
 - [ ] Decide **N generations per bundle per arm**. This multiplies both cost and campaign wall-time, and drives the grounding-variance measurement. Pick it deliberately, not by drifting upward.
 - [ ] Decide the **total spend ceiling** for the project and the expected campaign cost within it.
-- [ ] Decide the blind-scoring split — hosted-vs-template at full N, local-vs-hosted as a smaller secondary sample. Fix before M9; adjusting it after seeing results is a validity problem, not a scheduling one.
+- [ ] Fix the blind-scoring corpus — **hosted-vs-template only**, a stratified sample of ~20 evidence bundles (5 per anomalous scenario type), 40 hypotheses, fully double-scored. The local arm is not scored. Fix before M9; adjusting after seeing results is a validity problem, not a scheduling one.
 - [ ] Confirm the Track 0 data-egress item is closed.
 
 **Implementation prerequisites (build before the first real call):**
@@ -194,8 +194,10 @@ None of this blocks the **template generator**, which is the first thing built i
 - [ ] Batch runner: execute 20–30 randomised runs per scenario type from parameters + seeds.
 - [ ] Compute precision, recall, F1, false positive rate, false negative rate, and detection latency (in simulated time, per the Track 0 definition).
 - [ ] Export results to CSV/JSON for thesis tables and charts.
-- [ ] Generate hypotheses from all three generators over identical bundles, anonymised for blind rubric scoring; primary comparison hosted-vs-template at full N, secondary local-vs-hosted at reduced N (per the Phase 8.5 decision).
-- [ ] Produce N generations per bundle per model arm; record grounding catch rate, grounding variance, and retry rate **per arm**.
+- [ ] Generate hypotheses from the **hosted and template** generators over identical bundles, anonymised for blind rubric scoring (per the Phase 8.5 decision). The local arm is exercised as a fallback but is not scored.
+- [ ] Emit the scoring pack: rendered hypothesis pairs in randomised order, identical formatting across arms, arm key held in a separate file, plus a blank score sheet per rater.
+- [ ] Ingest completed score sheets; compute per-dimension means per arm and quadratic-weighted Cohen's κ across the double-scored corpus. Apply the pre-registered adjudication rule for disagreements.
+- [ ] Produce N generations per bundle per model arm; record grounding catch rate, grounding variance, and retry rate **per arm**. Keep this separate from rubric scoring — raters see one generation per arm, not all N.
 - [ ] Record actual campaign cost and wall-time per arm — both are write-up material, and the cost figure is what makes the "deliberate spend" claim in `thesis_notes.md` concrete.
 - [ ] Late-project extensibility demonstration: add a third source adapter and record files touched, lines changed, and hours taken (RQ1 evidence).
 - [ ] Dry-run the full evaluation once in early October before the real runs.

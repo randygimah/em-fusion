@@ -158,8 +158,10 @@ Every evidence item must trace to a stored anomaly or observation.
 **Three generators, one output schema.** All three are called with the evidence bundle and nothing else, at temperature 0 with schema-constrained output, behind a single provider-agnostic service module (`evidence_bundle → validated hypothesis`, provider selected by config):
 
 - **Template generator** (`generator = "template"`) — built first. It is the correctness fallback *and* the evaluation comparison baseline. No model involved.
-- **Hosted AI generator** (`generator = "hosted"`) — **the primary AI arm.** A frontier model via API, using native JSON-schema-constrained output so schema conformance stays a generation-time guarantee (see the validation pipeline below). A dated model ID is pinned, never a moving alias.
-- **Local AI generator** (`generator = "local"`) — **the second evaluation arm and the availability fallback.** A locally-hosted open-weight model via Ollama (or `llama-cpp-python` + GBNF grammar), running on the host and reached over HTTP. Same bundles, same schema, same grounding check.
+- **Hosted AI generator** (`generator = "hosted"`) — **the primary and only measured AI arm.** A frontier model via API, using native JSON-schema-constrained output so schema conformance stays a generation-time guarantee (see the validation pipeline below). A dated model ID is pinned, never a moving alias.
+- **Local AI generator** (`generator = "local"`) — **the availability fallback and the offline-demo guarantee, not an evaluation arm.** A locally-hosted open-weight model via Ollama (or `llama-cpp-python` + GBNF grammar), running on the host and reached over HTTP. Same bundles, same schema, same grounding check. It is exercised and tested, but it does not appear in any results table — see section 10.
+
+**The measured comparison is two-armed: hosted versus template.** The local arm was originally specified as a second evaluation arm; that was withdrawn. Comparing an open-weight model against a frontier model is a capability question, not the architecture question the project asks, and at the sample size the scoring budget supports it would have produced two underpowered comparisons in place of one adequately powered one. The local generator remains in the system for the reliability reasons in section 12. Rationale and the reversal are recorded in `thesis_notes.md`; the comparison itself moves to Future Work.
 
 Two distinct fallbacks, easy to conflate — keep them separate in code and in the write-up:
 
@@ -258,8 +260,9 @@ A first-class deliverable, not an afterthought:
 - Batch runner: 20–30 randomised runs per scenario type from parameters + seeds
 - Computes precision, recall, F1, false positive rate, false negative rate, detection latency (simulated time)
 - Exports CSV/JSON for thesis tables and charts
-- Generates anonymised hypotheses from all three generators over identical bundles for blind rubric scoring — hosted-vs-template at full N as the primary comparison, local-vs-hosted as a smaller secondary sample (scoring is human time, and three arms is 3× the pairs)
-- Produces N generations per bundle per model arm and records grounding variance and retry rate per arm
+- Generates anonymised hypotheses from the **hosted and template** generators over identical bundles for blind rubric scoring. The corpus is a stratified sample of roughly 20 evidence bundles — 5 per anomalous scenario type — giving 40 hypotheses, each scored independently by two raters against the pre-registered rubric in `docs/scoring_rubric.md`. Scoring is paired within bundle: both arms are rendered identically, in randomised order, with the arm key held separately. Exactly one generation per arm per bundle is scored
+- Reports per-dimension means per arm and **inter-rater agreement** (quadratic-weighted Cohen's κ) across the whole scored corpus. Full double-scoring was chosen over scoring a larger corpus with a partial double-scored overlap: every reported number is then double-scored, and the write-up carries no unscored remainder to defend
+- Produces N generations per bundle per model arm and records grounding variance and retry rate per arm. This is a **separate measurement from rubric scoring** and does not multiply the scored corpus — grounding variance is machine-computed over all N, while raters see one generation per arm
 - Dry-run the full evaluation once in early October before the real runs
 
 ---
@@ -431,7 +434,7 @@ erDiagram
 
 Track/RF/source-health specialisations live in the observation `payload` (typed via Pydantic), keeping the canonical table stable as sources are added. `hypotheses.generator` and `grounding_passed` exist so the evaluation harness can query comparisons directly.
 
-`hypotheses.generator` takes **`"template" | "local" | "hosted"`** — widened from the original `"template" | "ai"`. All three are populated in v1: `"hosted"` is the primary AI arm, `"local"` the second arm and availability fallback, `"template"` the baseline. Recording *which* backend produced a hypothesis, not merely that one did, is what makes the three-way comparison queryable.
+`hypotheses.generator` takes **`"template" | "local" | "hosted"`** — widened from the original `"template" | "ai"`. All three values occur in v1: `"hosted"` is the primary AI arm, `"template"` the comparison baseline and correctness fallback, `"local"` the availability fallback. Only `hosted` and `template` are scored, but recording *which* backend produced a hypothesis, not merely that one did, is what keeps the comparison queryable and makes any fallback visible in the data rather than inferred from a log. Filtering the scored corpus to `generator IN ('hosted','template')` is then a query rather than a reconstruction.
 
 Three further hypothesis columns exist for reproducibility rather than for the UI: **`model_id`** (the exact dated model identifier, never an alias), **`generation_params`** (temperature, seed, max tokens), and **`raw_response`** (the model's verbatim output before parsing). `raw_response` is the mitigation for hosted-model retirement — the evaluation artefacts survive as stored evidence even when the model behind them no longer exists. It costs one `TEXT` column and is not retrofittable after a campaign has run.
 
@@ -459,7 +462,9 @@ Three further hypothesis columns exist for reproducibility rather than for the U
 
 **What this gives up, and how it is covered.** Reproducibility at viva was the original argument for local-primary, and it was overweighted. Evaluation artefacts are *persisted* — every hypothesis is stored with its `model_id`, `generation_params`, and `raw_response` — so results are defensible as recorded evidence even after a model is retired. What is genuinely lost is the ability to *regenerate* the hosted arm from scratch years later; the deterministic pipeline (seed → data → detection → evidence bundle) is unaffected, and the local arm remains fully regenerable indefinitely. That is an acceptable trade, but it is a trade, and it holds only if the persistence above is built *before* the campaign runs.
 
-*Why the local arm stays — it is not just insurance.* Running both models over identical evidence bundles upgrades the research question from "does an AI generator beat a template?" to **"how much of hypothesis quality comes from model capability versus from the constrained-generation architecture?"** Both outcomes are informative: if the local arm approaches the hosted one, the finding is that the architecture carries the quality and the system runs offline on commodity hardware; if the hosted arm leads clearly, the capability contribution is quantified. The two-arm design could only produce one interesting result; the three-arm design produces one either way. The marginal cost is a second generation pass over bundles that already exist.
+*Why the local arm stays, and why it is no longer measured.* An earlier version of this document argued for running both models over identical bundles as a three-arm comparison, on the grounds that it upgraded the research question from "does an AI generator beat a template?" to "how much of hypothesis quality comes from model capability versus from the constrained-generation architecture?" **That argument has been withdrawn.** It answers a capability question the project does not ask — open-weight versus frontier is a legitimate study, and a separate one — and the scoring budget will not carry it: at ~20 bundles, splitting human attention three ways yields two underpowered comparisons instead of one adequately powered one. Concentrating the whole rubric budget on hosted-versus-template sharpens the result that actually bears on RQ3. The comparison moves to Future Work; the reversal and its reasoning are in `thesis_notes.md`.
+
+The local generator itself stays, for three reasons that have nothing to do with evaluation. It is the **availability fallback** when the hosted API is unreachable. It is what makes the **offline-demo guarantee** in section 12 hold with AI-generated rather than template hypotheses — no API key, no network, no third-party account. And it is the second consumer of the provider-agnostic service interface, which is what makes that interface demonstrably load-bearing rather than speculative, feeding the RQ1 extensibility claim. It is **time-boxed and droppable**: if local model selection, quantisation, and grammar-constrained output do not come together inside about a day, cut it, let the template generator be the sole fallback, and record that the offline demo shows template output. Nothing downstream depends on it.
 
 Implementation constraints:
 
@@ -470,7 +475,7 @@ Implementation constraints:
 - **The local arm runs on the host, not in a container.** Docker Desktop on macOS does not pass through Metal, so a containerised runtime silently falls back to CPU at roughly an order of magnitude less throughput. Ollama runs natively; the backend container reaches it via `host.docker.internal`. It is a Compose *config value*, not a Compose service.
 - **Exercise the fallback deliberately.** The offline-demo requirement in section 12 is now satisfied *only* through the local arm. An untested fallback path is an unbacked claim — see the Track 0 and Phase 9 checks in `implementation.md`.
 
-*Known risks.* Two, both manageable: (a) **human scoring load** — three arms is 3× the blind-rubric pairs, which may not fit 3–6 participants, so hosted-vs-template is the primary comparison at full N and local-vs-hosted a smaller secondary sample, decided before M9 rather than during; (b) **data egress** — evidence bundles now leave the machine. All content is synthetic or replayed open data, so this is expected to be a non-issue, but it intersects the employer clearance conversation already in Track 0 and is cheaper to confirm early than to discover late.
+*Known risks.* Two, both manageable: (a) **rater availability** — the blind scoring needs one independent second rater for roughly ninety minutes plus a calibration round, and the corpus size is set by what they will commit to, agreed in Track 0 rather than assumed. Losing them costs the inter-rater agreement figure and leaves single-rater scoring by the system's own author, which is a declared limitation, not a silent one; (b) **data egress** — evidence bundles leave the machine. All content is synthetic or replayed open data, so this is expected to be a non-issue, but it intersects the employer clearance conversation already in Track 0 and is cheaper to confirm early than to discover late.
 
 **DevOps:** Docker, Docker Compose, GitHub Actions (backend tests, frontend tests/build, lint), Ruff, Black, ESLint. Basic dependency audit only.
 
@@ -497,7 +502,7 @@ As an analyst, I want to confirm, reject, or mark a hypothesis as needing more e
 As an engineer, I want every scenario run reproducible from type + parameters + seed so that evaluation results can be regenerated exactly.
 As an engineer, I want the AI layer to receive only structured evidence bundles so that hypotheses cannot be based on invented evidence.
 As a researcher, I want batch runs with exported metrics so that detection performance has statistical weight.
-As a researcher, I want template, hosted-AI, and local-AI hypotheses stored with a generator flag and model ID so that three-way blind comparison is queryable.
+As a researcher, I want every hypothesis stored with a generator flag and model ID so that the hosted-vs-template blind comparison is queryable and any fallback to the local or template generator is visible in the data rather than inferred.
 As a researcher, I want raw model responses persisted so that results stay defensible after a hosted model is retired.
 ```
 
@@ -587,9 +592,17 @@ Task-based user study with practising analysts — task completion time, triage
   Withdrawn from v1 on capacity grounds, not on value grounds: it is the only
   strand that would measure analyst *utility* rather than hypothesis quality,
   and its absence is a stated limitation
-Additional model arms beyond the two in v1 (e.g. a mid-size open-weight model
-  between the local and hosted arms) to place the capability/architecture
-  trade-off on a curve rather than at two points
+Open-weight versus frontier model comparison over identical evidence bundles —
+  "how much of hypothesis quality comes from model capability versus from the
+  constrained-generation architecture?" Specified for v1 as a third scored arm
+  and withdrawn: it is a capability question rather than an architecture one,
+  and at the v1 sample size it would have produced two underpowered
+  comparisons in place of one adequately powered one. The local generator is
+  built and exercised as a fallback, so the marginal cost of adding it back is
+  a second generation pass and a larger scoring budget
+Additional model arms beyond those two (e.g. a mid-size open-weight model
+  between them) to place the capability/architecture trade-off on a curve
+  rather than at two points
 Trino/MinIO OpenSky access for date- or region-specific replay corpora beyond
   the static snapshot's Monday-only coverage
 Lakehouse storage substrate beneath the DAL at operational ingest volumes:
