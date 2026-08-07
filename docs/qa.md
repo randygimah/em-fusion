@@ -382,6 +382,141 @@ prototype needs a load-bearing reason, and that query is it.
 
 ---
 
+## 7. Will the blind scorer just be scoring AI deviation from ground truth?
+
+**No — and the assumption is worth unpicking, because it describes work two automated checks already
+do, and misses the only thing the human is there for.**
+
+### Ground truth is already scored, twice, without a human
+
+| Check | What it compares | How it is scored | Spec |
+|---|---|---|---|
+| Detection metrics | Anomalies raised vs anomalies the generator injected | Machine, deterministic | `eval-002` |
+| Grounding check | Every `supporting_evidence` item vs the evidence bundle | Machine, per-claim trace | `ai-008`, `eval-005` |
+
+Between them, *"did the system detect the right thing"* and *"did the hypothesis cite evidence that
+actually exists"* are settled before any human sees output. A rater asked to re-judge either would be
+slower, less consistent, and adding nothing.
+
+### What is left is what no machine can judge
+
+Here is the part that makes the human necessary. **After the grounding check, both scored arms are
+100% schema-valid and 100% grounded** — that is what constrained decoding plus a grounding gate
+*mean*. So neither schema conformance nor grounding rate can distinguish the hosted arm from the
+template arm; both score perfectly by construction. If those were the only measurements, RQ3 would
+have no evidence at all.
+
+The distinguishing question is whether the explanation is **useful to an analyst**, and that is
+irreducibly a judgement:
+
+| Dimension | What it asks | Schema field |
+|---|---|---|
+| Evidence use | Does it reason *from* the findings, or merely restate them? | `supporting_evidence` |
+| Uncertainty quality | Substantive, or boilerplate? | `evidence_against_or_uncertainty` |
+| Alternatives quality | Genuine competing explanations, or filler? | `alternative_explanations` |
+| Actionability | Specific and appropriate, or generic? | `recommended_human_action` |
+| Overall usefulness | Would this help an analyst triage faster? | whole |
+
+Note what dimension 1 does: the grounding check proves a cited rule ID **exists in the bundle**; it
+cannot tell you the finding was used *meaningfully*. A hypothesis can cite every rule ID correctly
+and still reason badly. That gap between "traceable" and "well-reasoned" is exactly the human's
+territory, and it is worth stating plainly in the write-up — it is the honest limit of automated
+grounding.
+
+### The two dimensions that *do* reference ground truth
+
+Two do, and they are handled separately: **cause correctness** (does the stated cause match the
+injected condition?) and **confidence calibration** (is `Low`/`Medium`/`High` warranted by the
+evidence — a `High` on the ambiguous-mixed-evidence scenario is wrong however well written it is).
+These are scored in a **separate final pass**, after all quality dimensions are complete, so that
+knowing the ground truth cannot colour the earlier judgements.
+
+### Deliberately excluded: fluency
+
+Writing quality is not scored. It would inflate the hosted arm for reasons having nothing to do with
+the constrained-generation architecture under study, contaminating the headline result. If it is
+measured at all it is reported separately.
+
+**A threat to validity to record now, not later.** Template output is stylistically distinctive and a
+rater will probably recognise it. Rendering is normalised — identical field order, identical
+formatting, no markdown flourishes — but blinding is imperfect and the write-up should say so. The
+template must *not* be made to imitate model prose; that would corrupt the baseline it exists to
+provide.
+
+See `docs/scoring_rubric.md` for the instrument itself and `em_fusion_v2.md` section 5.9 for how the
+harness produces the corpus.
+
+---
+
+## 8. When you say 20 triads, do you mean the randomised runs?
+
+**No.** Three different units get conflated here, and the arithmetic only works if they are kept
+apart.
+
+```
+scenario run   →   evidence bundle   →   scored item
+(one seed)         (one grouped set       (one hypothesis
+                    of related             from one
+                    anomalies)             generator)
+```
+
+- A **run** is one execution of `(scenario_type, parameters, seed)` — see Q3. There are 20–30 per
+  scenario type, so 100–150 in total.
+- A **bundle** is what the evidence bundle builder produces by grouping related anomalies from a run.
+  One run yields zero, one, or several. Normal-baseline runs should yield **zero** — that is
+  `anom-008`, the correct non-detection, and it is why bundles come only from the four anomalous
+  types. Expect roughly 80–120 bundles available.
+- A **scored item** is one hypothesis: one bundle passed through one generator.
+
+**Detection metrics run at full N** — every one of the 100–150 runs. Only the *human scoring* is
+sampled, because human attention is the scarce resource and machine metrics are not.
+
+### The sampling arithmetic
+
+The scored corpus is a **stratified sample of bundles**, not of runs: roughly 5 bundles from each of
+the four anomalous scenario types, so ~20 bundles. Stratified rather than random, so no scenario type
+is accidentally absent from the comparison. Each selected bundle is generated by both scored arms:
+
+```
+20 bundles × 2 arms (hosted, template)  =  40 hypotheses
+40 hypotheses × 2 raters                =  80 scoring judgements
+                                        ≈  90 minutes per rater
+```
+
+The pairing matters: because both arms are scored on the *same* bundle, the comparison is **paired
+within bundle**, which is far more powerful than 20 independent observations would suggest. Bundle
+difficulty is held constant and cancels out of the comparison.
+
+### Why full double-scoring, rather than an overlap fraction
+
+An earlier version of this plan used a larger corpus with only a fraction double-scored — you score
+everything, a second rater scores a slice, and inter-rater agreement is computed on that slice alone.
+That is a standard technique and it exists for one reason: to buy corpus size with someone else's
+time, when they cannot commit to the whole thing.
+
+It was dropped because the trade was not needed. Full double-scoring at a smaller N is both simpler
+and stronger:
+
+| | Partial overlap | Full double-scoring |
+|---|---|---|
+| Corpus | Larger | Smaller |
+| κ computed over | The overlap subset only | Every scored item |
+| Unscored-by-second-rater remainder | Must be argued to be trustworthy | Does not exist |
+| Explanation required in the write-up | The overlap design and its assumptions | None |
+
+Use the overlap design only if the second rater cannot commit ~90 minutes. It is a concession, not
+an improvement.
+
+### One thing that does *not* multiply the corpus
+
+The harness also generates **N hypotheses per bundle per arm** to measure grounding variance
+(`em_fusion_v2.md` section 5.9, and Q3 on the AI layer being the one non-deterministic component).
+That is a **separate, machine-computed measurement over all N**. Raters see exactly **one** generation
+per arm per bundle. Confusing the two multiplies the human corpus by N and makes the scoring plan
+impossible.
+
+---
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -407,3 +542,14 @@ prototype needs a load-bearing reason, and that query is it.
 | **Evidence bundle** | The structured, traceable anomaly summary that is the *only* input the AI layer sees. |
 | **Grounding check** | Verifying every claim in a generated hypothesis traces back to the evidence bundle. |
 | **Constrained decoding** | Restricting generation to a grammar so invalid output is unrepresentable, not merely detectable. |
+| **Arm** | One hypothesis generator treated as a condition in the evaluation. Two are scored — `hosted` and `template`; `local` runs as a fallback but is not scored. |
+| **Evidence bundle** *(as a scoring unit)* | The sampling unit for blind scoring. ~20 are drawn, stratified across the four anomalous scenario types. |
+| **Scored item** | One hypothesis — one bundle through one arm. 20 bundles × 2 arms = 40 items. |
+| **Stratified sample** | A sample drawn deliberately from each subgroup, so no scenario type is accidentally absent from the comparison. |
+| **Paired comparison** | Scoring both arms on the *same* bundle, so bundle difficulty cancels out of the arm difference. |
+| **Blind scoring** | Rating output without knowing which arm produced it; the arm key is held in a separate file until scores are ingested. |
+| **Rubric** | The fixed scoring instrument — dimensions plus worded 1/3/5 anchors. Lives in `docs/scoring_rubric.md`. |
+| **Pre-registration** | Committing the rubric before the campaign runs and citing the commit hash, so the instrument demonstrably predates the results. |
+| **Inter-rater agreement** | How closely two independent raters coincide. Reported as quadratic-weighted Cohen's κ, which penalises far-apart disagreements more than adjacent ones. |
+| **Adjudication rule** | The pre-agreed procedure for handling rater disagreement — here, mean for analysis, discussion where scorers differ by ≥2. |
+| **Calibration round** | A few shared items scored and discussed before independent scoring begins, to align interpretation of the anchors. |
