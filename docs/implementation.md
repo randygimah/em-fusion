@@ -128,18 +128,22 @@ Added after the original checklist was written — a static snapshot cannot show
 - [ ] Build a parameterised scenario generator: scenario type + parameters (noise amplitude, gap duration, sensor count, area, timing, seed).
 - [ ] Every run is reproducible from its seed and parameters — this is the foundation of the evaluation harness.
 - [ ] Implement adapter 1: replayed OpenSky telemetry from the archived file.
-- [ ] Implement adapter 2: synthetic RF observation generator under scenario control.
+- [ ] Fix the RF grid as configuration before writing the generator (spec `scn-005`): six to eight sensors at recorded positions, eight 2 MHz channels centred 1567.42–1581.42 MHz with one channel exactly on GNSS L1. Position sensors so a candidate interference zone contains some and excludes others — otherwise `anom-005` and `anom-007` have nothing to discriminate.
+- [ ] Implement adapter 2: synthetic RF observation generator under scenario control, emitting on the full sensor × channel × time grid. Every sensor reports every channel every interval, so a missing reading is a detectable gap rather than an ambiguous absence.
+- [ ] Add spectral extent as a **parameter** of `gnss-degradation` — narrowband confined to the L1 channel, or broadband across the grid. Not a sixth scenario type.
+- [ ] **Ground truth never leaves the run record** (spec `api-009`). Assert it: no observation, anomaly, bundle, or API response carries the scenario type or injected event for a scorable run. A detector that can see the answer invalidates every metric.
 - [ ] Implement the DAL: canonical observation model, required-field validation, quarantine of malformed records, provenance attached to every record.
 - [ ] Move GNSS degradation data into a scenario fixture; add a normal-environment fixture for comparison.
 - [ ] Test: malformed records are quarantined, valid records land in the canonical store with provenance.
 
 ## Phase 8: Baseline, Anomaly Detection, and Evidence Bundles
 
-- [ ] Implement the baseline engine (rolling averages over normal-scenario runs).
+- [ ] Implement the baseline engine (rolling averages over normal-scenario runs), **per sensor per channel** for RF metrics. Pooling channels into one per-sensor baseline hides single-channel deviations inside the spread of the others.
 - [ ] Implement deterministic detectors only: threshold rules, z-score deviation, spatial clustering. No Isolation Forest in v1.
 - [ ] Add a simple rule that explains why the GNSS hypothesis exists (RF deviation + clustered track gaps, same window and area).
 - [ ] Test each detector with both degraded and normal scenarios — a correct non-detection is a first-class test.
-- [ ] Build the evidence bundle builder: grouped anomalies, source lineage, rule IDs, known uncertainties.
+- [ ] Add the frequency-adjacency test to the sensor-fault rule (`anom-007`), recorded as evidence distinct from the spatial-neighbour test. A single anomalous channel with clean neighbours on the same sensor points at the sensor; a deviation across all eight points at the environment.
+- [ ] Build the evidence bundle builder: grouped anomalies, source lineage, rule IDs, known uncertainties. Group on **three** axes — time window, spatial proximity, **frequency adjacency**. Grouping on time and space alone fragments one broadband event into eight unrelated findings.
 - [ ] Test: every evidence item in a bundle traces to a stored anomaly/observation.
 
 ## Phase 8.5: AI Layer Prerequisites (gate — settle before writing model code)

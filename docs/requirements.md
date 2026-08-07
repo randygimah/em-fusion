@@ -22,7 +22,7 @@ the database, in API responses, and on every screen.
 |---|---|---|
 | **Analyst** | The human in the loop. Reviews the operational picture and adjudicates hypotheses. Not a developer. | See what is anomalous, understand why the system thinks so, and record a judgement. |
 | **Engineer** | Builds and operates the prototype. | Reproducible runs, a stable data contract, a system that can be run end to end locally. |
-| **Researcher** | The dissertation author, evaluating the system. | Batch runs with ground truth, exportable metrics, queryable three-arm hypothesis comparison. |
+| **Researcher** | The dissertation author, evaluating the system. | Batch runs with ground truth, exportable metrics, a queryable hosted-vs-template hypothesis comparison. |
 
 ---
 
@@ -98,8 +98,10 @@ the database, in API responses, and on every screen.
 | FR-103 | The DAL shall quarantine records failing validation: stored, countable, attributable to a source — never silently dropped, and never fatal to the ingest run. |
 | FR-104 | The DAL shall attach provenance (source ID, source type, data mode, scenario run ID) to every accepted record. |
 | FR-105 | An aviation adapter shall replay archived OpenSky state vectors from file, with no live API dependency at demo time. |
-| FR-106 | An RF adapter shall emit synthetic RF observations under scenario control, carrying frequency, band, power, SNR, bandwidth, signal type, sensor location, and baseline delta. |
+| FR-106 | An RF adapter shall emit synthetic RF observations under scenario control, carrying channel index, channel centre frequency, band, power, SNR, bandwidth, signal type, sensor ID, sensor location, and baseline delta. |
 | FR-107 | A third source adapter shall be addable late in the project, with files touched, lines changed, and hours taken recorded as RQ1 evidence. |
+| FR-108 | RF observations shall be emitted on a fixed sensor × channel × time grid: six to eight sensors at recorded positions, each reporting on eight 2 MHz channels centred on 1567.42–1581.42 MHz with one channel centred exactly on GNSS L1 (1575.42 MHz). Every sensor shall report on every channel at every interval, so a missing reading is a detectable gap rather than an ambiguous absence. |
+| FR-109 | Sensor positions and the channel plan shall be configuration, not hard-coded constants, and sensors shall be positioned so that a candidate interference zone contains some and excludes others. |
 
 ### FR-2xx — Scenario Generator
 
@@ -110,6 +112,8 @@ the database, in API responses, and on every screen.
 | FR-203 | Parameters shall include at minimum noise amplitude, gap duration, number of affected sensors, affected-area size, event timing, and seed. |
 | FR-204 | Each run shall record its ground truth (what was injected, where, and when) alongside its parameters. |
 | FR-205 | The generator shall support batch execution of 20–30 randomised runs per scenario type. |
+| FR-206 | Spectral extent shall be a parameter of the GNSS degradation scenario — narrowband confined to the L1 channel, or broadband across the grid — not a sixth scenario type. |
+| FR-207 | Ground truth shall be recorded on the scenario run and read by the evaluation harness only. No adapter, DAL record, detector input, API response, or evidence bundle shall carry it, whether as a field, a label, or an inferable artefact such as a scenario-type string on an observation. |
 
 ### FR-3xx — Baseline and Anomaly Detection
 
@@ -287,6 +291,7 @@ the database, in API responses, and on every screen.
 | NFR-601 | Every evaluation result shall be regenerable from scenario type + parameters + seed for the deterministic pipeline. |
 | NFR-602 | Hosted-arm results shall remain defensible after model retirement through persisted `model_id`, `generation_params`, and `raw_response`. |
 | NFR-603 | The local arm shall remain fully regenerable indefinitely. |
+| NFR-604 | No detector, API response, or analyst-visible surface shall have access to a run's injected ground truth while that run is scorable. A detector able to see the answer invalidates every metric computed from the run. |
 
 ---
 

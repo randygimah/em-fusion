@@ -43,7 +43,7 @@ The MVP is **decision support**, not autonomous decision-making. Every hypothesi
 Two sources at launch, a third added late as a measured extensibility demonstration:
 
 1. **Replayed open aviation telemetry** — OpenSky Network historical state vectors, downloaded once, archived, and replayed deterministically from file. No live API dependency: replays are reproducible, offline, and immune to rate limits. Record licence/attribution requirements.
-2. **Synthetic RF sensor observations** — generated under scenario control (frequency, band, power, SNR, bandwidth, baseline delta, severity).
+2. **Synthetic RF sensor observations** — generated under scenario control on a fixed sensor × channel × time grid (channel, centre frequency, band, power, SNR, bandwidth, baseline delta, severity). See the RF observation grid below.
 3. **Third adapter (late-project)** — a simple additional source (e.g. synthetic source-health feed) added near the end purely to measure DAL extension effort: files touched, lines changed, hours taken. This is RQ1 evidence, not a feature.
 
 Aviation data provides: location, altitude, velocity, track, update gaps, dropout behaviour, continuity scores.
@@ -58,7 +58,20 @@ Three constraints follow from this choice:
 - **Filter on ingest.** Raw hourly files are global (millions of rows, hundreds of MB). Download one hour, filter to a bounding box, archive the filtered extract as the replay corpus — plus a manifest recording source URL, hour, download date, licence, and checksum of the original, so the extract is reproducible without committing the raw file.
 - **Choose a densely covered region.** OpenSky sensor coverage is uneven, and a sparse region produces genuine dropouts and coverage gaps that confound injected synthetic ones, making ground truth ambiguous and the false-positive rate meaningless. Central Europe has the densest coverage. Acceptance check: run the `Normal baseline` scenario against the extract — if dropouts appear before anything is injected, move the bounding box.
 
-Synthetic RF data provides: frequency band, signal power, SNR, bandwidth, signal type, sensor location, baseline delta, observation time.
+Synthetic RF data provides: channel, centre frequency, band, signal power, SNR, bandwidth, signal type, sensor ID, sensor location, baseline delta, observation time.
+
+**RF observation grid — decided.** Observations are emitted on a fixed **sensor × channel × time** grid rather than as unstructured per-sensor readings. Without a channel axis the model can say "this sensor is noisy" but not "the noise is confined to one channel" or "it is smeared across the band" — and that distinction is a real discriminator that deterministic rules can act on.
+
+- **Channels: eight, 2 MHz wide, centred on GNSS L1.** Centre frequencies 1567.42, 1569.42, 1571.42, 1573.42, **1575.42**, 1577.42, 1579.42, 1581.42 MHz. One channel sits exactly on L1 with four either side, so frequency adjacency runs in both directions. This is a *plausible abstraction, not an RF-accurate channelisation* — consistent with the sensor-report-generator framing in `qa.md` Q1. The real GPS L1 band is wider; eight channels is the smallest grid that supports the adjacency reasoning below.
+- **Sensors: six to eight**, positioned so that a candidate interference zone contains some and excludes others. Fewer than six makes "neighbouring sensors stay nominal" (`anom-007`) and PostGIS clustering (`anom-004`) barely meaningful — with three sensors, "clustered" is not a claim worth testing.
+- **Cadence:** one reading per sensor per channel per fixed interval of simulated time.
+
+Two consequences follow, and both are deliberate:
+
+- **Narrowband versus broadband is a scenario *parameter*, not a sixth scenario type.** `gnss-degradation` can now inject a spike confined to the L1 channel or a raised floor across all eight, under parameter control. The five scenario types stay fixed; adding a sixth would reopen scope for what is a variation within one type.
+- **Frequency adjacency joins time and space as a grouping and reasoning axis.** Baselines become per-sensor-per-channel; the sensor-fault rule gains a frequency-neighbour test alongside its spatial-neighbour test; the evidence bundle builder groups on three axes rather than two. A real emission affects adjacent channels together, so a single anomalous channel with clean neighbours on the same sensor points at the sensor, not the environment — the same argument the spatial test already makes, one axis over.
+
+**Ground truth is never emitted into observation data.** The generator records what it injected on `scenario_runs.ground_truth`, and that field is read by the evaluation harness only. No adapter, DAL record, API response, or evidence bundle may carry it. A detector that can see the answer is not a detector, and a leak would silently invalidate every metric in the campaign.
 
 **Removed from v1:** the public RF/IQ classification dataset and ML signal classifier. It was a separate ML workflow bolted onto the side of the thesis argument. It moves to future work.
 
@@ -126,7 +139,12 @@ THEN anomaly: possible data-source issue
 
 IF one RF sensor reports abnormal readings AND nearby sensors are normal
 THEN anomaly: possible sensor fault
+
+IF one channel on one sensor is abnormal AND its adjacent channels are normal
+THEN the deviation is not environmental — reinforces sensor fault over interference
 ```
+
+Baselines are computed **per sensor per channel**. Frequency adjacency is a first-class test alongside spatial adjacency: a real emission raises adjacent channels together, so an isolated single-channel deviation with clean neighbours on the same sensor is evidence about the sensor rather than about the environment.
 
 **Removed from v1:** Isolation Forest, DBSCAN, change-point detection. Deterministic methods are sufficient for the research questions, easier to explain, and easier to evaluate. ML detectors are future work.
 
@@ -134,7 +152,7 @@ Detection latency is measured in **simulated scenario time** (event onset → an
 
 #### 4. Evidence Bundle Builder
 
-Groups related anomalies and prepares the only input the AI layer is allowed to see:
+Groups related anomalies on three axes — **time window, spatial proximity, and frequency adjacency** — and prepares the only input the AI layer is allowed to see. Anomalies on adjacent channels of the same sensor within the same window belong in one bundle, not several; grouping only on time and space would split a broadband event into eight unrelated findings and hand the AI layer a fragmented picture.
 
 ```json
 {

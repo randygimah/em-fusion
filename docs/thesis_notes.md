@@ -99,6 +99,64 @@ becomes the sole fallback, and the offline demonstration shows template output.
 *(Record the actual time spent standing up the local arm here, and whether the time-box held. If it
 was cut, record that too — a time-box that fires is a result about estimation, not a failure.)*
 
+### RF observation model: a sensor × channel grid rather than per-sensor readings
+
+The synthetic RF generator emits on a fixed grid of sensors by frequency channels by time, rather
+than as one unstructured reading per sensor per interval. Eight channels of 2 MHz, centred on
+1567.42 to 1581.42 MHz, place one channel exactly on GNSS L1 (1575.42 MHz) with four either side.
+Sensors number six to eight, positioned so that a plausible interference zone contains some and
+excludes others.
+
+The original design had a `frequency` field but no channel axis, and the gap only became visible when
+the design was compared against a previous anomaly-detection project of the author's that used a
+sensor-by-channel grid. Without adjacency in frequency, the model can express "this sensor is noisy"
+but not "the noise is confined to one channel" or "it is smeared across the band" — and that
+distinction is a discriminator a deterministic rule can act on directly. It is the same argument the
+project already makes spatially, one axis over: a real emission raises adjacent channels together,
+just as it affects neighbouring sensors together, so an isolated single-channel deviation with clean
+neighbours is evidence about the instrument rather than about the environment. Adding the axis
+therefore strengthens an existing claim rather than introducing a new mechanism, which is why it was
+adopted despite arriving late.
+
+Three design choices within it are worth defending. The grid is **dense** — every sensor reports
+every channel every interval — so that a missing reading is an unambiguous gap rather than a
+generator that had nothing to say; a sparse grid would make genuine dropouts indistinguishable from a
+design decision. Spectral extent is a **parameter of the GNSS degradation scenario** rather than a
+sixth scenario type, because narrowband and broadband interference are variations within one
+phenomenon and the five-type set is a scope boundary worth holding. And the sensor count rose from
+the three used in the earlier project to six or eight, because that project was not spatial: with
+three sensors, "the discontinuities are clustered" and "the neighbours are nominal" are not claims
+that can meaningfully be tested, and the PostGIS justification would be correspondingly thin.
+
+Two things were deliberately **not** carried across from the earlier project, and the reasons are
+scope decisions rather than technical objections. Its Isolation Forest detector is exactly what v1
+excludes: deterministic detection is the scope commitment the whole argument rests on, and ML
+detectors are recorded as future work. Its 0–100 severity score conflicts directly with the
+project-wide rule that confidence and severity are categorical — a numeric score implies a precision
+the evidence does not support, and the rule exists to prevent exactly that. Its counterfactual
+per-feature rescoring was also left behind: it is an explainability technique bound to the tree
+model, whereas explanation here comes from rule IDs, the evidence bundle, and the constrained AI
+layer, and importing a second explanation mechanism would blur that story.
+
+*(Record here whether eight channels proved sufficient once the detectors ran, and whether the
+narrowband/broadband parameter produced separable detection behaviour or collapsed into one case.)*
+
+### Ground truth is generator-side only
+
+The generator records what it injected on `scenario_runs.ground_truth`, and nothing downstream may
+carry it — no observation, adapter record, detector input, API response, or evidence bundle, whether
+as a field, a label, or an inferable artefact such as a scenario-type string attached to an
+observation. This was made an explicit specification (`api-009`, `NFR-604`) rather than left as an
+assumption, because it is the kind of constraint that holds by accident until one convenience field
+is added during debugging and then silently invalidates a campaign. The practice was adopted from the
+earlier project, where ground-truth labels were kept out of the published artefacts by the same
+reasoning.
+
+The failure it guards against is not subtle but is easy to miss: a detector with access to the answer
+is not a detector, and every precision, recall, and false-positive figure computed from such a run
+would be meaningless while still looking entirely plausible. There is no test that catches this after
+the fact, which is why it is asserted structurally instead.
+
 ### Data acquisition: OpenSky static snapshot rather than the Trino interface
 
 OpenSky offers two routes to historical state vectors. The **Trino/MinIO SQL interface** is free to
