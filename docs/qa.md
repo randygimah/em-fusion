@@ -517,6 +517,169 @@ impossible.
 
 ---
 
+## 9. Is the synthetic RF data on a specific frequency range?
+
+**It is now.** It wasn't when the question was asked, and finding that out is how the channel grid
+got specified.
+
+The original model gave each RF observation a `frequency`, a `band`, and a `bandwidth`, and named
+GNSS L1 (1575.42 MHz) as the band the interference scenario targets — but there was **no channel
+grid**, so no notion of frequency adjacency anywhere. Baselines were per-band or per-sensor; the
+sensor-fault rule reasoned only about *spatial* neighbours. The model could say "this sensor is
+noisy". It could not say "the noise is confined to one channel" or "it is smeared across the band."
+
+### The grid
+
+Observations are emitted on a fixed **sensor × channel × time** grid:
+
+```
+Channels:  8, each 2 MHz wide
+Centres:   1567.42  1569.42  1571.42  1573.42  [1575.42]  1577.42  1579.42  1581.42   MHz
+                                                 GNSS L1
+Sensors:   6–8, at recorded positions
+Cadence:   every sensor reports every channel, every interval of simulated time
+```
+
+One channel sits exactly on L1 with four either side, so adjacency runs in both directions.
+
+This is **a plausible abstraction, not an RF-accurate channelisation** — the real L1 band is wider
+than 16 MHz. That is consistent with Q1: this is a sensor-report generator, not a propagation
+simulator. Eight channels is simply the smallest grid that supports the adjacency reasoning below.
+
+### Why adjacency in frequency earns its place
+
+It is the same argument the project already makes spatially, moved one axis over:
+
+| | Spatial version | Frequency version |
+|---|---|---|
+| The physical fact | A real emission affects nearby sensors together | A real emission raises adjacent channels together |
+| So an isolated deviation… | one sensor abnormal, neighbours nominal | one channel abnormal, adjacent channels nominal |
+| …is evidence about | the instrument, not the environment | the instrument, not the environment |
+
+So a single anomalous channel with clean neighbours on the same sensor **reinforces sensor fault over
+interference** — a second, independent line of evidence for the discrimination that `anom-007` already
+performs spatially. The axis strengthens an existing claim rather than introducing a new mechanism,
+which is why it was worth adopting late.
+
+Three consequences:
+
+- **Baselines become per-sensor-per-channel.** Pooling channels into one per-sensor baseline hides a
+  single-channel deviation inside the spread of the other seven.
+- **Evidence bundles group on three axes** — time, space, *and* frequency adjacency. Grouping on time
+  and space alone would fragment one broadband event into eight unrelated findings and hand the AI
+  layer an incoherent picture.
+- **The grid is dense.** Every sensor reports every channel every interval, even when there is nothing
+  to report. A sparse grid would make a genuine dropout indistinguishable from "the generator had
+  nothing to say."
+
+### Narrowband vs broadband is a parameter, not a sixth scenario type
+
+Once channels exist, `gnss-degradation` can inject a spike confined to the L1 channel or a raised
+floor across all eight. That stays a **parameter** of the existing type. The five scenario types are a
+scope boundary; adding a sixth for what is a variation within one phenomenon would reopen it.
+
+### Why six to eight sensors, not three
+
+Three sensors is enough for a non-spatial pipeline. It is not enough here. `anom-004` clusters track
+discontinuities in PostGIS and `anom-005` requires spatial coherence *across* sensors — with three,
+"the discontinuities are clustered" and "the neighbours are nominal" are not claims that can
+meaningfully be tested, and the PostGIS justification would be correspondingly thin. Sensors are also
+positioned deliberately, so that a candidate interference zone contains some and excludes others.
+
+### What ground truth is allowed to touch: nothing
+
+Related and worth stating separately. The generator records what it injected on
+`scenario_runs.ground_truth`. **Nothing downstream may carry it** — no observation, adapter record,
+detector input, API response, or evidence bundle, whether as a field, a label, or an inferable
+artefact such as a scenario-type string attached to an observation (`api-009`, `NFR-604`).
+
+The failure this guards against is easy to miss because it looks fine: a detector with access to the
+answer is not a detector, and every precision, recall, and false-positive figure computed from such a
+run is meaningless while still looking entirely plausible. No test catches it after the fact, which is
+why it is asserted structurally.
+
+---
+
+## 10. Can we use Parquet for the synthetic data?
+
+**For the archived aviation extract, yes. For anything the system queries, no** — and the distinction
+is load-bearing rather than pedantic.
+
+### The question underneath the question
+
+Parquet-as-storage was already considered and rejected for this project — the lakehouse substrate
+(Parquet on object storage under Iceberg, queried by Trino) is in the v1 out-of-scope list, with the
+reasoning in `thesis_notes.md`. The short version: **PostGIS is justified by exactly one thing**, the
+indexed spatial join behind `anom-004` (see Q6). Trino has `ST_*` functions but no comparable indexed
+spatial join, and Iceberg has no spatial partitioning. Put the observations in Parquet and the reason
+the database exists evaporates, taking `anom-004` and `db-004` with it.
+
+So the test to apply is simple: **does anything *query* the Parquet?**
+
+| Use | Queried? | Verdict |
+|---|---|---|
+| Archived OpenSky extract | No — read once at replay, converted through the DAL into PostGIS | **Yes, use Parquet** |
+| Canonical observations | Yes — spatial and temporal queries | **No.** PostGIS, and the spatial index is the whole point |
+| Generated synthetic observations | — | **Don't persist them.** `scn-001` guarantees byte-identical regeneration from type + parameters + seed, so the seed *is* the artefact |
+| Evaluation exports | No — read by humans and spreadsheets | CSV/JSON per `eval-003`; Parquet adds nothing |
+
+### Why Parquet is a genuine improvement for the archive
+
+OpenSky publishes CSV, Avro, and JSON. Parquet is columnar, typed, and compresses hard enough that a
+bounding-box-filtered hour becomes small enough to **commit to the repository**. That is the real gain
+— not disk space, but that the pipeline then reproduces from a fresh clone with no download step, no
+external dependency, and no drift between what was measured and what a reader can re-run. `pyarrow`
+comes along with Pandas, which the evaluation harness needs anyway, so it costs nothing new.
+
+### The general point
+
+A **format** decision and a **substrate** decision are different decisions, and conflating them is how
+a rejected architecture returns unnoticed. Parquet holding a static input file touches nothing the
+lakehouse rejection was about; Parquet serving reads would reverse it entirely. Same file format,
+opposite architectural consequence.
+
+---
+
+## 11. If the API contract is known, isn't it better to build the backend first?
+
+**Yes for two specific features — and the reason is narrower and better than "backend-first is
+generally sensible."**
+
+The contract-first design was meant to make this *not* matter: a typed `OperationalPicture` mirroring
+the future response, screens taking it as a prop, one seam in `App.tsx` where a fetch replaces the
+mock import. That works, and for most of the UI the mock is genuinely sufficient.
+
+**But it makes the data source substitutable, not the *behaviour*.** Two features have semantics that
+live on the server and cannot be developed against a client-side stand-in however faithful its shape:
+
+| Feature | Why a mock can't stand in |
+|---|---|
+| View filter (`api-007`) | Filtering happens server-side, so excluded rows never arrive. The suppressed counts that keep "+n nominal hidden" truthful exist **only** as response metadata — a client-side filter has nothing to report because it can still see everything. |
+| Playback buffer (`api-008`) | `track-window` is bounded server-side, and over-long spans are truncated *with the truncation reported*. There is no mock equivalent of that behaviour to build against. |
+
+The original checklist had already half-admitted this, instructing that the mock be filtered "behind
+the same function signature the API call will use" — which is an explicit acknowledgement that the
+work would be done twice.
+
+### The revised order
+
+```
+Phase 3 layout  →  Phase 5 contract mirror  →  Phase 3 view filter  →  Phase 4 MapView  →  playback
+```
+
+Layout work (nav shell, status bar, map placeholder, panels, timeline) is design-driven and gains
+nothing from a backend, so it still goes first. Phase 5 is small — `/operational-picture` returning
+the mock shape **from a static fixture**, a contract test, and the `api.ts` function. It needs no
+database, no generator, and no DAL; the point is to establish the seam, not the data.
+
+### One risk the reorder introduces
+
+The backend fixture and the frontend `OperationalPicture` type now describe one contract in two
+languages, and will drift silently. Mitigation: assert the same shape from both sides, so a renamed
+field fails a test rather than surfacing as an empty panel in the browser.
+
+---
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -553,3 +716,11 @@ impossible.
 | **Inter-rater agreement** | How closely two independent raters coincide. Reported as quadratic-weighted Cohen's κ, which penalises far-apart disagreements more than adjacent ones. |
 | **Adjudication rule** | The pre-agreed procedure for handling rater disagreement — here, mean for analysis, discussion where scorers differ by ≥2. |
 | **Calibration round** | A few shared items scored and discussed before independent scoring begins, to align interpretation of the anchors. |
+| **Channel** | One 2 MHz slice of the RF grid. Eight of them, centred 1567.42–1581.42 MHz, with one centred exactly on GNSS L1. |
+| **Frequency adjacency** | Neighbouring channels on the same sensor. A real emission raises them together, so an isolated single-channel deviation is evidence about the instrument. |
+| **Sensor × channel × time grid** | The fixed shape of RF output: every sensor reports every channel every interval, so a missing reading is a detectable gap rather than an ambiguous absence. |
+| **Narrowband / broadband** | Spectral extent of injected interference — one channel or the whole grid. A *parameter* of `gnss-degradation`, never a separate scenario type. |
+| **Dense grid** | Emitting a reading even when there is nothing to report, so absence carries information. |
+| **Parquet** | Columnar, typed, compressed file format. Used here for the archived aviation extract only — never as a read path, which stays PostGIS. |
+| **Read path** | Where queries actually run. Distinguishing it from *archive format* is what keeps the rejected lakehouse decision rejected. |
+| **Contract mirror** | A backend endpoint returning the frontend's expected shape from a static fixture, to establish the API seam before real data exists. |
