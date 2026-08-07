@@ -25,7 +25,9 @@ Scope v2 changes: three screens only (Operational Picture, Hypothesis Detail, Sc
 - [ ] Confirm the employer's position on **data egress to a hosted AI API** — evidence bundles will leave the machine. Content is synthetic or replayed open data, so this is expected to be a non-issue, but fold it into the clearance conversation rather than discovering it after the campaign. Blocks the hosted arm, not the build.
 - [ ] Download and archive the OpenSky historical dataset once; record licence/attribution requirements.
 - [ ] Define detection latency precisely (simulated scenario time, not wall clock) before any measurement code exists.
-- [ ] Write and **pre-register `docs/scoring_rubric.md`** — dimensions, worded 1/3/5 anchors, calibration procedure, adjudication rule. Commit it before the campaign runs and cite the commit hash in the thesis. A rubric fixed after seeing output is not a blind instrument.
+- [x] Write and pre-register `docs/scoring_rubric.md` — dimensions, worded 1/3/5 anchors, worked example, calibration procedure, adjudication rule, threats to validity. **Drafted 2026-08-07.**
+- [ ] Walk the second rater through Part A of `docs/scoring_rubric.md` and confirm the anchors read clearly to someone outside the project. Revise now if not — after the campaign starts it is frozen.
+- [ ] **Record the pre-registration commit hash** of `docs/scoring_rubric.md` immediately before the first scored generation, and cite it in the thesis. This is the whole value of pre-registering; an uncited rubric proves nothing about when it was fixed.
 
 ### C4 architecture model (Structurizr)
 
