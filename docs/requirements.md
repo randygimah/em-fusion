@@ -102,6 +102,7 @@ the database, in API responses, and on every screen.
 | FR-107 | A third source adapter shall be addable late in the project, with files touched, lines changed, and hours taken recorded as RQ1 evidence. |
 | FR-108 | RF observations shall be emitted on a fixed sensor × channel × time grid: six to eight sensors at recorded positions, each reporting on eight 2 MHz channels centred on 1567.42–1581.42 MHz with one channel centred exactly on GNSS L1 (1575.42 MHz). Every sensor shall report on every channel at every interval, so a missing reading is a detectable gap rather than an ambiguous absence. |
 | FR-109 | Sensor positions and the channel plan shall be configuration, not hard-coded constants, and sensors shall be positioned so that a candidate interference zone contains some and excludes others. |
+| FR-110 | The bounding-box-filtered OpenSky extract shall be archived as Parquet and committed to the repository with its manifest, so the pipeline reproduces from a fresh clone with no download step. Parquet shall be the archive format for that extract only and shall never serve as a read path for observations, which are served from PostGIS. |
 
 ### FR-2xx — Scenario Generator
 

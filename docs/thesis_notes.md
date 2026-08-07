@@ -249,6 +249,24 @@ migration, since it is the one component genuinely coupled to PostGIS rather tha
 model. Candidate approaches — spatial partitioning schemes, a retained PostGIS serving tier for the
 active window, or grid-cell indexing computed at DAL time — are untested here.
 
+**A narrow, deliberate exception: Parquet as archive format.** The archived OpenSky extract is stored
+as Parquet and committed to the repository. This is not the rejected decision creeping back in, and
+the distinction is worth stating precisely because it would be easy to mistake one for the other. The
+lakehouse proposal was about the **read path** — making Parquet-on-object-storage the substrate that
+queries run against, which is what would have cost the indexed spatial join. Using Parquet as a
+*container for a static, committed input file* touches none of that: the file is read once at replay
+time, converted through the adapter and DAL, and written into PostGIS, which remains the sole query
+substrate. Parquet was chosen over CSV because it is typed and compresses well enough that a
+bounding-box-filtered hour can be version-controlled, which removes the download step and makes the
+pipeline reproducible from a fresh clone — a reproducibility gain, not an architectural one.
+
+The general point for the write-up is that a format decision and a substrate decision are different
+decisions, and conflating them is how a rejected architecture returns unnoticed. The test applied
+here was simple: does anything *query* the Parquet? Nothing does, so the PostGIS justification is
+untouched. Recording the test is more useful than recording the outcome, because the same question
+will arise again for the evaluation exports (`eval-003`), which stay CSV/JSON for the opposite
+reason — they are read by humans and spreadsheets, not by the system.
+
 Two low-cost practices are taken from that ecosystem without taking the infrastructure, to be
 confirmed as built: the evaluation harness (M9) should export batch metrics as Parquet rather than
 CSV (Pandas is already a dependency, and dtypes survive the round trip), and the archived OpenSky
