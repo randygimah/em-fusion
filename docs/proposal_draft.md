@@ -123,7 +123,7 @@ latter has a baseline to be measured against.
 
 | Period | Focus |
 |---|---|
-| **August** | Proposal, employer clearance; OpenSky data acquisition; map boundary and API contract |
+| **August** | Proposal, employer clearance; OpenSky data acquisition; API contract, then map boundary |
 | **September** | Database persistence, scenario generator, source adapters, Data Abstraction Layer |
 | **October** | Detection engine, evidence bundles, constrained AI hypothesis layer; **writing begins** |
 | **November** | Evaluation harness, third adapter, evaluation campaign, blind scoring; writing continues |
@@ -506,17 +506,21 @@ The project runs from August to the end of December, approximately twenty-one we
 is 5–10 hours per week initially, rising to 10–15 hours per week from September, giving a planned
 budget of roughly 240 hours against an estimated requirement of 236.
 
-Three scheduling decisions follow. First, the non-code track — employer clearance and the ethics
+Four scheduling decisions follow. First, the non-code track — employer clearance and the ethics
 question on blind scoring — starts immediately, because if approval turns out to be required it
-carries a four-to-eight-week wait. Second, writing begins in October alongside the final build phases
-rather than after them; the draft is not left until the build is finished. Third, December is treated
-as working time with contingency inside it, not as pure buffer.
+carries a four-to-eight-week wait. Second, the API contract (task 3) is built before the map and
+playback work (task 4) that consumes it: two dashboard features — server-side view filtering and the
+bounded playback window — have behaviour that exists only on the server, so building them against
+placeholder data would mean building them twice. Third, writing begins in October alongside the final
+build phases rather than after them; the draft is not left until the build is finished. Fourth,
+December is treated as working time with contingency inside it, not as pure buffer.
 
 The task-based user study has been withdrawn on capacity grounds (see TOR 7), removing eighteen hours
 and one external dependency from the plan. Phases already complete (frontend foundation and
 contract-first mock data) are excluded from the estimate.
 
-*(163 words)*
+*(204 words — over the 150 guide; the build-order sentence in decision two is the first candidate to
+cut if the limit is enforced strictly, since the Gantt shows the ordering anyway.)*
 
 ### Task breakdown
 
@@ -524,8 +528,8 @@ contract-first mock data) are excluded from the estimate.
 |---|---|---|---|---|
 | 1 | Track 0: proposal, employer clearance, ethics question on blind scoring | All | 6 | 3 wks |
 | 2 | OpenSky acquisition: download, bounding-box filter, archive + manifest | 1 | 5 | 1 wk |
-| 3 | MapView boundary and map integration | 5 | 8 | 2 wks |
-| 4 | FastAPI contract mirror and frontend polling | 5 | 8 | 2 wks |
+| 3 | FastAPI contract mirror and frontend polling | 5 | 8 | 2 wks |
+| 4 | MapView boundary, map integration, and playback | 5 | 8 | 2 wks |
 | 5 | PostgreSQL/PostGIS schema, repositories, spatial query | 1 | 16 | 3 wks |
 | 6 | Scenario generator, source adapters, Data Abstraction Layer | 1, 2 | 18 | 3 wks |
 | 7 | Baseline engine, deterministic detection, evidence bundles | 3 | 20 | 3 wks |
@@ -545,8 +549,8 @@ contract-first mock data) are excluded from the estimate.
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | Track 0 (clearance, ethics query) | ▓ | ▓ | ▓ | | | | | | | |
 | 2 | OpenSky acquisition | | ▓ | | | | | | | | |
-| 3 | MapView boundary | ▓ | ▓ | | | | | | | | |
-| 4 | FastAPI contract mirror | | ▓ | ▓ | | | | | | | |
+| 3 | FastAPI contract mirror | ▓ | ▓ | | | | | | | | |
+| 4 | MapView boundary + playback | | ▓ | ▓ | | | | | | | |
 | 5 | PostGIS persistence | | | ▓ | ▓ | | | | | | |
 | 6 | Scenario generator + DAL | | | | ▓ | ▓ | | | | | |
 | 7 | Detection + evidence bundles | | | | | ▓ | ▓ | | | | |
