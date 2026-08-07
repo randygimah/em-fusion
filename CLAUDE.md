@@ -14,6 +14,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Capture thesis material as you go.** See Thesis Notes below — findings, rationale, and references go into `docs/thesis_notes.md` while they are fresh, not at write-up time.
 
+**Capture questions and clarifications as you go.** Every question the user asks, and every clarification you give that corrects something they had misunderstood, gets appended to `docs/qa.md` as a numbered entry. Write the answer as it was actually needed — including the wrong assumption it corrected, because the correction is the useful part. Do this in the same turn as the explanation, not later. See the Concepts Q&A section below.
+
 ## Project
 
 EM Fusion is a human-in-the-loop AI prototype for explainable electromagnetic situational awareness: it fuses replayed aviation telemetry and synthetic RF observations through a Data Abstraction Layer, detects deviations deterministically, and turns evidence bundles into schema-validated, grounding-checked AI hypotheses for human analyst review. It is decision support, not autonomous decision-making. Confidence is always Low/Medium/High — never a percentage or decimal score — and that rule applies to any score shown in the UI.
@@ -74,7 +76,7 @@ A contents page for the repo. Use it to find the right file before searching; it
 | `docs/research_scope.md` | The coding-relevant extract of the docx: research questions, objectives, architecture rationale, AI-layer validation/grounding detail, canonical data model, scenario types, evaluation metrics, success criteria. Read to check *why* a build decision matters to the thesis. |
 | `docs/implementation.md` | The phase-by-phase build checklist and the current position in it (mid-Phase 3). Read to find what comes next and which phase a spec item belongs to. A learning checklist, not a rigid sprint plan. |
 | `docs/thesis_notes.md` | **Write to it continuously, not just when read.** Dissertation skeleton and evidence base — Methodology, System Design and Architecture, Implementation, Evaluation. Every design decision, reversal, measurement, threat to validity, reference, and limitation goes here while fresh. See the Thesis Notes section below for what to capture and how to structure it. |
-| `docs/qa.md` | Running Q&A on concepts used elsewhere — RF/EM terms, OpenSky state vectors, the generator's determinism model, detection methods, bounding boxes, PostGIS. **Explanatory, not authoritative**: it paraphrases decisions rather than making them. When scope changes, update `em_fusion_v2.md` and re-check this follows. Append new questions as they arise. |
+| `docs/qa.md` | **Write to it continuously, not just when read.** Running Q&A on concepts used elsewhere — RF/EM terms, OpenSky state vectors, the generator's determinism model, detection methods, bounding boxes, PostGIS, evaluation scoring. **Explanatory, not authoritative**: it paraphrases decisions rather than making them. When scope changes, update `em_fusion_v2.md` and re-check this follows. See the Concepts Q&A section below for what to append and when. |
 | `docs/proposal_draft.md` | The submitted project proposal. Read for the agreed framing; not a build reference. |
 | `docs/em_fusion.md` | The **superseded v1 PRD**. History only. Its RF/IQ ML classifier, Isolation Forest/DBSCAN, WebSockets, and multi-screen nav are all cut from v2 — never use it as a scope reference. |
 | `DESIGN.md` | The design system spec — colors, typography, spacing, component styling. Front-matter holds the raw tokens. Read before writing any styled component. |
@@ -219,6 +221,31 @@ Four top-level sections, fixed: **Methodology**, **System Design and Architectur
 - **When a phase in `docs/implementation.md` completes** — offer to draft the matching section rather than leaving it.
 - **When a measurement is taken** — with its conditions, before moving on.
 - **When something goes wrong** — deviations, dead ends, and surprises are Implementation-chapter material, not embarrassments to omit.
+
+## Concepts Q&A
+
+`docs/qa.md` is the running record of everything that needed explaining. It exists because a concept explained once in conversation is lost at the end of the session, and the same confusion then costs the same time again — and because the places where understanding slipped are exactly the places the write-up will need to explain carefully to an examiner.
+
+### What goes in
+
+- **Every question the user asks**, whether about a domain concept, a technical mechanism, or a project decision.
+- **Every clarification that corrects a misunderstanding** — including ones the user did not ask for, where an answer revealed a wrong assumption. State the wrong assumption plainly and then correct it; the correction is the valuable part and an answer without it reads as unmotivated.
+- **Distinctions that were being conflated.** If two things were treated as one, name both and say what separates them.
+
+Do not record decisions here. A decision and its rationale belong in `docs/thesis_notes.md`; `qa.md` explains what a decision *means*. Where the two touch, `qa.md` cross-references rather than duplicating, and `docs/em_fusion_v2.md` remains the source of truth.
+
+### How to write it
+
+- Append a new numbered `##` section. **Never rewrite or renumber an earlier answer** — if an answer is superseded by a scope change, add a new entry and note the supersession there.
+- The heading is the question, in the user's own framing rather than a tidied-up version of it. The framing is part of the record.
+- Lead with the direct answer in bold — **Yes**, **No**, **Essentially yes, but** — before the explanation.
+- Use tables for anything enumerable, worked examples with real numbers for anything quantitative, and code blocks for anything structural.
+- Close with limitations, traps, or threats to validity where they exist. Several entries carry a "worth recording as a limitation" note that feeds straight into the thesis.
+- Add any new term to the glossary table at the foot of the file.
+
+### When to write
+
+In the same turn as the explanation. An entry written later is reconstructed from memory and loses the misunderstanding it was correcting, which is the part worth keeping.
 
 ## Git
 
