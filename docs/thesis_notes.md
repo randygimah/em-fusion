@@ -99,6 +99,39 @@ becomes the sole fallback, and the offline demonstration shows template output.
 *(Record the actual time spent standing up the local arm here, and whether the time-box held. If it
 was cut, record that too — a time-box that fires is a result about estimation, not a failure.)*
 
+### Build order: the API contract before the UI features that depend on it
+
+The original phase order built the Operational Picture screen against mock data and introduced the
+FastAPI contract mirror two phases later. That order has been amended: the contract mirror now
+precedes the view filter and the map playback, though the purely visual layout work still runs first.
+
+The reasoning is narrower than a general preference for backend-first development, and the narrowness
+is the point. Two features are **server-side by specification** rather than by convention. The view
+filter filters on the server so that excluded rows never reach the client — which means the
+suppressed counts that keep the "+n nominal hidden" footer truthful can only come from response
+metadata, and a client-side implementation has nothing to report. The playback buffer's time-window
+query is bounded server-side, with over-long spans truncated and the truncation reported; a mock has
+no equivalent behaviour to exercise. In both cases the original checklist had already conceded the
+problem, instructing that the mock be filtered "behind the same function signature the API call will
+use" — an explicit acknowledgement that the work would be done twice.
+
+The general lesson worth carrying into the write-up is about where a contract-first architecture
+actually pays. The project's contract-first design — a typed `OperationalPicture` mirroring the future
+response shape, screens taking it as a prop, one seam in `App.tsx` — was intended to make the data
+source substitutable, and it does. What it does not do is make *behaviour* substitutable: a feature
+whose semantics live on the server cannot be developed against a client-side stand-in, however
+faithful the shape. Recognising which features those are, rather than treating the mock as uniformly
+sufficient, is the distinction that reordered the phases.
+
+One risk the reorder introduces is recorded here in advance: the backend fixture and the frontend type
+now describe one contract in two languages, and will drift silently unless something forces them
+together. The mitigation is a contract test on each side asserting the same shape, so a renamed field
+fails a test rather than surfacing as an empty panel in the browser.
+
+*(Record here whether the reorder actually avoided rework, or whether the contract mirror turned out
+to cost more than the shim it replaced. The estimate was that Phase 5 is small; that should be
+checked against the outturn rather than assumed.)*
+
 ### RF observation model: a sensor × channel grid rather than per-sensor readings
 
 The synthetic RF generator emits on a fixed grid of sensors by frequency channels by time, rather

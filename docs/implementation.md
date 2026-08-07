@@ -62,7 +62,25 @@ Feeds the **System Design and Architecture** chapter of `thesis_notes.md`. Non-c
 - [x] Add one extra assertion only if it represents analyst value.
 - [x] Update README with the contract-first mock data approach.
 
+## Phase order — amended
+
+**Phase 5 now runs before the Phase 3 view filter and the Phase 4 playback.** The layout items in
+Phase 3 are design-driven and gain nothing from a backend, so they proceed first. But `api-007` (view
+filter) and `api-008` (`track-window`) are **server-side by specification**, and building them against
+a mock means building them twice:
+
+- The suppressed counts that keep the "+n nominal hidden" footer truthful only exist once the backend
+  is doing the filtering. A client-side filter has nothing to report.
+- `track-window`'s server-side bound and truncation reporting have no mock equivalent at all.
+
+Revised order: **Phase 3 layout → Phase 5 contract mirror → Phase 3 view filter → Phase 4 MapView →
+Phase 4 playback.** Phase 5 is small — `/operational-picture` returning the mock shape from a fixture,
+a contract test, and the `api.ts` seam that `App.tsx` was already structured for. Everything after it
+is built once, against a real fetch.
+
 ## Phase 3: Operational Picture Layout (3-screen model)
+
+*Layout items below run first. The view filter subsection waits for Phase 5.*
 
 - [ ] Add a left navigation shell with only three sections: Operational Picture, Hypotheses, Scenario Control.
 - [ ] Improve the top status bar using the design tokens from `DESIGN.md`; include data-mode badge, scenario badge, and a compact system-health strip (not a screen).
@@ -76,10 +94,12 @@ Feeds the **System Design and Architecture** chapter of `thesis_notes.md`. Non-c
 
 Added after the original checklist was written. The exception-first default stands — anomalous-only is still what the analyst sees first — but judging an anomaly usually means seeing it against nominal traffic, and forcing that contrast to be inferred is a worse failure than a busier map.
 
+**Build this after Phase 5, not before.** See the phase-order note above: the filter is server-side by specification, so building a client-side version first means building it twice and throwing the first away.
+
 - [ ] Add a three-state view filter — `Anomalous only` / `Nominal only` / `All` — defaulting to anomalous-only.
 - [ ] One control drives the map and the exception panel together. They must never disagree about what is shown.
 - [ ] Leave drill-down tables unfiltered. They are the show-everything view by definition.
-- [ ] Filter server-side via a `view` query parameter, not by fetching everything and discarding client-side. Until Phase 5 lands, filter the mock behind the same function signature the API call will use.
+- [ ] Filter server-side via a `view` query parameter, not by fetching everything and discarding client-side. Phase 5 is now built first, so this goes straight into the backend — no mock shim.
 - [ ] Carry per-collection suppressed counts in the response. Once the backend filters, the excluded rows never arrive, so the "+n nominal hidden" footer can no longer be computed from the payload — this amends the panel built above.
 - [ ] Test: the selection persists across poll ticks rather than resetting to the default.
 - [ ] Test: the hidden count stays truthful when the backend filtered, not zero.
@@ -101,17 +121,20 @@ Added after the original checklist was written — a static snapshot cannot show
 - [ ] Add a playback transport to Operational Picture: play, pause, speed, scrub — over **simulated** scenario time, consistent with the Track 0 latency definition. Never wall clock.
 - [ ] Render aircraft at the interpolated cursor position with a trailing path; anomalous track segments visually distinct; anomaly zones appear and clear as their windows enter and leave the cursor.
 - [ ] Buffer spans of positions ahead of the cursor and interpolate client-side. **The request rate must not be coupled to the frame rate** — this is what keeps playback inside the no-WebSockets decision rather than quietly reopening it.
-- [ ] Add the backing time-window query (`GET /aircraft/track-window`), bounded server-side so an over-long span is rejected or truncated with the truncation reported, never silently served in full. Until Phase 5 lands, buffer from the mock.
+- [ ] Add the backing time-window query (`GET /aircraft/track-window`), bounded server-side so an over-long span is rejected or truncated with the truncation reported, never silently served in full. Phase 5 is built first, so buffer from the real endpoint — the bound and the truncation report have no mock equivalent.
 - [ ] Test: a track whose buffer has not yet loaded holds its last known position and is marked stale — it must not jump to a default coordinate or vanish.
 - [ ] Test: the same cursor renders the same data at 1x and 4x. Playback speed must not alter the simulated time of a rendered position.
 
 ## Phase 5: FastAPI Contract Mirror
 
-- [ ] Create the smallest FastAPI app with `/health`.
+**Runs before the Phase 3 view filter and Phase 4 playback** — see the phase-order note above. Nothing here needs the database, the generator, or the DAL: the endpoint serves a static fixture in the frontend's shape. The point is to establish the seam, not the data.
+
+- [x] Create the smallest FastAPI app with `/health`.
 - [ ] Add a backend test for `/health`.
-- [ ] Add `/operational-picture` returning the same shape as the frontend mock data.
+- [ ] Add `/operational-picture` returning the same shape as the frontend mock data, from a static fixture.
 - [ ] Add a backend contract test for the response shape.
-- [ ] Connect the frontend to the endpoint behind a small API function (simple fetch/polling — no WebSockets in v1).
+- [ ] **Guard against fixture/type drift.** The backend fixture and the frontend `OperationalPicture` type describe the same contract in two languages and will diverge silently unless something forces them together. Assert the same shape from both sides — a backend contract test plus a frontend test that parses a copy of the real response — so a field renamed in one place fails a test rather than surfacing as an empty panel.
+- [ ] Connect the frontend to the endpoint behind a small `api.ts` function (simple fetch/polling — no WebSockets in v1). `App.tsx` is the seam this was designed for: the screen keeps taking `operationalPicture` as a prop and no component changes.
 - [ ] Keep the mock fallback until backend integration is stable.
 
 ## Phase 6: Persistence (PostgreSQL + PostGIS)
