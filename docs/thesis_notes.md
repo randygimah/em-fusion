@@ -263,7 +263,30 @@ part of the system in every ordinary sense. The reason is that it runs as a host
 Compose stack — Docker Desktop on macOS does not pass Metal through, so a containerised runtime would
 silently fall back to CPU — and C4's container notion carries an implicit deployment boundary that
 would misrepresent this. The deployment view is where the arrangement is stated properly, and adding
-that view was prompted entirely by the difficulty of expressing the constraint at Level 2. Second,
+that view was prompted entirely by the difficulty of expressing the constraint at Level 2.
+
+That decision was then taken further, in a way worth recording because the reasoning generalises. In
+the first draft the local model server appeared on all three levels, and at Level 1 it sat beside the
+analyst and the archived corpus as a peer external system. That badly overstated it: a component which
+fires only when the hosted API is unreachable is not part of the story the context diagram tells, and
+drawing it there invited a reader to think the system routinely depends on two model providers. It is
+therefore **excluded from Levels 1 and 2 and appears only at Level 3 and in the deployment view** —
+an implementation detail of the hypothesis service, documented where implementation details belong.
+The consequence at Level 1 is a sharper claim rather than a weaker one: the hosted AI provider becomes
+the only system EM Fusion reaches over a network, which is precisely what `docs/em_fusion_v2.md` §10
+and §12 assert.
+
+Removing it from the model altogether was considered and rejected. The distinction that settles it is
+between *silent* meaning "does not interrupt the analyst" and *silent* meaning "undisclosed". §12
+commits to the first and explicitly forbids the second — the degradation must reach the analyst as a
+visible attribution of which generator produced a hypothesis, never as an error state and never as an
+unmarked substitution. An architecture that cannot answer "what happens when the API is down" leaves
+that reliability claim unsupported, and a fallback is by definition a designed path with a named
+trigger rather than an accident. The legitimate route to removal is to *cut the local arm* — which
+§10 already sanctions if its time-box expires — and that is a scope decision touching §10, §12,
+and two build phases, not a change to a diagram.
+
+Second,
 schema validation and the grounding check are modelled as **two components rather than one**, against
 the single "Schema Validation + Grounding Check" node in `docs/em_fusion_v2.md` §7. They are separated
 because the grounding catch rate is a per-arm reportable result of the evaluation, and a mechanism the
@@ -297,18 +320,47 @@ drawn and the reader can see that no such edge exists. That negative space is ar
 single statement in the model that this is decision support rather than a learning loop, and it is
 worth pointing at explicitly in the Design chapter rather than leaving the reader to notice it.
 
-The third divergence is a factual correction rather than a framing one. `docs/em_fusion_v2.md` §10
-states that the hosted AI generator is the sole hosted dependency, and this is used to justify
-MapLibre over Mapbox and Structurizr's local tooling over the hosted service. Drawing the Level 1
-context diagram surfaced a fifth external system not in the original checklist: **the basemap tile
-source, which the browser fetches from directly**. The claim as written in §10 is therefore not
-currently true. Three resolutions are available — state the exception, self-host tiles alongside the
-Compose stack, or ship with the `MapView` placeholder and no basemap — and the choice is deferred to
-Phase 4. It is recorded here because it is a good example of the diagram doing the job it was built
-for: a sentence that had been repeated across several documents without challenge failed the first
-time the system was drawn as boxes and arrows.
+The third divergence is a factual correction rather than a framing one, and it was resolved by
+changing the system rather than the sentence. `docs/em_fusion_v2.md` §10 states that the hosted AI
+generator is the sole hosted dependency, and §12 goes further — the data and map layers have *no
+hosted dependency at all*, "archived replay, tokenless tiles". Both claims were used to justify
+MapLibre over Mapbox. Drawing the Level 1 context diagram surfaced a system neither claim accounted
+for: **the basemap tile source, which the browser fetches from directly**. The error underneath was a
+conflation of *tokenless* with *self-hosted*. MapLibre is a renderer and ships with no map data;
+requiring no account for the library says nothing about where its tiles come from, and the default
+answer is someone else's server.
 
-*(Record here which of the three tile-source resolutions was taken, and at what point in Phase 4.)*
+The resolution taken is to **self-host the basemap**, which makes both claims literally true rather
+than nearly true. A vector basemap covering the project's bounding box — the same box already fixed
+for the OpenSky extract — is cut as a single PMTiles archive from a Protomaps build of OpenStreetMap
+and served over HTTP range requests by the nginx container that already serves the frontend bundle.
+This costs nothing, adds no Compose service and no tile-server process, and has the secondary benefit
+of making the offline demonstration in §12 complete rather than partial: with the basemap local, the
+hosted generator is the only thing the system reaches for over a network.
+
+Vector rather than raster was chosen on design grounds rather than technical preference. Raster tiles
+arrive pre-rendered, carrying whatever colour scheme their renderer baked in; vector tiles carry
+geometry and attributes and are styled by the client at render time. The operational picture is
+exception-first — its entire premise is that anomalies are the salient thing on screen — and a bright
+standard-OpenStreetMap basemap composited under dark anomaly overlays competes with exactly the signal
+the screen exists to foreground. With vector tiles the basemap style is written from the same
+`DESIGN.md` tokens as the rest of the interface and can be deliberately subordinated. Continuous zoom
+and upright, collision-managed labels follow as secondary benefits.
+
+Two obligations follow, recorded now because both are cheaper to capture than to reconstruct.
+OpenStreetMap data is licensed **ODbL**, so "© OpenStreetMap contributors" must be rendered on the
+map — the same class of requirement as the OpenSky licence note, and captured at download time for the
+same reason. And a vector style references **fonts and sprite assets by URL**, which default styles
+point at a CDN; these must be self-hosted alongside the archive, or the hosted dependency just removed
+returns silently with the map still rendering perfectly.
+
+This sequence is the clearest example in the project of the model doing the job it was built for. A
+sentence repeated across several documents without challenge failed the first time the system was
+drawn as boxes and arrows, and the correction improved the system rather than merely qualifying the
+claim.
+
+*(Record here whether the .pmtiles archive was committed or downloaded against a checksum, and its
+size, once Phase 4 lands.)*
 
 *(Revisit this entire subsection at the end of the build and record the divergence between the model
 as drawn now and the architecture as actually built, per the Track 0 checklist. The divergence is

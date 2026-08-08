@@ -722,6 +722,100 @@ is omitted and the styles are written out in full.
 
 ---
 
+## 13. Can you explain more about the basemap tiles? Raster or vector?
+
+**Vector — and self-hosted.** But the more useful correction is upstream of that question.
+
+The wrong assumption was that choosing MapLibre had already settled the hosted-dependency question.
+It had not. **MapLibre is a renderer and ships with no map data.** "No account or access token
+required" is a statement about the *library*, not about the map. Point MapLibre at nothing and you get
+a blank canvas — which is exactly why `MapView` needs a placeholder path. The tiles still come from
+somewhere, and the default somewhere is a tile provider's server.
+
+So `em_fusion_v2.md` §12 — "the data and map layers have no hosted dependency at all — archived
+replay, **tokenless tiles**" — was conflating two different properties:
+
+| Property | Means | Satisfied by MapLibre alone? |
+|---|---|---|
+| **Tokenless** | No account, no API key, no registration | Yes |
+| **Self-hosted** | The bytes come from your own machine | **No** |
+
+A web map draws its background — coastlines, roads, terrain, labels — by fetching pre-cut tiles
+indexed by zoom/x/y as you pan. Those requests go somewhere. Without self-hosting, the browser is
+talking to a third party on every pan and zoom.
+
+### Raster versus vector
+
+| | Raster | Vector |
+|---|---|---|
+| What ships | Pre-rendered PNG/JPEG images | Geometry + attributes (protobuf), drawn on the GPU |
+| Who styles it | Whoever rendered the tiles | You, at runtime, from a style JSON |
+| Restyling | Requires re-rendering every tile | Edit the style, reload |
+| Zoom | Snaps between integer levels | Continuous |
+| Labels | Baked into the image; rotate with the map | Live text; stay upright, collision-managed |
+| Size | One image per level per tile | One tile serves a range of zooms |
+
+**The decisive argument here is styling, not performance.** The Operational Picture is exception-first
+— the whole premise is that anomalies are the most salient thing on screen. A raster basemap arrives
+with standard-OpenStreetMap colours already burned in: bright, high-contrast, full of road casings and
+place labels. Composited under dark anomaly overlays, it competes with the exact signal the screen
+exists to foreground, and there is no way to tone it down short of a translucent scrim over the whole
+map. With vector tiles the basemap style is written from the `DESIGN.md` tokens like any other part of
+the interface, and can be deliberately subordinated.
+
+### How self-hosting works without a tile server
+
+The light option is **PMTiles**: the entire tile set as a *single file*, queried by the browser using
+HTTP range requests. No tile-server process, no new Compose service — the nginx container that already
+serves the frontend bundle can serve it as a static asset.
+
+The data comes from a **Protomaps** build of OpenStreetMap. The planet file is ~100 GB, but a
+bounding-box extract is tens of MB — and the project already has a fixed bounding box, chosen for the
+OpenSky corpus. The same box does for both.
+
+Worth recording as traps, both of which fail *silently*:
+
+- **Glyphs and sprites.** A vector style references its fonts and icon sprites by URL, and stock
+  styles point those at a CDN. Self-host the tiles but not the fonts and the hosted dependency comes
+  straight back — with the map still rendering perfectly, so nothing looks wrong.
+- **Attribution.** OpenStreetMap data is **ODbL**: "© OpenStreetMap contributors" must appear on the
+  map. Same class of obligation as the OpenSky licence note, and the same rule applies — capture it at
+  download time, because licence terms cannot be reconstructed from a file later.
+
+## 14. Can the local model be removed from the architecture — it's just a silent fallback?
+
+**No — but the instinct behind it was right, and the model was changed.** The word doing the damage
+is "silent", which was carrying two incompatible meanings:
+
+| "Silent" as… | Meaning | Project position |
+|---|---|---|
+| Non-interrupting | No error state, no modal; the hypothesis just appears | **Required.** §12: the degradation "must hold without an error state reaching the analyst" |
+| Undisclosed | The analyst cannot tell which generator produced the output | **Forbidden.** §12: the UI "must surface *which* generator produced a hypothesis rather than hiding the degradation"; Phase 9 repeats it |
+
+So a fallback that fires without disturbing the analyst is the specification; a fallback that fires
+without the analyst being able to see it did is the opposite of the specification.
+
+The second assumption worth correcting is that a fallback is not part of a system. **A fallback is a
+designed path with a named trigger** — that is what distinguishes it from a crash. If the architecture
+does not contain it, then when the hosted API drops out the system is doing something no diagram
+describes, and the §12 reliability claim has nothing behind it. "What happens when the API is down?"
+is a question an examiner will ask, and the architecture is where it gets answered.
+
+What *was* wrong is where it was drawn. At Level 1 the local model server sat beside the analyst and
+the archived corpus as a peer, which reads as "this system routinely depends on two model providers".
+It does not. **Resolution: excluded from Levels 1 and 2, retained at Level 3 and in the deployment
+view** — an implementation detail of the hypothesis service, documented at the level where
+implementation details belong. Level 1 gets *sharper* as a result: the hosted AI provider is now the
+only system EM Fusion reaches over a network, which is precisely the claim §10 and §12 make.
+
+There is a legitimate route to removing it entirely, and it is a different decision: **cut the local
+arm from scope**, which §10 already sanctions if its time-box expires. That makes the template
+generator the sole fallback and the offline demo show template output. It changes §10, §12, Phase 8.5
+and Phase 9 — it is a scope decision, not a diagram edit. See `thesis_notes.md` for the rationale;
+this entry only explains what the distinction means.
+
+---
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -749,6 +843,13 @@ is omitted and the styles are written out in full.
 | **Structurizr DSL** | A text format for writing a C4 model, so diagrams are generated from a diffable source rather than drawn by hand. |
 | **Bind mount** | Docker's `-v host_path:container_path`; exposes a host directory inside the container. Docker creates a missing host path rather than failing. |
 | **Seam** | An interface deliberately placed so one implementation can be swapped for another without touching callers — here, the DAL and the hypothesis service. |
+| **Basemap** | The background map — coastlines, roads, terrain, labels — that overlays are drawn on top of. Separate from the map library that renders it. |
+| **Tile** | One square piece of a basemap, addressed by zoom/x/y. Maps are fetched a tile at a time as you pan. |
+| **Raster tile** | A pre-rendered image tile. Styling is fixed at render time by whoever produced it. |
+| **Vector tile** | Geometry and attributes (MVT/protobuf) styled by the client at draw time, so the same tiles can look any way you choose. |
+| **PMTiles** | A whole tile set in one file, read by the browser via HTTP range requests — self-hosting with no tile-server process. |
+| **ODbL** | The Open Database Licence covering OpenStreetMap data; requires attribution on the map. |
+| **Glyphs / sprites** | The font and icon assets a vector style references by URL. Easy to leave pointing at a CDN by accident. |
 | **Grounding check** | Verifying every claim in a generated hypothesis traces back to the evidence bundle. |
 | **Constrained decoding** | Restricting generation to a grammar so invalid output is unrepresentable, not merely detectable. |
 | **Arm** | One hypothesis generator treated as a condition in the evaluation. Two are scored — `hosted` and `template`; `local` runs as a fallback but is not scored. |
