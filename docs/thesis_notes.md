@@ -238,6 +238,105 @@ network, but verify against their current terms rather than relying on conventio
 <!-- Actual architecture as built vs as planned (docs/em_fusion_v2.md section 7) and why it
 diverged, if it did. DAL design decisions, canonical data model decisions, key diagrams. -->
 
+### Architecture documentation: a generated C4 model rather than drawn diagrams
+
+The architecture is documented as a C4 model written in Structurizr DSL and held in the repository at
+`docs/architecture/workspace.dsl`, from which every diagram is generated. The alternative — drawing
+the diagrams directly in a graphical tool and exporting images — was rejected on a maintenance
+argument rather than an aesthetic one. A drawn diagram has no relationship to the code that survives
+a refactor: it goes stale silently, and the failure is invisible precisely because an out-of-date
+diagram still renders perfectly well. A generated model at least fails loudly, in that the `validate`
+command rejects a view referring to an element that no longer exists, and it produces a text diff that
+a reader can review alongside the code change that motivated it. The cost is that the model is one
+more artefact to keep current; the mitigation is that it is cheap to regenerate and lives beside the
+code rather than in a separate tool.
+
+Three levels are modelled — Context, Containers, Components (backend only) — with a fourth deployment
+view added beyond the standard set. Level 4 (Code) is deliberately omitted. C4 treats it as optional,
+it is the level that decays fastest, and the TypeScript contract types and the schema in
+`docs/em_fusion_v2.md` §9 already document structure at that granularity with the advantage of being
+compiler-checked. Documenting it twice would guarantee that one copy is wrong.
+
+Two modelling decisions are worth recording because C4 did not offer an obvious answer. First, the
+local model server is drawn as an **external software system rather than a container**, despite being
+part of the system in every ordinary sense. The reason is that it runs as a host process outside the
+Compose stack — Docker Desktop on macOS does not pass Metal through, so a containerised runtime would
+silently fall back to CPU — and C4's container notion carries an implicit deployment boundary that
+would misrepresent this. The deployment view is where the arrangement is stated properly, and adding
+that view was prompted entirely by the difficulty of expressing the constraint at Level 2. Second,
+schema validation and the grounding check are modelled as **two components rather than one**, against
+the single "Schema Validation + Grounding Check" node in `docs/em_fusion_v2.md` §7. They are separated
+because the grounding catch rate is a per-arm reportable result of the evaluation, and a mechanism the
+thesis reports on separately should be legible as a separate thing in the architecture that produces
+it.
+
+The two seams carrying the RQ1 extensibility argument — the adapter-to-DAL seam and the
+hypothesis-service-to-generator seam — are given distinct visual styling. This is presentational, but
+deliberately so: the claim the diagram exists to support is that a new source or a new generator
+attaches at one identified place, and a diagram in which those places are indistinguishable from every
+other box does not make the argument.
+
+#### What drawing the model revealed about the planned architecture
+
+The checklist predicted that a container diagram which is awkward to draw usually indicates the
+boundaries are wrong, and that drawing it early would therefore be cheaper than drawing it at Phase 7.
+That prediction held, in three specific ways, all of which are divergences from
+`docs/em_fusion_v2.md` §7 rather than errors in it.
+
+The §7 flowchart shows a single linear pipeline from source to analyst and does not distinguish
+process boundaries. Drawing it at Level 2 forced the question of what runs *when*, and the answer is
+that the scenario runner and evaluation harness are a batch entrypoint into the same image as the API
+rather than part of any request path. This is not a change to the design; it is something the design
+always implied and never stated, and the container diagram cannot avoid stating it. It matters to the
+write-up because the reproducibility claim rests on the batch path being deterministic and the serving
+path being irrelevant to it.
+
+The §7 flowchart has no edge carrying analyst feedback back into the AI layer, and this is correct —
+the system does not learn from verdicts. But the absence only becomes legible once the diagram is
+drawn and the reader can see that no such edge exists. That negative space is arguably the clearest
+single statement in the model that this is decision support rather than a learning loop, and it is
+worth pointing at explicitly in the Design chapter rather than leaving the reader to notice it.
+
+The third divergence is a factual correction rather than a framing one. `docs/em_fusion_v2.md` §10
+states that the hosted AI generator is the sole hosted dependency, and this is used to justify
+MapLibre over Mapbox and Structurizr's local tooling over the hosted service. Drawing the Level 1
+context diagram surfaced a fifth external system not in the original checklist: **the basemap tile
+source, which the browser fetches from directly**. The claim as written in §10 is therefore not
+currently true. Three resolutions are available — state the exception, self-host tiles alongside the
+Compose stack, or ship with the `MapView` placeholder and no basemap — and the choice is deferred to
+Phase 4. It is recorded here because it is a good example of the diagram doing the job it was built
+for: a sentence that had been repeated across several documents without challenge failed the first
+time the system was drawn as boxes and arrows.
+
+*(Record here which of the three tile-source resolutions was taken, and at what point in Phase 4.)*
+
+*(Revisit this entire subsection at the end of the build and record the divergence between the model
+as drawn now and the architecture as actually built, per the Track 0 checklist. The divergence is
+itself write-up material: an architecture documented once at planning time and never revised is a
+weaker artefact than one whose revisions are on record.)*
+
+#### Tooling notes
+
+Structurizr's tooling was consolidated during the project into a single `structurizr/structurizr`
+Docker image with subcommands; the standalone `structurizr/lite` image and the separate
+`structurizr/cli` image are superseded, and the latter now emits an end-of-life notice. The model is
+rendered locally via `structurizr local`, never through the hosted structurizr.com workspace, which
+keeps the account-free stance intact for this part of the toolchain.
+
+One limitation constrains the thesis figures directly: **the Docker build does not support PNG or SVG
+export**, reporting that the operation is unsupported regardless of the `-url` option it advertises
+for the purpose. Image export is a manual action in the browser UI. Text exports (Mermaid, PlantUML,
+JSON, DOT) do work from the command line, and it is those that preserve the regenerability property —
+the exported images are downstream artefacts of a model that remains generated from source even though
+the images themselves are produced by hand.
+
+The DSL deliberately omits `theme default`. The default theme is fetched at render time from
+`static.structurizr.com`, a service scheduled for end of life on 30 September 2026. That date falls
+after submission but well within the useful life of the thesis as a document, and a model whose
+rendering silently degrades once a third-party service is switched off is not regenerable in the sense
+that motivated choosing a text-based model in the first place. The element styles are therefore
+written out in full in the workspace, which is more verbose and entirely self-contained.
+
 ### Storage substrate: why PostgreSQL/PostGIS and not a data lakehouse
 
 A lakehouse stack (Parquet on object storage under an Iceberg table format, a REST catalog such as

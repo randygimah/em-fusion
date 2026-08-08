@@ -1,2 +1,8 @@
 .DS_store
 .worktrees/
+
+# Structurizr: workspace.dsl is the source of truth. These are regenerated on every
+# `structurizr local` run and would otherwise churn in every diff.
+docs/architecture/workspace.json
+docs/architecture/.structurizr/
+docs/architecture/exports/

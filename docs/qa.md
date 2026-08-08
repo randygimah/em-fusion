@@ -680,6 +680,48 @@ field fails a test rather than surfacing as an empty panel in the browser.
 
 ---
 
+## 12. Why does `docker run -v /Users/randy.gyimah/structurizr:...` fail with "permission denied"?
+
+**Because the directory does not exist and Docker cannot create it — the error is about the wrong
+thing.** The home directory is `/Users/randygyimah`, with no dot. The mount source `/Users/randy.gyimah`
+was a typo for a path that has never existed.
+
+The misleading part is the wording. Docker's bind-mount behaviour is to *create* a missing mount
+source rather than fail, so it tried to `mkdir /Users/randy.gyimah` — and `/Users` is not writable
+by a normal user on macOS. The permission error is therefore about creating a **new** directory in
+`/Users`, not about access to the directory you meant. The wrong assumption it invites is "Docker
+Desktop needs file-sharing permission for my home folder", which sends you into Settings → Resources
+→ File Sharing, where nothing is wrong. Read `mkdir <path>: permission denied` as *"that path does
+not exist"* first, and only then as a permissions problem.
+
+The general rule: **an absolute bind-mount source should always be a path you have confirmed exists.**
+`-v "$(pwd)/docs/architecture":/usr/local/structurizr` is safer than a hand-typed absolute path
+precisely because the shell resolves it and a typo fails loudly at the shell rather than quietly at
+Docker.
+
+Two related corrections came out of the same command:
+
+| Assumption | Correction |
+|---|---|
+| `structurizr/structurizr` is the wrong image; Lite is `structurizr/lite` | **Both work.** Structurizr consolidated its tooling into one `structurizr/structurizr` image with subcommands. `local` is the successor to the standalone Lite image, and the trailing `local` in the original command was correct. The separate `structurizr/cli` image now prints an end-of-life notice. |
+| Port 8080 is fine | It collides with `uvicorn --port 8080`, which Vite proxies `/api` to. Publish on **9090**; the container still listens on 8080 internally, so only the host side of `-p` changes. |
+| The model can live anywhere on disk | It should live in the repo under `docs/architecture/`, and the mount should point there. Structurizr writes browser edits back to `workspace.dsl`, so mounting the repo directory is what makes diagram edits land in git instead of in a scratch folder. |
+
+Worth recording as a limitation: **PNG/SVG export is not available from the Docker build** — it
+reports "Exporting to PNG/SVG is not supported in this build" and the `-url` option it advertises for
+that purpose does not change the outcome. Thesis figures have to be exported by hand from the browser
+UI. Text formats (`mermaid`, `plantuml`, `json`, `dot`) do export from the CLI, and those are what
+keep the "diagrams that cannot be regenerated go stale silently" property intact; the PNGs are
+downstream artefacts of a model that is itself regenerable.
+
+A second one, found while writing the model rather than running it: `theme default` in the DSL
+fetches from `static.structurizr.com`, which reaches **end of life on 30 September 2026** — after
+submission, but well within the life of the thesis as a document. A model whose rendering depends on
+a service that will be switched off is not regenerable in the sense the checklist means, so the theme
+is omitted and the styles are written out in full.
+
+---
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -703,6 +745,10 @@ field fails a test rather than surfacing as an empty panel in the browser.
 | **SRID 4326** | WGS84 — the lat/lon coordinate system used by GPS and OpenSky. |
 | **GiST** | The PostgreSQL index type PostGIS uses for spatial columns. |
 | **Evidence bundle** | The structured, traceable anomaly summary that is the *only* input the AI layer sees. |
+| **C4 model** | Four nested levels of architecture diagram — Context, Containers, Components, Code — each zooming into one box of the level above. |
+| **Structurizr DSL** | A text format for writing a C4 model, so diagrams are generated from a diffable source rather than drawn by hand. |
+| **Bind mount** | Docker's `-v host_path:container_path`; exposes a host directory inside the container. Docker creates a missing host path rather than failing. |
+| **Seam** | An interface deliberately placed so one implementation can be swapped for another without touching callers — here, the DAL and the hypothesis service. |
 | **Grounding check** | Verifying every claim in a generated hypothesis traces back to the evidence bundle. |
 | **Constrained decoding** | Restricting generation to a grammar so invalid output is unrepresentable, not merely detectable. |
 | **Arm** | One hypothesis generator treated as a condition in the evaluation. Two are scored — `hosted` and `template`; `local` runs as a fallback but is not scored. |
