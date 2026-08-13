@@ -1,6 +1,14 @@
 .DS_store
 .worktrees/
 
+# OpenSky corpus. The Data License Agreement s3(iii) forbids making the data
+# available to anyone outside the licensee's institute, so neither the raw
+# hourly file nor the filtered extract may be committed. manifest.json,
+# coverage.json, and the fetch script are the committed artefacts — see
+# docs/qa.md 21 and spec adp-004.
+data/opensky/raw/
+data/opensky/*.parquet
+
 # Structurizr: workspace.dsl is the source of truth. These are regenerated on every
 # `structurizr local` run and would otherwise churn in every diff.
 docs/architecture/workspace.json

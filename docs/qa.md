@@ -1272,6 +1272,101 @@ basemap.
 
 ---
 
+## 21. Let me get the real file first — this will make writing the test easier. What do you think, and how do I get the snapshot?
+
+**Agreed, and for a stronger reason than convenience.** The fixture has to reproduce the raw file's
+quirks, and a fixture written blind invents its own. The real header, read off the bucket without
+downloading the file:
+
+```
+time,icao24,lat,lon,velocity,heading,vertrate,callsign,onground,alert,spi,
+squawk,baroaltitude,geoaltitude,lastposupdate,lastcontact
+1656331200,4d22ec,51.090475825940146,7.54730224609375,194.26375447899966,
+135.64374571417537,13.329920000000001,CXI27NM ,False,False,False,2556,
+5753.1,5951.22,1656331198.94,1656331200.0
+```
+
+Three things a blind fixture would have missed: `callsign` is **space-padded to 8 characters**;
+booleans serialise Python-style as `False`/`True`, not `0`/`1` or `false`/`true`; and `lastposupdate`
+carries millisecond precision while `lastcontact` is whole seconds. `adp-004`'s determinism constraint
+would have been verified against a file that does not resemble the input.
+
+### Which dataset — a conflation in our own docs
+
+`docs/em_fusion_v2.md` section 5 and `docs/thesis_notes.md` describe the source as "published tables as
+of 2026-03-01: every Monday's complete state vectors at 10-second intervals, one file per hour,
+CSV/Avro/JSON". That single sentence merges **two different entries** on
+`https://opensky-network.org/data/scientific`:
+
+| | Dataset 1 | Dataset 11 |
+|---|---|---|
+| Name | Weekly 24 Hours of State Vector Data | Complete Trino Tables Snapshot |
+| Coverage | Mondays, 2017-06-05 to 2022-06-27 (259 dates) | Tables as of 2026-03-01 |
+| Granularity | 10-second state vectors, one file per hour | Full table dump |
+| Formats | CSV, Avro, JSON | Trino table export |
+| Right one here | **Yes** | No |
+
+The Monday/hourly/three-format description belongs to dataset 1; only the March 2026 date belongs to
+dataset 11. **The corpus is from 2022, not 2026** — a claim an examiner can check, so both documents
+need correcting rather than leaving the date to be quietly read as recency.
+
+### Where it actually lives
+
+The `datasets/` browser on the website is a JavaScript S3 bucket explorer over a public,
+anonymously-readable bucket. The bucket is the real address:
+
+```
+https://s3.opensky-network.org/data-samples/states/YYYY-MM-DD/HH/states_YYYY-MM-DD-HH.csv.tar
+```
+
+`HH` is `00`-`23`; dates are restricted to the 259 Mondays. **No account or login is required** — this
+was verified with unauthenticated requests. Each hourly tar wraps exactly one member, a `.csv.gz`, and
+runs 120-180 MB; a full day is roughly 3.9 GB and is not needed, since one hour at 10-second intervals
+already gives 360 samples per aircraft.
+
+### The licence contradicts FR-110 and adp-004
+
+Found while confirming the citation. The OpenSky Data License Agreement, section 3(iii):
+
+> You will not distribute, disclose, transfer or otherwise make available the data set(s) to any person
+> other than those employed by your institute who are assisting or collaborating with You.
+
+`FR-110` and `adp-004` both require the filtered extract to be **committed to the repository**, so that a
+fresh clone reproduces the pipeline with no download step. Committing it is redistribution — plainly so
+for a public repository, and arguably so for private-with-examiner-access, which is still an open Track 0
+item. Section 4(ii) points the same way: copies are to be expunged on completion of the research, with
+only a narrow carve-out for reproducibility obligations.
+
+The wrong assumption was that a bounding-box-filtered subset is a derived work rather than the data set,
+and therefore freely committable. The agreement draws no such line, and a filtered extract of state
+vectors is still state vectors.
+
+Two further points from the same terms:
+
+- **Commercial and contractor use.** "Any use by a for-profit or commercial entity — including government
+  and military contractors — requires a written license from OpenSky Network, regardless of purpose." A
+  university dissertation falls under the non-profit research licence, but this belongs in the employer
+  clearance conversation alongside the EW/GNSS review question, not least because the project's subject
+  matter is exactly what that clause contemplates.
+- **Citation, now verified** rather than assumed. Section 4(i) requires either `The OpenSky Network,
+  http://www.opensky-network.org` or the paper: Schäfer, Strohmeier, Lenders, Martinovic and Wilhelm,
+  *Bringing up OpenSky: A large-scale ADS-B sensor network for research*, ACM/IEEE IPSN, April 2014. The
+  conventional citation was correct; it is now checked against the current terms as the thesis note asked.
+
+**Resolved the same day:** the extract is **not** committed. `data/opensky/` is gitignored; what the
+repository carries is `manifest.json`, `coverage.json`, and a fetch-and-filter script that re-downloads
+against the recorded SHA-256 and re-filters deterministically. A fresh clone reproduces the corpus in one
+command once the reader accepts the licence themselves. FR-110, `adp-004`, and the Track 0 checklist item
+were amended accordingly, and the reversal is written up in `docs/thesis_notes.md`.
+
+*Worth recording as a limitation:* the reproducibility story for the corpus is now weaker than for the
+synthetic half of the pipeline. Scenario runs regenerate from type, parameters and seed indefinitely; the
+aviation backdrop can only be reproduced by a reader who accepts the same licence and re-downloads
+against the recorded checksum. That asymmetry is a property of using real third-party data at all, and is
+better stated than hidden behind a committed file that should not have been committed.
+
+---
+
 ## Appendix: quick glossary
 
 | Term | Short definition |

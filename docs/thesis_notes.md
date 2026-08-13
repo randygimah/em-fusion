@@ -195,9 +195,9 @@ the fact, which is why it is asserted structurally instead.
 OpenSky offers two routes to historical state vectors. The **Trino/MinIO SQL interface** is free to
 university-affiliated researchers but requires an application with written justification, carries an
 unbounded approval wait, and its own documentation discourages the bulk-extraction pattern. The
-**static snapshot download** — published tables as of 2026-03-01, every Monday's complete state
-vectors at 10-second intervals, one file per hour — needs no application and is available
-immediately. The snapshot was chosen on schedule-risk grounds: an approval wait of unknown length
+**Weekly 24 Hours of State Vector Data** sample — every Monday's complete state vectors at 10-second
+intervals, one file per hour, covering 2017-06-05 to 2022-06-27 — needs no application and is
+available immediately, served anonymously from OpenSky's `data-samples` bucket. The snapshot was chosen on schedule-risk grounds: an approval wait of unknown length
 sits on the critical path of a time-boxed dissertation, and the alternative costs nothing in
 capability.
 
@@ -223,15 +223,68 @@ Three consequences, recorded because two of them are threats to validity rather 
    dropouts appear prior to injection. *(Record the box chosen, the hour used, and the result of
    this check here once run.)*
 3. **Reproducibility depends on the manifest, not the raw file.** Raw hourly files are global and
-   run to hundreds of MB, so the archived corpus is a bounding-box-filtered extract accompanied by a
-   manifest recording source URL, hour, download date, licence, and the checksum of the original.
-   The extract is the artefact; the manifest is what makes it reproducible without redistributing
-   several hundred MB of someone else's data.
+   run to 120–180 MB compressed, so the archived corpus is a bounding-box-filtered extract
+   accompanied by a manifest recording source URL, hour, download date, licence, attribution, and
+   the SHA-256 checksum of the original. The manifest is what makes the extract reproducible without
+   redistributing several hundred MB of someone else's data — a property that turned out to be the
+   whole mechanism rather than a convenience, once the licence was read (see the reversal below).
 
 Trino access remains available as future work if a date- or region-specific corpus is ever needed
-beyond the snapshot's coverage. *(Record licence and citation requirements here once confirmed from
-OpenSky's terms page — the conventional academic citation is the 2014 IPSN paper introducing the
-network, but verify against their current terms rather than relying on convention.)*
+beyond the sample's coverage.
+
+**Citation and licence, confirmed from OpenSky's terms page on 2026-08-13** rather than assumed. §4(i)
+of the Data License Agreement requires that any publication using the data cite either `The OpenSky
+Network, http://www.opensky-network.org` or the paper introducing the network: Schäfer, M.,
+Strohmeier, M., Lenders, V., Martinovic, I. and Wilhelm, M. (2014) *Bringing up OpenSky: A large-scale
+ADS-B sensor network for research*, ACM/IEEE International Conference on Information Processing in
+Sensor Networks (IPSN), April 2014. The conventional citation was the correct one; it is now checked
+against the current terms as this note originally required. §4(i) also obliges the licensee to provide
+OpenSky with a copy of or link to the publication.
+
+### Reversal: the corpus is not committed to the repository after all
+
+The original position, recorded above and written into FR-110, `adp-004`, and the Track 0 checklist,
+was that the filtered extract would be **committed** so that the pipeline reproduces from a fresh
+clone with no download step. That position was reversed on 2026-08-13, before any data was downloaded,
+on reading the licence rather than on any technical ground.
+
+§3(iii) of the OpenSky Data License Agreement states that the licensee "will not distribute, disclose,
+transfer or otherwise make available the data set(s) to any person other than those employed by your
+institute who are assisting or collaborating with You", and §4(ii) obliges the licensee to expunge
+copies on completion of the stated research, with a narrow carve-out for scientific reproducibility.
+Committing the extract is redistribution — unambiguously so for a public repository, and on any
+honest reading still so for a private repository shared with an examiner, who is not employed by the
+licensee's institute.
+
+The failed assumption is worth naming precisely, because it is the kind that survives review: that a
+bounding-box-filtered subset is a *derived work* and therefore freely committable. The agreement draws
+no such line, and a filtered set of state vectors is still state vectors. Three alternatives were
+considered. Committing to a private repository with examiner access was rejected because it rests on
+the same reading of §3(iii) that fails, and because a file once in git history requires a history
+rewrite to remove. Requesting written permission from OpenSky was rejected on schedule grounds — an
+unbounded wait on the critical path, which is the identical risk that ruled out the Trino interface in
+the first place, and it would have been inconsistent to accept it here having rejected it there.
+
+What is committed instead is the manifest, the coverage report, and a fetch-and-filter script that
+re-downloads against the recorded SHA-256 and re-filters deterministically. A reader reproduces the
+corpus in one command, having accepted the same licence themselves — which is arguably the more
+honest arrangement, since it makes the reader's acceptance of the terms explicit rather than bypassing
+it by handing them the bytes.
+
+**The resulting limitation should be stated plainly in the write-up.** The two halves of the pipeline
+now have different reproducibility guarantees. The synthetic half regenerates indefinitely and exactly
+from scenario type, parameters, and seed. The aviation backdrop regenerates only for a reader who
+accepts the OpenSky terms and re-downloads, and depends on OpenSky continuing to host that hourly file
+at that path — a dependency on a third party's hosting decisions that a committed file would not have
+had. That is a genuine cost of the reversal, not a neutral trade, and it is the price of complying
+with terms that should have been read before FR-110 was written.
+
+A second point from the same terms, logged for the Track 0 employer-clearance conversation rather than
+for the build: OpenSky now requires a written licence for "any use by a for-profit or commercial
+entity — including government and military contractors — regardless of purpose". The work is
+university research under the non-profit research licence, but the project's subject matter and the
+employer relationship put it close enough to that clause that it belongs in the same conversation as
+the EW/GNSS review question.
 
 ## System Design and Architecture
 
