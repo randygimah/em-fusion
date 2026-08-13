@@ -28,11 +28,28 @@ wait_for() {
 	fail "$name did not become healthy at $url"
 }
 
+POSTGRES_USER="${POSTGRES_USER:-postgres}"
+POSTGRES_DB="${POSTGRES_DB:-em_fusion}"
+
+# The extension is created by the image's init scripts on first start only. If
+# that step is ever skipped, the database still accepts connections and reports
+# healthy, and the failure surfaces much later as an unknown type "geography".
+check_postgis() {
+	local version
+	version="$(docker compose exec -T postgis \
+		psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc "SELECT postgis_version();" 2>/dev/null)" ||
+		fail "could not query postgis in database $POSTGRES_DB"
+	[ -n "$version" ] || fail "postgis extension is not installed in $POSTGRES_DB"
+	echo "ok: postgis $version in $POSTGRES_DB"
+}
+
 wait_for "backend health" "$BACKEND_URL/api/v1/health"
 wait_for "frontend" "$FRONTEND_URL/"
 # The proxy must forward /api/v1 intact. A trailing slash on nginx's proxy_pass
 # would strip the prefix and 404 here while both services report healthy.
 wait_for "frontend -> backend proxy" "$FRONTEND_URL/api/v1/health"
+
+check_postgis
 
 body="$(curl -fsS "$BACKEND_URL/api/v1/health")"
 case "$body" in

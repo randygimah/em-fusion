@@ -3,7 +3,7 @@
 # backend/Makefile; everything here goes through Docker.
 
 .DEFAULT_GOAL := help
-.PHONY: help build up demo down restart logs ps shell \
+.PHONY: help build up demo down restart logs ps shell db-shell db-reset \
         generate ensure-artifacts \
         test test-backend test-frontend lint format type-check check smoke clean
 
@@ -47,6 +47,19 @@ ps: ## Show container status
 
 shell: ## Open a shell in the backend container
 	$(COMPOSE) run --rm --no-deps backend sh
+
+## ---------------------------------------------------------------- database
+
+POSTGRES_USER ?= postgres
+POSTGRES_DB ?= em_fusion
+
+db-shell: ## psql into the running database
+	$(COMPOSE) exec postgis psql -U $(POSTGRES_USER) -d $(POSTGRES_DB)
+
+db-reset: ## Drop the database volume and recreate it empty
+	$(COMPOSE) rm -sf postgis
+	docker volume rm -f em-fusion_postgis_data
+	$(COMPOSE) up -d postgis
 
 ## ---------------------------------------------------------------- data
 
@@ -92,5 +105,5 @@ smoke: ## Health-check a running stack
 
 ## ---------------------------------------------------------------- cleanup
 
-clean: ## Stop the stack and drop its volumes
+clean: ## Stop the stack and drop its volumes, including the database
 	$(COMPOSE) down --remove-orphans --volumes

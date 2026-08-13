@@ -59,7 +59,7 @@ A contents page for the repo. Use it to find the right file before searching; it
 
 **`docs/`** — all project documentation. See the Documents table below.
 
-**Root tooling** — `compose.yaml` (four services: `backend`, `frontend`, profiled `pipeline` and `frontend-test`), the root `Makefile` (the single command surface over Compose — run `make` for the target list), and `scripts/smoke-test.sh` (post-start check that the services can reach each other).
+**Root tooling** — `compose.yaml` (five services: `postgis`, `backend`, `frontend`, plus profiled `pipeline` and `frontend-test`), the root `Makefile` (the single command surface over Compose — run `make` for the target list), and `scripts/smoke-test.sh` (post-start check that the services can reach each other and that PostGIS initialised).
 
 **Empty placeholders** — reserved, no code yet:
 
@@ -189,7 +189,7 @@ Python, managed with a venv (`backend/.venv`) and a Makefile. All commands run f
 
 ### Backend
 
-The backend exposes `/api/v1/health` only today. Per `docs/implementation.md` Phase 5, next is `/api/v1/operational-picture` returning the same shape as the frontend contract, after which the frontend swaps its mock import for a fetch behind a small API function. Target stack per `docs/em_fusion_v2.md` §10: Pydantic, SQLAlchemy, PostgreSQL + PostGIS, Uvicorn, Pytest — no Celery or APScheduler, a simple loop or on-demand replay is enough. SQL and spatial logic belong in a repository layer, never in route handlers.
+The backend exposes `/api/v1/health` only today. Per `docs/implementation.md` Phase 5, next is `/api/v1/operational-picture` returning the same shape as the frontend contract, after which the frontend swaps its mock import for a fetch behind a small API function. Target stack per `docs/em_fusion_v2.md` §10: Pydantic, SQLAlchemy, PostgreSQL + PostGIS, Uvicorn, Pytest. The database is now running in Compose (`postgis` service, `DATABASE_URL` already passed to `backend`), but nothing connects to it yet — no Celery or APScheduler, a simple loop or on-demand replay is enough. SQL and spatial logic belong in a repository layer, never in route handlers.
 
 ## Testing conventions
 

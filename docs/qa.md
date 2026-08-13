@@ -1016,7 +1016,66 @@ files-unchanged result from black after the swap confirms, whereas swapping the 
 files and puts a reformatting diff through the repository. That is a separate decision with a separate
 diff, and it should be made on its own rather than smuggled in behind a linter change.
 
-| Term | Short definition |
+---
+
+## 18. Why can't we just set `platform: linux/amd64`?
+
+**You can, and it is what the project now does.** The question came up because `postgis/postgis`
+publishes **no arm64 image at any tag** — 15, 16, 17, alpine or Debian — so on Apple Silicon the pull
+fails outright with `no matching manifest for linux/arm64/v8`. There are exactly two ways past that,
+and the initial recommendation of a multi-arch community rebuild (`imresamu/postgis`) over-weighted
+performance against provenance.
+
+| Option | Gets you | Costs you |
+|---|---|---|
+| `platform: linux/amd64` on the official image | The canonical image, byte-for-byte what upstream publishes | Runs emulated; ~2.5× slower on a spatial query here |
+| A multi-arch rebuild (`imresamu`, `baosystems`) | Native arm64 speed | A third-party build, which is a weaker provenance claim in a thesis |
+
+Emulation is not a fallback mode with different semantics — the container runs a real x86-64 Postgres,
+`uname -m` inside it reports `x86_64`, and PostGIS behaves identically. Docker Desktop uses Rosetta 2
+if it is enabled under Settings → General, and QEMU otherwise; the QEMU path is substantially slower
+and historically more fragile, so the setting is worth checking rather than assuming.
+
+### The measured cost
+
+The same query on the same host, once each, warm:
+
+```sql
+SELECT count(*) FROM (
+  SELECT ST_MakePoint(g*0.001, g*0.001)::geography AS p FROM generate_series(1,200000) g
+) s WHERE ST_DWithin(p, ST_MakePoint(50,50)::geography, 100000);
+```
+
+| Image | Reported arch | Time |
+|---|---|---|
+| `postgis/postgis:15-3.5-alpine`, `platform: linux/amd64` | `x86_64` | **3231 ms** |
+| `imresamu/postgis:15-3.5-alpine`, native | `aarch64` | **1314 ms** |
+
+Roughly 2.5× — indicative, not a benchmark: one run each, no cache control, and the containers differ
+in volume configuration. It is recorded because **detection latency is a reported evaluation metric**,
+so any latency figure taken against this database inherits the emulation factor. That belongs in the
+conditions attached to the measurement, not discovered afterwards. Note that the metric is defined in
+*simulated* scenario time rather than wall clock, which insulates the headline detection-latency
+numbers; what emulation actually threatens is any wall-clock claim about query or pipeline throughput.
+
+### Other corrections to the stack as first written
+
+**PGDATA was bind-mounted to `./data/postgres`.** Changed to a named volume, for three reasons that
+compound: `./data` is already bind-mounted into the backend and pipeline as `/data` for generated
+artefacts, so the database's internal files would sit inside the directory `make generate` writes to;
+`data/` is not gitignored, so root-owned Postgres files would appear in `git status` and could be
+committed; and `make clean` (`down --volumes`) would not have dropped a bind mount, so "clean" would
+have silently left a stale database behind. A named volume fixes all three, and `make db-reset` now
+exists for the deliberate wipe.
+
+**The healthcheck named no database.** `pg_isready -U postgres` connects to a database named after the
+user, which is not `em_fusion`. It now names the database it is actually gating on.
+
+**The PostGIS extension is created by the image's init scripts on first start only**, against an empty
+data directory. If that step is ever skipped — a pre-existing volume, a changed `POSTGRES_DB` — the
+database still accepts connections and still reports healthy, and the failure appears much later as
+`type "geography" does not exist`. `scripts/smoke-test.sh` now asserts `postgis_version()` for this
+reason, and `make db-reset` was verified to re-run the initialisation.
 |---|---|
 | **State vector** | One tracked object's complete state (position, velocity, attributes) at one instant; one row. |
 | **Track** | The time-ordered sequence of state vectors sharing an `icao24` — an aircraft's trajectory. |
@@ -1037,6 +1096,9 @@ diff, and it should be made on its own rather than smuggled in behind a linter c
 | **SRID 4326** | WGS84 — the lat/lon coordinate system used by GPS and OpenSky. |
 | **GiST** | The PostgreSQL index type PostGIS uses for spatial columns. |
 | **Evidence bundle** | The structured, traceable anomaly summary that is the *only* input the AI layer sees. |
+| **PGDATA** | Postgres's internal data directory. Belongs in a named volume, not a bind mount inside a directory used for anything else. |
+| **Image platform** | The CPU architecture an image was built for. `platform: linux/amd64` runs an amd64 image emulated on arm64; it is real, just slower. |
+| **Rosetta / QEMU** | The two emulation backends Docker Desktop can use for cross-architecture images. Rosetta is much faster and is a Docker Desktop setting. |
 | **C4 model** | Four nested levels of architecture diagram — Context, Containers, Components, Code — each zooming into one box of the level above. |
 | **Structurizr DSL** | A text format for writing a C4 model, so diagrams are generated from a diffable source rather than drawn by hand. |
 | **Bind mount** | Docker's `-v host_path:container_path`; exposes a host directory inside the container. Docker creates a missing host path rather than failing. |

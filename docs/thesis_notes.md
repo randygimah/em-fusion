@@ -618,6 +618,35 @@ check rather than only checking that each service responds. The general observat
 belongs in the write-up, is that integration configuration fails differently from code: it fails by
 silence rather than by exception, so it needs a test that exercises the joins, not the parts.
 
+### Database container: the official image emulated, and what that costs
+
+PostgreSQL with PostGIS joined the Compose stack ahead of any code that uses it, which is the right
+order given that the storage substrate decision (recorded above) rests on the indexed spatial join
+being available rather than aspirational. One property of the image was not anticipated: `postgis/postgis`
+publishes **amd64 builds only**, at every tag, so on the Apple Silicon development machine the pull
+fails outright rather than degrading. The choice is therefore between the canonical image running under
+emulation and a third-party multi-arch rebuild running natively, and it was resolved in favour of the
+official image with `platform: linux/amd64`.
+
+The reasoning is worth recording because the first recommendation was the other way round, on
+performance grounds, and performance was the wrong thing to optimise. A thesis that cites its
+dependencies is better served by the image its upstream project actually publishes than by a faithful
+but third-party rebuild; provenance is the claim being made, and emulation does not weaken it, because
+the emulated container runs a genuine x86-64 build with identical behaviour.
+
+The cost was measured rather than assumed. The same spatial predicate over 200,000 generated points ran
+in **3231 ms** emulated (`platform: linux/amd64`, reporting `x86_64`) against **1314 ms** on a native
+arm64 rebuild of the same PostGIS version — roughly 2.5×. Conditions: one run each on the same host,
+warm, no cache control, and the two containers differed in volume configuration, so this is indicative
+of the order of magnitude and not a benchmark.
+
+The threat to validity this creates is narrow but must be stated. Detection latency is a reported
+evaluation metric, and it is defined in *simulated* scenario time rather than wall clock, which
+insulates the headline figures from the emulation factor entirely. What emulation does affect is any
+wall-clock claim about query or pipeline throughput — including the spatial-join performance argument
+used to justify PostGIS over alternatives. If such a figure is reported, it must carry the emulation
+condition, or be taken on an amd64 host where the image runs natively.
+
 ### Backend dependencies: a lockfile, chosen for reproducibility rather than ergonomics
 
 Dependencies moved from `requirements.txt`/`requirements-dev.txt` into `pyproject.toml` with a committed

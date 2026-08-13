@@ -25,10 +25,7 @@ RUN pnpm run build
 # ==========================================
 #  Serve Static Files with Nginx
 # ==========================================
-# The unprivileged variant runs as uid 101 and listens on 8080, with the pid
-# file and temp directories already relocated to writable paths. Ports below
-# 1024 need root or CAP_NET_BIND_SERVICE, so serving 80 would mean running the
-# container as root for no gain — see docs/qa.md section 16.
+
 FROM nginxinc/nginx-unprivileged:1.25-alpine
 
 # Copy the compiled React assets from the build stage to Nginx web root

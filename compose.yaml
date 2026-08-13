@@ -1,6 +1,26 @@
 name: em-fusion
 
 services:
+  postgis:
+    container_name: em-fusion-postgis
+    image: postgis/postgis:15-3.5-alpine
+    platform: linux/amd64
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-em_fusion}
+    # Overridable, because 5432 is often already taken by a native Postgres install.
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-postgres}", "-d", "${POSTGRES_DB:-em_fusion}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
 
   # Replay / synthetic-observation pipeline. Profiled so it never starts as part
   # of `docker compose up` — it is a one-shot job, driven by `make generate`.
@@ -10,6 +30,11 @@ services:
       context: ./backend
       target: dev
     command: ["python", "-m", "app.pipeline"]
+    depends_on:
+      postgis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://postgres:postgres@postgis:5432/em_fusion}
     volumes:
       - ./backend:/app
       - ./data:/data
@@ -20,8 +45,15 @@ services:
       context: ./backend
       target: dev
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    depends_on:
+      postgis:
+        condition: service_healthy
     ports:
       - "8000:8000"
+    # The host name is the compose service, not localhost. Nothing reads this yet;
+    # it is here so the first repository lands against a working connection string.
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://postgres:postgres@postgis:5432/em_fusion}
     volumes:
       - ./backend:/app
       - ./data:/data
@@ -58,3 +90,6 @@ services:
     command: ["pnpm", "test"]
     volumes:
       - ./frontend/src:/app/src
+
+volumes:
+  postgis_data:

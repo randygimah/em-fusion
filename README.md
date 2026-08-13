@@ -20,6 +20,7 @@ make down     # stop everything
 | http://localhost:8080 | Frontend (nginx, serving the built React app) |
 | http://localhost:8000/api/v1/health | Backend health endpoint |
 | http://localhost:8000/docs | Generated OpenAPI documentation |
+| localhost:5432 | PostgreSQL 15 + PostGIS 3.5 (`make db-shell`) |
 
 The frontend proxies `/api/` to the backend, so a browser only ever needs port 8080.
 
@@ -32,6 +33,7 @@ The frontend proxies `/api/` to the backend, so a browser only ever needs port 8
 | `make lint` / `make type-check` / `make format` | ruff + Biome / mypy / black + ruff |
 | `make check` | All of the above, in the order `backend/Makefile` uses |
 | `make generate` | Run the data pipeline once into `data/` (not yet implemented) |
+| `make db-shell` / `make db-reset` | psql into the database / drop its volume and recreate it empty |
 | `make logs` / `make ps` / `make shell` | Follow logs / container status / shell in the backend |
 | `make clean` | Stop the stack and drop its volumes |
 

@@ -124,19 +124,19 @@ workspace "EM Fusion" "Explainable electromagnetic situational awareness: a huma
 
                 docker = deploymentNode "Docker Desktop" "Comes up with `make demo`." "Docker Engine + Compose" {
 
-                    deploymentNode "frontend" "Serves the SPA bundle and the tile archive." "nginx" {
+                    deploymentNode "frontend" "Serves the SPA bundle and the tile archive. Runs unprivileged on 8080." "nginx-unprivileged:1.25-alpine" {
                         containerInstance tiles
                     }
 
-                    deploymentNode "backend" "" "python:slim, Uvicorn" {
+                    deploymentNode "backend" "" "python:3.13-alpine, Uvicorn, uv" {
                         containerInstance api
                     }
 
-                    deploymentNode "db" "" "postgis/postgis" {
+                    deploymentNode "postgis" "amd64 only, so emulated on Apple Silicon." "postgis/postgis:15-3.5-alpine" {
                         containerInstance db
                     }
 
-                    deploymentNode "runner" "Ephemeral — `docker compose run`." "python:slim" {
+                    deploymentNode "runner" "Ephemeral — `docker compose run`." "python:3.13-alpine" {
                         containerInstance harness
                     }
                 }
