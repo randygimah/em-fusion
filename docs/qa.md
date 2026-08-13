@@ -1076,6 +1076,125 @@ data directory. If that step is ever skipped — a pre-existing volume, a change
 database still accepts connections and still reports healthy, and the failure appears much later as
 `type "geography" does not exist`. `scripts/smoke-test.sh` now asserts `postgis_version()` for this
 reason, and `make db-reset` was verified to re-run the initialisation.
+
+---
+
+## 19. SQLAlchemy is an ORM that lets us manipulate data with Python instead of SQL, psycopg is the driver handling network communication, and the engine configures SQLAlchemy to use psycopg?
+
+**The psycopg half is right, the SQLAlchemy half is half right, and the engine does more than wire the
+two together.** Taking them in order, because the layering is what makes the rest of `db-005` make
+sense.
+
+### The stack, top to bottom
+
+```
+repository function            your code — the only place SQL and spatial logic may live (db-003)
+  ↓
+Session                        ORM: identity map, unit of work, transaction scope
+  ↓
+Engine                         dialect + connection pool + execution entry point
+  ↓
+psycopg (DBAPI)                wire protocol, type adaptation, TLS, authentication
+  ↓
+TCP socket → PostgreSQL/PostGIS
+```
+
+Each layer talks only to its neighbours. That is why swapping the driver is a URL change, and why the
+repository boundary in `db-003` can hold: everything above `Session` is project code, everything below
+`Engine` is somebody else's problem.
+
+### psycopg: yes, that is what a driver is
+
+psycopg 3 implements PostgreSQL's **frontend/backend wire protocol** — the byte-level conversation a
+client has with the server. Concretely it owns the connection handshake, authentication (SCRAM-SHA-256
+and friends), TLS negotiation via `sslmode`, sending statements, streaming result rows back, `COPY`,
+`LISTEN`/`NOTIFY`, and transaction control at the protocol level.
+
+It also does one job that is easy to overlook and matters more than the networking: **type adaptation**
+in both directions — a Python `datetime` to a Postgres `timestamptz`, a `dict` to `jsonb`, a returned
+`numeric` to `Decimal`. And it is where **parameter binding** actually happens. Parameters are sent to
+the server separately from the statement text, so the server never parses user data as SQL. That, not
+escaping, is what makes parameterised queries injection-proof. psycopg is a PEP 249 (DBAPI 2.0)
+implementation, which is the interface SQLAlchemy programs against — hence "driver" and "DBAPI" being
+interchangeable in SQLAlchemy's documentation.
+
+### SQLAlchemy: two libraries, and it does not replace SQL
+
+The correction worth making is that SQLAlchemy is **two layers, and only the upper one is an ORM**:
+
+| Layer | What it gives you | Used here for |
+|---|---|---|
+| **Core** | SQL expression language, schema/metadata, connection pooling, dialects. Composes SQL in Python; no classes, no objects-as-rows. | The PostGIS spatial query in `db-004`, and anything set-based |
+| **ORM** | Declarative classes mapped to tables, identity map, unit of work, relationship loading | The CRUD-shaped tables: hypotheses, analyst feedback, scenario runs |
+
+"Manipulate data with Python instead of SQL" is the framing that produces slow queries, because it
+suggests SQL has been abstracted away. It has not — it has been made **composable and type-checked**.
+`select(Observation).where(Observation.icao24 == x)` is not an alternative to SQL, it is a SQL `SELECT`
+built out of Python objects, and you still have to know what statement it will emit, what it will join,
+and how many round trips it will cost. The ORM's real contributions are narrower and more valuable than
+"no SQL": it tracks which loaded objects changed and emits the right `UPDATE`s at flush (unit of work),
+and it guarantees one Python object per database row per session (identity map).
+
+**This project meets the limit of that abstraction early.** `db-004` requires a genuine PostGIS
+predicate — track discontinuities within N km of an anomaly zone — and the ORM has no notion of
+`ST_DWithin`. SQLAlchemy can *call* it through `func.ST_DWithin(...)`, but knowing that a column holds a
+geometry, indexing it with GiST, and parsing WKB results needs **GeoAlchemy2**, a separate library that
+adds PostGIS types on top of SQLAlchemy. The spatial query — the single feature that justifies choosing
+PostGIS at all — is the part the ORM helps with least. That is an argument for keeping it in a
+repository function written close to the SQL, which is what `db-003` mandates anyway.
+
+### The Engine: the pool is the point
+
+Configuring the driver is one of three jobs, and the least interesting:
+
+1. **Dialect selection.** `postgresql+psycopg://` is read as *dialect* `postgresql` plus *DBAPI*
+   `psycopg`. The dialect knows PostgreSQL's SQL flavour; the DBAPI knows how to talk to it.
+2. **Connection pooling.** The Engine holds a pool of already-open connections and lends them out.
+   Opening a PostgreSQL connection is expensive — TCP handshake, TLS, authentication, and a new backend
+   *process* forked server-side. Pooling amortises that across requests.
+3. **Execution entry point**, and the source every `Session` borrows its connection from.
+
+Point 2 is why `db-005` insists on exactly one Engine per process. An Engine constructed inside a
+request handler creates a *new pool* on every request, so nothing is ever reused, connections
+accumulate, and Postgres eventually refuses new ones at `max_connections`. The symptom appears under
+load, long after the code looks fine — which is why it is written as a failure case rather than left to
+review.
+
+A related property the spec depends on: **`create_engine()` does not connect.** It parses the URL and
+builds the pool lazily; the first real connection happens at first use. That is what allows unit tests
+for `db-005` to assert configuration and cleanup behaviour with no database running, and it is why live
+connectivity is checked in `scripts/smoke-test.sh` instead.
+
+### Session versus Engine versus Connection
+
+Three things that are easy to conflate:
+
+| | Lifetime | Holds |
+|---|---|---|
+| **Engine** | One per process | The pool and the dialect |
+| **Connection** | One transaction's worth | A real socket, borrowed from the pool and returned |
+| **Session** | One per request, per `db-005` | The ORM's work in progress: pending changes, identity map, and a borrowed Connection |
+
+A `Session` is not a connection — it acquires one when it first needs it and releases it on close. This
+is why "one session per request, rolled back on exception, closed on completion" is the whole of the
+dependency's contract: a session left open holds a pooled connection hostage, and a request that raises
+without rollback returns a connection to the pool with an aborted transaction still on it, so the *next*
+request to borrow it fails for no visible reason.
+
+### Could psycopg be used without SQLAlchemy?
+
+**Yes**, and it is worth knowing the option exists. psycopg alone executes any statement this project
+needs, and `db-003` already confines SQL to a repository layer, which is where an ORM's benefits are
+thinnest. SQLAlchemy is retained because it is named in the target stack (`em_fusion_v2.md` §10) and
+because the non-spatial tables are exactly the CRUD shape the unit of work handles well. The honest
+statement for the write-up is that the ORM earns its place on the hypothesis, feedback, and scenario-run
+tables and earns much less on the spatial query — not that it was needed throughout.
+
+---
+
+## Appendix: quick glossary
+
+| Term | Short definition |
 |---|---|
 | **State vector** | One tracked object's complete state (position, velocity, attributes) at one instant; one row. |
 | **Track** | The time-ordered sequence of state vectors sharing an `icao24` — an aircraft's trajectory. |
@@ -1096,6 +1215,12 @@ reason, and `make db-reset` was verified to re-run the initialisation.
 | **SRID 4326** | WGS84 — the lat/lon coordinate system used by GPS and OpenSky. |
 | **GiST** | The PostgreSQL index type PostGIS uses for spatial columns. |
 | **Evidence bundle** | The structured, traceable anomaly summary that is the *only* input the AI layer sees. |
+| **DBAPI (PEP 249)** | Python's standard database-driver interface. psycopg implements it; SQLAlchemy programs against it. |
+| **Dialect** | SQLAlchemy's knowledge of one database's SQL flavour. `postgresql+psycopg` = dialect + driver. |
+| **Connection pool** | Reusable open connections held by the Engine. Exists because a new PostgreSQL connection costs a handshake and a forked server process. |
+| **Unit of work** | The ORM tracking which loaded objects changed and emitting the matching `UPDATE`s at flush time. |
+| **Identity map** | The ORM's guarantee of one Python object per database row within a session. |
+| **GeoAlchemy2** | The library that teaches SQLAlchemy about PostGIS geometry types. SQLAlchemy alone can call `ST_*` functions but does not know the column types. |
 | **PGDATA** | Postgres's internal data directory. Belongs in a named volume, not a bind mount inside a directory used for anything else. |
 | **Image platform** | The CPU architecture an image was built for. `platform: linux/amd64` runs an amd64 image emulated on arm64; it is real, just slower. |
 | **Rosetta / QEMU** | The two emulation backends Docker Desktop can use for cross-architecture images. Rosetta is much faster and is a Docker Desktop setting. |
