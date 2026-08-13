@@ -1,5 +1,5 @@
 # EM Fusion — single command surface over compose.yaml.
-# Backend-only tooling (black/isort/flake8/mypy against a local venv) stays in
+# Backend-only tooling (black/ruff/mypy against a local venv) stays in
 # backend/Makefile; everything here goes through Docker.
 
 .DEFAULT_GOAL := help
@@ -75,12 +75,12 @@ test-backend: ## Pytest inside the backend container
 test-frontend: ## Vitest inside the frontend build stage
 	$(COMPOSE) --profile test run --rm frontend-test
 
-lint: ## flake8 + isort (backend), Biome (frontend)
-	$(COMPOSE) run --rm --no-deps backend sh -c "flake8 app/ && isort --check-only --diff app/"
+lint: ## ruff (backend), Biome (frontend)
+	$(COMPOSE) run --rm --no-deps backend ruff check app/ tests/
 	$(COMPOSE) --profile test run --rm frontend-test pnpm lint
 
-format: ## Black + isort against the mounted backend source
-	$(COMPOSE) run --rm --no-deps backend sh -c "black app/ && isort app/"
+format: ## Black, then ruff's import sorting, against the mounted backend source
+	$(COMPOSE) run --rm --no-deps backend sh -c "black app/ tests/ && ruff check --select I --fix app/ tests/"
 
 type-check: ## mypy inside the backend container
 	$(COMPOSE) run --rm --no-deps backend mypy app/

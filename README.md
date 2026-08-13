@@ -29,7 +29,7 @@ The frontend proxies `/api/` to the backend, so a browser only ever needs port 8
 |---|---|
 | `make demo` | Build and run the stack in the foreground |
 | `make test` | Backend pytest and frontend Vitest, both in containers |
-| `make lint` / `make type-check` / `make format` | flake8 + isort + Biome / mypy / black + isort |
+| `make lint` / `make type-check` / `make format` | ruff + Biome / mypy / black + ruff |
 | `make check` | All of the above, in the order `backend/Makefile` uses |
 | `make generate` | Run the data pipeline once into `data/` (not yet implemented) |
 | `make logs` / `make ps` / `make shell` | Follow logs / container status / shell in the backend |

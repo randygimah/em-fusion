@@ -94,9 +94,8 @@ A contents page for the repo. Use it to find the right file before searching; it
 | `frontend/vite.config.ts` | Vite config — dev port 1234, `/api` proxy to `:8000` with no path rewrite (the backend owns `/api/v1`), Tailwind plugin, Vitest setup. |
 | `frontend/index.html`, `frontend/nginx.conf`, `frontend/Dockerfile` | Build and container config for the frontend. |
 | `backend/Makefile` | The backend command surface (`format`, `lint`, `type-check`, `test`, `check`). Read before running backend tooling by hand. |
-| `backend/pyproject.toml` | **Single source for dependencies and tool config** — `[project]` runtime deps, `[dependency-groups] dev`, plus black/isort/mypy/pytest settings. |
+| `backend/pyproject.toml` | **Single source for dependencies and tool config** — `[project]` runtime deps, `[dependency-groups] dev`, plus black/ruff/mypy/pytest settings. No tool config lives outside it. |
 | `backend/uv.lock` | Resolved, pinned dependency graph. Committed — it is what makes a fresh clone reproduce the environment a result was measured under. |
-| `backend/.flake8` | flake8 config. The one tool that cannot read `pyproject.toml`, which is why this file still exists. |
 | `backend/.env.example` | Template for backend env vars. Secrets never get committed — add new keys here, not to a fixture. |
 | `backend/Dockerfile`, `.dockerignore` | Backend container config. |
 | `.claude/settings.local.json` | Local Claude Code permissions. Not project scope. |
@@ -166,8 +165,8 @@ Python, managed with a venv (`backend/.venv`) and a Makefile. All commands run f
 
 - `uv sync` (or `make install-dev`) — install dependencies from `uv.lock`
 - `uvicorn app.main:app --reload --port 8000` — run the dev server
-- `make format` — Black + isort (writes)
-- `make lint` — flake8 + isort --check-only
+- `make format` — Black, then ruff import sorting (writes)
+- `make lint` — ruff check
 - `make type-check` — mypy
 - `make test` — pytest
 - `make check` — format + lint + type-check + test

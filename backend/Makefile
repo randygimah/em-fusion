@@ -5,11 +5,10 @@ install-dev:
 
 format:
 	black app/ tests/
-	isort app/ tests/
+	ruff check --select I --fix app/ tests/
 
 lint:
-	flake8 app/
-	isort --check-only --diff app/
+	ruff check app/ tests/
 
 type-check:
 	mypy app/

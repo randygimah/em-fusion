@@ -635,10 +635,29 @@ and the environment that processed it.
 from `pyproject.toml` with `pip install .` requires the package source to be present in the same layer,
 which collapses the dependency install and the source copy into one Docker layer and makes every source
 edit reinstall the full dependency set; `uv sync --no-install-project` separates them and preserves the
-cached layer that the original two-file split existed to protect. One tool resisted the consolidation:
-flake8 does not read `pyproject.toml` by maintainer decision, so `.flake8` survives as the single
-exception. That is a small enough residue to accept, though it is also the argument for `ruff`, which
-would absorb both flake8 and isort and leave no file behind.
+cached layer that the original two-file split existed to protect. One tool initially resisted the consolidation:
+flake8 does not read `pyproject.toml` by maintainer decision, so `.flake8` survived the first pass as
+the single exception. It was judged a small enough residue to accept — and then, within the same
+session, not accepted: flake8 and isort were both replaced by `ruff`, which reads `pyproject.toml` and
+implements both, leaving the backend with no tool configuration outside that one file.
+
+The sequence is worth recording because it is a small case of a pattern the Implementation chapter can
+name. The residue was tolerable in isolation; it stopped being tolerable once the goal was stated as
+*one file*, because a consolidation that is 90% complete still requires every reader to know which
+tool is the exception and why. The cost of finishing was low precisely because the change was
+mechanical — the rule set `["E", "F", "W", "I"]` reproduces flake8's defaults plus isort — and because
+it was verifiable: black reported all seven source files unchanged afterwards, so the linter swap
+altered no source byte. The formatter was deliberately not swapped at the same time, although ruff
+offers a black-compatible one, on the grounds that a formatter change rewrites files and a linter
+change does not; bundling them would have hidden a reformatting diff inside a tooling commit.
+
+One honest limitation attaches to the swap. Ruff's whitespace rules (`E1`/`E2`/`E3`, including missing
+whitespace around an operator) are preview-only and therefore inactive under a stable release, so a
+small class of formatting defect that flake8 rejected now passes the linter. This is covered rather
+than ignored: black normalises all of those cases, and the `check` target runs formatting before
+linting, so the exposure is limited to invoking the linter alone on unformatted code. It is recorded
+here rather than left implicit because "we replaced flake8 with ruff" reads as a pure superset claim,
+and it is not quite one.
 
 ### Container hardening: the port number as a consequence of the user, not a choice in itself
 

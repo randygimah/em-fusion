@@ -971,7 +971,50 @@ database engine and replay loop will attach.
 
 ---
 
-## Appendix: quick glossary
+## 17. For the sake of `pyproject.toml`, let's use ruff instead of flake8 and isort
+
+**Done — and it retires the caveat in §16.** That entry said flake8 could not read `pyproject.toml`
+and so `.flake8` would survive any consolidation. That is still true *of flake8*, but flake8 is no
+longer here: ruff implements the same checks, reads `pyproject.toml`, and subsumes isort as well.
+`.flake8` is deleted, and the backend now has **no tool configuration outside `pyproject.toml`** —
+which was the point of the consolidation and was previously 90% achieved.
+
+| Before | After |
+|---|---|
+| `flake8` (config in `.flake8`) | `ruff check` (config in `[tool.ruff.lint]`) |
+| `isort` (config in `[tool.isort]`) | ruff rule set `I` (config in `[tool.ruff.lint.isort]`) |
+| `black` (config in `[tool.black]`) | unchanged — ruff's formatter was not adopted |
+
+### Rule mapping, and one genuine gap
+
+`select = ["E", "F", "W", "I"]` reproduces flake8's defaults: `F` is pyflakes, `E`/`W` are
+pycodestyle, `I` is isort. Two entries in the old `.flake8` needed thought rather than translation:
+
+- **`E203`** (whitespace before punctuation) is still ignored. It disagrees with how black formats
+  slices, so it would fail on code black had just produced.
+- **`W503`** (line break before binary operator) has no ruff equivalent, because ruff does not
+  implement that check at all. It needs no ignore entry — there is nothing to ignore.
+
+The gap worth knowing about: **ruff's whitespace rules are preview-only.** `E1`, `E2`, `E3` — including
+`E225`, missing whitespace around an operator — do nothing under a stable ruff unless `preview = true`
+is set. Selecting them explicitly produces a warning that the selection has no effect, verified here
+rather than assumed. So `x=1` passes `make lint` where flake8 would have rejected it.
+
+This is acceptable, but for a specific reason rather than by dismissal: black already normalises every
+one of those cases, and `make check` runs `format` before `lint`, so formatted code cannot reach the
+linter in that state. Preview rules were not enabled because preview is explicitly unstable and would
+opt the project into every other in-development rule for the selected sets at the same time. The
+division of labour is the standard one — **the formatter owns whitespace, the linter owns everything
+else** — and the residual risk is limited to running `make lint` in isolation on unformatted code.
+
+### Why keep black at all
+
+Ruff ships a formatter that is a near drop-in for black, so the obvious follow-on question is whether
+black should go too. It was kept because it is not what was asked for, and because the two changes have
+different risk profiles: swapping the *linter* leaves every source file byte-identical, as the 7
+files-unchanged result from black after the swap confirms, whereas swapping the *formatter* rewrites
+files and puts a reformatting diff through the repository. That is a separate decision with a separate
+diff, and it should be made on its own rather than smuggled in behind a linter change.
 
 | Term | Short definition |
 |---|---|
