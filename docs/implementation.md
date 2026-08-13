@@ -6,13 +6,13 @@ Scope v2 changes: three screens only (Operational Picture, Hypothesis Detail, Sc
 
 ## Working Rules
 
-- [ ] Before coding a step, write down the user-visible behavior you are trying to create.
-- [ ] Write or update a test before polishing the UI.
-- [ ] Prefer analyst-visible tests over implementation details like CSS class names.
-- [ ] Keep mock data shaped like the future API response.
-- [ ] Update `README.md` or the relevant package README whenever setup, scripts, scope, or behavior changes.
-- [ ] After each step, ask: what would happen if we did the simpler or more general version instead?
-- [ ] Anything cut from v1 (extra screens, WebSockets, Timescale, multi-agent) goes in a FUTURE.md note, not back into scope.
+- Before coding a step, write down the user-visible behavior you are trying to create.
+- Write or update a test before polishing the UI.
+- Prefer analyst-visible tests over implementation details like CSS class names.
+- Keep mock data shaped like the future API response.
+- Update `README.md` or the relevant package README whenever setup, scripts, scope, or behavior changes.
+- After each step, ask: what would happen if we did the simpler or more general version instead?
+- Anything cut from v1 (extra screens, WebSockets, Timescale, multi-agent) goes in a FUTURE.md note, not back into scope.
 
 ## Track 0: Non-Code (runs in parallel — start now)
 
