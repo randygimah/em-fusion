@@ -103,6 +103,7 @@ the database, in API responses, and on every screen.
 | FR-108 | RF observations shall be emitted on a fixed sensor × channel × time grid: six to eight sensors at recorded positions, each reporting on eight 2 MHz channels centred on 1567.42–1581.42 MHz with one channel centred exactly on GNSS L1 (1575.42 MHz). Every sensor shall report on every channel at every interval, so a missing reading is a detectable gap rather than an ambiguous absence. |
 | FR-109 | Sensor positions and the channel plan shall be configuration, not hard-coded constants, and sensors shall be positioned so that a candidate interference zone contains some and excludes others. |
 | FR-110 | The bounding-box-filtered OpenSky extract shall be archived as Parquet locally and shall **not** be committed to the repository, because the OpenSky Data License Agreement §3(iii) prohibits making the data available to anyone outside the licensee's institute. The repository shall instead commit the manifest and a fetch-and-filter script, so the pipeline reproduces from a fresh clone in one command once the reader accepts the same licence, verified against the recorded checksum of the original. Parquet shall be the archive format for that extract only and shall never serve as a read path for observations, which are served from PostGIS. *(Amended 2026-08-13; the original required the extract to be committed. See `docs/qa.md` §21.)* |
+| FR-111 | The DAL shall replace source aircraft identifiers (`icao24`, `callsign`) with deterministic seeded pseudonyms before persistence, discarding the source values rather than retaining them alongside. The mapping shall be stable for a given seed, so track continuity survives for the detectors, and shall carry no source information. OpenSky Data License Agreement §3(i) requires aircraft identifiers to be de-identified for any publication or other disclosure. *(Added 2026-08-13; see `docs/qa.md` §22.)* |
 
 ### FR-2xx — Scenario Generator
 
@@ -276,6 +277,7 @@ the database, in API responses, and on every screen.
 | NFR-402 | All incoming data shall be validated at the DAL boundary. |
 | NFR-403 | CORS shall be restricted. |
 | NFR-404 | A basic dependency audit shall run in CI. No further security tooling in v1. |
+| NFR-405 | No real aircraft identifier shall leave the local machine — in particular in an evidence bundle sent to the hosted AI provider — nor appear in any thesis screenshot or published figure. OpenSky Data License Agreement §3(i) and §3(iii). *(Added 2026-08-13; see `docs/qa.md` §22.)* |
 
 ### NFR-5xx — Performance
 

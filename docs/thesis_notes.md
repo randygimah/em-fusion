@@ -291,6 +291,53 @@ the EW/GNSS review question.
 <!-- Actual architecture as built vs as planned (docs/em_fusion_v2.md section 7) and why it
 diverged, if it did. DAL design decisions, canonical data model decisions, key diagrams. -->
 
+### Identifier pseudonymisation placed at the DAL rather than in the adapter
+
+The OpenSky Data License Agreement §3(i) obliges the licensee to de-identify aircraft identifiers for
+any publication or other disclosure. `icao24` and `callsign` are aircraft identifiers, and they reach
+three surfaces that both count as disclosure: figures in this dissertation, evidence bundles sent to
+the hosted AI provider, and any screen captured for the write-up. The obligation was discovered on
+reading the licence that ships inside the data tarball, after the corpus was downloaded but before any
+replay code existed — which is the only reason it cost nothing.
+
+The design question was *where* the substitution belongs. Placing it in the OpenSky adapter is the
+obvious answer, since `icao24` is an OpenSky field and the adapter is where OpenSky's vocabulary is
+supposed to be confined. It was rejected. The DAL exists precisely so that obligations holding across
+every source are discharged in one place, and the project already makes that argument once, for
+provenance: `dal-003` attaches provenance at the DAL "so it cannot be forgotten by a new adapter". A
+de-identification obligation is the same shape of requirement — cross-cutting, silent when omitted, and
+consequential — so putting it anywhere else would have contradicted an argument the architecture
+already relies on. The extensibility claim in RQ1 is strengthened rather than weakened by this: a third
+adapter inherits compliance without its author having to know the licence exists.
+
+Nothing downstream is degraded, because nothing downstream needs the true identifier. The detectors
+need *stable identity* across samples to reason about track continuity, not *real identity*, and a
+deterministic seeded mapping supplies exactly that. This is pseudonymisation rather than anonymisation
+in the strict sense — the link between records is deliberately preserved and only the link to the real
+airframe is severed — and the distinction is worth stating explicitly in the write-up, because a claim
+of "anonymised data" would be too strong for what is actually done.
+
+Two details are deliberate. The source values are **discarded** rather than carried alongside the
+pseudonym, since retaining them would satisfy the mapping while leaving the real value one query away.
+And the pseudonym carries no information from its input, so airline prefixes in a callsign and country
+blocks in an `icao24` allocation do not survive into it — a pseudonym that preserved either would leak
+the thing it exists to remove.
+
+The seed governing the mapping is held **separately from the scenario seed**, and the reasoning is worth
+recording because the obvious alternative fails in a way that is easy to miss. The archived corpus is a
+single replayed hour, so the same airframes appear in every run of a batch; deriving the pseudonym from
+the scenario seed would give one aircraft twenty-five different labels across a twenty-five-run batch,
+making cross-run comparison and any manual inspection of a suspected false positive far harder than it
+needs to be. It would also have collided with `scn-001`, which requires two runs sharing a type,
+parameter set and seed to emit byte-identical output: a per-run pseudonym draw is exactly the kind of
+unseeded variation that guarantee forbids.
+
+The resolution is to treat the mapping as a property of the **corpus** rather than of a run. It is fixed
+once when the extract is built, recorded in the manifest beside the extract checksum, and never drawn
+per run. `scn-001` is then untouched, because nothing about the mapping varies with the three values it
+constrains, and changing the seed becomes a deliberate corpus-level event with a record rather than a
+side effect of re-running a scenario.
+
 ### Architecture documentation: a generated C4 model rather than drawn diagrams
 
 The architecture is documented as a C4 model written in Structurizr DSL and held in the repository at

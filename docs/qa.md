@@ -1367,6 +1367,103 @@ better stated than hidden behind a committed file that should not have been comm
 
 ---
 
+## 22. What did reading the actual licence file change?
+
+**Two things, one of which reopens a Track 0 item that had been marked closed.** The licence was read
+properly only after the file was downloaded, because `LICENSE.txt` ships *inside* the data tarball —
+which is itself the first correction: the tar holds **three** members, not one.
+
+```
+states_2022-06-27-12.csv.gz   179733529
+LICENSE.txt                       14973   (dated 2017-08-24)
+README.txt                         7074
+```
+
+The shipped `LICENSE.txt` is byte-identical to the copy in the bucket (`d4ea34f0…`), and there are **no
+Supplemental provisions** for state vectors, so the general agreement governs in full.
+
+### Finding 1: aircraft identifiers must be de-identified
+
+Section 3(i):
+
+> For any publication or other disclosure, You will anonymize or de-identify personally-identifiable
+> information, aircraft identifiers, sensor locations and other data identified in Supplemental
+> provisions (if any).
+
+`icao24` and `callsign` are aircraft identifiers. The `AircraftTrack` contract carries `id` and `name`,
+which become exactly those two fields once `adp-001` replays real data. Three surfaces are affected:
+
+| Surface | Why it counts |
+|---|---|
+| Thesis screenshots and figures | "publication" in the plain sense |
+| Evidence bundles sent to the hosted AI provider | "other disclosure" — a third party outside the institute |
+| The third adapter (`adp-003`) | would inherit the problem silently |
+
+**The wrong assumption, which had been written into the Track 0 checklist**, was that data being openly
+*accessible* makes it freely *disclosable*. It does not. The egress item had been closed on the reasoning
+that bundle content is "synthetic or replayed open data, so this is expected to be a non-issue"; open
+access is a statement about how the data is obtained, not about what may be done with it afterwards. The
+item is reopened for the employer dimension, with the licence dimension now answered rather than assumed.
+
+**Resolution: `dal-004`**, pseudonymisation at the DAL. A deterministic seeded mapping replaces `icao24`
+and `callsign` before persistence, and the source values are discarded rather than kept beside the
+pseudonym. Placing it at the DAL rather than in the adapter follows the argument `dal-003` already makes
+for provenance — attached where all sources converge, so a new adapter cannot forget it.
+
+Nothing downstream loses anything, because nothing downstream needs the real identifier:
+
+| Consumer | Needs | Satisfied by a pseudonym? |
+|---|---|---|
+| Track continuity detectors | stable identity across samples | Yes — same aircraft, same pseudonym |
+| Spatial clustering | position only | Not affected |
+| Analyst UI | a distinguishable label | Yes |
+| Evidence bundles / AI layer | a referent to cite | Yes |
+
+The real identifiers stay in the local extract, which the licence permits — the restriction is on
+publication and disclosure, not on local use.
+
+**Where the seed lives — decided.** The pseudonym seed is held separately from the scenario seed, as fixed
+configuration recorded in the corpus manifest, and is never drawn per run. The archived corpus is a single
+replayed hour, so the same airframes recur in every run of a batch; deriving the pseudonym from the
+scenario seed would relabel each aircraft in each of `scn-003`'s twenty-five runs, and would have broken
+`scn-001`, which requires two runs sharing type, parameters and seed to emit byte-identical output. Making
+the mapping a property of the corpus rather than of a run resolves both at once.
+
+*The trap this avoids:* retrofitting is not a code change. Once a campaign has run, every stored
+observation, evidence bundle, and persisted hypothesis carries a real identifier, and removing them means
+migrating data and regenerating results. Building it alongside `dal-001`, before `adp-001` replays a
+single real row, costs nothing.
+
+### Finding 2: the shipped licence is not the operative licence
+
+The `LICENSE.txt` inside the tarball is dated 2017-08-24. The terms published at
+`opensky-network.org/about/terms-of-use`, retrieved 2026-08-13, differ materially — and the shipped file
+is the **more permissive** of the two:
+
+| | Shipped, 2017 | Published, 2026 |
+|---|---|---|
+| Permitted purposes | non-profit research, non-profit education, commercial internal testing and evaluation, government purposes | non-profit research and non-profit education only |
+| Commercial entities | not addressed | written licence required |
+| Government and military contractors | covered by "government purposes" | explicitly require a written licence |
+| Operational REST API use | not addressed | written licence required regardless of non-profit status |
+
+Section 2(iii) resolves which applies: modifications become effective fifteen days after notification and
+continued use constitutes assent, so **the currently published terms govern, not the copy in the
+tarball**. A reader who consulted only the shipped file — the natural thing to do, since it arrives with
+the data — would reach a more permissive conclusion than the terms actually allow.
+
+The manifest therefore records both: the shipped file's SHA-256 and date, and the published terms' URL
+and retrieval date, with a note on which is operative. This is a stronger version of the rule that terms
+must be captured at download time; here they had already drifted from the artefact before download.
+
+*Worth recording as a limitation:* the licence is revocable and modifiable at OpenSky's sole discretion
+(section 1), so a claim that this corpus is redistributable or reusable under fixed terms cannot be made
+at all. Recording the retrieval date is what makes the compliance claim checkable — it fixes *which*
+terms were complied with, which is the most that can be said about a licence that can change underneath
+the work.
+
+---
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -1439,4 +1536,6 @@ better stated than hidden behind a committed file that should not have been comm
 | **Lifespan** | FastAPI's startup/shutdown context manager, yielding once between the two phases. Replaces the deprecated `on_event` handlers. |
 | **`proxy_pass` trailing slash** | In nginx, a trailing slash strips the matched location prefix before forwarding; without it the full path passes through. One character, two different backend routes. |
 | **Coverage acceptance check** | A pre-build check that the chosen bounding box has dense enough OpenSky sensor coverage that *genuine* dropouts will not be mistaken for injected ones. Validates the region, not the code. |
+| **Pseudonymisation** | Replacing an identifier with a stable substitute that carries no source information. Distinct from anonymisation: identity is preserved across records, only its link to the real subject is severed — which is what keeps track continuity intact. |
+| **`icao24`** | The 24-bit ICAO transponder address, six hex digits, fixed to an airframe across flights. An aircraft identifier under OpenSky DLA §3(i), so it never leaves the DAL unpseudonymised. |
 | **Manifest** | The record accompanying the archived extract — source URL, hour, download date, licence, checksum of the original. What makes a filtered extract reproducible without redistributing the full source file. |
