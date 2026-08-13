@@ -255,18 +255,18 @@ This screen is the visible face of the evaluation harness — parameter and seed
 FastAPI, modular monolith. Example endpoints:
 
 ```
-GET  /health
-GET  /operational-picture?view=anomalous|nominal|all
-GET  /aircraft
-GET  /aircraft/track-window?run_id=&from=&to=
-GET  /rf-observations
-GET  /anomalies
-GET  /hypotheses
-GET  /hypotheses/{id}
-POST /hypotheses/{id}/feedback
-POST /scenario/start
-POST /scenario/reset
-GET  /scenario/runs
+GET  /api/v1/health
+GET  /api/v1/operational-picture?view=anomalous|nominal|all
+GET  /api/v1/aircraft
+GET  /api/v1/aircraft/track-window?run_id=&from=&to=
+GET  /api/v1/rf-observations
+GET  /api/v1/anomalies
+GET  /api/v1/hypotheses
+GET  /api/v1/hypotheses/{id}
+POST /api/v1/hypotheses/{id}/feedback
+POST /api/v1/scenario/start
+POST /api/v1/scenario/reset
+GET  /api/v1/scenario/runs
 ```
 
 `view` filters server-side and defaults to `anomalous`; an unrecognised value is a 422, never a silent fall-through to `all`. Filtered responses carry per-collection suppressed counts as metadata.
