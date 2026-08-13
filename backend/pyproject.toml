@@ -1,3 +1,35 @@
+[project]
+name = "em-fusion-backend"
+version = "0.1.0"
+description = "ADS-B and synthetic RF anomaly monitoring and alerting system"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "pydantic",
+    "python-dotenv",
+    "uvicorn",
+]
+
+[dependency-groups]
+dev = [
+    "black",
+    "flake8",
+    "httpx",
+    "isort",
+    "mypy",
+    "pytest",
+    "pytest-cov",
+]
+
+# The backend is an application, not a distributable package: uv installs the
+# dependencies and the source is imported from the working directory. Without
+# this, uv looks for a build backend that would exist only to serve itself.
+[tool.uv]
+package = false
+
+# Tool configuration. flake8 is the exception — it does not read pyproject.toml,
+# so its settings stay in .flake8.
+
 [tool.black]
 line-length = 88
 target-version = ['py311']
@@ -26,3 +58,33 @@ include_trailing_comma = true
 force_grid_wrap = 0
 use_parentheses = true
 ensure_newline_before_comments = true
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--disable-warnings",
+]

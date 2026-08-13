@@ -1,0 +1,60 @@
+name: em-fusion
+
+services:
+
+  # Replay / synthetic-observation pipeline. Profiled so it never starts as part
+  # of `docker compose up` — it is a one-shot job, driven by `make generate`.
+  pipeline:
+    profiles: ["pipeline"]
+    build:
+      context: ./backend
+      target: dev
+    command: ["python", "-m", "app.pipeline"]
+    volumes:
+      - ./backend:/app
+      - ./data:/data
+
+  backend:
+    container_name: em-fusion-backend
+    build:
+      context: ./backend
+      target: dev
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  frontend:
+    container_name: em-fusion-frontend
+    build:
+      context: ./frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    # nginx runs unprivileged and listens on 8080 inside the container.
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Vitest against the frontend build stage, which already has node_modules.
+  # src/ is bind-mounted so a test run reflects the working tree, not the image.
+  frontend-test:
+    profiles: ["test"]
+    build:
+      context: ./frontend
+      target: build
+    command: ["pnpm", "test"]
+    volumes:
+      - ./frontend/src:/app/src

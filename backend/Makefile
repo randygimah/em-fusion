@@ -1,11 +1,11 @@
 .PHONY: lint format type-check test clean install-dev
 
 install-dev:
-	pip install -r requirements-dev.txt
+	uv sync
 
 format:
-	black app/
-	isort app/
+	black app/ tests/
+	isort app/ tests/
 
 lint:
 	flake8 app/

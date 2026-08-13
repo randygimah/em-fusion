@@ -25,7 +25,11 @@ RUN pnpm run build
 # ==========================================
 #  Serve Static Files with Nginx
 # ==========================================
-FROM nginx:1.25-alpine
+# The unprivileged variant runs as uid 101 and listens on 8080, with the pid
+# file and temp directories already relocated to writable paths. Ports below
+# 1024 need root or CAP_NET_BIND_SERVICE, so serving 80 would mean running the
+# container as root for no gain — see docs/qa.md section 16.
+FROM nginxinc/nginx-unprivileged:1.25-alpine
 
 # Copy the compiled React assets from the build stage to Nginx web root
 COPY --from=build /app/dist /usr/share/nginx/html
@@ -33,8 +37,8 @@ COPY --from=build /app/dist /usr/share/nginx/html
 # Copy a custom Nginx configuration to handle React routing properly
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Expose port 80 for web traffic
-EXPOSE 80
+# Expose the unprivileged port nginx.conf listens on
+EXPOSE 8080
 
 # Start Nginx in the foreground
 CMD ["nginx", "-g", "daemon off;"]
