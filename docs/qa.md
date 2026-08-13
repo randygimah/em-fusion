@@ -1192,6 +1192,86 @@ tables and earns much less on the spatial query — not that it was needed throu
 
 ---
 
+## 20. Is this a good time to get the OpenSky data in and generate the synthetic RF data, or is there something else we should do first?
+
+**Half right — those are two tasks, not one, and they have opposite answers.** The question treats data
+acquisition and data generation as a single "get the data in" step. They sit in different tracks, have
+different blockers, and separating them is the useful part of the answer.
+
+### The two halves
+
+| | OpenSky acquisition | Synthetic RF generation |
+|---|---|---|
+| Where it sits | Track 0, non-code, marked *start now* | Phase 7 (`adp-002`), after the DAL |
+| Blocked by | Nothing | `db-005`, `db-001`, `dal-001/002/003`, `scn-005`, `scn-001` |
+| Cost of delay | Rises — a wrong bounding box invalidates the extract, the manifest, the PMTiles archive, and any run measured against them | Flat |
+| Verdict | Do it now | Wait |
+
+### Why the acquisition is genuinely urgent
+
+The bounding box is an input to two artefacts, not one: the OpenSky extract *and* the Phase 4 PMTiles
+basemap cut, which covers the same box. The coverage acceptance check can force the box to move. Every
+week that check is deferred, more work is pinned to a box that has not been validated.
+
+### The trap in the acceptance check as written
+
+`docs/implementation.md` phrases the check as *"execute `Normal baseline` against the extract and confirm
+no dropouts appear."* But `Normal baseline` is `scn-002` and "dropouts appear" needs the Phase 8 detectors.
+Read literally, the check that validates the bounding box cannot run until the point at which a wrong box
+is most expensive to fix.
+
+The resolution is to split it into a cheap proxy now and the specified check later:
+
+```text
+now (pandas, no detector):   group by icao24, diff consecutive `time` values,
+                             compare the gap distribution against the 10s cadence
+Phase 8 (as specified):      run Normal baseline, confirm zero detections
+```
+
+The proxy answers the only question that has to be answered early — *is this region densely enough
+covered that genuine gaps will not swamp injected ones* — without waiting for the detection layer.
+
+### Why the generator has to wait for the DAL
+
+This is the load-bearing blocker, and the reason is not sequencing tidiness. Adapters emit *into* the DAL;
+the canonical observation model (`dal-001`) is their output target. Build `adp-001` first and the canonical
+model gets shaped around whatever fields OpenSky happens to supply.
+
+`adp-003` — the third adapter — exists specifically to measure whether a new source lands without modifying
+the canonical model or any detection rule. That measurement is the RQ1 extensibility evidence. Building the
+first adapter before the model it is supposed to be independent of pre-contaminates the result, and no test
+catches it: the suite passes either way, and the number reported at the end is simply wrong in a direction
+that flatters the project. Same class of hazard as `api-009` — a structural assertion, because there is no
+after-the-fact check.
+
+The two secondary blockers are more ordinary but still real: `dal-002` requires quarantine **rows**, and
+`scn-002` requires ground truth on `scenario_runs`, so `db-001` has to exist or there is nowhere to put
+either; and `scn-005` fixes the sensor/channel grid as configuration *before* the generator reads it.
+
+### Gap found while answering
+
+There is **no spec item covering production of the extract**. `adp-001` opens with "the archived,
+bounding-box-filtered OpenSky extract, stored as a committed Parquet file with its manifest" — it consumes
+the artefact and assumes it exists. The filter script, the manifest, the checksum of the original, and the
+continuity check are an unspecced capability, and per the spec-first rule they need an item of their own
+before any of it is written.
+
+### Resulting order
+
+Track 0, in parallel with code: extract spec → download, filter, commit Parquet + manifest → record licence
+and attribution at download time → continuity proxy check → fill the two open placeholders in
+`thesis_notes.md` (the bounding box and hour used; the OpenSky licence and citation terms).
+
+Code: `api-002`/`api-003` → `db-005` → `db-001` → `dal-001/002/003` → `scn-005` → `scn-001`/`scn-002` →
+`adp-001` → `adp-002`.
+
+*Worth recording as a limitation:* the licence and attribution terms are the one part of this that is
+genuinely unrecoverable later. A Parquet file can be re-filtered from a re-download; the terms as published
+on the day of download cannot be reconstructed if the page changes. Same rule as the ODbL note for the
+basemap.
+
+---
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -1263,3 +1343,5 @@ tables and earns much less on the spatial query — not that it was needed throu
 | **Privileged port** | Any port below 1024. Binding one requires root or `CAP_NET_BIND_SERVICE`, which is why a non-root container must listen on 8080 rather than 80. |
 | **Lifespan** | FastAPI's startup/shutdown context manager, yielding once between the two phases. Replaces the deprecated `on_event` handlers. |
 | **`proxy_pass` trailing slash** | In nginx, a trailing slash strips the matched location prefix before forwarding; without it the full path passes through. One character, two different backend routes. |
+| **Coverage acceptance check** | A pre-build check that the chosen bounding box has dense enough OpenSky sensor coverage that *genuine* dropouts will not be mistaken for injected ones. Validates the region, not the code. |
+| **Manifest** | The record accompanying the archived extract — source URL, hour, download date, licence, checksum of the original. What makes a filtered extract reproducible without redistributing the full source file. |
