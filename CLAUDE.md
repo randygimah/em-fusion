@@ -20,7 +20,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 EM Fusion is a human-in-the-loop AI prototype for explainable electromagnetic situational awareness: it fuses replayed aviation telemetry and synthetic RF observations through a Data Abstraction Layer, detects deviations deterministically, and turns evidence bundles into schema-validated, grounding-checked AI hypotheses for human analyst review. It is decision support, not autonomous decision-making. Confidence is always Low/Medium/High — never a percentage or decimal score — and that rule applies to any score shown in the UI.
 
-Development is deliberately incremental — see `docs/implementation.md` for the phase-by-phase build checklist (currently mid-way through Phase 3, Operational Picture Layout, 3-screen model). **Phase order is amended:** Phase 5 (FastAPI contract mirror) now runs before the Phase 3 view filter and Phase 4 playback, because both are server-side by specification and building them against a mock means building them twice. Read the phase-order note at the head of the phase list before picking up work. `frontend/` has real code; `backend/` has a minimal FastAPI skeleton (`app/main.py` with `/health` only, plus lint/type/test tooling — see Commands below). `ai/`, `infrastructure/`, and `scenarios/` are still empty placeholders reserved for ML/classification code, Docker/deploy configs, and scenario fixtures respectively.
+Development is deliberately incremental — see `docs/implementation.md` for the phase-by-phase build checklist (currently mid-way through Phase 3, Operational Picture Layout, 3-screen model). **Phase order is amended:** Phase 5 (FastAPI contract mirror) now runs before the Phase 3 view filter and Phase 4 playback, because both are server-side by specification and building them against a mock means building them twice. Read the phase-order note at the head of the phase list before picking up work. `frontend/` has real code; `backend/` has a minimal FastAPI skeleton (`app/main.py` plus `app/api/v1/` with `/api/v1/health` only, and lint/type/test tooling — see Commands below). `ai/`, `infrastructure/`, and `scenarios/` are still empty placeholders reserved for ML/classification code, Docker/deploy configs, and scenario fixtures respectively.
 
 Scope is v2: exactly three screens (Operational Picture, Hypotheses, Scenario Control) — no TimescaleDB, no WebSockets (frontend polls), no multi-agent AI, no Isolation Forest/DBSCAN. Anomaly detection is deterministic only (threshold rules, rolling averages, z-score, PostGIS spatial clustering). The AI hypothesis layer is constrained: template generator first (fallback + evaluation baseline), then an AI generator, both schema-validated and grounding-checked before an analyst sees them.
 
@@ -37,7 +37,7 @@ A contents page for the repo. Use it to find the right file before searching; it
 | `frontend/src/App.tsx` | Wires the mock into the screen. **The seam** where a real API call replaces the mock import. |
 | `frontend/src/main.tsx` | React entry point. |
 | `frontend/src/index.css` | Tailwind v4 entry (no `tailwind.config.js`) plus design tokens. |
-| `frontend/src/types/operationalPicture.ts` | The `OperationalPicture` contract — scenario, hypotheses, detectionSummary, rfSensors, aircraftTracks, timelineEvents. Mirrors the future `/operational-picture` response shape. |
+| `frontend/src/types/operationalPicture.ts` | The `OperationalPicture` contract — scenario, hypotheses, detectionSummary, rfSensors, aircraftTracks, timelineEvents. Mirrors the future `/api/v1/operational-picture` response shape. |
 | `frontend/src/mocks/operationalPictureMock.ts` | Mock satisfying that contract. Currently the app's only data source. |
 | `frontend/src/screens/operationalPicture.tsx` | The main screen. Takes `operationalPicture` as a prop; never imports the mock. |
 | `frontend/src/components/em/` | Shared `Em*` UI primitives (`EmButton.tsx`) built with `cva` + `cn`. New styled components follow this pattern. |
@@ -52,11 +52,14 @@ A contents page for the repo. Use it to find the right file before searching; it
 
 | Path | What's in it |
 |---|---|
-| `backend/app/main.py` | The whole backend today: FastAPI app, `/health` only, CORS for the Vite dev server. |
+| `backend/app/main.py` | The whole backend today: FastAPI app, `/api/v1/health` only, CORS for the Vite dev server. |
 | `backend/app/__init__.py` | Package marker. |
-| `backend/tests/` | Pytest home (`pytest.ini` sets `testpaths = tests`). **Does not exist yet** — create it with the first backend spec. |
+| `backend/app/api/v1/` | Route modules, one per resource, assembled by `api_router` which declares the `/api/v1` prefix once. Handlers stay prefix-free. |
+| `backend/tests/` | Pytest home (`pyproject.toml` sets `testpaths = tests`). `test_health.py` covers `api-001`. |
 
 **`docs/`** — all project documentation. See the Documents table below.
+
+**Root tooling** — `compose.yaml` (four services: `backend`, `frontend`, profiled `pipeline` and `frontend-test`), the root `Makefile` (the single command surface over Compose — run `make` for the target list), and `scripts/smoke-test.sh` (post-start check that the services can reach each other).
 
 **Empty placeholders** — reserved, no code yet:
 
@@ -88,11 +91,12 @@ A contents page for the repo. Use it to find the right file before searching; it
 | `frontend/package.json` | Scripts and dependencies. `frontend/pnpm-lock.yaml` is the lockfile; `frontend/.nvmrc` pins Node. |
 | `frontend/biome.json` | Biome lint + format config. |
 | `frontend/tsconfig.json`, `tsconfig.app.json`, `tsconfig.node.json` | TypeScript project references. |
-| `frontend/vite.config.ts` | Vite config — dev port 1234, `/api` proxy to `:8080`, Tailwind plugin, Vitest setup. |
+| `frontend/vite.config.ts` | Vite config — dev port 1234, `/api` proxy to `:8000` with no path rewrite (the backend owns `/api/v1`), Tailwind plugin, Vitest setup. |
 | `frontend/index.html`, `frontend/nginx.conf`, `frontend/Dockerfile` | Build and container config for the frontend. |
 | `backend/Makefile` | The backend command surface (`format`, `lint`, `type-check`, `test`, `check`). Read before running backend tooling by hand. |
-| `backend/pyproject.toml`, `.flake8`, `mypy.ini`, `pytest.ini` | Black/isort, flake8, mypy, and pytest config respectively. |
-| `backend/requirements.txt`, `requirements-dev.txt` | Runtime and dev dependencies. |
+| `backend/pyproject.toml` | **Single source for dependencies and tool config** — `[project]` runtime deps, `[dependency-groups] dev`, plus black/isort/mypy/pytest settings. |
+| `backend/uv.lock` | Resolved, pinned dependency graph. Committed — it is what makes a fresh clone reproduce the environment a result was measured under. |
+| `backend/.flake8` | flake8 config. The one tool that cannot read `pyproject.toml`, which is why this file still exists. |
 | `backend/.env.example` | Template for backend env vars. Secrets never get committed — add new keys here, not to a fixture. |
 | `backend/Dockerfile`, `.dockerignore` | Backend container config. |
 | `.claude/settings.local.json` | Local Claude Code permissions. Not project scope. |
@@ -148,7 +152,7 @@ Commit: `git commit -m "feat(<id>): <short-description> - tests pass"` — `feat
 Package manager is pnpm (requires Node >= 22.13). `frontend/.nvmrc` pins the version — run `nvm use` from `frontend/` first if your shell's default Node is older. All commands run from `frontend/`:
 
 - `pnpm install` — install dependencies
-- `pnpm dev` — start Vite dev server (port 1234, proxies `/api` to `http://localhost:8080`)
+- `pnpm dev` — start Vite dev server (port 1234, proxies `/api` to `http://localhost:8000`)
 - `pnpm build` — typecheck (`tsc -b`) then production build
 - `pnpm lint` — Biome lint
 - `pnpm format` — Biome format (writes)
@@ -160,8 +164,8 @@ Package manager is pnpm (requires Node >= 22.13). `frontend/.nvmrc` pins the ver
 
 Python, managed with a venv (`backend/.venv`) and a Makefile. All commands run from `backend/`:
 
-- `pip install -r requirements-dev.txt` (or `make install-dev`) — install dependencies
-- `uvicorn app.main:app --reload --port 8080` — run the dev server
+- `uv sync` (or `make install-dev`) — install dependencies from `uv.lock`
+- `uvicorn app.main:app --reload --port 8000` — run the dev server
 - `make format` — Black + isort (writes)
 - `make lint` — flake8 + isort --check-only
 - `make type-check` — mypy
@@ -174,7 +178,7 @@ Python, managed with a venv (`backend/.venv`) and a Makefile. All commands run f
 
 *File-by-file locations are in the Repo Map above; this section is the rationale behind them.*
 
-**Contract-first.** UI components are dumb renderers that accept a typed data prop, decoupled from where the data comes from. The `OperationalPicture` type mirrors the future `/operational-picture` response shape exactly, screens take it as a prop, and `App.tsx` is the single seam where a real fetch replaces the mock — so swapping the data source changes one file and no component.
+**Contract-first.** UI components are dumb renderers that accept a typed data prop, decoupled from where the data comes from. The `OperationalPicture` type mirrors the future `/api/v1/operational-picture` response shape exactly, screens take it as a prop, and `App.tsx` is the single seam where a real fetch replaces the mock — so swapping the data source changes one file and no component.
 
 **Styling.** Shared `Em*` primitives use `class-variance-authority` for variants and `cn` for class merging; follow that cva+cn pattern for new styled components. Tailwind v4 is wired through the `@tailwindcss/vite` plugin, so there is no `tailwind.config.js` — colors, spacing, and type scale come from the `DESIGN.md` tokens, not ad hoc values.
 
@@ -186,11 +190,11 @@ Python, managed with a venv (`backend/.venv`) and a Makefile. All commands run f
 
 ### Backend
 
-The backend exposes `/health` only today. Per `docs/implementation.md` Phase 5, next is `/operational-picture` returning the same shape as the frontend contract, after which the frontend swaps its mock import for a fetch behind a small API function. Target stack per `docs/em_fusion_v2.md` §10: Pydantic, SQLAlchemy, PostgreSQL + PostGIS, Uvicorn, Pytest — no Celery or APScheduler, a simple loop or on-demand replay is enough. SQL and spatial logic belong in a repository layer, never in route handlers.
+The backend exposes `/api/v1/health` only today. Per `docs/implementation.md` Phase 5, next is `/api/v1/operational-picture` returning the same shape as the frontend contract, after which the frontend swaps its mock import for a fetch behind a small API function. Target stack per `docs/em_fusion_v2.md` §10: Pydantic, SQLAlchemy, PostgreSQL + PostGIS, Uvicorn, Pytest — no Celery or APScheduler, a simple loop or on-demand replay is enough. SQL and spatial logic belong in a repository layer, never in route handlers.
 
 ## Testing conventions
 
-- Frontend tests live in `frontend/src/test/` (Vitest + Testing Library + jsdom), not colocated with components, with one legacy exception (`src/App.test.tsx`). Backend tests live in `backend/tests/` (pytest; `pytest.ini` sets `testpaths = tests`).
+- Frontend tests live in `frontend/src/test/` (Vitest + Testing Library + jsdom), not colocated with components, with one legacy exception (`src/App.test.tsx`). Backend tests live in `backend/tests/` (pytest; `pyproject.toml` sets `testpaths = tests`).
 - Every test carries a comment citing the spec ID it proves, e.g. `// spec: op-004` or `# spec: dal-002`.
 - Assert on analyst-visible behavior (rendered text/values from the data contract), not implementation details like CSS classes.
 - Render tests against the mock data module so assertions can reference `operationalPicture.*` fields directly instead of duplicating literals.

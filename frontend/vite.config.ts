@@ -14,10 +14,11 @@ export default defineConfig({
     open: true,
     hmr: true,
     proxy: {
+      // The backend serves the /api/v1 prefix itself, so the path passes
+      // through unrewritten — matching what nginx does in the container.
       "/api": {
-        target: "http://localhost:8080",
+        target: "http://localhost:8000",
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ""),
       },
     },
   },

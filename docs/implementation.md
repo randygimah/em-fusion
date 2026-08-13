@@ -86,7 +86,7 @@ a mock means building them twice:
 - `track-window`'s server-side bound and truncation reporting have no mock equivalent at all.
 
 Revised order: **Phase 3 layout → Phase 5 contract mirror → Phase 3 view filter → Phase 4 MapView →
-Phase 4 playback.** Phase 5 is small — `/operational-picture` returning the mock shape from a fixture,
+Phase 4 playback.** Phase 5 is small — `/api/v1/operational-picture` returning the mock shape from a fixture,
 a contract test, and the `api.ts` seam that `App.tsx` was already structured for. Everything after it
 is built once, against a real fetch.
 
@@ -138,7 +138,7 @@ Added after the original checklist was written — a static snapshot cannot show
 - [ ] Add a playback transport to Operational Picture: play, pause, speed, scrub — over **simulated** scenario time, consistent with the Track 0 latency definition. Never wall clock.
 - [ ] Render aircraft at the interpolated cursor position with a trailing path; anomalous track segments visually distinct; anomaly zones appear and clear as their windows enter and leave the cursor.
 - [ ] Buffer spans of positions ahead of the cursor and interpolate client-side. **The request rate must not be coupled to the frame rate** — this is what keeps playback inside the no-WebSockets decision rather than quietly reopening it.
-- [ ] Add the backing time-window query (`GET /aircraft/track-window`), bounded server-side so an over-long span is rejected or truncated with the truncation reported, never silently served in full. Phase 5 is built first, so buffer from the real endpoint — the bound and the truncation report have no mock equivalent.
+- [ ] Add the backing time-window query (`GET /api/v1/aircraft/track-window`), bounded server-side so an over-long span is rejected or truncated with the truncation reported, never silently served in full. Phase 5 is built first, so buffer from the real endpoint — the bound and the truncation report have no mock equivalent.
 - [ ] Test: a track whose buffer has not yet loaded holds its last known position and is marked stale — it must not jump to a default coordinate or vanish.
 - [ ] Test: the same cursor renders the same data at 1x and 4x. Playback speed must not alter the simulated time of a rendered position.
 
@@ -146,9 +146,9 @@ Added after the original checklist was written — a static snapshot cannot show
 
 **Runs before the Phase 3 view filter and Phase 4 playback** — see the phase-order note above. Nothing here needs the database, the generator, or the DAL: the endpoint serves a static fixture in the frontend's shape. The point is to establish the seam, not the data.
 
-- [x] Create the smallest FastAPI app with `/health`.
-- [ ] Add a backend test for `/health`.
-- [ ] Add `/operational-picture` returning the same shape as the frontend mock data, from a static fixture.
+- [x] Create the smallest FastAPI app with `/api/v1/health`.
+- [x] Add a backend test for `/api/v1/health`. *(`api-001` passes: 5 tests, 100% coverage. Route lives in `app/api/v1/health.py` behind the `api_router` prefix.)*
+- [ ] Add `/api/v1/operational-picture` returning the same shape as the frontend mock data, from a static fixture.
 - [ ] Add a backend contract test for the response shape.
 - [ ] **Guard against fixture/type drift.** The backend fixture and the frontend `OperationalPicture` type describe the same contract in two languages and will diverge silently unless something forces them together. Assert the same shape from both sides — a backend contract test plus a frontend test that parses a copy of the real response — so a field renamed in one place fails a test rather than surfacing as an empty panel.
 - [ ] Connect the frontend to the endpoint behind a small `api.ts` function (simple fetch/polling — no WebSockets in v1). `App.tsx` is the seam this was designed for: the screen keeps taking `operationalPicture` as a prop and no component changes.
