@@ -156,7 +156,7 @@ Added after the original checklist was written — a static snapshot cannot show
 
 ## Phase 6: Persistence (PostgreSQL + PostGIS)
 
-- [ ] Add PostgreSQL + PostGIS via Docker Compose (backend + db services now; frontend service can join in Phase 11).
+- [x] Add PostgreSQL + PostGIS via Docker Compose (backend + db services now; frontend service can join in Phase 11). *(Done 2026-08-13, ahead of this phase — the `frontend` service landed at the same time rather than waiting. `postgis` 15/3.5 on a named volume, health-gated, `DATABASE_URL` passed to `backend` and `pipeline`. Nothing connects to it yet: that is `db-005`.)*
 - [ ] Create the core schema: observations, track/RF/source-health payloads, anomaly events, hypotheses, analyst feedback.
 - [ ] Include the reproducibility columns on `hypotheses` now: `generator` (`template|local|hosted`), `model_id`, `generation_params`, `raw_response`. Cheap while the table is empty; a migration plus an un-rerunnable campaign afterwards.
 - [ ] Add a repository layer; keep SQL/spatial logic out of route handlers.
@@ -251,10 +251,27 @@ None of this blocks the **template generator**, which is the first thing built i
 
 ## Phase 12: Docker, CI, and Polish
 
-- [ ] Extend Docker Compose to run frontend, backend, and database together.
+**Partially pulled forward to 2026-08-13.** The container work was scheduled here but happened during
+Phase 5, because developing an API seam against a stack that has to be started by hand is slower than
+building the stack. What landed early is listed below; CI genuinely remains, and that is the item that
+turns these commands from a convention into an enforcement.
+
+- [x] Route the whole stack through a root `Makefile` — one command surface over Compose (`make` lists
+      the targets). Adapted from an earlier project; the `ensure-artifacts` guard came with it and is
+      deliberately empty, because this project commits its corpus and regenerates synthetic data from a
+      seed. See `thesis_notes.md`.
+- [x] Add `scripts/smoke-test.sh`: a post-start check that the services can reach *each other*, not
+      merely that each answers. Both containers can report healthy while the path between them is
+      broken — which is exactly what happened twice while writing the Compose file.
+- [x] Pin backend dependencies. `pyproject.toml` plus a committed `uv.lock`; tool config consolidated
+      into the same file (ruff replaced flake8 and isort, which removed the last config file that could
+      not live there).
+- [x] Run the frontend container unprivileged (`nginx-unprivileged`, uid 101, port 8080).
+
+- [x] Extend Docker Compose to run frontend, backend, and database together. *(Done 2026-08-13. `make up` starts all three with `depends_on: service_healthy` gating; `make smoke` asserts the frontend→backend proxy hop and that PostGIS initialised.)*
 - [ ] Add CI for frontend tests/build and backend tests.
-- [ ] Add linting checks.
-- [ ] Basic dependency audit only — no further security tooling in v1.
+- [x] Add linting checks. *(Done 2026-08-13, but **locally only** — `make lint` runs ruff over the backend and Biome over the frontend, `make check` chains format → lint → type-check → test. These are the commands CI will call; nothing enforces them on push until the item above lands.)*
+- [ ] Basic dependency audit only — no further security tooling in v1. *(Now possible: `backend/uv.lock` pins the full graph, where the previous requirements files pinned nothing.)*
 
 ## Review Prompts
 
