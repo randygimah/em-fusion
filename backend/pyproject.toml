@@ -13,7 +13,10 @@ dependencies = [
 [dependency-groups]
 dev = [
     "black",
-    "httpx",
+    # starlette.testclient prefers httpx2 and warns on httpx. Both work; this
+    # follows the direction starlette is moving rather than waiting for the
+    # fallback to be removed.
+    "httpx2",
     "mypy",
     "pytest",
     "pytest-cov",
