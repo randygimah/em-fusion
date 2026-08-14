@@ -73,6 +73,7 @@ A contents page for the repo. Use it to find the right file before searching; it
 
 | Path | Read it when |
 |---|---|
+| `docs/handoff.md` | **Read first, at the start of every session.** Where the work stands: goal, current state, files in flight, what changed, failed attempts, next step. Overwritten each session, not appended to — it is a snapshot, not a log. See the Handoff section below. |
 | `docs/requirements.md` | **Start here for "what must this do".** Numbered user stories (US-*), functional requirements (FR-*), non-functional requirements (NFR-*), out-of-scope list, and acceptance criteria (AC-*). Every spec item traces to a requirement here. |
 | `docs/spec.jsonl` | **The executable backlog.** One JSON object per line: `id`, `description` (inputs, outputs, constraints, at least one failure case, cross-refs), `passes`. Read before starting any capability; write to it before writing tests. See the workflow section below. |
 | `docs/em_fusion_v2.md` | The authority on technical detail: data sources, architecture, DB design, tech stack, milestones, out-of-scope list, future work. Wins over the docx on technical detail; the docx (`EM-Fusion-Project-Scope-v2.docx`, not in this repo) wins on academic framing and research questions. Read when a requirement or spec item is ambiguous. |
@@ -252,6 +253,35 @@ Do not record decisions here. A decision and its rationale belong in `docs/thesi
 ### When to write
 
 In the same turn as the explanation. An entry written later is reconstructed from memory and loses the misunderstanding it was correcting, which is the part worth keeping.
+
+## Handoff
+
+`docs/handoff.md` is the bridge between sessions. Read it first, before anything else; write it at
+the end of a session, or whenever asked. It is a **snapshot, overwritten each time** — not a log and
+not a changelog. Git already records history; this records position.
+
+Six sections, fixed, in this order:
+
+| Section | Contents |
+|---|---|
+| **Goal** | What is being built. The project in a few sentences, then what this particular session set out to do. |
+| **Current state** | Where the work stands *right now*. What is done, what is green, what is specified but unbuilt, what is blocked. Include measurements taken this session — the next session should not have to re-derive them. |
+| **Files in flight** | The files being actively worked, and what the next step will do to them. If the tree is clean, say so. |
+| **Changed** | What was touched this session: commits with their messages, files added or modified, new requirements, new dependencies. |
+| **Failed attempts** | What was tried and did not work, and **why**. Wrong assumptions, misdiagnoses, reversals, corrections made by the user. This is the section that saves the next session from repeating the mistake. |
+| **Next step** | What comes next, in order, and what gates what. Add anything open and unowned as a separate list below it. |
+
+Rules:
+
+- **Never invent content to fill a section.** If nothing failed, leave Failed attempts empty. An
+  empty section is information; a padded one is noise that trains the reader to skim.
+- **Record your own errors there, not just the code's.** A misdiagnosis, a guessed URL, a wrong claim
+  corrected by the user — all of it goes in Failed attempts. The value of the file is proportional to
+  how uncomfortable it is to write.
+- **Be specific enough to act on.** Commit hashes, file paths, exact counts, exact checksums. "Fixed
+  the tests" is useless; "32 passed, 99% coverage, `adp-004` still `passes: false` because the fetch
+  entrypoint is unbuilt" is not.
+- **Deviations from the workflow get recorded**, including tests written after implementation.
 
 ## Git
 
