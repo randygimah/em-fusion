@@ -1464,6 +1464,108 @@ the work.
 
 ---
 
+## 23. Since we can't commit the extract, is Parquet still necessary? I guess it is because it still compresses the data. And do we extract the data from its tar/gz state so it's readable, or keep it as is?
+
+**Parquet yes, but compression is the wrong reason — and the tar should stay sealed.** Both answers were
+checked against the downloaded corpus rather than reasoned from first principles, and the measurements
+changed one of them.
+
+### Parquet: the surviving reason is typing, not size
+
+The original rationale, as recorded in `thesis_notes.md`, gave two reasons: Parquet is typed, *and* it
+compresses well enough that a filtered hour could be version-controlled. **The second reason no longer
+exists**, since the licence forbids committing the extract at all. Compression on its own does not
+justify a format here — the source is already gzipped, and at 255,145 rows the extract is small in any
+encoding.
+
+The typing reason, however, is far stronger than it looks, and the corpus proves it:
+
+| Measurement over the downloaded hour | |
+|---|---|
+| Total rows | 2,858,582 |
+| Distinct `icao24` | 14,334 |
+| `icao24` values that are all digits | ~10% |
+| **All-digit `icao24` beginning with a zero** | **14,781 rows** |
+
+`icao24` is a 24-bit transponder address written as six hexadecimal digits — a **string**, and the field
+every track-continuity rule groups by. Roughly a tenth of values happen to contain no letters. Where such
+a value also begins with `0`, any read that infers the column as an integer destroys it:
+
+```
+'004321'  --inferred as int64-->  4321      leading zeros gone, silently
+```
+
+This is not hypothetical: type inference over a *filtered subset* containing no letter-bearing values, or
+a chunked reader inferring per chunk rather than per file, both produce it. The result is corruption of
+the primary key for track continuity, with no error raised and no test failing unless one is written to
+look for exactly this.
+
+CSV cannot carry a dtype, so the schema would have to live in code and be kept in step with the file by
+discipline. Parquet carries the schema inside the artefact, which also makes `adp-004`'s constraint —
+"identical row content **and column schema**" — checkable rather than aspirational.
+
+**Consequent dependency decision:** `pyarrow` only. Neither Pandas nor pyarrow was previously a
+dependency, despite a note in `thesis_notes.md` claiming Pandas already was; that claim was wrong and has
+been corrected. The filter pass runs on the standard library's `csv` module, so Pandas buys nothing here.
+
+### The tar stays sealed
+
+Reading straight through the archive was tested on the real file — `tarfile` → `extractfile` → `gzip` →
+`csv`, no temporary files and no Pandas:
+
+```
+2,858,582 rows streamed in 13.6 s
+```
+
+| | Size |
+|---|---|
+| Tar as downloaded | 0.18 GB |
+| Same data decompressed | 0.49 GB |
+
+Four reasons not to unpack it:
+
+1. **One artefact, one checksum.** The manifest records the SHA-256 of the `.tar`, which is the published
+   object. Unpack it and the thing on disk is no longer the thing that was verified, so re-verification
+   would require re-downloading.
+2. **`LICENSE.txt` is inside the tar.** Unpacking separates the obligations from the data they attach to,
+   which is the exact failure mode §3(iii) makes costly.
+3. 2.7× the disk for a file that is streamed exactly once.
+4. gzip is not seekable, but nothing needs to seek — the filter is a single sequential pass.
+
+The already-extracted `.csv.gz` is therefore redundant and should be deleted.
+
+### A third finding: the quarantine path had no real input
+
+| | |
+|---|---|
+| Rows with a null `lat` or `lon` | 220,908 (7.73%) |
+
+A bounding-box test cannot be applied to a null coordinate, so a pure spatial filter excludes **every one
+of them**. That quietly defeats `adp-001`'s stated failure case — "a row with a null lat or lon must
+quarantine rather than persist a track observation at a default coordinate" — because no such row would
+ever reach the DAL. `dal-002`'s quarantine path would be exercised by fixtures only, and **AC-02 would
+never be demonstrated on real data**.
+
+**Decided: retain a bounded sample of null-position rows in the extract.** `adp-004` now takes the first
+N such rows in file order, with N as configuration and both the value and the resulting count recorded in
+the manifest. File order rather than a seeded sample, so the retention needs no seed of its own and stays
+deterministic for a given raw file.
+
+The property that makes this safe is worth stating: a null-position row **can only ever reach quarantine**
+— it cannot become a canonical observation by definition, since `dal-001` requires a location. So it adds
+real-data evidence for `AC-02` with no possibility of contaminating the operational picture or any metric.
+The coverage report computes its gap distribution over positioned rows only, since a row with no position
+is not a coverage gap.
+
+### Incidental, but useful for the bounding box
+
+The candidate box 47–55°N, 3–15°E yields 255,145 rows, 1,580 distinct aircraft, and **360 distinct
+timestamps — exactly 3600/10**, so the hour is complete with no globally missing time steps. That is a
+necessary condition for the coverage check, not a sufficient one: per-aircraft continuity is the question
+the coverage report actually answers, and it remains open until the box is fixed.
+
+---
+
 ## Appendix: quick glossary
 
 | Term | Short definition |

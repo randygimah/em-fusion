@@ -534,15 +534,34 @@ model. Candidate approaches — spatial partitioning schemes, a retained PostGIS
 active window, or grid-cell indexing computed at DAL time — are untested here.
 
 **A narrow, deliberate exception: Parquet as archive format.** The archived OpenSky extract is stored
-as Parquet and committed to the repository. This is not the rejected decision creeping back in, and
+as Parquet, held locally and deliberately *not* committed — see the licence reversal in the
+Methodology chapter. This is not the rejected decision creeping back in, and
 the distinction is worth stating precisely because it would be easy to mistake one for the other. The
 lakehouse proposal was about the **read path** — making Parquet-on-object-storage the substrate that
 queries run against, which is what would have cost the indexed spatial join. Using Parquet as a
 *container for a static, committed input file* touches none of that: the file is read once at replay
 time, converted through the adapter and DAL, and written into PostGIS, which remains the sole query
-substrate. Parquet was chosen over CSV because it is typed and compresses well enough that a
-bounding-box-filtered hour can be version-controlled, which removes the download step and makes the
-pipeline reproducible from a fresh clone — a reproducibility gain, not an architectural one.
+substrate. Parquet was originally chosen over CSV for two reasons: that it is typed, and that it
+compresses well enough for a bounding-box-filtered hour to be version-controlled, removing the
+download step. **The second reason no longer exists** — the licence forbids committing the extract at
+all — and it is worth recording that the decision survived losing half its justification rather than
+quietly retaining the original wording.
+
+The surviving reason turned out to be much stronger than it first appeared, and the corpus supplies
+the evidence. `icao24`, the 24-bit transponder address, is a six-digit hexadecimal *string*, and it is
+the field every track-continuity rule groups by. In the downloaded hour, 14,781 rows carry an
+`icao24` that contains no letters and begins with a zero. Any read that infers that column as an
+integer — which is what happens when a filtered subset contains no letter-bearing values, or when a
+chunked reader infers types per chunk rather than per file — turns `004321` into `4321`. The leading
+zeros are gone, two aircraft can collide onto one identifier, and nothing raises an error. A CSV
+cannot carry a dtype, so the schema would have to live in code and be kept in step with the file by
+discipline alone; Parquet carries it in the artefact. This also makes the determinism constraint on
+the extraction step (`adp-004`) enforceable rather than aspirational, since "identical row content and
+column schema" is checkable against a file that actually records its schema.
+
+The general lesson for the write-up is not about Parquet. It is that a decision can outlive the reason
+it was made for, and that the honest response is to re-examine whether the remaining reasons carry it
+rather than to treat the original conclusion as settled.
 
 The general point for the write-up is that a format decision and a substrate decision are different
 decisions, and conflating them is how a rejected architecture returns unnoticed. The test applied
@@ -553,9 +572,12 @@ reason — they are read by humans and spreadsheets, not by the system.
 
 Two low-cost practices are taken from that ecosystem without taking the infrastructure, to be
 confirmed as built: the evaluation harness (M9) should export batch metrics as Parquet rather than
-CSV (Pandas is already a dependency, and dtypes survive the round trip), and the archived OpenSky
-pull should be kept as immutable files with a manifest recording source URL, download date,
-licence, and checksum.
+CSV (dtypes survive the round trip), and the archived OpenSky pull should be kept as immutable files
+with a manifest recording source URL, download date, licence, and checksum. *(Corrected: an earlier
+version of this note asserted that Pandas was already a dependency. It was not, and it has not become
+one — the extraction pass runs on the standard library's `csv` module and writes through `pyarrow`
+alone, which keeps the dependency footprint to the one library that is actually needed for the format
+decision above.)*
 
 ## Implementation
 
