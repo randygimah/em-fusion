@@ -258,12 +258,57 @@ def test_a_leading_zero_icao24_survives_the_parquet_round_trip(tmp_path: Path) -
     import pyarrow.parquet as pq
 
     rows = [{"icao24": "004321", "lat": "51.09", "lon": "7.54", "time": "1"}]
-    out = tmp_path / "extract.parquet"
+    out = tmp_path / "opensky_extract.parquet"
 
     write_parquet(rows, out)
     table = pq.read_table(out)
 
     assert table.column("icao24").to_pylist() == ["004321"]
+
+
+def test_a_retained_null_position_row_keeps_null_coordinates(tmp_path: Path) -> None:
+    # spec: adp-004 — the retained sample exists to feed dal-002. Writing its
+    # missing coordinates as 0.0 would place the row off West Africa instead of
+    # marking it unplaceable, which is the default-coordinate failure adp-001
+    # names.
+    import pyarrow.parquet as pq
+
+    rows = [{"icao24": "nul001", "lat": "", "lon": "", "time": "1"}]
+    out = tmp_path / "opensky_extract.parquet"
+
+    write_parquet(rows, out)
+    table = pq.read_table(out)
+
+    assert table.column("lat").to_pylist() == [None]
+    assert table.column("lon").to_pylist() == [None]
+
+
+def test_source_booleans_round_trip_as_booleans(tmp_path: Path) -> None:
+    # spec: adp-004 — the source writes Python-style 'False'/'True'. Left as
+    # strings, every value is truthy and onground stops meaning anything.
+    import pyarrow.parquet as pq
+
+    rows = [{"icao24": "aaa111", "onground": "True", "alert": "False", "time": "1"}]
+    out = tmp_path / "opensky_extract.parquet"
+
+    write_parquet(rows, out)
+    table = pq.read_table(out)
+
+    assert table.column("onground").to_pylist() == [True]
+    assert table.column("alert").to_pylist() == [False]
+
+
+def test_a_tar_without_a_csv_member_is_rejected(tmp_path: Path) -> None:
+    # spec: adp-004 — a tar that carries only the licence and readme is not a
+    # corpus, and must say so rather than yielding zero rows silently.
+    tar_path = tmp_path / "empty.csv.tar"
+    with tarfile.open(tar_path, "w") as tar:
+        info = tarfile.TarInfo("LICENSE.txt")
+        info.size = 4
+        tar.addfile(info, io.BytesIO(b"none"))
+
+    with pytest.raises(ValueError, match="csv.gz"):
+        list(read_rows(tar_path))
 
 
 # --------------------------------------------------------------------------
