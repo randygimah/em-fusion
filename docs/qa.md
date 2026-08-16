@@ -1566,6 +1566,72 @@ the coverage report actually answers, and it remains open until the box is fixed
 
 ---
 
+## 24. For my understanding, adp-005 is testing the ability to download the OpenSky data with the same checksum and licence from the committed manifest before filtering to the bounding box?
+
+**Half right.** The checksum half is exactly as described. The licence half works by a different
+mechanism, and the difference matters more than it looks.
+
+### The checksum: yes, and the ordering is the spec
+
+`adp-005` reads `original_sha256` out of the committed `manifest.json`, downloads the tarball to a
+temporary path, hashes what arrived, and only then moves it into `data/opensky/raw/` and hands it to
+the `adp-004` filter.
+
+Verify **before** filter, not after. Filtering first and checking later still produces an extract,
+and that extract sits on disk beside a manifest asserting a provenance that does not hold — the
+artefact is then unattributable to the recorded source, which is the failure the spec names. The
+temp-then-move step exists for the neighbouring failure: an interrupted download left at the
+destination path is a file a later run would accept as complete and filter into a silently truncated
+extract, with no error anywhere.
+
+A run that finds a local file already matching the recorded checksum skips the download entirely
+rather than re-fetching roughly 180 MB.
+
+### The licence: nothing is compared
+
+The wrong assumption worth naming: that the licence is *verified against* the manifest the way the
+checksum is. It is not. The two fields serve different purposes.
+
+| | Checksum | Licence |
+|---|---|---|
+| Where it lives | `manifest.json`, `original_sha256` | `manifest.json`, `licence` and `attribution` |
+| What the fetcher does with it | Compares it against the bytes it downloaded | Displays it, and refuses to proceed without an explicit acceptance act |
+| What failure looks like | Mismatch → abort, leave no extract behind | Acceptance not given → no download at all |
+| Is it a check? | Yes | No — it is a gate on the operator, not on the data |
+
+The licence entry is *provenance*: the name, which version governs (published, per §2(iii)), the
+SHA-256 of the `LICENSE.txt` that ships inside the tarball, and the §4(i) attribution string. Nothing
+downstream can compare a downloaded file against it, because a licence is not a property of the
+bytes.
+
+Why the acceptance gate exists at all is the same reason the extract is not committed. Under DLA
+§3(iii) the data cannot be made available outside the institute, so whoever wants the corpus fetches
+it themselves — and fetching it is the moment they take on the terms. Handing someone a repository
+that downloads 180 MB of licensed data without their say-so relocates that acceptance to whoever
+wrote the script. A flag defaulting to true would be the same bypass with an extra step in front of
+it. See [thesis_notes.md](thesis_notes.md), "Reversal: the corpus is not committed to the repository
+after all".
+
+### Two things adp-005 is beyond "download"
+
+**The socket boundary.** It is the only module in the corpus tooling permitted to open a socket. That
+is not a stylistic preference — it is what keeps `extract.py` offline-testable, and `adp-004` already
+carries a test that monkeypatches `socket.socket` to prove the filter never reaches for one. Put the
+download inside the filter and that test becomes unwritable.
+
+**The one command.** Fresh clone to `opensky_extract.parquet`, `manifest.json` and `coverage.json` in
+a single invocation. The fetch and the filter are separate modules but not separate chores.
+
+### One trap worth recording
+
+Every `adp-005` test mocks the transport; none performs a real download. Beyond speed and
+determinism, a test suite that really fetches turns continuous integration into an unattended
+acceptor of someone else's licence terms — the machine agreeing on the operator's behalf, which is
+precisely the thing the acceptance gate was built to prevent. The spec names this as its fourth
+failure case rather than leaving it to reviewer discipline.
+
+---
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -1641,3 +1707,5 @@ the coverage report actually answers, and it remains open until the box is fixed
 | **Pseudonymisation** | Replacing an identifier with a stable substitute that carries no source information. Distinct from anonymisation: identity is preserved across records, only its link to the real subject is severed — which is what keeps track continuity intact. |
 | **`icao24`** | The 24-bit ICAO transponder address, six hex digits, fixed to an airframe across flights. An aircraft identifier under OpenSky DLA §3(i), so it never leaves the DAL unpseudonymised. |
 | **Manifest** | The record accompanying the archived extract — source URL, hour, download date, licence, checksum of the original. What makes a filtered extract reproducible without redistributing the full source file. |
+| **Temp-then-move** | Writing a download to a temporary path and renaming it into place only once verified. An interrupted run then leaves nothing a later run could mistake for a complete file. |
+| **Licence acceptance gate** | An explicit operator act required before the fetcher opens a socket. Not a check against the manifest — the manifest records the licence, the gate makes a human accept it. |
