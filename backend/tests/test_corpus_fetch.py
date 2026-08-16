@@ -252,12 +252,12 @@ def test_an_interrupted_download_leaves_nothing_at_the_destination(
     # destination path is one a later run reads as complete and filters into a
     # silently short extract. Writing elsewhere and moving only after
     # verification is what makes that unrepresentable.
-    class _Interrupting(io.RawIOBase):
-        def readinto(self, buffer: Any) -> int:
+    class _Interrupting(io.BytesIO):
+        def read(self, size: int | None = -1) -> bytes:
             raise ConnectionResetError("connection reset mid-transfer")
 
     def _open(url: str) -> BinaryIO:
-        return io.BufferedReader(_Interrupting())
+        return _Interrupting()
 
     destination = tmp_path / "raw" / f"{SNAPSHOT}.csv.tar"
 
