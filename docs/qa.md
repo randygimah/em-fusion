@@ -1632,6 +1632,81 @@ failure case rather than leaving it to reviewer discipline.
 
 ---
 
+## 25. Let's work on choosing the bounding box next, per the handoff
+
+**The coverage report did not choose it, and that is the finding.** The handoff said to pick the box
+"by running the coverage report over candidates and reading the gap distribution". That plan assumed
+the candidates would differ in coverage quality. They do not.
+
+### What was expected, and what happened
+
+Eight candidate regions were scored against the full 2,858,582-row hour. Every one returned a p50, p90
+*and* p99 gap of exactly 10 seconds — the published cadence — and a clean-cadence fraction of 0.999 or
+better:
+
+| box | rows | aircraft | p99 gap | clean fraction |
+|---|---|---|---|---|
+| central-europe | 255,145 | 1,580 | 10 s | 0.999 |
+| benelux-ruhr | 84,355 | 642 | 10 s | 1.000 |
+| uk-southeast | 98,614 | 701 | 10 s | 1.000 |
+| france | 194,682 | 1,232 | 10 s | 1.000 |
+| iberia | 141,955 | 787 | 10 s | 1.000 |
+| alps-adriatic | 181,038 | 1,106 | 10 s | 1.000 |
+| us-northeast | 196,010 | 1,224 | 10 s | 0.999 |
+
+A metric that returns the same value for every option cannot rank them. OpenSky's 2022 coverage over
+populated airspace is simply complete at this resolution, which is good news for the project and
+useless for the decision.
+
+### The measurement had to be corrected before it could be trusted
+
+The same naive report showed maximum gaps of up to **3,140 seconds in a 3,600-second file**. Read at
+face value that is near-total coverage collapse. It is nothing of the sort, and two distinct confounds
+produce it:
+
+| Confound | What it actually is | Fix |
+|---|---|---|
+| **Boundary crossing** | The aircraft flew out of the box and came back. A property of drawing a finite box, not of the sensor network. | Count a gap only if both endpoints are ≥ 0.5° inside the edge |
+| **Ground movement** | A parked airframe transmits differently from an airborne one. Its quiet period is not a dropout. | Count a gap only if `onground` is false on both sides |
+
+With both applied, `central-europe` drops from a 2,970 s maximum to **29 gaps above cadence out of
+170,673** — 0.02%. The corrected and uncorrected numbers do not merely differ in precision; they
+support opposite conclusions. Worth recording as a trap: an uncorrected spatial-temporal gap metric
+points confidently in the wrong direction.
+
+### What actually decided it
+
+The criterion came from what the scenarios need rather than from data quality. Types 2 and 4 inject
+events confined to roughly a 20 km area, and the harness runs 20–30 randomised runs across five types,
+so **100–150 event placements** are needed. Binning airborne samples into ~20 km cells and counting
+cells with ≥ 5 distinct aircraft in a 15-minute window gives the number of *usable event sites* — and
+that discriminates, from 132 to 556 across the shortlist.
+
+Chosen: **49–54°N, 3–11°E**, with 263 sites against a ceiling of 150. The tightest candidate (132
+sites) was rejected because randomised runs would exhaust the pool and start reusing locations,
+correlating runs the evaluation treats as independent.
+
+### The mistake the metrics would never have caught
+
+An earlier shortlisted box started at **5°E**, which puts Schiphol (4.76°E) and Brussels (4.48°E)
+*outside* the corpus. Nothing in its statistics looked wrong — it simply read as a slightly quieter
+region. Moving the western edge to 3°E added 306 aircraft and 64 event sites for 33% more area, the
+best return in the sweep.
+
+**A geographic filter has to be checked against named landmarks it ought to contain, not only against
+aggregate statistics.** A statistic cannot report what it never saw.
+
+### Worth recording as a limitation
+
+The surviving natural dropouts sit in the same duration band that scenario type 4 will inject into. In
+the chosen box they are `[20, 100, 110, 200, 280, 280, 300, 970, 1160, 1440]` seconds — seven of ten
+between 100 and 300 s. That is the confound `adp-004` names as a failure case, and it is present, not
+avoided: 10 of 948 tracks, 1.05%. It is mitigable, because the coverage report names exactly which
+tracks carry one, so the generator can refuse them as injection sites. See
+[thesis_notes.md](thesis_notes.md), "Bounding box: 49–54°N, 3–11°E".
+
+---
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -1709,3 +1784,5 @@ failure case rather than leaving it to reviewer discipline.
 | **Manifest** | The record accompanying the archived extract — source URL, hour, download date, licence, checksum of the original. What makes a filtered extract reproducible without redistributing the full source file. |
 | **Temp-then-move** | Writing a download to a temporary path and renaming it into place only once verified. An interrupted run then leaves nothing a later run could mistake for a complete file. |
 | **Licence acceptance gate** | An explicit operator act required before the fetcher opens a socket. Not a check against the manifest — the manifest records the licence, the gate makes a human accept it. |
+| **Interior gap** | A dropout with both endpoints well inside the bounding box and the aircraft airborne on both sides. The only kind that measures sensor coverage; the rest measure box geometry. |
+| **Event site** | A ~20 km cell carrying enough simultaneous traffic (≥ 5 distinct aircraft) for a localised injected event to have witnesses. The count of these, not coverage quality, is what the bounding box was chosen on. |

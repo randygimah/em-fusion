@@ -286,6 +286,80 @@ university research under the non-profit research licence, but the project's sub
 employer relationship put it close enough to that clause that it belongs in the same conversation as
 the EW/GNSS review question.
 
+### Bounding box: 49–54°N, 3–11°E, chosen on event-site density rather than coverage quality
+
+The region the corpus covers was fixed on 2026-08-19 at 49–54°N, 3–11°E — roughly 309,000 km² over
+the Low Countries, western Germany and Luxembourg. The box is a more consequential choice than it
+looks, because it constrains three things at once that are expensive to change independently: the rows
+that enter PostGIS, the basemap tile cut for the map view, and the geographic space in which every
+scenario run places its injected event.
+
+The selection criterion the checklist anticipated was coverage quality — that a box must have sensor
+coverage dense enough that genuine ADS-B dropouts are not mistaken for injected ones. **That criterion
+turned out not to discriminate at all.** Measured across eight candidate regions spanning Europe and
+the north-eastern United States, every one showed at least 99.97% of consecutive-sample gaps sitting
+exactly at the published ten-second cadence. The metric could not separate the candidates because
+there was nothing to separate: OpenSky's coverage over populated airspace in 2022 is essentially
+complete at this resolution.
+
+Reaching that conclusion required correcting the measurement first, and the correction is the
+methodologically interesting part. A naive gap report over each candidate returned maximum gaps of up
+to 3,140 seconds — in a file spanning 3,600 seconds — which read as catastrophic coverage failure. It
+was not. Those gaps are aircraft leaving the box and re-entering it later, which is a property of
+drawing a finite box, not of the sensor network. A second confound sat underneath it: aircraft
+stationary on the ground transmit differently from airborne ones, and counting a parked airframe going
+quiet as a coverage dropout inflates the same statistic. Restricting the measurement to gaps whose
+endpoints are both at least 0.5° inside the boundary and both airborne is what made the number mean
+what it claimed to mean. Recorded here because the uncorrected metric was not merely noisy — it
+pointed confidently in the wrong direction, and a box could have been rejected on it.
+
+With coverage quality neutralised, the decision moved to a criterion derived from what the scenarios
+actually do. Scenario types 2 and 4 inject events confined to roughly a 20 km area, and the evaluation
+harness needs 20–30 randomised runs across each of five types, so 100–150 runs must be placed. A box is
+therefore only usable if it contains enough distinct 20 km patches carrying enough simultaneous
+traffic for an injected effect to have witnesses. Binning airborne samples into ~20 km cells over a
+fifteen-minute window and counting cells holding at least five distinct aircraft gives a direct count
+of usable event sites, and this did discriminate: from 132 sites for the tightest candidate to 556 for
+the widest.
+
+The chosen box offers 263 such sites against a ceiling of 150 runs, giving enough headroom that
+randomised placement need not reuse locations — reuse would correlate runs that the evaluation treats
+as independent, which is why the cheapest candidate, at 132 sites, was rejected despite being the
+cleanest on every other measure. The widest candidate, 47–55°N/3–15°E, was rejected on the opposite
+ground: it offers 2.1× the event sites for 2.4× the tile area and 1.9× the rows, which is proportional
+scaling rather than a better trade, and it carries a lower per-cell aircraft density (median 3 against
+4) alongside nearly double the confound rate discussed below.
+
+One defect found during the sweep is worth recording because no metric would have surfaced it. An
+earlier shortlisted box began at 5°E, which places both Amsterdam Schiphol (4.76°E) and Brussels
+(4.48°E) outside the corpus — the two busiest fields in the region, excluded by a boundary drawn to a
+round number. The metrics for that box were unremarkable rather than alarming; it simply looked like a
+slightly quieter region. Moving the western edge to 3°E added 306 aircraft and 64 event sites for a
+33% area increase, the best return in the entire sweep. **The general lesson, and one that transfers
+to the scenario placement work: a geographic filter should be checked against named landmarks it ought
+to contain, not only against aggregate statistics, because a statistic cannot report what it never
+saw.**
+
+**Threat to validity, stated in advance of the evaluation.** The natural dropouts that remain, though
+rare, occupy the same duration band that scenario type 4 will inject into. Within the chosen box the
+ten surviving interior airborne gaps measure 20, 100, 110, 200, 280, 280, 300, 970, 1,160 and 1,440
+seconds — seven of the ten falling between 100 and 300 seconds, which is squarely where a plausible
+injected coverage gap sits. This is the confound `adp-004` names as a failure case, and it is present
+rather than avoided. Its magnitude is small and now quantified: it touches 10 of 948 tracks, or 1.05%,
+against 1.84% for the widest candidate rejected above. It is also mitigable rather than merely
+tolerable, because the coverage report identifies exactly which tracks carry a natural dropout, so the
+scenario generator can refuse those tracks as injection sites and the evaluation can account for the
+exclusion. *(Record here whether that exclusion was implemented in the generator, and the measured
+false-positive rate on scenario type 4 with and without it.)*
+
+A second limitation follows from the null-position retention rule rather than the box. The 500
+retained rows with no coordinates are drawn in file order from the whole hour, not from within the
+box, since a row with no position cannot be tested against a boundary at all. The extract therefore
+contains 1,445 distinct aircraft while only 948 have any in-box position, and a count of distinct
+airframes in the extract overstates in-box traffic by roughly half. This is harmless to the detection
+path — such rows can only reach quarantine, never a canonical observation — but any descriptive
+statistic quoted about the corpus needs to say which of the two counts it means.
+
 ## System Design and Architecture
 
 <!-- Actual architecture as built vs as planned (docs/em_fusion_v2.md section 7) and why it

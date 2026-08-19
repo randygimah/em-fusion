@@ -1,0 +1,25 @@
+{
+  "source_url": "https://s3.opensky-network.org/data-samples/states/2022-06-27/12/states_2022-06-27-12.csv.tar",
+  "snapshot_hour": "2022-06-27T12:00:00Z",
+  "download_date": "2026-08-13",
+  "original_sha256": "6e0d227849348f7118744a98aeebd15e35068393524471cdec6588b0387991e2",
+  "content_sha256": "7ce8388179e1cc88d06298f7ba300c38ae6dde2f6caea1d642c526779d2cbe05",
+  "licence": {
+    "name": "OpenSky Network General Terms of Use & Data License Agreement",
+    "governing": "published",
+    "published_url": "https://opensky-network.org/about/terms-of-use",
+    "retrieved": "2026-08-13",
+    "shipped_sha256": "d4ea34f0786652cf6252da10660b1490cc45c181254a1705f0661a48d14a3ec2",
+    "shipped_dated": "2017-08-24",
+    "note": "The LICENSE.txt shipped inside the tarball permits commercial internal testing and government purposes; the published terms do not. \u00a72(iii) makes the published terms operative."
+  },
+  "attribution": "The OpenSky Network, http://www.opensky-network.org \u2014 or Sch\u00e4fer, M., Strohmeier, M., Lenders, V., Martinovic, I. and Wilhelm, M. (2014) 'Bringing up OpenSky: A large-scale ADS-B sensor network for research', ACM/IEEE International Conference on Information Processing in Sensor Networks (IPSN), April 2014.",
+  "bounding_box": {
+    "lat_min": 49.0,
+    "lat_max": 54.0,
+    "lon_min": 3.0,
+    "lon_max": 11.0
+  },
+  "null_sample": 500,
+  "null_retained": 500
+}

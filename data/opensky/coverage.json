@@ -1,0 +1,12 @@
+{
+  "cadence_s": 10,
+  "aircraft": 948,
+  "gaps": 132186,
+  "max_gap_s": 2890,
+  "gap_percentiles": {
+    "p50": 10,
+    "p90": 10,
+    "p99": 10
+  },
+  "clean_cadence_fraction": 0.9994326176750942
+}
