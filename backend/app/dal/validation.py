@@ -101,6 +101,16 @@ def validate_record(
     because a rejection has to name one field -- an aggregated error over a
     half-resolved model names none of them usefully.
     """
+    # Checked before the required fields, so an adapter doing the DAL's job
+    # is reported as itself rather than masked by whatever else is wrong with
+    # the record. Attachment at the DAL is only a guarantee if the DAL is the
+    # sole source of it (`dal-003`).
+    if "provenance" in record:
+        return _reject(
+            "provenance",
+            "provenance is attached by the DAL, not supplied by an adapter",
+        )
+
     for field in REQUIRED_FIELDS:
         if record.get(field) is None:
             return _reject(field, f"{field} is required and was not supplied")
