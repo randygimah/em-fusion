@@ -197,7 +197,7 @@ def test_the_seed_is_read_from_the_env_file_when_absent_from_the_environment(
 
 
 def test_a_skipped_download_carries_the_recorded_date_forward(
-    clone: tuple[Path, bytes]
+    clone: tuple[Path, bytes],
 ) -> None:
     """The first failure case, and the trap the manual invocation carried:
     re-filtering a file downloaded weeks ago must not claim it arrived today."""
@@ -226,7 +226,7 @@ def test_an_actual_download_records_today(clone: tuple[Path, bytes]) -> None:
 
 
 def test_the_box_defaults_to_the_one_recorded_in_the_manifest(
-    clone: tuple[Path, bytes]
+    clone: tuple[Path, bytes],
 ) -> None:
     """The manifest is the authority on what the corpus covers, so a
     re-filter cannot silently apply a different box from the one that built
@@ -302,7 +302,7 @@ def test_the_abort_reports_both_checksums(
 
 
 def test_replace_corpus_lets_a_deliberate_change_through(
-    clone: tuple[Path, bytes]
+    clone: tuple[Path, bytes],
 ) -> None:
     """Replacing the corpus is permitted, but only as an explicit act."""
     # spec: adp-006
@@ -324,7 +324,7 @@ def test_replace_corpus_lets_a_deliberate_change_through(
 
 
 def test_a_successful_run_exits_zero_and_writes_the_three_artefacts(
-    clone: tuple[Path, bytes]
+    clone: tuple[Path, bytes],
 ) -> None:
     # spec: adp-006
     data_dir, payload = clone
@@ -354,22 +354,20 @@ def test_the_summary_names_what_was_written(
     assert _manifest(data_dir)["content_sha256"] in out
 
 
-def test_a_download_checksum_mismatch_exits_non_zero(
-    clone: tuple[Path, bytes]
-) -> None:
+def test_a_download_checksum_mismatch_exits_non_zero(clone: tuple[Path, bytes]) -> None:
     """The command must not report success when adp-005 refused the bytes."""
     # spec: adp-006
     data_dir, _ = clone
 
-    exit_code = _run(data_dir, b"not the tarball the manifest cites", "--accept-licence")
+    exit_code = _run(
+        data_dir, b"not the tarball the manifest cites", "--accept-licence"
+    )
 
     assert exit_code != 0
     assert _artefacts(data_dir) == {"manifest.json"}
 
 
-def test_a_missing_manifest_exits_non_zero_rather_than_raising(
-    tmp_path: Path
-) -> None:
+def test_a_missing_manifest_exits_non_zero_rather_than_raising(tmp_path: Path) -> None:
     """The fourth failure case is about exit codes: a command usable in a
     script reports failure rather than a traceback."""
     # spec: adp-006
@@ -377,3 +375,24 @@ def test_a_missing_manifest_exits_non_zero_rather_than_raising(
     empty.mkdir()
 
     assert _run(empty, None, "--accept-licence") != 0
+
+
+def test_a_manifest_without_a_usable_box_asks_for_one_rather_than_guessing(
+    clone: tuple[Path, bytes], capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Falling back to a hard-coded box would silently filter to a region
+    other than the one the manifest describes."""
+    # spec: adp-006
+    data_dir, payload = clone
+    _manifest_file(
+        data_dir,
+        original_sha256=hashlib.sha256(payload).hexdigest(),
+        content_sha256=None,
+        bounding_box={},
+    )
+
+    exit_code = _run(data_dir, payload, "--accept-licence")
+
+    assert exit_code != 0
+    assert "--box" in capsys.readouterr().err
+    assert not (data_dir / "opensky_extract.parquet").exists()

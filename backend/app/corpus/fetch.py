@@ -58,6 +58,18 @@ class ChecksumMismatchError(RuntimeError):
     """Raised when downloaded bytes are not the source the manifest cites."""
 
 
+class ContentChecksumChanged(RuntimeError):
+    """Raised when a re-filter would replace the extract with a different one.
+
+    Not a corruption check -- the filter is deterministic, so a changed
+    content checksum means the *inputs* changed: a different box, a different
+    raw file, or a change to the filter itself. Whichever it is, the extract
+    is no longer the artefact the recorded measurements were taken against,
+    and overwriting it silently would leave the thesis citing numbers derived
+    from data that no longer exists (`adp-006`).
+    """
+
+
 @dataclass(frozen=True)
 class SourceRef:
     """Where the corpus came from, as recorded in the committed manifest."""
@@ -121,6 +133,29 @@ def read_source_ref(manifest_path: Path) -> SourceRef:
     )
 
 
+def raw_path(data_dir: Path, url: str) -> Path:
+    """Where a downloaded source file lives under the data directory."""
+    return Path(data_dir) / "raw" / url.rsplit("/", 1)[-1]
+
+
+def is_already_downloaded(
+    destination: Path, expected_sha256: str, chunk_bytes: int = CHUNK_BYTES
+) -> bool:
+    """Whether `destination` is the file the manifest cites.
+
+    A checksum match, never mere presence, because presence and completeness
+    diverge in exactly the truncated-leftover case. Shared with `download`
+    rather than reimplemented by callers, so the two cannot disagree about
+    whether a run fetched anything -- which `adp-006` relies on to decide
+    whether today's date belongs in the manifest.
+    """
+    destination = Path(destination)
+    return (
+        destination.exists()
+        and file_sha256(destination, chunk_bytes) == expected_sha256
+    )
+
+
 def download(
     url: str,
     destination: Path,
@@ -138,10 +173,7 @@ def download(
     the truncated-leftover case this guards.
     """
     destination = Path(destination)
-    if (
-        destination.exists()
-        and file_sha256(destination, chunk_bytes) == expected_sha256
-    ):
+    if is_already_downloaded(destination, expected_sha256, chunk_bytes):
         return destination
 
     if not accept_licence:
@@ -180,6 +212,7 @@ def build_corpus(
     opener: Opener = _urlopen,
     download_date: str,
     pseudonymiser: Pseudonymiser,
+    require_content_sha256: str | None = None,
 ) -> dict[str, Any]:
     """Fresh clone to corpus in one call.
 
@@ -192,15 +225,25 @@ def build_corpus(
     manifest_path = data_dir / "manifest.json"
     source = read_source_ref(manifest_path)
 
-    raw_path = download(
+    tarball = download(
         source.url,
-        data_dir / "raw" / source.url.rsplit("/", 1)[-1],
+        raw_path(data_dir, source.url),
         source.sha256,
         accept_licence=accept_licence,
         opener=opener,
     )
 
-    kept, stats = filter_rows(read_rows(raw_path), box=box, null_sample=null_sample)
+    kept, stats = filter_rows(read_rows(tarball), box=box, null_sample=null_sample)
+
+    # Checksummed before a byte is written, so a run that would replace the
+    # corpus leaves the existing artefacts exactly as it found them.
+    content_sha256 = content_checksum(kept)
+    if require_content_sha256 is not None and content_sha256 != require_content_sha256:
+        raise ContentChecksumChanged(
+            f"the filtered extract hashes to {content_sha256}, but the manifest "
+            f"records {require_content_sha256}. Nothing was written."
+        )
+
     write_parquet(kept, data_dir / "opensky_extract.parquet")
 
     manifest = build_manifest(
@@ -208,7 +251,7 @@ def build_corpus(
         snapshot_hour=source.snapshot_hour,
         download_date=download_date,
         original_sha256=source.sha256,
-        content_sha256=content_checksum(kept),
+        content_sha256=content_sha256,
         box=box,
         null_sample=null_sample,
         null_retained=stats.null_retained,
