@@ -216,9 +216,7 @@ def test_a_payload_missing_a_required_field_is_rejected() -> None:
 def test_a_payload_must_match_its_observation_type() -> None:
     """A track observation carrying an RF payload is not a track observation."""
     # spec: dal-001
-    outcome = validate_record(
-        _track_record(payload=_rf_record()["payload"]), CONTEXT
-    )
+    outcome = validate_record(_track_record(payload=_rf_record()["payload"]), CONTEXT)
 
     assert not outcome.accepted
     assert outcome.observation is None
@@ -226,9 +224,7 @@ def test_a_payload_must_match_its_observation_type() -> None:
 
 def test_an_unknown_observation_type_is_rejected() -> None:
     # spec: dal-001
-    outcome = validate_record(
-        _track_record(observation_type="telepathy"), CONTEXT
-    )
+    outcome = validate_record(_track_record(observation_type="telepathy"), CONTEXT)
 
     assert not outcome.accepted
     assert outcome.rejection is not None
@@ -285,3 +281,49 @@ def test_an_accepted_observation_is_immutable() -> None:
 
     with pytest.raises(Exception):
         observation.source_id = "somewhere-else"
+
+
+def test_an_unknown_source_type_is_rejected() -> None:
+    # spec: dal-001
+    outcome = validate_record(_track_record(source_type="carrier-pigeon"), CONTEXT)
+
+    assert not outcome.accepted
+    assert outcome.rejection is not None
+    assert outcome.rejection.field == "source_type"
+
+
+def test_a_malformed_timestamp_is_rejected() -> None:
+    """Present but unparseable is a different failure from absent, and the
+    corpus can produce either."""
+    # spec: dal-001
+    outcome = validate_record(_track_record(timestamp="half past four"), CONTEXT)
+
+    assert not outcome.accepted
+    assert outcome.observation is None
+    assert outcome.rejection is not None
+    assert outcome.rejection.field == "timestamp"
+
+
+def test_the_model_itself_refuses_a_mismatched_payload() -> None:
+    """The type/payload agreement is a property of the model, not of the
+    validator, so it holds for anything constructed directly."""
+    # spec: dal-001
+    provenance = Provenance(
+        source_id="opensky-replay",
+        source_type=SourceType.OPENSKY,
+        data_mode=DataMode.REPLAYED,
+        scenario_run_id=7,
+    )
+
+    with pytest.raises(ValueError, match="track observation requires TrackPayload"):
+        CanonicalObservation(
+            source_id="opensky-replay",
+            source_type=SourceType.OPENSKY,
+            observation_type=ObservationType.TRACK,
+            timestamp=WHEN,
+            location=Location(lat=51.09, lon=7.54),
+            data_mode=DataMode.REPLAYED,
+            validation_status=ValidationStatus.VALID,
+            provenance=provenance,
+            payload=RfPayload.model_validate(_rf_record()["payload"]),
+        )
