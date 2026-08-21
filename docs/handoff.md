@@ -26,7 +26,7 @@ yet: the repository port has one implementation, an in-memory fake in `backend/t
 | | |
 |---|---|
 | Backend suite | **128 passed, 99% coverage on `app/`.** Only miss is `app/corpus/extract.py:246`, pre-existing |
-| Tooling | `make check` **works now** — format, lint, type-check, test, all through `uv run`, coverage gated at 90% |
+| Tooling | **Both `make check` surfaces exit 0.** `backend/` runs through `uv run`; the root runs through Compose against freshly built images. Both gate coverage at 90% |
 | Spec items passing | **8 of 80**: `api-001`, `adp-004`, `adp-005`, `adp-006`, `dal-001`, `dal-002`, `dal-003`, `dal-004` |
 | Corpus | Rebuilt this session. Box 49–54°N, 3–11°E; 133,634 rows; content checksum `7ce83881…be05`, now stable across four builds |
 | Seed | `PSEUDONYM_SEED` set in `backend/.env` (gitignored). Fingerprint `8696f2f2…1de7` committed in the manifest |
@@ -139,6 +139,23 @@ its first consumer.
   had no red step of their own.
 - **Deviation: three `dal-003` tests passed before the implementation existed.** `dal-001`'s models
   already discharge that failure case. Kept as regression guards rather than contorted into failing.
+- **Fixing `backend/make check` was reported as fixing `make check`, and it was not.** The root
+  `make check` still failed: the backend container image predated `pyarrow` being added to
+  `pyproject.toml`, so four test modules could not import it. Compose bind-mounts source but not
+  `site-packages`, so a stale image runs current code against outdated dependencies. Nothing was
+  wrong with the code, the Dockerfile or the lockfile — `docker compose build backend` fixed it. The
+  loud direction is harmless; the dangerous one is a dependency *removed* from `pyproject.toml` that
+  a stale image still has, where the container passes and a fresh clone fails. Every root quality
+  target now depends on its image being rebuilt. See `docs/qa.md` §29.
+- **The two `make check` surfaces had silently drifted apart in three ways** — the dependencies they
+  ran against, the pytest arguments (the root ran bare `pytest --tb=short` while the backend had just
+  gained a 90% coverage gate), and a comment claiming the OpenSky extract is committed, false since
+  the licence reversal. All three were found by a person typing a command. This is the concrete
+  argument for `ops-002`.
+- **A commit message claimed a change that was not in the commit.** `29b8b91` says it recorded the
+  finding in `thesis_notes.md`; a failed string match meant only `qa.md` was written, and the `&&`
+  chain let the commit proceed anyway. Corrected by `939e673`. When a scripted edit and a commit are
+  chained, verify what was staged rather than trusting the chain.
 - **The Bash working directory does not persist reliably between calls.** A `cd backend && cat > …`
   heredoc silently wrote nothing when the `cd` failed because the shell was already there. Use
   absolute paths for file writes.
@@ -170,7 +187,10 @@ Open and unowned:
   extended, because `mypy app/ tests/` currently reports **18 errors**, nearly all from deliberate
   type violations in negative tests. Extending it would mean ~18 `# type: ignore` annotations, which
   arguably documents the violations as intentional. Cost is now quantified; the call is not made.
-- **CI still does not exist** (`ops-002`). `make check` is now the command CI would call, but nothing
-  enforces it on push — which is what would have caught the broken Makefile four sessions earlier.
+- **CI still does not exist** (`ops-002`), and this session produced the concrete argument for it:
+  two command surfaces for one suite drifted three ways and were reconciled only because someone ran
+  both by hand. Until CI exists, a green `make check` is evidence about one machine at one moment.
+  `ops-003` also remains `passes: false` — the root Makefile has no tests, and this session's fix was
+  work toward it rather than a claim it is done.
 - Track 0: the data-egress question (employer) and the licence-version divergence (shipped 2017
   `LICENSE.txt` vs the operative published terms) both remain open.
