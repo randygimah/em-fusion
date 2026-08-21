@@ -1704,6 +1704,87 @@ between 100 and 300 s. That is the confound `adp-004` names as a failure case, a
 avoided: 10 of 948 tracks, 1.05%. It is mitigable, because the coverage report names exactly which
 tracks carry one, so the generator can refuse them as injection sites. See
 [thesis_notes.md](thesis_notes.md), "Bounding box: 49–54°N, 3–11°E".
+---
+
+## 26. I am keen to go with the first option. Just want to understand the trade-off/overhead a bit more
+
+**The overhead is smaller than it looks, because the repository seam is required by `db-003`
+regardless of build order.** Deferring persistence does not add a layer that a database-first build
+would have avoided; it defines that layer earlier and gives it a second implementation. The real cost
+is concentrated in one place — the port's signature — and the real gap is one the spec text does not
+currently distinguish.
+
+The question arose when choosing what to build after the OpenSky corpus landed. `docs/handoff.md`
+named `dal-004` as the next item, but `dal-004` pseudonymises identifiers on a canonical observation
+that does not exist yet: `dal-001` is unbuilt, and `dal-002` (quarantine) and `dal-003` (provenance)
+are the same code path. All three are worded around persistence, while `db-001` (schema and
+migrations) and `db-005` (engine and session) are also unbuilt. So "build `dal-004` next" resolves to
+one of two orderings, and the choice was between them.
+
+### The wrong assumption the question corrects
+
+The intuitive reading is that building the DAL before the database means **writing it twice** — once
+against an in-memory stand-in, once against PostGIS. That is not what happens. What gets written
+twice is the *repository implementation*, not the DAL. The validation, quarantine routing, provenance
+attachment, and pseudonymisation are written once and never reopened, because they never touch a
+database in either ordering. `db-003` forbids it:
+
+> a route handler needing persisted data obtains it through a repository function; the handler
+> contains no SQL, no session construction, and no spatial logic
+
+The seam exists in the spec independently of when the database lands. Ordering decides only whether
+the seam has one implementation or two at the moment the DAL items are marked passing.
+
+### What is actually extra
+
+| | |
+|---|---|
+| The port definition (a `Protocol`, two methods) | Not extra — `db-003` requires it either way |
+| An in-memory fake in `backend/tests/` | Genuinely extra, roughly 50 lines. Not throwaway: the Phase 8 detectors, the evidence bundle builder, and the grounding check all need observations without a database, and reuse it |
+| The SQLAlchemy implementation at `db-001` | Deferred, not duplicated — it is the code a database-first build would have written first instead of last |
+| The DAL logic itself | Written once in both orderings |
+
+### Where rework can actually happen
+
+Only in the port's signature. An in-memory fake is permissive in three ways PostGIS is not, and each
+is cheap to decide now and expensive to discover later:
+
+| Decision | The fake makes it look like | PostGIS forces |
+|---|---|---|
+| `location` | a lat/lon pair carried on the model | a geometry column per `db-001`. The port must accept a canonical model and let the repository do the WKB conversion. A WKT string in the port signature means the DAL knows about PostGIS, and the seam is already broken |
+| Record identity | sequential integers from a counter | `bigserial` or UUID assigned on flush. `evb-002` requires stored IDs to resolve, so the repository returns persisted objects and no test asserts an ID literal |
+| Atomicity | trivially atomic — two lists appended | `dal-002`'s "seven observations and three quarantine rows, completes without raising" is **one transaction**. The port has to express that the two writes go together: one method taking both collections, or an explicit unit of work |
+
+The blast radius if a signature turns out wrong is small, because the port is narrow and its only
+callers at that point are the ingest function and `adp-001`.
+
+### The gap this ordering leaves open, and why it is worth naming
+
+Against a fake, `dal-003`'s failure case — an observation persisted with a null scenario run ID —
+is proven by the DAL refusing to construct one. It is **not** proven by a `NOT NULL` constraint. Those
+are two different guarantees, and only the first is in place when the DAL items pass:
+
+- *The DAL behaves correctly* — asserted by unit tests against the fake, at `dal-001`–`dal-004`.
+- *The database enforces it* — asserted by schema constraints, at `db-001`, later.
+
+`dal-001`–`dal-004` at `passes: true` therefore means the first claim only. This is a deviation from
+the plain reading of the spec text, which says "persisted", and it belongs in the handoff's
+**Failed attempts**/deviation record rather than being left for the write-up to rediscover. The
+second claim is not weakened by arriving later — it is simply not yet made.
+
+### Why this ordering was chosen anyway
+
+Because the alternative puts `dal-004` last. `docs/implementation.md` Phase 7 is explicit about why
+that is the expensive mistake:
+
+> Build it with `dal-001`, before `adp-001` replays a single real row: retrofitting it after a
+> campaign means every stored observation, bundle, and hypothesis carries a real identifier that has
+> to be migrated out.
+
+A wrong port signature costs an afternoon. A campaign run before pseudonymisation exists costs the
+campaign, and — per OpenSky DLA §3(i) and §3(iii), see [§22](#22-what-did-reading-the-actual-licence-file-change)
+— makes every stored artefact a disclosure problem. The asymmetry is what settles it.
+
 
 ---
 
@@ -1786,3 +1867,6 @@ tracks carry one, so the generator can refuse them as injection sites. See
 | **Licence acceptance gate** | An explicit operator act required before the fetcher opens a socket. Not a check against the manifest — the manifest records the licence, the gate makes a human accept it. |
 | **Interior gap** | A dropout with both endpoints well inside the bounding box and the aircraft airborne on both sides. The only kind that measures sensor coverage; the rest measure box geometry. |
 | **Event site** | A ~20 km cell carrying enough simultaneous traffic (≥ 5 distinct aircraft) for a localised injected event to have witnesses. The count of these, not coverage quality, is what the bounding box was chosen on. |
+| **Repository port** | The interface a caller depends on to persist or read records, defined independently of the storage engine behind it. Required by `db-003` regardless of build order, which is why defining it before the database exists adds a second implementation rather than a second layer. |
+| **In-memory fake** | A working implementation of a port backed by plain data structures, used so unit tests need no database. Distinct from a mock: it has real behaviour and can be asserted against, rather than merely recording calls. |
+| **Unit of work** | An explicit boundary declaring that several writes commit or fail together. Invisible against an in-memory fake, where appending to two lists is trivially atomic, and required against PostgreSQL for `dal-002`'s split of a batch into observations and quarantine rows. |
