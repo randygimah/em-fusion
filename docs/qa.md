@@ -1784,6 +1784,80 @@ that is the expensive mistake:
 A wrong port signature costs an afternoon. A campaign run before pseudonymisation exists costs the
 campaign, and — per OpenSky DLA §3(i) and §3(iii), see [§22](#22-what-did-reading-the-actual-licence-file-change)
 — makes every stored artefact a disclosure problem. The asymmetry is what settles it.
+---
+
+## 27. `dal-004` said to record the pseudonymisation seed in the corpus manifest. Why is it now a fingerprint?
+
+**Because the manifest is committed, and `icao24` is only 24 bits wide.** A seed published beside the
+derivation function does not protect anything: an `icao24` is six hex digits, so the whole space is
+about 16.7 million values, and anyone holding the seed enumerates it and rebuilds the complete
+pseudonym-to-airframe mapping in seconds on a laptop. The spec item forbade a readable reverse
+mapping and required the seed to be published, in adjacent sentences. Only one of those could stand.
+
+### The wrong assumption
+
+The assumption was that a *seed* is like a *salt* — a value whose secrecy does not matter, recorded
+for reproducibility. That holds when the input space is large enough to resist enumeration. It does
+not hold here, and the reason is worth stating precisely because it is a property of the data rather
+than of the cryptography:
+
+| | |
+|---|---|
+| Hash function | HMAC-SHA256 — not the weak link, and not what fails |
+| Input space | `icao24`: 24 bits, about 16.7 million values |
+| Work to reverse the whole corpus, given the seed | One pass over 16.7M HMACs — seconds |
+| Work to reverse it without the seed | Infeasible |
+
+The seed is therefore not a salt but a **key**, and the security of the scheme rests entirely on it.
+Publishing a key alongside the ciphertext is the failure, not the choice of algorithm. A password
+hash resists an offline attack because a password is drawn from a large, unguessable space; a
+transponder address is drawn from a small, fully enumerable one.
+
+### What replaced it
+
+The seed is read from the environment (`PSEUDONYM_SEED`, documented in `backend/.env.example`, no
+default — a default seed is a committed seed by another name). The manifest records
+`pseudonym_seed_sha256`, the SHA-256 of the seed. That preserves what recording it was for without
+disclosing it:
+
+- **A seed change stays a detectable, recorded corpus-level event**, sitting beside the extract
+  checksum, rather than a silent one. Two corpora built under different seeds are distinguishable.
+- **The corpus stays attributable** — a given extract can be shown to have been built under a given
+  seed by whoever holds it.
+- **The mapping stays irreversible to a reader**, which is the whole obligation under OpenSky DLA
+  §3(i).
+
+### The limitation this creates, which is real and should be stated
+
+The mapping is now **machine-local**. A reader who accepts the licence and rebuilds the corpus
+supplies their own seed, and gets different pseudonyms from the ones in this dissertation.
+
+That costs less than it appears to, and the reason is worth being precise about. Nothing downstream
+reads a pseudonym's *value* — it is an opaque grouping key, and detection, clustering, evidence
+bundling and scoring are all invariant under relabelling. So every reported metric reproduces
+exactly. What does not reproduce is a specific label quoted in a figure: `AC-a1d043d088e6` in a
+screenshot cannot be matched to `AC-…` in a reader's rebuild.
+
+That is the correct trade rather than a regrettable one. A figure whose labels a reader *could*
+resolve back to real airframes is precisely the disclosure the item exists to prevent — so label
+stability across machines and the licence obligation are in direct conflict, and the obligation wins.
+See [§22](#22-what-did-reading-the-actual-licence-file-change) for the licence reading itself.
+
+### Two smaller decisions recorded at the same time
+
+**Callsigns are pseudonymised too, into a separate `flight_id`.** `dal-004` names both `icao24` and
+`callsign` as identifiers. They are derived under separate namespaces, so an `icao24` and a callsign
+that happen to share text cannot land on the same pseudonym. A **blank callsign yields no
+`flight_id`** rather than a pseudonym of the empty string — OpenSky reports many blank callsigns, and
+hashing `""` would give every one of them a single shared identity, which is worse than recording the
+absence.
+
+**Identifiers are normalised before hashing** — stripped and case-folded. OpenSky pads callsigns to a
+fixed width, so `DLH8AT ` and `DLH8AT  ` are the same flight; without normalisation they would be two
+different pseudonyms, and every track-continuity rule downstream would see two aircraft. This is a
+trap rather than a refinement: the failure is silent, and it would present as a detection result
+rather than as a bug.
+
 
 
 ---
@@ -1870,3 +1944,6 @@ campaign, and — per OpenSky DLA §3(i) and §3(iii), see [§22](#22-what-did-r
 | **Repository port** | The interface a caller depends on to persist or read records, defined independently of the storage engine behind it. Required by `db-003` regardless of build order, which is why defining it before the database exists adds a second implementation rather than a second layer. |
 | **In-memory fake** | A working implementation of a port backed by plain data structures, used so unit tests need no database. Distinct from a mock: it has real behaviour and can be asserted against, rather than merely recording calls. |
 | **Unit of work** | An explicit boundary declaring that several writes commit or fail together. Invisible against an in-memory fake, where appending to two lists is trivially atomic, and required against PostgreSQL for `dal-002`'s split of a batch into observations and quarantine rows. |
+| **Seed vs salt** | A salt need not be secret because the input space resists enumeration; a seed over a small input space is a *key*, and publishing it reverses the mapping. `icao24` is 24 bits, which is why the pseudonymisation seed is a key. |
+| **Seed fingerprint** | The SHA-256 of the pseudonymisation seed, recorded in the committed manifest in place of the seed. Identifies which seed built a corpus without disclosing it. |
+| **Namespace separation** | Mixing the field name into the hashed message so two identifier spaces stay independent — an `icao24` and a callsign sharing text cannot collide onto one pseudonym. |

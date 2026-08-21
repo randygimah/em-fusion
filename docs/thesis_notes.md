@@ -412,6 +412,56 @@ per run. `scn-001` is then untouched, because nothing about the mapping varies w
 constrains, and changing the seed becomes a deliberate corpus-level event with a record rather than a
 side effect of re-running a scenario.
 
+### Reversal: the pseudonymisation seed is not recorded in the manifest
+
+The specification for `dal-004` required the pseudonymisation seed to be "held as fixed project
+configuration and recorded in the corpus manifest", and in the same paragraph required that "no
+reverse mapping is persisted anywhere the application can read". Those two clauses cannot both hold,
+and the contradiction survived several readings of the item before it was noticed during
+implementation. The manifest is committed; the seed is therefore published; and an `icao24` is a
+24-bit value, so the space of about 16.7 million addresses can be enumerated against a known seed in
+seconds. A published seed *is* a readable reverse mapping. The item forbade the thing it mandated.
+
+The error underneath is a category mistake worth recording, because it is the kind that survives
+review by looking like good practice. A seed was being treated as a **salt** — a value whose
+publication is harmless and whose recording aids reproducibility. That reasoning is sound when the
+input space is large enough to resist exhaustive search, which is the case a salt is designed for: a
+password is drawn from a vast and unguessable space, so knowing the salt buys an attacker very
+little. A transponder address is drawn from a small and completely enumerable one. In that setting
+the seed is not a salt but a **key**, and the confidentiality of the whole scheme rests on it. The
+strength of HMAC-SHA256 is irrelevant to this failure and it is worth saying so explicitly: the
+cryptography was never the weak link, and reaching for a stronger hash would have addressed nothing.
+
+The resolution keeps what recording the seed was actually for and discards what it cost. The seed is
+read from the environment, with its key documented in `backend/.env.example` under the convention
+already established for secrets, and deliberately given no default — a default seed is a committed
+seed under another name. What the manifest records is `pseudonym_seed_sha256`, a commitment to the
+seed rather than the seed. A corpus therefore remains attributable to the seed that built it, and
+changing the seed remains a detectable corpus-level event sitting beside the extract checksum rather
+than a silent one, which is precisely the property the original clause was reaching for.
+
+**The resulting limitation is real and belongs in the write-up rather than in a footnote.** The
+mapping is now machine-local: a reader who accepts the OpenSky licence and rebuilds the corpus
+supplies their own seed and obtains different pseudonyms from the ones appearing in this
+dissertation. The cost is narrower than it first appears, because nothing downstream reads a
+pseudonym's value — it is an opaque grouping key, and detection, spatial clustering, evidence
+bundling and rubric scoring are all invariant under relabelling. Every reported metric therefore
+reproduces exactly. What does not reproduce is a specific label quoted in a figure.
+
+That trade is the correct one rather than a reluctant compromise, and the reasoning generalises. A
+figure whose pseudonyms a reader could resolve back to real airframes is exactly the disclosure
+§3(i) prohibits, so cross-machine label stability and the licence obligation are in direct
+opposition — there is no arrangement that delivers both. Recognising that they were in opposition,
+rather than assuming both were available, is what the implementation pass contributed.
+
+This is the second occasion in the project on which a licence obligation was found to be
+misunderstood only when the code that had to satisfy it was written, the first being the reversal on
+committing the extract recorded in the Methodology chapter. Both were caught before any data had
+been disclosed, and in both cases the cost of the correction was a design change rather than a
+migration. The pattern is worth naming honestly in the write-up: reading a licence carefully is
+necessary but was not, in either case, sufficient — what surfaced the defect was the attempt to
+build a mechanism that satisfied it.
+
 ### The canonical model has no field for a source aircraft identifier
 
 The entry above settles that pseudonymisation belongs at the DAL rather than in the adapter. Building
