@@ -21,5 +21,6 @@
     "lon_max": 11.0
   },
   "null_sample": 500,
-  "null_retained": 500
+  "null_retained": 500,
+  "pseudonym_seed_sha256": "8696f2f27f195c1f3c957258e32ce4fabd67bcd01781950a63ad0b21495e1de7"
 }
