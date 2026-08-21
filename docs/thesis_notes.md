@@ -957,6 +957,29 @@ check rather than only checking that each service responds. The general observat
 belongs in the write-up, is that integration configuration fails differently from code: it fails by
 silence rather than by exception, so it needs a test that exercises the joins, not the parts.
 
+A second instance of the same failure mode appeared later, and the two together make the argument
+better than either does alone. Compose bind-mounts the backend source over `/app`, but dependencies
+are baked into the image at build time and are not mounted, so a container whose image predates a
+dependency change runs today's code against yesterday's libraries. The visible symptom was a library
+that had been a declared dependency for a week failing to import, which is loud and therefore
+harmless. The direction that matters is the opposite one: a dependency *removed* from
+`pyproject.toml` stays installed in a stale image, so the suite passes in the container and would
+fail on a fresh clone or in CI. The environment being reported on is then one that exists nowhere
+else, and the report is confident. The remedy was to make every quality target depend on its image
+being rebuilt, but the observation worth carrying into the write-up is more general: a bind mount is
+a *partial* override of an environment, and a partially overridden environment is a third environment
+rather than either of the two it was assembled from.
+
+The same episode exposed a divergence that care alone would not have prevented. The repository offers
+two command surfaces for one test suite — `backend/Makefile` against the host virtual environment and
+the root `Makefile` against containers — and they had drifted in three independent ways: the
+dependencies they ran against, the pytest arguments they passed, and a comment asserting that the
+OpenSky extract was committed, which the licence reversal had made false a week earlier. Each drift
+was individually invisible, and all three surfaced because a person typed a command, not because
+anything checked. This is the argument for continuous integration stated as evidence rather than as
+principle: not that CI catches defects in code, but that a repository offering two ways to do one
+thing will silently offer two different things unless something exercises both.
+
 ### Database container: the official image emulated, and what that costs
 
 PostgreSQL with PostGIS joined the Compose stack ahead of any code that uses it, which is the right
