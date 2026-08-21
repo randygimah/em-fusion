@@ -412,6 +412,99 @@ per run. `scn-001` is then untouched, because nothing about the mapping varies w
 constrains, and changing the seed becomes a deliberate corpus-level event with a record rather than a
 side effect of re-running a scenario.
 
+### The canonical model has no field for a source aircraft identifier
+
+The entry above settles that pseudonymisation belongs at the DAL rather than in the adapter. Building
+the canonical model raised a narrower question it did not settle: what the model should look like
+*between* the point where the adapter reads `icao24` out of the corpus and the point where the DAL
+replaces it. The obvious answer is that a canonical observation carries `icao24` like any other field
+and `dal-004` overwrites or removes it downstream. That was rejected. The model instead has no field
+anywhere in its tree — observation, payload, or provenance — capable of holding `icao24` or `callsign`
+under any name; `TrackPayload.aircraft_id` is opaque by contract, and a unit test asserts the absence
+across all four models rather than leaving it to review.
+
+The reasoning is that `dal-004`'s third failure case — retaining the source identifier beside the
+pseudonym, which satisfies the letter of the mapping while leaving the real value one query away — is
+a failure of omission, and failures of omission are not reliably caught by inspection. A field that
+exists can be populated by any adapter author who does not know why it should not be, and the
+resulting record is well-formed, passes validation, and looks entirely correct. A field that does not
+exist cannot be populated at all. The substitution therefore changes how `aircraft_id` is *derived*
+rather than changing the shape of the record, which turns `dal-004` into a function that produces a
+value rather than a migration that removes one.
+
+This is the third instance of one pattern in the project, and the repetition is worth naming because
+it is closer to a design principle than a coincidence. Confidence is an enum of Low, Medium and High
+so that `0.87` is unrepresentable rather than rejected (`ui-001`, `ai-001`). Constrained decoding
+makes structurally invalid model output unrepresentable rather than detectable (see "Schema
+conformance as a generation-time guarantee" in the Implementation chapter). And the canonical model
+makes a licence breach unrepresentable rather than reviewable. In each case a check that would have to
+be remembered is replaced by a shape that cannot express the wrong thing. The general form is that a
+constraint carried by the type is enforced once and thereafter costs nothing, whereas a constraint
+carried by a check is enforced only as often as somebody remembers to run it.
+
+Two limitations attach, and both should be stated rather than left implicit. The guarantee is about
+the model's *shape*, not about the provenance of the value an adapter supplies: until `dal-004`
+exists, nothing derives `aircraft_id` from `icao24` under a seed, and an adapter could in principle
+pass a raw transponder address into an opaque-looking field. What the model forecloses is retention
+*alongside* the pseudonym, which is the specific exposure the licence creates; deriving the value
+correctly is `dal-004`'s obligation and is asserted there. And the arrangement is free only because it
+was made before `adp-001` replayed a single row. Had the model carried `icao24` through even one
+campaign, the correction would have been a migration across every stored observation, evidence bundle
+and hypothesis — precisely the retrofit the Phase 7 build order was written to avoid. The cost of the
+decision is therefore nil, and that is a fact about its timing rather than about its merit.
+
+### Building the DAL before the database, behind a repository port
+
+The planned phase order put persistence (Phase 6) ahead of the DAL and adapters (Phase 7). That order
+was inverted: the DAL was built first, with persistence reached through a repository port whose only
+implementation during the DAL's own construction is an in-memory fake used by the tests. The
+PostgreSQL implementation lands with the schema.
+
+The forcing constraint is the entry above. `dal-004` must precede `adp-001`, because the first
+replayed row is the point after which pseudonymisation stops being cheap, and `dal-004` cannot be
+built before `dal-001` defines the record it operates on. Building persistence first would have put
+the DAL last and `dal-004` last of all, which is the one ordering the licence exposure makes
+expensive.
+
+The objection to inverting the order is that it means writing the persistence layer twice. It does
+not, and identifying why is the part worth recording. `db-003` already requires that route handlers
+obtain data through a repository function and contain no SQL, no session construction, and no spatial
+logic — so the seam exists in the specification regardless of when the database is built. What
+changes with the ordering is not whether the seam exists but how many implementations it has at the
+moment the DAL items are complete. The validation, quarantine routing, provenance attachment and
+pseudonymisation are written once either way, because none of them ever touches a database. The
+in-memory implementation is not throwaway either: the detectors, the evidence bundle builder and the
+grounding check all need canonical observations without a live database, and they reuse it.
+
+The genuine cost sits in one place — the port's signature, which is being designed against a stand-in
+more permissive than the thing that will eventually satisfy it. Three specific ways an in-memory
+implementation forgives what PostGIS will not were identified in advance and constrained at the model
+rather than left to be discovered. Geometry: `Location` carries latitude and longitude as floats and
+has no WKT, WKB, or SRID attribute, so the conversion to a geometry column belongs to the repository
+and the DAL stays ignorant of PostGIS; a storage-engine type in the port signature would have broken
+the seam before it was built. Identity: record identifiers are assigned on write, so the repository
+returns persisted objects and no test asserts an identifier literal, which keeps `evb-002`'s
+requirement that evidence items resolve to stored records satisfiable under either implementation.
+Atomicity: `dal-002` requires a batch of ten records with three invalid to yield seven observations
+and three quarantine rows and complete without raising, which is one transaction against a database
+and trivially free against two lists in memory — so the port has to express that the two writes
+commit together rather than leaving it to be noticed later.
+
+The limitation this ordering leaves open is narrow, and naming it is the reason it is recorded here
+rather than in the commit message. Two distinct guarantees are being conflated by the plain reading of
+the specification's word "persisted": that the DAL refuses to construct a record with provenance
+missing, and that the schema refuses to store one. Only the first is in place when the DAL items pass;
+the second is `db-001`'s `NOT NULL` constraints and is asserted there. The specification text for
+`dal-002` and `dal-003` was amended to say so explicitly rather than leaving `passes: true` to imply
+more than it demonstrates, on the grounds that a backlog item whose failure case reads as a database
+guarantee but is proven by application logic is the kind of drift that stays invisible until somebody
+checks.
+
+*(Record here whether the port's signature survived the PostgreSQL implementation unchanged, and if
+not, which of the three constraints above turned out to be the one that was got wrong. The prediction
+is that geometry and atomicity are the risks and identity is not; a wrong prediction is the more
+interesting result.)*
+
 ### Architecture documentation: a generated C4 model rather than drawn diagrams
 
 The architecture is documented as a C4 model written in Structurizr DSL and held in the repository at
