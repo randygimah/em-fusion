@@ -1960,6 +1960,77 @@ who already holds that seed. To a reader it is an opaque commitment — enough t
 apart, not enough to verify either. That is the intended trade, but it means the manifest's
 reproducibility guarantee is weaker for the pseudonym mapping than for the extract itself, where the
 content checksum is independently checkable.
+---
+
+## 29. I just ran the root `make check` and got errors, but the backend `make check` all passes
+
+**The container image was stale.** Compose bind-mounts `./backend` over `/app`, so the container saw
+today's source, but dependencies are baked into the image at build time and are not mounted. The
+image predated `pyarrow` being added to `pyproject.toml`, so four test modules failed to import a
+library that has been a declared dependency for over a week.
+
+Nothing was wrong with the code, the Dockerfile, or the lockfile. `docker compose build backend`
+followed by the same command gave 128 passed.
+
+### Why the two halves disagreed
+
+| | `backend/make check` | root `make check` |
+|---|---|---|
+| Runs against | the host venv, synced from `uv.lock` | the container image |
+| Source | the working tree | the working tree, bind-mounted |
+| Dependencies | `uv sync` — current | **baked into the image at build time** |
+| Effect | always current | current only if the image was rebuilt since `pyproject.toml` last changed |
+
+A bind mount that covers source but not `site-packages` produces a hybrid environment that exists
+nowhere else: today's code against whichever dependencies were current when the image was last
+built.
+
+### The failure that matters is the other one
+
+A missing module is loud, and it is the harmless direction. The dangerous direction is silent:
+
+- A dependency is **removed** from `pyproject.toml`, but the stale image still has it installed. The
+  suite passes in the container and would fail on a fresh clone or in CI.
+- A dependency is **pinned to a new version** in `uv.lock`, but the image still holds the old one.
+  The suite passes against a version nobody will ever install again.
+
+In both cases the container reports success about an environment that does not exist. `ops-003`
+already names this as its failure case — "a target that succeeds while the underlying compose command
+fails, or a test target that reports success when either suite had failures" — and this is the same
+defect one layer down: a target reporting success about the wrong environment rather than about a
+failed command.
+
+### What changed
+
+Every quality target in the root `Makefile` now depends on `build-backend` or
+`build-frontend-test`. Make resolves a shared prerequisite once per invocation, so `make check`
+rebuilds once rather than five times, and a cached rebuild costs about a second.
+
+The backend pytest arguments were also aligned. The root target ran bare `pytest --tb=short` while
+`backend/Makefile` had just gained a 90% coverage gate, so `make check` meant two different things
+depending on which directory it was typed in. Both now use one `PYTEST_ARGS` value with a comment
+saying they must stay in step.
+
+### Two smaller things the stale image was also hiding
+
+The `StarletteDeprecationWarning` about `httpx` versus `httpx2` was an artefact of the same
+staleness — `httpx2` is a declared dev dependency and the rebuilt image has it. It only became
+visible because `--disable-warnings` had just been removed from `addopts`, which is a small argument
+for having removed it.
+
+Separately, the `ARTIFACTS` comment in the root `Makefile` still asserted that the OpenSky extract
+"is committed to the repo rather than generated". That has been false since the licence reversal in
+[§22](#22-what-did-reading-the-actual-licence-file-change). A comment is not executable, so nothing
+failed; it had simply been wrong for a week.
+
+### The general point, and it is not about Docker
+
+The real defect was that **nothing runs both command surfaces**. Two ways to run the same suite
+drifted apart in dependencies, in pytest arguments, and in a comment, and the drift was found by a
+human typing a command rather than by anything automatic. That is `ops-002` — CI — and it remains
+unbuilt. Until it exists, `make check` passing is evidence about one machine and one moment, not
+about the repository.
+
 
 
 
@@ -2054,3 +2125,4 @@ content checksum is independently checkable.
 | **Scenario seed** | An integer initialising a pseudo-random generator, drawn per run and published so a run can be reproduced. The opposite of the pseudonymisation seed in every respect except the name. |
 | **Pseudonymisation seed** | A secret HMAC key, fixed once per corpus and never published. Involves no randomness; "seed" is conventional here and misleading. |
 | **HMAC** | A keyed hash: the output depends on both the message and a secret key, so it cannot be recomputed by someone holding only the message. |
+| **Stale image** | A container image built before a dependency change. With source bind-mounted but `site-packages` baked in, it runs current code against outdated libraries — and reports confidently about an environment that exists nowhere else. |
