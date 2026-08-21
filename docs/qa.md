@@ -1857,6 +1857,110 @@ fixed width, so `DLH8AT ` and `DLH8AT  ` are the same flight; without normalisat
 different pseudonyms, and every track-continuity rule downstream would see two aircraft. This is a
 trap rather than a refinement: the failure is silent, and it would present as a detection result
 rather than as a bug.
+---
+
+## 28. What does a "seed" mean in this instance? Why does a rebuild give different pseudonyms, what is `PSEUDONYM_SEED` meant to be, and is `manifest.json` stale just because it lacks `pseudonym_seed_sha256`?
+
+**Because the project has two unrelated things called a seed, and they have opposite disclosure
+rules.** The scenario seed is published on purpose; the pseudonymisation seed must never be. Almost
+all of the confusion in [§27](#27-dal-004-said-to-record-the-pseudonymisation-seed-in-the-corpus-manifest-why-is-it-now-a-fingerprint)
+traces to the word being reused, and the original spec's instruction to commit the pseudonymisation
+seed was very likely the same slip made once already.
+
+### The two seeds
+
+| | Scenario seed (`scn-001`) | Pseudonymisation seed (`dal-004`) |
+|---|---|---|
+| What it is | An integer initialising a pseudo-random number generator | A secret string used as an **HMAC key** |
+| What it is for | Making randomness repeatable | Making a mapping irreversible |
+| Scope | Per run — a batch of 25 runs has 25 derived seeds | Per **corpus** — one value, fixed for the project |
+| Published? | **Yes.** A run is unreproducible without it, so `api-006` echoes it back and `scn-004` shows it in the UI | **No.** Publishing it reverses every pseudonym |
+| Stored | On the run record | `backend/.env`, gitignored |
+| In the manifest | n/a | Its SHA-256 **fingerprint**, never its value |
+
+The pseudonymisation seed involves no randomness at all. It is a fixed secret that goes *into* a hash
+function, in the same sense a password is a key. Calling it a seed is conventional but, in this
+project, actively misleading.
+
+### Why a rebuild under a different seed relabels everything
+
+Because the seed is a direct input to the derivation. Nothing is random, so nothing is "regenerated":
+
+```
+pseudonym = HMAC-SHA256(key = seed, message = "icao24:3c6444")   then keep 12 hex characters
+```
+
+Worked, with the real implementation, on one aircraft — `icao24` `3c6444`:
+
+| Input | Seed | Pseudonym |
+|---|---|---|
+| `3c6444` | `seed-one` | `AC-b743f8c6a190` |
+| `3c6444` | `seed-one` | `AC-b743f8c6a190` — again, identical, always |
+| `3c6444` | `seed-two` | `AC-2df5b3935837` — unrelated |
+| `3c6445` | `seed-one` | `AC-9a2a5cc06bb2` — a neighbouring address, unrelated output |
+
+Two properties follow, and the mechanism depends on both:
+
+- **Deterministic in the seed.** One aircraft keeps one label across all 25 runs of a batch, which is
+  what lets the detectors reason about track continuity across a replay.
+- **Unpredictable without the seed.** The last row is the point: `3c6444` and `3c6445` are adjacent
+  addresses in the German `3c` allocation block, and their pseudonyms share nothing. The allocation
+  block does not survive, which is what [§27](#27-dal-004-said-to-record-the-pseudonymisation-seed-in-the-corpus-manifest-why-is-it-now-a-fingerprint)
+  means by "carries no source information".
+
+So a reader who rebuilds the corpus with their own seed gets a valid corpus with different labels.
+Every metric still reproduces exactly, because nothing downstream reads a pseudonym's value — it is
+an opaque grouping key.
+
+### What `PSEUDONYM_SEED` should be set to
+
+**Treat it as a password, because that is what it is.** Long and unguessable: if it can be guessed,
+every pseudonym can be reversed, since checking a guess costs one pass over the 16.7 million `icao24`
+values.
+
+```bash
+python3 -c "import secrets; print(secrets.token_hex(32))"
+```
+
+Three rules attach to it:
+
+- **Never commit it.** `backend/.env` is gitignored; `.env.example` carries only a placeholder.
+- **Set it once and never change it.** Changing it relabels the whole corpus, so any figure already
+  produced stops matching the data behind it.
+- **Do not make it meaningful.** `em-fusion-2026` is guessable and therefore worthless as a key.
+
+### Why the manifest is stale, and what fixes it
+
+**Nothing in the file is wrong — it is missing one key.** `validate_manifest` now requires
+`pseudonym_seed_sha256`, and the committed manifest predates it:
+
+```
+INVALID: manifest is missing required field: pseudonym_seed_sha256
+```
+
+Only `validate_manifest` rejects it. `build_corpus` still runs, because `read_source_ref` reads only
+`source_url` and `original_sha256`, both present.
+
+`build_corpus` rewrites the manifest wholesale, so running it adds the fingerprint. The raw tarball is
+still under `data/opensky/raw/` and its checksum matches, so the roughly 180 MB download is **skipped**
+— `adp-005` re-verifies and moves straight to filtering.
+
+Two things to watch on that run:
+
+- **`download_date` is a parameter, not a timestamp.** Passing today's date would record 2026-08-21 as
+  the download date for a file fetched on 2026-08-13 — a false provenance claim in a committed
+  artefact, and provenance is the entire reason the manifest exists. Pass `download_date="2026-08-13"`.
+- **`content_sha256` must come out unchanged** at `7ce83881…be05`. The filter is deterministic over
+  the same raw file and bounding box, and stability was verified across two builds. If it changes,
+  something is wrong and the run should be stopped rather than committed — a changed content checksum
+  means the extract is not the one every recorded measurement was taken against.
+
+Worth recording as a limitation: the fingerprint proves *which* seed built a corpus only to somebody
+who already holds that seed. To a reader it is an opaque commitment — enough to tell two corpora
+apart, not enough to verify either. That is the intended trade, but it means the manifest's
+reproducibility guarantee is weaker for the pseudonym mapping than for the extract itself, where the
+content checksum is independently checkable.
+
 
 
 
@@ -1947,3 +2051,6 @@ rather than as a bug.
 | **Seed vs salt** | A salt need not be secret because the input space resists enumeration; a seed over a small input space is a *key*, and publishing it reverses the mapping. `icao24` is 24 bits, which is why the pseudonymisation seed is a key. |
 | **Seed fingerprint** | The SHA-256 of the pseudonymisation seed, recorded in the committed manifest in place of the seed. Identifies which seed built a corpus without disclosing it. |
 | **Namespace separation** | Mixing the field name into the hashed message so two identifier spaces stay independent — an `icao24` and a callsign sharing text cannot collide onto one pseudonym. |
+| **Scenario seed** | An integer initialising a pseudo-random generator, drawn per run and published so a run can be reproduced. The opposite of the pseudonymisation seed in every respect except the name. |
+| **Pseudonymisation seed** | A secret HMAC key, fixed once per corpus and never published. Involves no randomness; "seed" is conventional here and misleading. |
+| **HMAC** | A keyed hash: the output depends on both the message and a secret key, so it cannot be recomputed by someone holding only the message. |
