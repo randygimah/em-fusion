@@ -24,6 +24,7 @@ from app.dal.models import (
     Provenance,
     SourceType,
 )
+from app.dal.pseudonymise import Pseudonymiser
 from app.dal.repository import ObservationRepository, QuarantineRecord
 from app.dal.validation import IngestContext
 from tests.fakes import FailingObservationRepository, InMemoryObservationRepository
@@ -31,6 +32,8 @@ from tests.fakes import FailingObservationRepository, InMemoryObservationReposit
 WHEN = datetime(2022, 6, 27, 12, 0, 0, tzinfo=timezone.utc)
 
 CONTEXT = IngestContext(data_mode=DataMode.REPLAYED, scenario_run_id=7)
+
+PSEUDONYMISER = Pseudonymiser(seed="a-test-seed-not-the-real-one")
 
 
 def _track_record(**overrides: Any) -> dict[str, Any]:
@@ -41,7 +44,8 @@ def _track_record(**overrides: Any) -> dict[str, Any]:
         "timestamp": WHEN,
         "location": {"lat": 51.09, "lon": 7.54},
         "payload": {
-            "aircraft_id": "AC-0f3a91c7",
+            "icao24": "3c6444",
+            "callsign": "DLH8AT  ",
             "altitude_m": 5951.22,
             "velocity_ms": 194.26,
             "heading_deg": 135.64,
@@ -105,7 +109,7 @@ def test_a_mixed_batch_persists_the_valid_and_quarantines_the_invalid() -> None:
     # spec: dal-002
     repository = InMemoryObservationRepository()
 
-    result = ingest_batch(_mixed_batch(), CONTEXT, repository)
+    result = ingest_batch(_mixed_batch(), CONTEXT, repository, PSEUDONYMISER)
 
     assert len(repository.observations) == 7
     assert len(repository.quarantined) == 3
@@ -118,7 +122,7 @@ def test_an_invalid_record_does_not_abort_the_ingest_run() -> None:
     # spec: dal-002
     repository = InMemoryObservationRepository()
 
-    ingest_batch(_mixed_batch(), CONTEXT, repository)  # must not raise
+    ingest_batch(_mixed_batch(), CONTEXT, repository, PSEUDONYMISER)  # must not raise
 
     assert repository.observations
 
@@ -128,7 +132,7 @@ def test_nothing_is_silently_dropped() -> None:
     batch = _mixed_batch()
     repository = InMemoryObservationRepository()
 
-    result = ingest_batch(batch, CONTEXT, repository)
+    result = ingest_batch(batch, CONTEXT, repository, PSEUDONYMISER)
 
     assert result.accepted + result.quarantined == len(batch)
 
@@ -139,7 +143,7 @@ def test_a_quarantine_record_carries_the_failing_field_and_the_reason() -> None:
     # spec: dal-002
     repository = InMemoryObservationRepository()
 
-    ingest_batch([_broken_record()], CONTEXT, repository)
+    ingest_batch([_broken_record()], CONTEXT, repository, PSEUDONYMISER)
 
     (quarantined,) = repository.quarantined
     assert quarantined.field == "location"
@@ -150,7 +154,7 @@ def test_a_quarantine_record_carries_its_source_attribution() -> None:
     # spec: dal-002
     repository = InMemoryObservationRepository()
 
-    ingest_batch([_broken_record()], CONTEXT, repository)
+    ingest_batch([_broken_record()], CONTEXT, repository, PSEUDONYMISER)
 
     (quarantined,) = repository.quarantined
     assert quarantined.source_id == "opensky-replay"
@@ -166,7 +170,7 @@ def test_a_record_missing_its_source_id_is_still_attributable_to_the_run() -> No
     del record["source_id"]
     repository = InMemoryObservationRepository()
 
-    ingest_batch([record], CONTEXT, repository)
+    ingest_batch([record], CONTEXT, repository, PSEUDONYMISER)
 
     (quarantined,) = repository.quarantined
     assert quarantined.source_id is None
@@ -191,7 +195,7 @@ def test_observations_and_quarantine_records_are_written_together() -> None:
     # spec: dal-002
     repository = InMemoryObservationRepository()
 
-    ingest_batch(_mixed_batch(), CONTEXT, repository)
+    ingest_batch(_mixed_batch(), CONTEXT, repository, PSEUDONYMISER)
 
     assert repository.calls == 1
 
@@ -204,7 +208,7 @@ def test_a_failing_repository_leaves_nothing_persisted() -> None:
     # RuntimeError, so a bare `raises(RuntimeError)` would pass against an
     # unbuilt ingest and prove nothing about the write.
     with pytest.raises(RuntimeError, match="not having it"):
-        ingest_batch(_mixed_batch(), CONTEXT, repository)
+        ingest_batch(_mixed_batch(), CONTEXT, repository, PSEUDONYMISER)
 
     assert repository.calls == 1
     assert repository.observations == []
@@ -215,7 +219,7 @@ def test_an_empty_batch_writes_nothing_and_does_not_raise() -> None:
     # spec: dal-002
     repository = InMemoryObservationRepository()
 
-    result = ingest_batch([], CONTEXT, repository)
+    result = ingest_batch([], CONTEXT, repository, PSEUDONYMISER)
 
     assert result.accepted == 0
     assert result.quarantined == 0
@@ -244,7 +248,7 @@ def test_every_accepted_observation_carries_provenance() -> None:
     # spec: dal-003
     repository = InMemoryObservationRepository()
 
-    ingest_batch(_mixed_batch(), CONTEXT, repository)
+    ingest_batch(_mixed_batch(), CONTEXT, repository, PSEUDONYMISER)
 
     assert repository.observations
     for observation in repository.observations:
@@ -262,7 +266,7 @@ def test_two_different_adapters_get_provenance_from_the_same_entrypoint() -> Non
     # spec: dal-003
     repository = InMemoryObservationRepository()
 
-    ingest_batch([_track_record(), _rf_record()], CONTEXT, repository)
+    ingest_batch([_track_record(), _rf_record()], CONTEXT, repository, PSEUDONYMISER)
 
     track, rf = repository.observations
     assert track.provenance.source_type is SourceType.OPENSKY
@@ -286,7 +290,7 @@ def test_an_adapter_may_not_supply_its_own_provenance() -> None:
     )
     repository = InMemoryObservationRepository()
 
-    result = ingest_batch([record], CONTEXT, repository)
+    result = ingest_batch([record], CONTEXT, repository, PSEUDONYMISER)
 
     assert result.accepted == 0
     assert repository.observations == []
@@ -301,8 +305,8 @@ def test_data_mode_distinguishes_replayed_from_synthetic() -> None:
     synthetic = IngestContext(data_mode=DataMode.SYNTHETIC, scenario_run_id=11)
     repository = InMemoryObservationRepository()
 
-    ingest_batch([_rf_record()], CONTEXT, repository)
-    ingest_batch([_rf_record()], synthetic, repository)
+    ingest_batch([_rf_record()], CONTEXT, repository, PSEUDONYMISER)
+    ingest_batch([_rf_record()], synthetic, repository, PSEUDONYMISER)
 
     replayed_observation, synthetic_observation = repository.observations
     assert replayed_observation.data_mode is DataMode.REPLAYED

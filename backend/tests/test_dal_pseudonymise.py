@@ -11,12 +11,14 @@ environment and is deliberately absent from the repository -- see the
 amended spec item on why publishing it would reverse every pseudonym.
 """
 
+import json
 from datetime import datetime, timezone
 from typing import Any
 
 import pytest
 from pydantic import ValidationError
 
+from app.corpus.extract import BoundingBox, build_manifest
 from app.dal.ingest import ingest_batch
 from app.dal.models import DataMode, ObservationType, SourceType
 from app.dal.pseudonymise import Pseudonymiser
@@ -101,9 +103,9 @@ def test_a_blank_callsign_yields_no_flight_id_rather_than_a_pseudonym() -> None:
     hashing the empty string would give every one of them one shared
     identity."""
     # spec: dal-004
-    assert _observation_for(callsign="   ").flight_id is None
-    assert _observation_for(callsign="").flight_id is None
-    assert _observation_for(callsign=None).flight_id is None
+    assert _observation_for(callsign="   ").payload.flight_id is None
+    assert _observation_for(callsign="").payload.flight_id is None
+    assert _observation_for(callsign=None).payload.flight_id is None
 
 
 def test_a_track_record_without_an_icao24_is_quarantined() -> None:
@@ -321,3 +323,27 @@ def test_the_pseudonymiser_holds_no_reverse_mapping() -> None:
         PSEUDONYMISER.aircraft(f"{value:06x}")
 
     assert dict(vars(PSEUDONYMISER)) == before
+
+
+def test_the_built_manifest_carries_the_fingerprint_and_not_the_seed() -> None:
+    """The fourth failure case, at the artefact that actually gets committed.
+
+    A seed in `data/opensky/manifest.json` is a published seed, and the
+    24-bit icao24 space is exhaustively searchable in seconds.
+    """
+    # spec: dal-004
+    manifest = build_manifest(
+        source_url="https://example.invalid/x.csv.tar",
+        snapshot_hour="2022-06-27T12:00:00Z",
+        download_date="2026-08-21",
+        original_sha256="6e0d2278",
+        content_sha256="abc123",
+        box=BoundingBox(lat_min=49.0, lat_max=54.0, lon_min=3.0, lon_max=11.0),
+        null_sample=500,
+        null_retained=500,
+        pseudonym_seed_sha256=PSEUDONYMISER.fingerprint(),
+    )
+
+    assert manifest["pseudonym_seed_sha256"] == PSEUDONYMISER.fingerprint()
+    assert "a-test-seed-not-the-real-one" not in json.dumps(manifest)
+    assert "seed" not in {key for key in manifest if key != "pseudonym_seed_sha256"}

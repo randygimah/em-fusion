@@ -85,7 +85,11 @@ class Provenance(_Frozen):
 
 
 class TrackPayload(_Frozen):
-    """Aircraft state. `aircraft_id` is a pseudonym, opaque by contract.
+    """Aircraft state. `aircraft_id` and `flight_id` are pseudonyms, derived
+    by the DAL from `icao24` and `callsign` and opaque by contract; the source
+    values never reach this model (`dal-004`). `flight_id` is optional because
+    OpenSky reports many blank callsigns, and a blank one is missing data
+    rather than an identity.
 
     `position_staleness_s` is the measured delta between the state vector's
     time and its `lastposupdate` -- a directly reported field rather than an
@@ -93,6 +97,7 @@ class TrackPayload(_Frozen):
     """
 
     aircraft_id: str = Field(min_length=1)
+    flight_id: str | None = None
     altitude_m: float | None = None
     velocity_ms: float | None = None
     heading_deg: float | None = None

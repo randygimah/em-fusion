@@ -29,11 +29,15 @@ from app.corpus.fetch import (
     licence_notice,
     read_source_ref,
 )
+from app.dal.pseudonymise import Pseudonymiser
 
 COLUMNS = (
     "time,icao24,lat,lon,velocity,heading,vertrate,callsign,onground,alert,"
     "spi,squawk,baroaltitude,geoaltitude,lastposupdate,lastcontact"
 )
+
+# The manifest records this object's fingerprint, never its seed (dal-004).
+PSEUDONYMISER = Pseudonymiser(seed="a-test-seed")
 
 BOX = BoundingBox(lat_min=47.0, lat_max=55.0, lon_min=3.0, lon_max=15.0)
 
@@ -383,6 +387,7 @@ def test_one_run_produces_the_extract_manifest_and_coverage_report(
         accept_licence=True,
         opener=opener,
         download_date="2026-08-16",
+        pseudonymiser=PSEUDONYMISER,
     )
 
     assert _artefacts(data_dir) == {
@@ -408,6 +413,7 @@ def test_the_written_manifest_records_the_content_checksum_and_the_box(
         accept_licence=True,
         opener=opener,
         download_date="2026-08-16",
+        pseudonymiser=PSEUDONYMISER,
     )
     manifest = json.loads((data_dir / "manifest.json").read_text())
 
@@ -433,6 +439,7 @@ def test_the_coverage_report_is_written_for_the_filtered_rows_only(
         accept_licence=True,
         opener=opener,
         download_date="2026-08-16",
+        pseudonymiser=PSEUDONYMISER,
     )
     coverage = json.loads((data_dir / "coverage.json").read_text())
 
@@ -460,6 +467,7 @@ def test_a_checksum_mismatch_leaves_no_extract_manifest_or_coverage_report(
             accept_licence=True,
             opener=opener,
             download_date="2026-08-16",
+            pseudonymiser=PSEUDONYMISER,
         )
 
     assert _artefacts(data_dir) == {"manifest.json"}
@@ -480,6 +488,7 @@ def test_the_build_refuses_without_licence_acceptance(
             null_sample=0,
             opener=_refusing_opener,
             download_date="2026-08-16",
+            pseudonymiser=PSEUDONYMISER,
         )
 
     assert _artefacts(data_dir) == {"manifest.json"}

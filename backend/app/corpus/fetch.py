@@ -40,6 +40,7 @@ from app.corpus.extract import (
     read_rows,
     write_parquet,
 )
+from app.dal.pseudonymise import Pseudonymiser
 
 CHUNK_BYTES = 1024 * 1024
 
@@ -178,6 +179,7 @@ def build_corpus(
     accept_licence: bool = False,
     opener: Opener = _urlopen,
     download_date: str,
+    pseudonymiser: Pseudonymiser,
 ) -> dict[str, Any]:
     """Fresh clone to corpus in one call.
 
@@ -210,6 +212,7 @@ def build_corpus(
         box=box,
         null_sample=null_sample,
         null_retained=stats.null_retained,
+        pseudonym_seed_sha256=pseudonymiser.fingerprint(),
     )
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
 

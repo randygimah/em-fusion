@@ -106,6 +106,7 @@ REQUIRED_MANIFEST_FIELDS: tuple[str, ...] = (
     "bounding_box",
     "null_sample",
     "null_retained",
+    "pseudonym_seed_sha256",
 )
 
 
@@ -297,12 +298,19 @@ def build_manifest(
     box: BoundingBox,
     null_sample: int,
     null_retained: int,
+    pseudonym_seed_sha256: str,
 ) -> dict[str, Any]:
     """Assemble the committed record of where the extract came from.
 
     Licence and attribution are module constants rather than arguments: they
     are a property of the source, and a caller that has to supply them is a
     caller that can forget them.
+
+    `pseudonym_seed_sha256` is a fingerprint, never the seed (`dal-004`). This
+    file is committed, and `icao24` is a 24-bit space -- a seed recorded here
+    would let any reader reconstruct the whole mapping by exhaustive search.
+    The fingerprint keeps a seed change a detectable, recorded event beside
+    the extract checksum without disclosing the value.
     """
     return {
         "source_url": source_url,
@@ -315,6 +323,7 @@ def build_manifest(
         "bounding_box": asdict(box),
         "null_sample": null_sample,
         "null_retained": null_retained,
+        "pseudonym_seed_sha256": pseudonym_seed_sha256,
     }
 
 

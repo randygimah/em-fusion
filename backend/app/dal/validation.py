@@ -31,6 +31,7 @@ from app.dal.models import (
     SourceType,
     ValidationStatus,
 )
+from app.dal.pseudonymise import IdentifierError, Pseudonymiser, substitute
 
 #: Top-level fields an adapter must supply. Provenance is not among them:
 #: the DAL attaches it from the ingest context, which is the whole point of
@@ -92,7 +93,9 @@ def _first_error(error: ValidationError) -> tuple[str, str]:
 
 
 def validate_record(
-    record: Mapping[str, Any], context: IngestContext
+    record: Mapping[str, Any],
+    context: IngestContext,
+    pseudonymiser: Pseudonymiser,
 ) -> ValidationOutcome:
     """Turn one source record into a canonical observation, or say why not.
 
@@ -136,9 +139,16 @@ def validate_record(
         path, message = _first_error(error)
         return _reject("location", f"{path}: {message}" if path else message)
 
+    # Identifiers are substituted before the payload is validated, so no
+    # model in the DAL is ever constructed holding a real one (`dal-004`).
+    try:
+        payload_source = substitute(observation_type, record["payload"], pseudonymiser)
+    except IdentifierError as error:
+        return _reject(error.field, error.reason)
+
     payload_type = PAYLOAD_TYPES[observation_type]
     try:
-        payload = payload_type.model_validate(record["payload"])
+        payload = payload_type.model_validate(payload_source)
     except ValidationError as error:
         path, message = _first_error(error)
         return _reject(f"payload.{path}" if path else "payload", message)

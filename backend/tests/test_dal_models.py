@@ -25,11 +25,14 @@ from app.dal.models import (
     TrackPayload,
     ValidationStatus,
 )
+from app.dal.pseudonymise import Pseudonymiser
 from app.dal.validation import IngestContext, validate_record
 
 WHEN = datetime(2022, 6, 27, 12, 0, 0, tzinfo=timezone.utc)
 
 CONTEXT = IngestContext(data_mode=DataMode.REPLAYED, scenario_run_id=7)
+
+PSEUDONYMISER = Pseudonymiser(seed="a-test-seed-not-the-real-one")
 
 
 def _track_record(**overrides: Any) -> dict[str, Any]:
@@ -47,7 +50,8 @@ def _track_record(**overrides: Any) -> dict[str, Any]:
         "timestamp": WHEN,
         "location": {"lat": 51.09, "lon": 7.54},
         "payload": {
-            "aircraft_id": "AC-0f3a91c7",
+            "icao24": "3c6444",
+            "callsign": "DLH8AT  ",
             "altitude_m": 5951.22,
             "velocity_ms": 194.26,
             "heading_deg": 135.64,
@@ -89,7 +93,7 @@ def _rf_record(**overrides: Any) -> dict[str, Any]:
 
 def test_valid_track_record_produces_a_canonical_observation() -> None:
     # spec: dal-001
-    outcome = validate_record(_track_record(), CONTEXT)
+    outcome = validate_record(_track_record(), CONTEXT, PSEUDONYMISER)
 
     assert outcome.accepted
     observation = outcome.observation
@@ -107,7 +111,7 @@ def test_valid_track_record_produces_a_canonical_observation() -> None:
 
 def test_valid_rf_record_produces_a_canonical_observation() -> None:
     # spec: dal-001
-    outcome = validate_record(_rf_record(), CONTEXT)
+    outcome = validate_record(_rf_record(), CONTEXT, PSEUDONYMISER)
 
     assert outcome.accepted
     observation = outcome.observation
@@ -120,8 +124,8 @@ def test_valid_rf_record_produces_a_canonical_observation() -> None:
 def test_both_sources_normalise_into_the_same_model() -> None:
     """FR-101: one canonical model regardless of source."""
     # spec: dal-001
-    track = validate_record(_track_record(), CONTEXT).observation
-    rf = validate_record(_rf_record(), CONTEXT).observation
+    track = validate_record(_track_record(), CONTEXT, PSEUDONYMISER).observation
+    rf = validate_record(_rf_record(), CONTEXT, PSEUDONYMISER).observation
 
     assert type(track) is CanonicalObservation
     assert type(rf) is CanonicalObservation
@@ -131,10 +135,10 @@ def test_both_sources_normalise_into_the_same_model() -> None:
 def test_payload_is_a_typed_model_not_a_raw_mapping() -> None:
     """Specialisations live in the payload, typed via Pydantic (section 9)."""
     # spec: dal-001
-    track = validate_record(_track_record(), CONTEXT).observation
+    track = validate_record(_track_record(), CONTEXT, PSEUDONYMISER).observation
     assert track is not None
     assert not isinstance(track.payload, dict)
-    assert track.payload.aircraft_id == "AC-0f3a91c7"
+    assert track.payload.aircraft_id == PSEUDONYMISER.aircraft("3c6444")
     assert track.payload.position_staleness_s == pytest.approx(1.06)
 
 
@@ -146,7 +150,7 @@ def test_a_record_missing_its_timestamp_is_rejected() -> None:
     record = _track_record()
     del record["timestamp"]
 
-    outcome = validate_record(record, CONTEXT)
+    outcome = validate_record(record, CONTEXT, PSEUDONYMISER)
 
     assert not outcome.accepted
     assert outcome.rejection is not None
@@ -159,7 +163,7 @@ def test_a_record_missing_its_location_is_rejected() -> None:
     record = _rf_record()
     del record["location"]
 
-    outcome = validate_record(record, CONTEXT)
+    outcome = validate_record(record, CONTEXT, PSEUDONYMISER)
 
     assert not outcome.accepted
     assert outcome.rejection is not None
@@ -172,7 +176,7 @@ def test_a_rejected_record_produces_no_canonical_observation() -> None:
     record = _track_record()
     del record["timestamp"]
 
-    outcome = validate_record(record, CONTEXT)
+    outcome = validate_record(record, CONTEXT, PSEUDONYMISER)
 
     assert outcome.observation is None
 
@@ -181,7 +185,7 @@ def test_a_null_coordinate_is_rejected_rather_than_defaulted() -> None:
     """The real corpus carries these; adp-004 retains 500 of them on purpose."""
     # spec: dal-001
     outcome = validate_record(
-        _track_record(location={"lat": None, "lon": 7.54}), CONTEXT
+        _track_record(location={"lat": None, "lon": 7.54}), CONTEXT, PSEUDONYMISER
     )
 
     assert not outcome.accepted
@@ -193,7 +197,7 @@ def test_a_null_coordinate_is_rejected_rather_than_defaulted() -> None:
 def test_an_out_of_range_latitude_is_rejected() -> None:
     # spec: dal-001
     outcome = validate_record(
-        _track_record(location={"lat": 91.5, "lon": 7.54}), CONTEXT
+        _track_record(location={"lat": 91.5, "lon": 7.54}), CONTEXT, PSEUDONYMISER
     )
 
     assert not outcome.accepted
@@ -206,7 +210,7 @@ def test_a_payload_missing_a_required_field_is_rejected() -> None:
     payload = _rf_record()["payload"]
     del payload["channel_index"]
 
-    outcome = validate_record(_rf_record(payload=payload), CONTEXT)
+    outcome = validate_record(_rf_record(payload=payload), CONTEXT, PSEUDONYMISER)
 
     assert not outcome.accepted
     assert outcome.rejection is not None
@@ -216,7 +220,9 @@ def test_a_payload_missing_a_required_field_is_rejected() -> None:
 def test_a_payload_must_match_its_observation_type() -> None:
     """A track observation carrying an RF payload is not a track observation."""
     # spec: dal-001
-    outcome = validate_record(_track_record(payload=_rf_record()["payload"]), CONTEXT)
+    outcome = validate_record(
+        _track_record(payload=_rf_record()["payload"]), CONTEXT, PSEUDONYMISER
+    )
 
     assert not outcome.accepted
     assert outcome.observation is None
@@ -224,7 +230,9 @@ def test_a_payload_must_match_its_observation_type() -> None:
 
 def test_an_unknown_observation_type_is_rejected() -> None:
     # spec: dal-001
-    outcome = validate_record(_track_record(observation_type="telepathy"), CONTEXT)
+    outcome = validate_record(
+        _track_record(observation_type="telepathy"), CONTEXT, PSEUDONYMISER
+    )
 
     assert not outcome.accepted
     assert outcome.rejection is not None
@@ -241,7 +249,7 @@ def test_location_carries_coordinates_not_a_storage_engine_type() -> None:
     repository seam db-003 requires would already be broken.
     """
     # spec: dal-001
-    observation = validate_record(_track_record(), CONTEXT).observation
+    observation = validate_record(_track_record(), CONTEXT, PSEUDONYMISER).observation
     assert observation is not None
 
     assert isinstance(observation.location.lat, float)
@@ -276,7 +284,7 @@ def test_an_accepted_observation_is_immutable() -> None:
     """Validation runs before persistence, so a validated record must stay
     validated -- a mutable one could be edited past its own check."""
     # spec: dal-001
-    observation = validate_record(_track_record(), CONTEXT).observation
+    observation = validate_record(_track_record(), CONTEXT, PSEUDONYMISER).observation
     assert observation is not None
 
     with pytest.raises(Exception):
@@ -285,7 +293,9 @@ def test_an_accepted_observation_is_immutable() -> None:
 
 def test_an_unknown_source_type_is_rejected() -> None:
     # spec: dal-001
-    outcome = validate_record(_track_record(source_type="carrier-pigeon"), CONTEXT)
+    outcome = validate_record(
+        _track_record(source_type="carrier-pigeon"), CONTEXT, PSEUDONYMISER
+    )
 
     assert not outcome.accepted
     assert outcome.rejection is not None
@@ -296,7 +306,9 @@ def test_a_malformed_timestamp_is_rejected() -> None:
     """Present but unparseable is a different failure from absent, and the
     corpus can produce either."""
     # spec: dal-001
-    outcome = validate_record(_track_record(timestamp="half past four"), CONTEXT)
+    outcome = validate_record(
+        _track_record(timestamp="half past four"), CONTEXT, PSEUDONYMISER
+    )
 
     assert not outcome.accepted
     assert outcome.observation is None

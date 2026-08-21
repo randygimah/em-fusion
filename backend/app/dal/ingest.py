@@ -26,6 +26,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict
 
 from app.dal.models import CanonicalObservation
+from app.dal.pseudonymise import Pseudonymiser
 from app.dal.repository import ObservationRepository, QuarantineRecord
 from app.dal.validation import IngestContext, Rejection, validate_record
 
@@ -70,13 +71,14 @@ def ingest_batch(
     records: Iterable[Mapping[str, Any]],
     context: IngestContext,
     repository: ObservationRepository,
+    pseudonymiser: Pseudonymiser,
 ) -> IngestResult:
     """Validate a batch, persist both halves of it, and report the counts."""
     observations: list[CanonicalObservation] = []
     quarantined: list[QuarantineRecord] = []
 
     for record in records:
-        outcome = validate_record(record, context)
+        outcome = validate_record(record, context, pseudonymiser)
         if outcome.observation is not None:
             observations.append(outcome.observation)
         else:

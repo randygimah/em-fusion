@@ -24,6 +24,7 @@ from app.corpus.extract import (
     validate_manifest,
     write_parquet,
 )
+from app.dal.pseudonymise import Pseudonymiser
 
 COLUMNS = (
     "time,icao24,lat,lon,velocity,heading,vertrate,callsign,onground,alert,"
@@ -31,6 +32,9 @@ COLUMNS = (
 )
 
 # A box over the Benelux/German core, matching the shape of the candidate box.
+# A fingerprint, never a seed: the manifest is committed (dal-004).
+SEED_FINGERPRINT = Pseudonymiser(seed="a-test-seed").fingerprint()
+
 BOX = BoundingBox(lat_min=47.0, lat_max=55.0, lon_min=3.0, lon_max=15.0)
 
 
@@ -358,6 +362,7 @@ def test_manifest_records_provenance_and_licence_fields() -> None:
         box=BOX,
         null_sample=500,
         null_retained=500,
+        pseudonym_seed_sha256=SEED_FINGERPRINT,
     )
 
     for key in (
@@ -388,6 +393,7 @@ def test_manifest_records_both_licence_versions_and_which_governs() -> None:
         box=BOX,
         null_sample=500,
         null_retained=500,
+        pseudonym_seed_sha256=SEED_FINGERPRINT,
     )
 
     assert manifest["licence"]["governing"] == "published"
@@ -396,7 +402,9 @@ def test_manifest_records_both_licence_versions_and_which_governs() -> None:
     assert "retrieved" in manifest["licence"]
 
 
-@pytest.mark.parametrize("missing", ["original_sha256", "licence", "attribution"])
+@pytest.mark.parametrize(
+    "missing", ["original_sha256", "licence", "attribution", "pseudonym_seed_sha256"]
+)
 def test_a_manifest_missing_a_required_field_is_rejected(missing: str) -> None:
     # spec: adp-004 — the second failure case. Without these the artefact is
     # neither reproducible nor attributable.
@@ -409,6 +417,7 @@ def test_a_manifest_missing_a_required_field_is_rejected(missing: str) -> None:
         box=BOX,
         null_sample=500,
         null_retained=500,
+        pseudonym_seed_sha256=SEED_FINGERPRINT,
     )
     del manifest[missing]
 
