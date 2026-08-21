@@ -3,7 +3,7 @@
 Written at the end of a working session so the next one starts with context rather than
 archaeology. Overwritten each session — this is the current state, not a log. History lives in git.
 
-**Session date:** 2026-08-19
+**Session date:** 2026-08-21
 **Branch:** `main`
 
 ## Goal
@@ -14,116 +14,147 @@ deviations detected deterministically, evidence bundles turned into schema-valid
 grounding-checked AI hypotheses for analyst review. Decision support, not autonomous
 decision-making.
 
-This session finished the corpus tooling — the fetch entrypoint — and then fixed the bounding box and
-built the corpus for real.
+This session built the DAL — canonical model, validation, quarantine, provenance — deliberately
+ahead of the database, so that `dal-004` can land before `adp-001` replays a single real row.
 
 ## Current state
 
-The corpus exists, is reproducible from a fresh clone, and the region it covers is decided. Track 0's
-data-acquisition items are closed apart from the two clearance questions.
+The DAL accepts records, validates them, quarantines what fails, and stamps provenance on what
+passes. Nothing persists yet: the repository port has one implementation, an in-memory fake in
+`backend/tests/fakes.py`, and the PostGIS one arrives with `db-001`.
 
 | | |
 |---|---|
-| Bounding box | **Fixed: 49–54°N, 3–11°E**, ~309,000 km². Governs the corpus *and* the Phase 4 PMTiles cut |
-| Corpus (raw) | `data/opensky/raw/states_2022-06-27-12.csv.tar`, 179,763,200 bytes, SHA-256 `6e0d2278…91e2`. Gitignored |
-| Corpus (extract) | `data/opensky/opensky_extract.parquet`, 5,036,969 bytes, 133,634 rows × 16 cols. Gitignored. Content checksum `7ce83881…be05`, verified stable across two builds |
-| Committed artefacts | `data/opensky/manifest.json`, `data/opensky/coverage.json` |
-| Backend suite | 50 passed, 99% coverage on `app/` (`fetch.py` 100%), black / ruff / mypy clean |
-| `adp-004`, `adp-005` | **`passes: true`** — 3 of 79 spec items now pass |
-| `dal-004` | Drafted and agreed, no tests and no code yet |
+| Backend suite | **86 passed, 99% coverage on `app/`**; 100% on all four `app/dal` modules. The single miss is pre-existing at `app/corpus/extract.py:245` |
+| Tooling | black / ruff / mypy clean. `make check` still cannot run — see Failed attempts |
+| Spec items passing | **6 of 79**: `api-001`, `adp-004`, `adp-005`, `dal-001`, `dal-002`, `dal-003` |
+| `dal-004` | Specified and agreed, no tests and no code. The next item |
+| Corpus | Unchanged from last session. Box 49–54°N, 3–11°E; extract 133,634 rows, content checksum `7ce83881…be05`. Gitignored, manifest and coverage report committed |
 
-Corpus composition, so the next session need not re-derive it: 133,134 positioned rows across **948
-aircraft** with an in-box position, plus **500 retained null-position rows** across 500 distinct
-aircraft. The extract therefore holds 1,445 distinct `icao24` values — quoting that as "aircraft in the
-box" overstates traffic by half. 7 airframes carry a leading-zero all-digit `icao24`, which is what the
-explicit Parquet schema protects.
+**Build-order decision, and the reason it matters downstream.** The planned order put persistence
+(Phase 6) before the DAL (Phase 7). It was inverted: the DAL is built first, behind a repository
+port. `db-003` requires that seam whatever the order, so this adds a second implementation rather
+than a second layer, and the DAL logic itself is written once either way. Full reasoning in
+`docs/qa.md` §26 and `docs/thesis_notes.md`, "Building the DAL before the database, behind a
+repository port".
 
-Box selection evidence (full hour, 2,858,582 rows, 8 candidates swept):
+**What "`dal-002` and `dal-003` pass" does and does not assert.** It asserts DAL behaviour: the DAL
+refuses to construct a record with provenance missing, and splits a batch into observations and
+quarantine rows without dropping anything. It does *not* assert that the schema would also refuse a
+bad record — those are `db-001`'s `NOT NULL` constraints, to be proven there. The spec text for both
+items was amended to say so explicitly rather than leaving `passes: true` to imply more than it
+demonstrates.
 
-| box | km² | rows | a/c | event sites | interior dropouts |
-|---|---|---|---|---|---|
-| benelux-tight 50–53.5N, 3–9E | 161k | 87,372 | 675 | 132 | 3 |
-| **chosen 49–54N, 3–11E** | **309k** | **133,134** | **948** | **263** | **10** |
-| nw-europe 48–54N, 2–12E | 468k | 196,992 | 1,352 | 406 | 16 |
-| central-europe 47–55N, 3–15E | 749k | 255,145 | 1,580 | 556 | 29 |
+**Two design decisions the next session should not re-litigate**, both written up in
+`docs/thesis_notes.md` under System Design and Architecture:
 
-An "event site" is a ~20 km cell holding ≥ 5 distinct airborne aircraft in a 15-minute window; the
-harness needs 100–150 placements, so 263 gives 1.8× headroom without reusing locations.
+- **No field anywhere in the canonical model can hold `icao24` or `callsign`.**
+  `TrackPayload.aircraft_id` is opaque by contract and a test asserts the absence across all four
+  models. `dal-004` therefore changes how that value is *derived*, not the shape of any record.
+- **`QuarantineRecord` does not store the raw source row.** A quarantined OpenSky row still carries
+  a real `icao24`; keeping it for debuggability would put into the database the identifier `dal-004`
+  exists to keep out. Quarantine holds the failing field, the reason, and best-effort attribution.
+  Attribution is best-effort because a record can fail *because* it is missing the field that
+  identifies it; `scenario_run_id` comes from the ingest context and is therefore always known.
+
+One further behaviour worth knowing: a record arriving with its own `provenance` key is **rejected**,
+not silently overwritten. Attachment at the DAL is only a guarantee if the DAL is the sole source.
 
 ## Files in flight
 
-The tree is clean. Files the next piece of work will open:
+The tree is clean. Files `dal-004` will open:
 
-- `backend/app/corpus/fetch.py`, `extract.py` — complete for now. `dal-004` sits downstream of both.
-- `data/opensky/manifest.json` — regenerated by any `build_corpus` run. Do not hand-edit; change the
-  box in the call and let it rewrite.
+- `backend/app/dal/models.py` — `TrackPayload.aircraft_id` already exists and is already opaque.
+  `dal-004` should need no change here, and needing one is a signal something was got wrong.
+- `backend/app/dal/validation.py` — where the derivation hooks in, since it is the only place a
+  payload is constructed.
+- `data/opensky/manifest.json` — gains the pseudonymisation seed. Regenerated by `build_corpus`; do
+  not hand-edit.
 - `docs/spec.jsonl` — `dal-004` is the one open item with agreement but no tests.
 
-## Changed this session
+## Changed
 
-Four commits on top of `f58de34`:
+Seven commits on top of `31c1521`:
 
 | Commit | What |
 |---|---|
-| `6a2dba9` | `docs: record qa 24 — how adp-005 uses the manifest` |
-| `415a8a2` | `test: add tests for adp-005` |
-| `22e2477` | `feat(adp-005): fetch-and-verify entrypoint - tests pass` |
-| *(HEAD)* | `chore: fix the bounding box and build the corpus` |
+| `63ef556` | `docs: record qa 26 — DAL behind a repository port, and what it costs` |
+| `44912f6` | `spec: amend dal-002, dal-003` |
+| `7cf37ff` | `test: add tests for dal-001` |
+| `fae7bbe` | `feat(dal-001): canonical observation model and validation - tests pass` |
+| `4192386` | `docs: record two DAL design decisions in thesis_notes` |
+| `ea23219` | `test: add tests for dal-002, dal-003` |
+| `12ed303` | `feat(dal-002, dal-003): quarantine and provenance - tests pass` |
 
-Files added: `backend/app/corpus/fetch.py`, `backend/tests/test_corpus_fetch.py` (21 tests),
-`data/opensky/manifest.json`, `data/opensky/coverage.json`. Modified: `docs/spec.jsonl` (two items to
-`passes: true`), `docs/qa.md` (§24, §25, four glossary terms), `docs/thesis_notes.md` (bounding-box
-subsection), `docs/implementation.md` (three Track 0 items closed, PMTiles item pinned to the box).
+Files added: `backend/app/dal/{__init__,models,validation,repository,ingest}.py`,
+`backend/tests/{fakes,test_dal_models,test_dal_ingest}.py`. Modified: `docs/spec.jsonl` (two items
+amended, three set to `passes: true`), `docs/qa.md` (§26, three glossary terms),
+`docs/thesis_notes.md` (two subsections under System Design and Architecture).
 
-No new dependencies.
+No new dependencies — `pydantic` was already a runtime dependency.
 
 ## Failed attempts
 
-- **The bounding box could not be chosen the way the last handoff said to choose it.** The plan was to
-  read the gap distribution across candidates. That distribution is identical everywhere — p50, p90 and
-  p99 are all exactly the 10 s cadence for all eight candidates, and clean-cadence fraction is ≥ 0.999.
-  A metric returning the same value for every option cannot rank them. The decision had to be re-derived
-  from scenario requirements instead.
-- **The first gap measurement pointed confidently in the wrong direction.** It reported maxima up to
-  3,140 s in a 3,600 s file, which reads as coverage collapse. Two confounds produced it: aircraft
-  leaving the box and re-entering (box geometry, not coverage), and parked aircraft on the ground going
-  quiet. Restricting to gaps ≥ 0.5° inside the edge with the aircraft airborne on both sides takes
-  `central-europe` from a 2,970 s maximum to 29 above-cadence gaps in 170,673. A box could have been
-  rejected on the uncorrected number.
-- **A shortlisted box silently excluded Schiphol and Brussels.** It began at 5°E; the fields are at
-  4.76°E and 4.48°E. Nothing in its statistics looked wrong — it read as a slightly quieter region.
-  Moving the west edge to 3°E added 306 aircraft and 64 event sites for 33% more area, the best return
-  in the sweep. Aggregate statistics cannot report what they never saw.
-- **One `adp-005` test was written wrong, not the code.** The interrupted-download fixture subclassed
-  `io.RawIOBase` without overriding `readable()`, so `io.BufferedReader` refused it before the download
-  logic was reached. Replaced with a `BytesIO` subclass whose `read` raises.
-- **`uv run` fails from the repository root**, where it resolves a different project and cannot import
-  `pyarrow`. All backend commands must run from `backend/`.
+- **The previous handoff's "next step: `dal-004`" was not directly actionable, and taking it at face
+  value would have wasted a session.** `dal-004` pseudonymises identifiers on a canonical observation
+  that did not exist: `dal-001` was unbuilt, and `dal-002` and `dal-003` are the same code path. All
+  three are worded around persistence while `db-001` and `db-005` are also unbuilt. The real choice
+  was database-first versus port-first, and it had to be made before any code was written.
+- **Two tests were wrong before any code was.** Both were caught by stubbing the unbuilt module so
+  pytest collects and each test fails individually, rather than accepting the import-level collection
+  error as the red bar. Worth continuing to do — it has now caught one bad test per spec item.
+  - `test_the_canonical_model_has_no_field_for_a_source_aircraft_identifier` passed against an empty
+    stub, because `isdisjoint` is trivially true of a model with no fields. It now asserts the
+    payload is populated first.
+  - `test_a_failing_repository_leaves_nothing_persisted` used a bare `pytest.raises(RuntimeError)`,
+    and `NotImplementedError` subclasses `RuntimeError`, so it passed against an unbuilt ingest. It
+    now matches on the message and asserts the repository was actually called.
+- **Deviation: three `dal-001` tests were written after the implementation**, to close coverage on
+  three dead failure paths (unknown `source_type`, malformed timestamp, the model's own payload/type
+  guard). Coverage moving 92% → 100% on `validation.py` is what evidences they execute those lines
+  rather than passing vacuously, but they did not get a red step of their own.
+- **Deviation: three `dal-003` tests passed before the implementation existed** — the ones asserting
+  a context or provenance with a null `scenario_run_id` or absent `data_mode`. `dal-001`'s models
+  already discharge that failure case. They were kept as regression guards rather than contorted into
+  failing; recorded here because the workflow's rule is that a test passing early is a wrong test, and
+  this is a considered exception rather than an oversight.
+- **`make check` is still broken**, and it cost time again this session. `backend/Makefile` calls
+  bare `black` / `ruff` / `mypy` / `pytest`, which are not on `PATH` without the venv activated. Every
+  tooling command this session was run as `uv run <tool>` instead. This is the open item below, and
+  it is now two sessions old.
+- **The Bash working directory does not persist reliably between calls.** A `cd backend && cat > …`
+  heredoc silently wrote nothing when the `cd` failed because the shell was already there, and the
+  failure was invisible until the next test run. Use absolute paths for file writes.
 
 ## Next step
 
-1. **`dal-004`** — pseudonymisation at the DAL, tests first, built alongside `dal-001` and before
-   `adp-001` replays a single real row. Nothing downstream should ever see a real `icao24`.
-2. **`adp-001`** — replay the extract through the DAL.
-3. **Phase 5** — `/api/v1/operational-picture` against the frontend contract, then swap the mock.
+1. **`dal-004`** — pseudonymisation at the DAL. Tests first. The model already has nowhere to put a
+   source identifier, so this is a seeded derivation function plus a manifest entry recording the
+   seed, not a change to any record shape. It gates everything below it.
+2. **`adp-001`** — replay the extract through the DAL. Must not start before `dal-004` is green.
+3. **`db-005` then `db-001`** — engine and session, then schema and migrations, at which point the
+   PostGIS implementation of `ObservationRepository` lands and the `NOT NULL` half of `dal-002` and
+   `dal-003` gets asserted.
+4. **Phase 5** — `/api/v1/operational-picture` against the frontend contract, then swap the mock.
 
 Owed, with an owner but no date:
 
-- **Scenario type 4 must exclude the 10 tracks carrying a natural dropout** from injection sites. Seven
-  of those ten dropouts fall in the 100–300 s band the scenario itself injects, so without the exclusion
-  the type 4 false-positive rate is confounded. The coverage report identifies the tracks. This is
-  recorded as a threat to validity in `docs/thesis_notes.md`, and it is the reason the coverage
-  acceptance check is marked done-with-residue rather than clean.
+- **Scenario type 4 must exclude the 10 tracks carrying a natural dropout** from injection sites.
+  Seven of those ten fall in the 100–300 s band the scenario itself injects, so without the exclusion
+  the type 4 false-positive rate is confounded. The coverage report identifies the tracks. Recorded as
+  a threat to validity in `docs/thesis_notes.md`.
 - **Re-run the coverage acceptance check as originally specified** — `Normal baseline` through the
-  extract — once the scenario engine exists. This session measured the extract directly instead,
-  because the box decision could not wait for an engine that does not exist.
+  extract — once the scenario engine exists. Last session measured the extract directly instead.
+- **Record whether the repository port's signature survived the PostgreSQL implementation unchanged**,
+  and if not, which of geometry, identity, or atomicity was got wrong. The prediction on record is
+  that geometry and atomicity are the risks and identity is not.
 
 Open and unowned:
 
-- `backend/Makefile` calls bare `ruff` / `mypy` / `pytest`, so every target needs `.venv` activated.
-  `uv run` would fix it — and would also have made the root-directory failure above impossible.
+- `backend/Makefile` calls bare `ruff` / `mypy` / `pytest`. `uv run` would fix it. Two sessions old
+  and it has now cost time in both.
 - `--disable-warnings` in pytest `addopts` hides deprecations.
-- The mypy `tests.*` override is dead config: `make type-check` only runs `mypy app/`, and mypy now
+- The mypy `tests.*` override is dead config: `make type-check` only runs `mypy app/`, and mypy
   reports the section as unused on every run.
 - Track 0: the data-egress question (employer) and the licence-version divergence (shipped 2017
   `LICENSE.txt` vs the operative published terms) both remain open.
