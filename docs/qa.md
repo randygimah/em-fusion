@@ -2037,6 +2037,71 @@ about the repository.
 
 ---
 
+## 30. What does an "adapter" mean in this project? My understanding is that it is the middle man between a raw data source and the application — it fetches the data, preprocesses it if needed, and hands it on
+
+**Essentially yes, but this project makes an adapter considerably thinner than that description allows.** The middle-man framing is right; "fetches" and "preprocesses" both need narrowing, because in EM Fusion each of those has been deliberately moved somewhere else, and in two cases the move is enforced by an outright rejection rather than by convention.
+
+An adapter here does exactly one thing: **translate a source's own dialect into the DAL's source-record shape.** Four jobs it does not do:
+
+| Job | Who does it instead | How it is enforced |
+|---|---|---|
+| Fetching from the network | `adp-005` (`app/corpus/fetch.py`), the only module in the corpus tooling permitted to open a socket | `adp-001` reads from file only; a fallback to the OpenSky API when the extract is missing is its second failure case |
+| Attaching provenance | The DAL, per `dal-003` | `validate_record` **rejects** a record arriving with a `provenance` key: "provenance is attached by the DAL, not supplied by an adapter" |
+| Pseudonymising identifiers | The DAL, per `dal-004` | Validation rejects a payload arriving with `aircraft_id` or `flight_id` already populated |
+| Persisting anything | `ingest_batch`, through the repository port | The adapter never imports `app.dal.repository` and cannot know a database exists |
+
+What remains as legitimate "preprocessing" is dialect translation and nothing more: mapping Parquet column names onto source-record keys, handling units, and computing derived measured fields such as `position_staleness_s` from `time - lastposupdate`. It is *not* cleaning, enriching, or de-identifying.
+
+One consequence is easy to get backwards. **An adapter must not drop rows it judges bad.** `adp-004` deliberately retained a bounded sample of null-position rows so that `dal-002`'s quarantine path has real input rather than fixture-only input; an adapter that filtered those out would silently remove the only real-data evidence for AC-02. A malformed row is passed through unchanged and the DAL quarantines it.
+
+The shape an adapter emits, taken from the fixture in `tests/test_dal_pseudonymise.py`:
+
+```python
+{
+    "source_id": "opensky-replay",
+    "source_type": SourceType.OPENSKY,
+    "observation_type": ObservationType.TRACK,
+    "timestamp": datetime(...),
+    "location": {"lat": 51.09, "lon": 7.54},
+    "payload": {"icao24": "3c6444", "callsign": "DLH8AT  ", ...},
+}
+```
+
+Note what is absent: no `data_mode` and no `scenario_run_id`. Those describe the run rather than the record, and reach the DAL through `IngestContext`.
+
+The reason for the thinness is RQ1. Every obligation that holds across *all* sources is discharged once, at the DAL, so that `adp-003` — the third adapter, whose files-touched and lines-changed figures are the extensibility evidence — costs almost nothing to add. If adapters carried provenance and pseudonymisation themselves, that measurement would be recording an author's diligence rather than a property of the architecture, and the RQ1 claim would be unfalsifiable. See `docs/thesis_notes.md` for the decision itself; this entry only explains what it means.
+
+## 31. `adp-001` requires an adapter that carries its provenance for OpenSky telemetry, which means an `icao24` or callsign is present — isn't that exactly what `dal-004` pseudonymisation is built to avoid?
+
+**No, and the apparent conflict rests on two separate conflations.** Both are worth naming, because the second one is the same mistake that produced a real defect earlier in the build.
+
+**First: provenance is not identity.** In this project provenance is exactly four fields, defined once on `Provenance` in `app/dal/models.py`:
+
+| Field | What it records |
+|---|---|
+| `source_id` | Which instance of a source — `"opensky-replay"` |
+| `source_type` | Which kind of source — `opensky`, `synthetic_rf` |
+| `data_mode` | Replayed or synthetic |
+| `scenario_run_id` | Which run this record was ingested under |
+
+Provenance answers *where did this record come from, under which run*. It never answers *which aircraft is this*. An `icao24` is aircraft identity and lives in the payload, not in provenance. The RF adapter is the clean demonstration: RF observations carry full provenance and no identifiers whatsoever — `IDENTIFIER_RULES[ObservationType.RF]` is an empty tuple. So "the record carries provenance" implies nothing at all about whether an identifier is present.
+
+**Second: the adapter does not carry provenance in the first place.** `dal-003` attaches it at the DAL, from the ingest context. A record that arrives with its own `provenance` key is rejected, not merged.
+
+With those separated, the actual relationship is the opposite of a conflict. **The adapter must pass the raw `icao24` and callsign through, and that is the precondition for `dal-004` rather than a violation of it.** `dal-004` requires the substitution to happen at the DAL "so a new adapter cannot forget it" — and for the DAL to perform the substitution, the raw value has to reach it. An adapter that handed over a ready-made opaque `aircraft_id` would *be* the pseudonymiser, which is precisely the failure `dal-004` exists to prevent. This is not hypothetical: `dal-001`'s original fixtures did exactly that, and the defect survived until `dal-004` exposed it. The fixture now carries the corrective comment, "A source record as the adapter emits it: real identifiers, still."
+
+Where a real `icao24` may and may not appear:
+
+| Location | Real identifier present? | Why |
+|---|---|---|
+| `opensky_extract.parquet` on disk | Yes | Local use, which the licence permits — the restriction is on publication and disclosure |
+| The adapter's source-record mapping, in memory | Yes | For the duration of one `validate_record` call, so the DAL has something to substitute |
+| Canonical observation, database, API response, evidence bundle, hosted-provider payload, rendered screen | **No** | No field anywhere in the canonical model can hold one; a test asserts this across all four models |
+
+The obligation under OpenSky DLA §3(i) is to de-identify for publication or other disclosure, and under §3(iii) not to make the data available outside the licensee's institute. Neither is a prohibition on local processing. The pseudonymisation boundary is therefore drawn at the edge of the canonical model, not at the edge of the process.
+
+**A trap this creates for `adp-001`.** A quarantined OpenSky row still holds a real `icao24`, since it never reached the pseudonymiser. That is why `QuarantineRecord` stores the failing field, the reason, and best-effort attribution rather than the raw source row. Any logging, exception message, or diagnostic added on the quarantine path that echoes the row would reintroduce the real identifier into a place the model was carefully shaped to exclude — and it would do so on the error path, which is the least-inspected code in the system. Worth recording as a limitation of the boundary: the guarantee is structural for the success path and merely conventional for the failure path.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -2126,3 +2191,6 @@ about the repository.
 | **Pseudonymisation seed** | A secret HMAC key, fixed once per corpus and never published. Involves no randomness; "seed" is conventional here and misleading. |
 | **HMAC** | A keyed hash: the output depends on both the message and a secret key, so it cannot be recomputed by someone holding only the message. |
 | **Stale image** | A container image built before a dependency change. With source bind-mounted but `site-packages` baked in, it runs current code against outdated libraries — and reports confidently about an environment that exists nowhere else. |
+| **Source record** | The mapping an adapter emits: source and observation type, timestamp, location, and a source-shaped payload still carrying real identifiers. Not a canonical observation — it has no provenance, no validation status, and no pseudonyms, all of which the DAL adds. |
+| **Dialect translation** | The whole of an adapter's job: renaming a source's columns onto source-record keys, handling units, computing directly measured derived fields. Explicitly not cleaning, enriching, or de-identifying, all of which belong to the DAL. |
+| **Provenance vs identity** | Provenance says where a record came from and under which run (`source_id`, `source_type`, `data_mode`, `scenario_run_id`); identity says which aircraft it is. Separate fields, separate obligations — RF observations carry the first and have none of the second. |
