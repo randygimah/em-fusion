@@ -796,6 +796,71 @@ one — the extraction pass runs on the standard library's `csv` module and writ
 alone, which keeps the dependency footprint to the one library that is actually needed for the format
 decision above.)*
 
+### The replay adapter holds no clock: a windowed reader, with simulated time owned by the scenario runner
+
+`adp-001` as first written took "a replay position in simulated time", which put a replay cursor
+inside the OpenSky adapter — the adapter would know where in the hour the run had reached, and would
+advance. That was reversed before any code was written, and the adapter is now a pure windowed
+reader: given a half-open window over source time it yields the records falling inside it and keeps
+no position between calls.
+
+The decisive argument is a measurement one rather than an aesthetic one. Detection latency in this
+project is defined as elapsed *simulated scenario time* from event onset to anomaly emission, never
+wall clock, and that definition was fixed deliberately early because it is the metric most easily
+rendered meaningless by an implementation detail. A clock inside the adapter would make two
+components — the adapter and the scenario runner (`scn-001`) — each hold a notion of "now", and any
+drift or disagreement between them lands directly in the latency figure with nothing to reveal it.
+Latency would then be measured against a clock that is partly an artefact of how the replay was
+paced. One clock, owned by the component that also owns event onset, removes the failure mode
+outright rather than mitigating it.
+
+Two lesser consequences reinforce the choice. A stateless reader is testable offline against a
+handful of fixture rows with no scenario machinery in scope, whereas a cursor-holding adapter drags
+the scenario generator into the test setup for every replay assertion. And the same windowed
+signature is what the `track-window` endpoint needs for playback buffering, so the API layer consumes
+the adapter's shape rather than working around it.
+
+The alternative — a cursor in the adapter — is not unreasonable in general, and it is the more
+conventional shape for a replay component; it was rejected here specifically because this system
+*measures* the passage of simulated time and reports the number as a result. Where replay timing is
+merely a presentation concern, the trade would run the other way.
+
+### Canonical altitude takes the barometric reading, and the corpus rather than preference decided it
+
+`TrackPayload` carries a single `altitude_m` field, while the OpenSky state vector reports two
+altitudes: `baroaltitude`, derived from static pressure, and `geoaltitude`, derived from GNSS. The
+canonical model has no field recording *which* reference a stored value came from, so the choice is
+lossy and had to be made deliberately rather than by whichever column was read first.
+
+The corpus settled it. Measured over the 133,134 positioned rows of the current extract (bounding box
+49–54°N, 3–11°E), `baroaltitude` is null on 30,276 rows and `geoaltitude` on 34,777 — and the null
+sets **nest**: every row lacking a barometric altitude also lacks a geometric one, so there are zero
+rows that geoaltitude could rescue. A geo-preferred rule and a baro-preferred rule therefore produce
+identical coverage, and the coverage argument that would normally decide such a question is simply
+absent. The specified fallback from baro to geo is retained for robustness against a re-filtered
+corpus over a different box, but on this corpus it provably never fires.
+
+With coverage neutral, two arguments decide it, and the second is specific to this project.
+Barometric altitude is a single consistent reference across the fleet, which matters because the
+detectors compare aircraft against each other and against rolling baselines; mixing two references
+would introduce systematic offsets of tens of metres that vary by aircraft and by conditions, and
+those offsets would be indistinguishable from the deviations the system exists to detect. More
+pointedly, `geoaltitude` is GNSS-derived, and GNSS degradation is precisely the phenomenon the
+scenario generator injects. Preferring it would mean the canonical altitude field is derived from the
+signal whose disruption is under study — a coupling that is harmless in this build, since the
+replayed telemetry carries no injected effects and the injection happens on the synthetic RF side,
+but which would become a genuine confound the moment anyone extended the generator to perturb
+replayed positions. Choosing barometric costs nothing now and forecloses that.
+
+The consequence is stated rather than hidden: **30,276 positioned rows, 22.7 per cent of the corpus,
+carry a null `altitude_m`.** The canonical model permits it, and `adp-001` forbids the two tempting
+repairs — defaulting to zero, which would place a cruising aircraft at sea level, and carrying the
+previous sample forward, which would manufacture continuity the source never reported. A rule that
+depends on altitude must therefore handle absence explicitly, and that is a real constraint on the
+detection layer rather than an incidental data-quality note. *(Record here whether any detection rule
+written in Phase 6 turned out to need altitude on more than 77 per cent of samples, and what was done
+about it if so.)*
+
 ## Implementation
 
 <!-- Notable technical decisions per phase (link to implementation.md phases), challenges and
