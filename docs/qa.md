@@ -2102,6 +2102,125 @@ The obligation under OpenSky DLA §3(i) is to de-identify for publication or oth
 
 **A trap this creates for `adp-001`.** A quarantined OpenSky row still holds a real `icao24`, since it never reached the pseudonymiser. That is why `QuarantineRecord` stores the failing field, the reason, and best-effort attribution rather than the raw source row. Any logging, exception message, or diagnostic added on the quarantine path that echoes the row would reintroduce the real identifier into a place the model was carefully shaped to exclude — and it would do so on the error path, which is the least-inspected code in the system. Worth recording as a limitation of the boundary: the guarantee is structural for the success path and merely conventional for the failure path.
 
+## 32. Just to understand what we are building for `adp-001` — this is essentially a read-only file that reads the parquet files through the built DAL and converts to the canonical model following the quarantine rules? And a `read_parquet` therefore needs to be added in `backend/app/corpus/extract.py`?
+
+**Essentially yes on the pipeline, no on both specifics.** The read-only description is exactly right and the sequence of steps is right, but three of the four actions in the question belong to the DAL rather than to the adapter, and the reader belongs in the adapter module rather than in the corpus tool.
+
+### The adapter converts nothing and quarantines nothing
+
+Attributing the conversion and the quarantine rules to `adp-001` is the misunderstanding worth correcting, because it is the same boundary that §30 and §31 turn on, approached from a third direction. Ownership of each step:
+
+| Step | Who does it | Where |
+|---|---|---|
+| Read Parquet rows | Adapter | `app/adapters/opensky.py` |
+| Map columns onto source-record keys, compute `position_staleness_s`, select `baroaltitude` | Adapter | same |
+| Validate required fields, decide quarantine, attach provenance, derive pseudonyms, construct `CanonicalObservation` | **DAL** | `validate_record`, `ingest_batch` |
+| Persist observations and quarantine rows as one unit of work | Repository port | `app/dal/repository.py` |
+
+The adapter never judges a row. It emits every row it reads — including the 500 null-position rows `adp-004` deliberately retained — and the DAL splits the batch. "Following the quarantine rules" is therefore not something the adapter does; it is something the adapter must not **pre-empt**, which is why `adp-001`'s third failure case makes filtering null-position rows inside the adapter a spec failure. Such an adapter would pass its own tests, look tidy, and silently remove the only real-data input `dal-002` has, reducing AC-02 to a fixture claim.
+
+Stated positively: **`adp-001` reads Parquet rows and emits source records, and that is the whole of it.** The DAL is downstream of the adapter, not inside it.
+
+### The reader does not belong in `extract.py`
+
+Three reasons, in ascending order of weight.
+
+**Lifecycle.** `extract.py` opens by declaring what it is: "This module is the tool; `opensky_extract.parquet` is the artefact it writes. Run by hand when the corpus is built — not on the request path." It is build-time tooling, run once per corpus. The adapter runs at replay time, on every scenario run. Merging them puts two lifecycles in one module.
+
+**Dependency direction.** An adapter importing the corpus tool would pull `tarfile`, `gzip`, `csv`, `hashlib` and manifest construction into the replay path's dependency graph — the consumer of an artefact depending on the tool that downloads and filters it. The arrow points the wrong way.
+
+**The reader needs nothing from it, by design.** Parquet carries its schema inside the file, which is what the comment on `parquet_schema` means by "the schema carried inside the artefact, so no reader can infer it". Verified against the real extract: `ParquetFile.schema_arrow` returns the writer's fields in the writer's order, so a reader recovers the exact types without being told them. A reader that imported `parquet_schema()` would be restating what the artefact already carries, and would drift from it the moment the two disagreed — precisely the failure the in-file schema exists to prevent. The correct reader asks the file.
+
+So the reader lives in `backend/app/adapters/opensky.py` and imports nothing from `app.corpus`.
+
+### Reading mechanism
+
+`pq.ParquetFile(path).iter_batches(batch_size=...)` streams record batches rather than materialising the table, which is what `adp-001`'s lazy-yield constraint requires over a 133,634-row extract. Two practical notes established by inspection rather than assumption:
+
+- `iter_batches` accepts `batch_size`, `row_groups`, `columns`, `use_threads` and `use_pandas_metadata` in pyarrow 25.0.1 — **no `filters` argument**. The time-window predicate is therefore applied per batch in Python, not pushed into the reader.
+- The extract is written as a **single row group**, so row-group pruning would not help even if it were available. Predicate pushdown is not on the table for this artefact, and the streaming read is what keeps memory bounded.
+
+### A trailing detail worth not being surprised by
+
+Callsigns in the extract carry trailing spaces — `'KLM30Q  '`, `'CXI27NM '` — because the source pads them to a fixed width. The adapter passes them through unchanged, as it passes everything through unchanged; normalising whitespace is `dal-004`'s business, since it is the component that decides whether a callsign is blank and therefore yields no `flight_id`. An adapter that helpfully stripped them would be making an identity decision, which is the boundary §31 draws.
+
+## 33. A couple of questions before we implement: what does a half-open window mean, what is position staleness, and what do the `-1` and `-2` and `offset_s` mean in the test fixture's `lastposupdate` and `lastcontact`?
+
+**Three answers, and the third one surfaced a gap in the canonical model that is recorded at the foot of this entry.**
+
+### Half-open window
+
+`[start, end)` means **start included, end excluded** — square bracket inclusive, parenthesis exclusive, in the ordinary mathematical notation for intervals. `adp-001` specifies it rather than leaving it to the implementer because it is the only convention under which contiguous windows tile the timeline exactly once, and the two alternatives each corrupt a measurement the project reports.
+
+With frames at 0, 10, 20 and 30 seconds, and a runner stepping two adjacent windows:
+
+| Convention | `[0,20]` then `[20,40]` | Consequence |
+|---|---|---|
+| Closed, `[a,b]` | Frame 20 appears in **both** | The frame is ingested twice. A continuity rule then sees two samples at the same instant — a zero-second inter-sample gap that never occurred |
+| Open, `(a,b)` | Frame 20 appears in **neither** | A ten-second dropout is manufactured, indistinguishable from the coverage gap scenario type 4 injects |
+| **Half-open, `[a,b)`** | Frame 20 appears in the second only | Each frame seen exactly once |
+
+Both failure modes land in the false-positive rate for the aircraft-coverage-gap scenario, which is a reported result, so the convention is a correctness requirement rather than a stylistic one.
+
+### Position staleness
+
+**How old the position carried inside a row is, at the moment that row was written**, computed as `time - lastposupdate`.
+
+The mechanism is worth being precise about, because the field is easy to misread as "time since we last saw the aircraft". OpenSky emits a state vector for every tracked aircraft on a fixed ten-second cadence whether or not anything new has arrived. When no fresh position message has been received, the row is still emitted and repeats the **last known** position. `lastposupdate` records when that position was actually refreshed, so the delta is the age of the coordinate rather than the age of the row.
+
+This is why `em_fusion_v2.md` §5 calls it a directly measured field rather than an inferred one, and makes it the basis of the "aircraft update frequency drops" rule: under interference an aircraft does not disappear from the feed, it continues to appear with a position that has stopped advancing.
+
+Measured over the 133,134 positioned rows of the current extract:
+
+| Statistic | Position staleness |
+|---|---|
+| p50 | 0.33 s |
+| p90 | 38.92 s |
+| p99 | 269.63 s |
+| max | 1561.12 s |
+| mean | 17.07 s |
+| negative values | 0 |
+
+The absence of negative values is a sanity check worth keeping: a negative staleness would mean a position refreshed after the row reporting it was written, which would indicate the two columns had been transposed.
+
+**Do not conflate position staleness with the inter-sample gap.** They measure different things on different axes, and `coverage.json` reports the second, not the first:
+
+| Measure | Axis | Question it answers |
+|---|---|---|
+| Position staleness | Within a single row | How old is this coordinate? |
+| Inter-sample gap | Between consecutive rows for one `icao24` | How long since we heard from this aircraft at all? |
+
+### The `-1`, the `-2`, and `offset_s`
+
+`EPOCH_START` is `1656331200`, which is `2022-06-27T12:00:00Z` — the snapshot hour the manifest records. `offset_s` is seconds into that hour, so `_row(10)` is the frame at `12:00:10`.
+
+```
+time          = EPOCH_START + offset_s     the frame's own timestamp
+lastposupdate = time - 2                   position last refreshed 2 s earlier
+lastcontact   = time - 1                   last heard from 1 s earlier
+```
+
+The default row therefore carries `position_staleness_s == 2.0`, and the ordering `lastposupdate <= lastcontact <= time` mirrors the real relationship: an aircraft is heard from more often than it yields a fresh position, because not every transmitted message carries one.
+
+The two offsets are **deliberately different values**. Were both `-1`, an implementation that read `lastcontact` where it meant `lastposupdate` would compute the correct answer and every test would pass — the fixture would be concealing exactly the bug it exists to catch. Distinct values make column confusion detectable. The same reasoning drives `test_position_staleness_is_the_measured_delta_from_lastposupdate` overriding `lastposupdate` to `EPOCH_START + 4` against a frame at offset 10 and expecting `6.0`: a different number from the fixture default, so the test cannot pass against a hardcoded constant.
+
+`-2` is also empirically plausible rather than arbitrary — p50 staleness in the real corpus is 0.33 s, and the first row sampled from the extract showed 1.06 s.
+
+### What this surfaced: `lastcontact` has nowhere to go
+
+`TrackPayload` carries no field derived from `lastcontact`, so the adapter reads the column and drops it. The original `adp-001` text listed it among the output fields; the 2026-08-23 amendment listed the payload as exactly the canonical fields, which silently removed it.
+
+That is not a harmless omission, because `lastcontact - lastposupdate` distinguishes two scenario types from one another:
+
+| Signature | Interpretation | Scenario type |
+|---|---|---|
+| Contact stale **and** position stale | The aircraft is no longer being heard at all | 4, aircraft data-source coverage gap |
+| Contact **fresh**, position stale | The aircraft is still transmitting but its position has stopped advancing | 2, GNSS degradation / possible interference |
+
+The real data carries this signal in quantity: **4,553 positioned rows, 3.4 per cent, hold a position more than 10 seconds older than their last contact**, with a maximum of 1552 s. The distributions confirm the mechanism rather than merely suggesting it — contact staleness caps at 299.97 s, which is OpenSky dropping a state vector after roughly five minutes of silence, whereas position staleness runs to 1561 s precisely because the row continues to be emitted while the coordinate inside it is frozen.
+
+Adding `contact_staleness_s` to `TrackPayload` is a change to `dal-001`, which is a passing item, so it is raised here rather than made in passing. The decision and its rationale belong in `docs/thesis_notes.md` once taken; what this entry records is what the field means and why its absence matters. See also §30 on why the adapter may not compensate by inventing a payload field of its own.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -2194,3 +2313,9 @@ The obligation under OpenSky DLA §3(i) is to de-identify for publication or oth
 | **Source record** | The mapping an adapter emits: source and observation type, timestamp, location, and a source-shaped payload still carrying real identifiers. Not a canonical observation — it has no provenance, no validation status, and no pseudonyms, all of which the DAL adds. |
 | **Dialect translation** | The whole of an adapter's job: renaming a source's columns onto source-record keys, handling units, computing directly measured derived fields. Explicitly not cleaning, enriching, or de-identifying, all of which belong to the DAL. |
 | **Provenance vs identity** | Provenance says where a record came from and under which run (`source_id`, `source_type`, `data_mode`, `scenario_run_id`); identity says which aircraft it is. Separate fields, separate obligations — RF observations carry the first and have none of the second. |
+| **In-file schema** | The column names and types Parquet stores inside the artefact. It makes a reader independent of the writer's code: the file is asked, not a shared constant, so the two cannot drift apart. |
+| **Predicate pushdown** | Filtering rows inside the storage reader rather than after loading them. Unavailable for this extract — `iter_batches` takes no `filters` and the file is one row group — so the replay window is applied per batch in Python. |
+| **Half-open interval** | `[start, end)` — start included, end excluded. The only convention under which adjacent replay windows tile the timeline exactly once; closed intervals double-count the boundary frame and open ones manufacture a dropout at it. |
+| **Position staleness** | `time - lastposupdate`: the age of the coordinate inside a state vector row. Not the age of the row, which is emitted on a fixed cadence regardless, and not the interval since the aircraft was last heard from. |
+| **Contact staleness** | `time - lastcontact`: the interval since any message was received from the aircraft. Capped near 300 s by OpenSky's own drop timeout, whereas position staleness is uncapped — which is what makes the difference between them a usable discriminator. |
+| **Inter-sample gap** | The interval between consecutive rows for one `icao24`. What `coverage.json` measures, and a different axis from staleness: between rows rather than within one. |
