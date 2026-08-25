@@ -4,7 +4,7 @@ Written at the end of a working session so the next one starts with context rath
 archaeology. Overwritten each session — this is the current state, not a log. History lives in git.
 
 **Session date:** 2026-08-26
-**Branch:** `main`, **9 commits ahead of `origin/main` and not pushed**
+**Branch:** `main`, **in sync with `origin/main`**. Working tree clean.
 
 ## Goal
 
@@ -70,8 +70,7 @@ All written up in `docs/thesis_notes.md` with their rejected alternatives.
 
 ## Files in flight
 
-Tree is clean apart from `docs/qa.md`, which carries this session's §30–§33 and is **uncommitted**
-(the user has been committing that file directly). Nine commits are unpushed.
+Nothing in flight. The tree is clean and everything is pushed.
 
 - `backend/app/adapters/opensky.py` — complete. `db-001` will not change it; only its caller changes.
 - `docs/spec.jsonl` — `adp-007` was drafted in conversation and **deliberately not written**. It is
@@ -83,7 +82,7 @@ Tree is clean apart from `docs/qa.md`, which carries this session's §30–§33 
 
 ## Changed
 
-Nine commits on top of `2fd2b2e`.
+Eleven commits on top of `2fd2b2e`.
 
 | Commit | What |
 |---|---|
@@ -95,7 +94,9 @@ Nine commits on top of `2fd2b2e`.
 | `ec5a1bf` | `feat(adp-001, dal-001): OpenSky replay adapter - tests pass` |
 | `44ea74e` | `docs: record the contact_staleness_s decision and adp-001 measurements` |
 | `1193387` | `docs: rewrite handoff, add the corpus slice to thesis_notes` |
-| *(this one)* | `docs: defer adp-007 until after db-001` |
+| `8fc29d6` | `docs: defer adp-007 until after db-001` |
+| `6da4343` | `feat: more qa` (committed by the user) |
+| *(this one)* | `docs: handoff — everything pushed` |
 
 Added: `backend/app/adapters/{__init__,opensky}.py`, `backend/tests/test_adp_opensky.py` (28 tests).
 Modified: `app/dal/models.py` (`contact_staleness_s`), three DAL test fixtures, `docs/spec.jsonl`
@@ -141,12 +142,10 @@ Methodology). No new dependencies.
 
 ## Next step
 
-1. **Push.** Nine commits are unpushed and `docs/qa.md` is uncommitted. Local and remote `main` are
-   supposed to be in sync after every merge.
-2. **`db-005` then `db-001`** — engine and session, then schema and migrations, at which point the
+1. **`db-005` then `db-001`** — engine and session, then schema and migrations, at which point the
    PostGIS implementation of `ObservationRepository` lands and the `NOT NULL` halves of `dal-002` and
    `dal-003` finally get asserted.
-3. **`adp-007`, deferred to here on purpose** — a `python -m app.replay` entrypoint and a `make replay`
+2. **`adp-007`, deferred to here on purpose** — a `python -m app.replay` entrypoint and a `make replay`
    target, so the full-corpus replay is reproducible by command rather than by an ad-hoc script.
    **Decided 2026-08-26 to defer it until `db-001` is done**, rather than build it now. The reason is
    that today there is nothing to replay *into*: the only `ObservationRepository` implementation is the
@@ -160,7 +159,7 @@ Methodology). No new dependencies.
    principle `adp-005` and `adp-006` established — a multi-line `python -c` inside a Makefile is not a
    command, and that shortcut is what carried the `download_date` trap, so this needs a real module
    behind it rather than an inline invocation.
-4. **Phase 5** — `/api/v1/operational-picture` against the frontend contract, then swap the mock.
+3. **Phase 5** — `/api/v1/operational-picture` against the frontend contract, then swap the mock.
 
 Owed, with an owner but no date:
 
