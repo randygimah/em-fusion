@@ -13,6 +13,7 @@ asserts the adapter itself has no such dependency.
 
 from __future__ import annotations
 
+import ast
 import socket
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
@@ -215,6 +216,45 @@ def test_a_row_without_lastposupdate_does_not_default_staleness_to_zero(
     assert payload["position_staleness_s"] is None
 
 
+def test_contact_staleness_is_the_measured_delta_from_lastcontact(
+    tmp_path: Path,
+) -> None:
+    """The second half of the discriminator (`dal-001`): the interval since
+    any message was received, as against the age of the coordinate."""
+    # spec: adp-001
+    path = _write(tmp_path, [_row(10, lastcontact=str(EPOCH_START + 7))])
+
+    payload = next(read_window(path, _window(0, 20)))["payload"]
+    assert payload["contact_staleness_s"] == pytest.approx(3.0)
+
+
+def test_the_two_stalenesses_are_read_from_their_own_columns(
+    tmp_path: Path,
+) -> None:
+    """The ninth failure case. Transposing the two source columns produces
+    plausible numbers, raises nothing, and makes scenario types 2 and 4 look
+    alike; the fixture gives them distinct values so it fails here instead.
+
+    The values describe the real signature: contact fresh, position stale --
+    an aircraft still transmitting whose position has stopped advancing.
+    """
+    # spec: adp-001
+    path = _write(
+        tmp_path,
+        [
+            _row(
+                100,
+                lastposupdate=str(EPOCH_START + 38),
+                lastcontact=str(EPOCH_START + 99),
+            )
+        ],
+    )
+
+    payload = next(read_window(path, _window(0, 200)))["payload"]
+    assert payload["position_staleness_s"] == pytest.approx(62.0)
+    assert payload["contact_staleness_s"] == pytest.approx(1.0)
+
+
 def test_altitude_takes_the_barometric_reading(tmp_path: Path) -> None:
     """One consistent reference across the fleet, and not the GNSS-derived
     field whose disruption the project injects."""
@@ -299,11 +339,24 @@ def test_a_missing_extract_raises_and_names_the_build_command(
 
 def test_the_adapter_does_not_import_the_corpus_tool() -> None:
     """The consumer of the artefact must not depend on the build-time tool
-    that downloads and filters it."""
-    # spec: adp-001
-    source = Path(opensky.__file__).read_text()
+    that downloads and filters it.
 
-    assert "app.corpus" not in source
+    Read from the parsed imports rather than the file text: a substring search
+    matches prose in a docstring, and misses `from app import corpus`.
+    """
+    # spec: adp-001
+    tree = ast.parse(Path(opensky.__file__).read_text())
+
+    imported: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported.add(node.module)
+            imported.update(f"{node.module}.{a.name}" for a in node.names)
+
+    assert not [name for name in imported if name.startswith("app.corpus")]
+    assert "app.corpus" not in imported
 
 
 # --- The manifest supplies the span, and nothing else ----------------------

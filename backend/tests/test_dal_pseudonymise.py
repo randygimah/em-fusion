@@ -45,6 +45,7 @@ def _track_record(**overrides: Any) -> dict[str, Any]:
         "vertical_rate_ms": 13.32,
         "on_ground": False,
         "position_staleness_s": 1.06,
+        "contact_staleness_s": 0.02,
     }
     payload.update(overrides.pop("payload", {}))
     record: dict[str, Any] = {

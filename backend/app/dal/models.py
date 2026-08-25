@@ -91,9 +91,22 @@ class TrackPayload(_Frozen):
     OpenSky reports many blank callsigns, and a blank one is missing data
     rather than an identity.
 
-    `position_staleness_s` is the measured delta between the state vector's
-    time and its `lastposupdate` -- a directly reported field rather than an
-    inferred one, and the basis of the update-frequency rule.
+    The two staleness fields are different measurements, and keeping them
+    apart is what lets the detectors tell two scenario types apart.
+    `position_staleness_s` is `time - lastposupdate`, the age of the
+    coordinate carried inside the row; `contact_staleness_s` is
+    `time - lastcontact`, the interval since any message was received. Both
+    are directly reported deltas rather than inferred values.
+
+    Both stale means the aircraft is no longer heard from -- a coverage gap.
+    Fresh contact with a stale position means it is still transmitting while
+    its position has stopped advancing, which is the GNSS-degradation
+    signature. 4,553 rows of the current extract (3.4%) carry the second
+    shape, so this is a real discriminator rather than a theoretical one.
+
+    Both are required. `lastcontact` is present on every one of the extract's
+    133,634 rows, `lastposupdate` on all but the 500 with no position -- rows
+    that quarantine on the position anyway.
     """
 
     aircraft_id: str = Field(min_length=1)
@@ -104,6 +117,7 @@ class TrackPayload(_Frozen):
     vertical_rate_ms: float | None = None
     on_ground: bool
     position_staleness_s: float
+    contact_staleness_s: float
 
 
 class RfPayload(_Frozen):

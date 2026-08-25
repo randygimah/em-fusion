@@ -58,6 +58,7 @@ def _track_record(**overrides: Any) -> dict[str, Any]:
             "vertical_rate_ms": 13.32,
             "on_ground": False,
             "position_staleness_s": 1.06,
+            "contact_staleness_s": 0.02,
         },
     }
     record.update(overrides)
@@ -140,6 +141,46 @@ def test_payload_is_a_typed_model_not_a_raw_mapping() -> None:
     assert not isinstance(track.payload, dict)
     assert track.payload.aircraft_id == PSEUDONYMISER.aircraft("3c6444")
     assert track.payload.position_staleness_s == pytest.approx(1.06)
+
+
+def test_contact_staleness_is_distinct_from_position_staleness() -> None:
+    """Two different measurements, and the difference is a discriminator.
+
+    Both stale means the aircraft is no longer heard from -- scenario type 4's
+    coverage gap. Fresh contact with a stale position means it is still
+    transmitting while its position has stopped advancing -- scenario type 2's
+    GNSS signature. A model carrying only one of them cannot tell them apart.
+    """
+    # spec: dal-001
+    track = validate_record(
+        _track_record(
+            payload={
+                **_track_record()["payload"],
+                "position_staleness_s": 61.75,
+                "contact_staleness_s": 0.02,
+            }
+        ),
+        CONTEXT,
+        PSEUDONYMISER,
+    ).observation
+
+    assert track is not None
+    assert track.payload.position_staleness_s == pytest.approx(61.75)
+    assert track.payload.contact_staleness_s == pytest.approx(0.02)
+
+
+def test_a_track_record_without_contact_staleness_is_rejected() -> None:
+    """Required, not optional: lastcontact is present on every one of the
+    extract's 133,634 rows, so absence means a malformed record rather than
+    missing data."""
+    # spec: dal-001
+    payload = dict(_track_record()["payload"])
+    payload.pop("contact_staleness_s", None)
+
+    outcome = validate_record(_track_record(payload=payload), CONTEXT, PSEUDONYMISER)
+
+    assert outcome.observation is None
+    assert outcome.rejection is not None
 
 
 # --- Required-field validation (FR-102) ------------------------------------
