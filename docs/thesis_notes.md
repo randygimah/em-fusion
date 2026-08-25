@@ -861,6 +861,80 @@ detection layer rather than an incidental data-quality note. *(Record here wheth
 written in Phase 6 turned out to need altitude on more than 77 per cent of samples, and what was done
 about it if so.)*
 
+### Reopening the canonical model for `contact_staleness_s`, and why a passing spec item was reverted to do it
+
+`dal-001` was a passing item when this was found, and reopening it was the more expensive of the two
+available options. The cheaper one — leave `TrackPayload` alone, ship the adapter as specified, and
+add the field later if a detection rule turned out to need it — was rejected, and the reasoning is
+worth recording because it generalises beyond this field.
+
+The OpenSky state vector reports two independent recency fields. `lastposupdate` gives the moment the
+aircraft's *position* was last refreshed, so `time - lastposupdate` is the age of the coordinate
+carried inside a row. `lastcontact` gives the moment *any* message was last received, so
+`time - lastcontact` is the interval since the aircraft was heard from at all. The canonical model
+carried only the first, and the adapter as first written read `lastcontact` from the file and
+discarded it, because `TrackPayload` had nowhere to put it.
+
+That omission is not a data-completeness nicety. The difference between the two fields is what
+separates two of the five scenario types from one another:
+
+| Signature | Interpretation | Scenario type |
+|---|---|---|
+| Contact stale **and** position stale | The aircraft is no longer being heard from | 4, aircraft data-source coverage gap |
+| Contact **fresh**, position stale | Still transmitting, but its position has stopped advancing | 2, GNSS degradation / possible interference |
+
+A model that cannot represent the distinction hands the detection layer data in which those two
+scenarios look alike. The consequence would not have surfaced as a bug; it would have surfaced as a
+mediocre confusion matrix between types 2 and 4 in the evaluation campaign, at a point where the
+cause would be hard to attribute and expensive to fix. **That is the general argument: a confound
+built into the canonical model is indistinguishable, in the results, from a detector that simply
+performs poorly.** Discovering it while the model was still cheap to change was luck, and the luck
+came from writing test fixtures with deliberately distinct values for the two source columns and
+having to explain what the values meant.
+
+The corpus confirms the mechanism rather than merely permitting it. Over the 133,134 positioned rows,
+**4,553 (3.4 per cent) carry a position more than ten seconds older than their last contact**, to a
+maximum of 1,552 seconds. The distributions are more persuasive than the count: contact staleness
+caps at 299.97 s, which is OpenSky dropping a state vector after roughly five minutes of silence,
+whereas position staleness runs on to 1,561 s — precisely because the row keeps being emitted while
+the coordinate inside it is frozen. The two fields are measuring different things, and the ceiling on
+one of them is what proves it.
+
+The field is **required rather than optional**, decided against the data in the same way the altitude
+question was: `lastcontact` is present on every one of the extract's 133,634 rows, including all 500
+with no position, so requiring it creates no quarantine that a null position does not already cause.
+`position_staleness_s` is the weaker of the two by this measure, absent on exactly those 500 rows.
+
+Process note, since it is a deviation worth owning. `dal-001` was set back to `passes: false` while
+the amended shape was unproven, taking the passing count from eight to seven, and returned to `true`
+only after the new tests went red and then green. Amending a passing item's description while leaving
+it marked passing would have made the flag assert something the tests did not demonstrate — which is
+the same failure the `dal-002` and `dal-003` amendments were written to avoid.
+
+### The replay adapter measured against the full corpus
+
+The adapter was exercised against the real 133,634-row extract rather than fixtures alone, and every
+figure predicted from the raw Parquet was reproduced through the complete DAL path:
+
+| Measure | Result |
+|---|---|
+| Accepted as canonical observations | 133,134 |
+| Quarantined | 500, all for a null position |
+| Repository writes | 1 — the batch commits as one unit of work |
+| Wall time, full simulated hour | 2.44 s |
+| Observations with no altitude | 30,276 (22.7 per cent) |
+| Fresh-contact / stale-position rows | 4,553 |
+
+The last row is the one worth keeping. That figure was derived from the raw columns *before* the
+field existed, and arrived at the far end of the pipeline unchanged — so it evidences that
+`contact_staleness_s` is computed from the column it claims and not silently transposed with its
+neighbour. A leak check over the first 2,000 observations found no `icao24` key and none of three
+known transponder addresses, which is `dal-004` holding on real data rather than on fixtures.
+
+*(Wall time was taken on the development machine against an in-memory repository, so it measures the
+read and the DAL, not persistence. Re-record it once the PostGIS repository lands, since that is the
+figure that will actually bound a scenario run.)*
+
 ## Implementation
 
 <!-- Notable technical decisions per phase (link to implementation.md phases), challenges and
