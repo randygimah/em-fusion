@@ -4,7 +4,7 @@ Written at the end of a working session so the next one starts with context rath
 archaeology. Overwritten each session — this is the current state, not a log. History lives in git.
 
 **Session date:** 2026-08-26
-**Branch:** `main`, **7 commits ahead of `origin/main` and not pushed**
+**Branch:** `main`, **9 commits ahead of `origin/main` and not pushed**
 
 ## Goal
 
@@ -70,16 +70,20 @@ All written up in `docs/thesis_notes.md` with their rejected alternatives.
 
 ## Files in flight
 
-Tree is clean apart from `docs/qa.md` and `docs/thesis_notes.md`, both of which carry this session's
-writing and are **uncommitted**. Seven commits are unpushed.
+Tree is clean apart from `docs/qa.md`, which carries this session's §30–§33 and is **uncommitted**
+(the user has been committing that file directly). Nine commits are unpushed.
 
 - `backend/app/adapters/opensky.py` — complete. `db-001` will not change it; only its caller changes.
-- `docs/spec.jsonl` — `adp-007` is drafted in conversation but **not yet written to the file**, pending
-  agreement. See Next step.
+- `docs/spec.jsonl` — `adp-007` was drafted in conversation and **deliberately not written**. It is
+  deferred until after `db-001`; see Next step for why.
+- **No committed way to re-run the full-corpus replay.** The figures above came from an ad-hoc script
+  in a session-scoped scratch directory, which is gone. Until `adp-007` lands, reproducing them means
+  writing that script again: replay `available_window(manifest)` through `replay_window` into an
+  in-memory repository and count. That gap is the whole argument for `adp-007` existing.
 
 ## Changed
 
-Seven commits on top of `2fd2b2e`.
+Nine commits on top of `2fd2b2e`.
 
 | Commit | What |
 |---|---|
@@ -90,11 +94,14 @@ Seven commits on top of `2fd2b2e`.
 | `8e7e2c7` | `test: add tests for adp-001` |
 | `ec5a1bf` | `feat(adp-001, dal-001): OpenSky replay adapter - tests pass` |
 | `44ea74e` | `docs: record the contact_staleness_s decision and adp-001 measurements` |
+| `1193387` | `docs: rewrite handoff, add the corpus slice to thesis_notes` |
+| *(this one)* | `docs: defer adp-007 until after db-001` |
 
 Added: `backend/app/adapters/{__init__,opensky}.py`, `backend/tests/test_adp_opensky.py` (28 tests).
 Modified: `app/dal/models.py` (`contact_staleness_s`), three DAL test fixtures, `docs/spec.jsonl`
 (`adp-001` amended twice and set passing, `dal-001` amended and cycled), `docs/qa.md` (§30–§33, nine
-glossary terms), `docs/thesis_notes.md` (four subsections). No new dependencies.
+glossary terms), `docs/thesis_notes.md` (five subsections, including the corpus slice under
+Methodology). No new dependencies.
 
 ## Failed attempts
 
@@ -134,15 +141,25 @@ glossary terms), `docs/thesis_notes.md` (four subsections). No new dependencies.
 
 ## Next step
 
-1. **Push.** Seven commits are unpushed and `docs/qa.md` and `docs/thesis_notes.md` are uncommitted.
-   Local and remote `main` are supposed to be in sync after every merge.
-2. **Decide `adp-007`** — a `make replay` target and the module behind it, so the full-corpus replay
-   above is reproducible by command rather than by an ad-hoc script. Drafted but not written to
-   `spec.jsonl`; needs agreement on scope first. The blocker to note: there is no repository to replay
-   *into* until `db-001`, so today it can only be a dry-run that reports counts without persisting.
-3. **`db-005` then `db-001`** — engine and session, then schema and migrations, at which point the
+1. **Push.** Nine commits are unpushed and `docs/qa.md` is uncommitted. Local and remote `main` are
+   supposed to be in sync after every merge.
+2. **`db-005` then `db-001`** — engine and session, then schema and migrations, at which point the
    PostGIS implementation of `ObservationRepository` lands and the `NOT NULL` halves of `dal-002` and
    `dal-003` finally get asserted.
+3. **`adp-007`, deferred to here on purpose** — a `python -m app.replay` entrypoint and a `make replay`
+   target, so the full-corpus replay is reproducible by command rather than by an ad-hoc script.
+   **Decided 2026-08-26 to defer it until `db-001` is done**, rather than build it now. The reason is
+   that today there is nothing to replay *into*: the only `ObservationRepository` implementation is the
+   in-memory fake in `tests/`, so a command written now could only be a dry run that counts without
+   persisting, and would then need a second pass to grow a `--persist` path once the real repository
+   exists. Building it once, against a repository that can actually store the observations, costs one
+   spec item instead of two and avoids a target whose behaviour changes underneath anyone who learned
+   it. Groundwork that is already in place: `./data:/data` is mounted into the `backend` and `pipeline`
+   services in `compose.yaml`, so the container can reach the extract, and `ops-003`'s target list will
+   need amending because it enumerates its targets and `replay` is not among them. Note also the
+   principle `adp-005` and `adp-006` established — a multi-line `python -c` inside a Makefile is not a
+   command, and that shortcut is what carried the `download_date` trap, so this needs a real module
+   behind it rather than an inline invocation.
 4. **Phase 5** — `/api/v1/operational-picture` against the frontend contract, then swap the mock.
 
 Owed, with an owner but no date:
