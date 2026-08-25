@@ -360,6 +360,141 @@ airframes in the extract overstates in-box traffic by roughly half. This is harm
 path — such rows can only reach quarantine, never a canonical observation — but any descriptive
 statistic quoted about the corpus needs to say which of the two counts it means.
 
+### What the replay corpus actually contains
+
+The extract is not committed and cannot be, so this section records its shape and a worked slice of
+its contents — enough that a reader can follow every later claim about detection without access to
+the file itself.
+
+**Licence position for this section.** `thesis_notes.md` is committed and is dissertation material,
+which makes it publication in the sense the OpenSky Data License Agreement §3(i) intends. The slice
+below therefore has `icao24` and `callsign` replaced by pseudonyms, exactly as the canonical model
+does. The pseudonyms shown were generated with a deliberately *illustrative* seed rather than the
+corpus seed, so they do not correspond to the labels under which any measurement in this document was
+taken and cannot be cross-referenced against them. The remaining fields are position and telemetry
+values carrying no aircraft identity, shown for five rows as illustration rather than redistribution.
+Required attribution: The OpenSky Network, http://www.opensky-network.org (Schäfer et al., 2014).
+
+#### Columns
+
+One row is one aircraft's state at one ten-second frame. Sixteen columns survive the extraction:
+
+| Column | Type | What it holds |
+|---|---|---|
+| `time` | int64 | Frame timestamp, UNIX seconds. The cadence axis: 360 distinct values across the hour |
+| `icao24` | string | Transponder address. **Kept as a string** — inferred as an integer, `004321` becomes `4321`, and airframes collide silently |
+| `lat`, `lon` | float64 | Position in degrees. Null on 500 retained rows, which is what gives the quarantine path real input |
+| `velocity` | float64 | Ground speed, m/s. Null on 23,585 rows |
+| `heading` | float64 | Track angle, degrees |
+| `vertrate` | float64 | Vertical rate, m/s. Negative is descending |
+| `callsign` | string | Flight identifier, space-padded to a fixed width. Blank on 3,754 positioned rows |
+| `onground` | bool | Surface or airborne. Never null |
+| `alert`, `spi` | bool | Transponder flags. Not carried into the canonical payload |
+| `squawk` | string | Mode A code, string for the same leading-zero reason as `icao24`. Sometimes empty |
+| `baroaltitude` | float64 | Barometric altitude, m. The canonical `altitude_m` |
+| `geoaltitude` | float64 | GNSS-derived altitude, m. Null wherever `baroaltitude` is |
+| `lastposupdate` | float64 | When the *position* was last refreshed. Null on exactly the 500 null-position rows |
+| `lastcontact` | float64 | When *any* message was last received. Never null, on any of the 133,634 rows |
+
+The last two are the ones to read carefully, because the difference between them is a detection
+signal rather than bookkeeping — see the `contact_staleness_s` subsection under System Design and
+Architecture.
+
+#### A worked slice
+
+Five rows chosen to span the shapes the adapter and the DAL must handle. `→` gives the two derived
+staleness values in seconds.
+
+**Row 0 — nominal, airborne.** The common case: everything reported, position 1.06 s old.
+
+```
+time 1656331200   icao24 AC-48089ab4e5a9   callsign FL-0c53755a34bc
+lat 51.0905  lon 7.5473  onground False  squawk '2556'
+velocity 194.26  heading 135.64  vertrate 13.33
+baroaltitude 5753.1  geoaltitude 5951.22
+lastposupdate 1656331198.94   lastcontact 1656331200.0
+→ position_staleness_s 1.06    contact_staleness_s 0.00
+```
+
+**Row 8969 — fresh contact, stale position.** The GNSS-degradation signature in real data, and the
+single clearest argument for carrying both staleness fields. The aircraft is airborne at 10,607 m and
+was heard from **1.35 seconds ago**, so it is emphatically not a coverage gap — yet the position
+being reported is **209 seconds old**. A model carrying only position staleness would render this
+indistinguishable from an aircraft that had dropped out entirely.
+
+```
+time 1656331460   icao24 AC-c62771cc89ff   callsign FL-285500f7594b
+lat 49.6308  lon 6.2136  onground False  squawk '1000'
+velocity 23.01  heading 259.70  vertrate -0.33
+baroaltitude 10607.04  geoaltitude None
+lastposupdate 1656331250.527   lastcontact 1656331458.649
+→ position_staleness_s 209.47   contact_staleness_s 1.35
+```
+
+**Row 2122 — airborne, no altitude at all.** Both altitude columns null, and a blank callsign. Two of
+the model's optionality decisions exercised by one row: `altitude_m` is `None` rather than zero, and
+`flight_id` is absent rather than a pseudonym of the empty string.
+
+```
+time 1656331260   icao24 AC-ddba5357390a   callsign (blank)
+lat 53.5227  lon 6.8907  onground False  squawk ''
+velocity 78.42  heading 308.07  vertrate -0.33
+baroaltitude None  geoaltitude None
+lastposupdate 1656331257.584   lastcontact 1656331257.584
+→ position_staleness_s 2.42    contact_staleness_s 2.42
+```
+
+**Row 122 — on the ground.** Note the negative barometric altitude: −15.24 m is a real reading, since
+barometric altitude is pressure-derived and uncorrected, not a height above terrain. A validation
+rule rejecting negative altitudes would quarantine legitimate surface traffic.
+
+```
+time 1656331210   icao24 AC-4d2ca0fb6595   callsign FL-3785a36267b2
+lat 52.3192  lon 4.7433  onground True  squawk '1000'
+velocity 50.99  heading 182.89  vertrate 0.0
+baroaltitude -15.24  geoaltitude None
+lastposupdate 1656331197.797   lastcontact 1656331209.673
+→ position_staleness_s 12.20   contact_staleness_s 0.33
+```
+
+**Row 12 — no position, so it quarantines.** One of the 500 rows retained deliberately by `adp-004`.
+The aircraft is being heard from perfectly well — contact staleness 0.00 s — and even reports an
+altitude, but has no coordinate, so it cannot be placed and `lastposupdate` is itself null. The
+adapter emits it unchanged and the DAL rejects it on `location`; nothing is invented to make it fit.
+
+```
+time 1656331210   icao24 AC-5fd6265ff4c5   callsign (blank)
+lat None  lon None  onground False  squawk '3612'
+velocity None  heading None  vertrate None
+baroaltitude 388.62  geoaltitude None
+lastposupdate None   lastcontact 1656331210.0
+→ position_staleness_s None    contact_staleness_s 0.00
+```
+
+#### What row 0 becomes
+
+The same row after the adapter's translation and the DAL's validation, provenance and
+pseudonymisation, which is the transformation the whole Data Abstraction Layer exists to perform:
+
+```
+CanonicalObservation(
+    source_id='opensky-replay', source_type=OPENSKY, observation_type=TRACK,
+    timestamp=2022-06-27T12:00:00+00:00,
+    location=Location(lat=51.0905, lon=7.5473),
+    data_mode=REPLAYED, validation_status=VALID,
+    provenance=Provenance(source_id='opensky-replay', source_type=OPENSKY,
+                          data_mode=REPLAYED, scenario_run_id=1),
+    payload=TrackPayload(aircraft_id='AC-…', flight_id='FL-…',
+                         altitude_m=5753.1, velocity_ms=194.26, heading_deg=135.64,
+                         vertical_rate_ms=13.33, on_ground=False,
+                         position_staleness_s=1.06, contact_staleness_s=0.00),
+)
+```
+
+Four things happened that no adapter did: provenance was attached, the run was recorded, the two
+identifiers were replaced, and the record was marked validated. Three source columns — `alert`, `spi`
+and `squawk` — were dropped as carrying nothing the detection rules read.
+
 ## System Design and Architecture
 
 <!-- Actual architecture as built vs as planned (docs/em_fusion_v2.md section 7) and why it
