@@ -1070,6 +1070,57 @@ known transponder addresses, which is `dal-004` holding on real data rather than
 read and the DAL, not persistence. Re-record it once the PostGIS repository lands, since that is the
 figure that will actually bound a scenario run.)*
 
+### Persistence split into three items: connectivity, schema, then repository
+
+The handoff written at the end of the adapter session described the next step as "`db-005` then
+`db-001`, at which point the PostGIS implementation of `ObservationRepository` lands". Reading the
+spec text back against that sentence showed it conflated two items: `db-001` is schema and
+migrations, and the repository layer is `db-003`. The build was therefore sequenced as three items
+rather than two, and the decision is recorded here because the reasoning generalises beyond this
+instance.
+
+Schema and repository fail differently, at different times, and against differently populated
+databases. A wrong column type fails when a migration is applied to an empty database; a wrong
+repository fails when a write is attempted against a schema that is already correct. Combined into
+one spec item, a red test cannot discriminate between the two, and the item's `passes` flag then
+asserts a conjunction rather than a claim. Keeping them separate also preserves an existing
+prediction on record — that the repository port's signature would survive the PostgreSQL
+implementation unchanged, with geometry and atomicity the risks and identity not — which is only
+testable if the schema is already proved when the repository is written. Folded together, a
+signature change would be indistinguishable from a schema correction.
+
+The same reading resolved a second boundary. `db-002` requires four reproducibility columns on
+`hypotheses` — `generator`, `model_id`, `generation_params`, `raw_response` — "from the first
+migration, not a later one", which places the DDL in `db-001` while leaving `db-002` to prove the
+null-rejection at the repository boundary. The consequence is that the first migration builds all
+six tables, four of which have no consumer for several phases. That is not speculative construction:
+a table built late is an ordinary migration, whereas `raw_response` built late — after an evaluation
+campaign has run against a hosted model — is a campaign that has to be repeated, and §9 of the
+technical specification says as much explicitly.
+
+### Spatial columns stored as geometry and cast to geography at query time
+
+`db-004` requires that the distance in the spatial clustering query be "computed by PostGIS on
+geography, not by application-side arithmetic". Two readings of that constraint were available, and
+they produce different DDL.
+
+The literal reading stores the columns as `geography(Point, 4326)` and
+`geography(Polygon, 4326)`, so the column type itself makes application-side arithmetic awkward. The
+rejected cost is real: PostGIS implements a substantially smaller function set over geography than
+over geometry, and operations other than distance are slower, which matters because the spatial
+clustering in the detection phase is not purely a distance query.
+
+The chosen reading stores `geometry(Point, 4326)` and `geometry(Polygon, 4326)`, GiST-indexed, and
+casts to geography inside the query where true-metre distance is wanted. This satisfies the
+constraint as written — the arithmetic remains PostGIS's, not the application's, which is the
+property the requirement exists to guarantee — while keeping the full geometry function set
+available. The distinction the requirement is actually drawing is between a spatial database doing
+spatial work and Python computing haversine distances in a loop; a cast falls unambiguously on the
+correct side of that line. What the choice gives up is that the geography semantics are re-asserted
+at every call site rather than once in the schema, so a query that forgets the cast silently
+computes distance in degrees. That is a testable failure — `db-004`'s own boundary case, a
+discontinuity just outside the radius, catches it — and it is recorded here as the price paid.
+
 ## Implementation
 
 <!-- Notable technical decisions per phase (link to implementation.md phases), challenges and
@@ -1156,6 +1207,43 @@ magnitude less throughput. The model server therefore runs on the host (Apple si
 memory) and is reached from the backend container via `host.docker.internal` — a Compose config
 value, not a Compose service. *(Record the hosted model ID and the local model, quantisation, and
 measured tokens/sec here, along with actual campaign cost and wall-time.)*
+
+### Migrations with Alembic, and the database-backed test tier they forced
+
+Neither the requirements nor the technical specification named a migration tool: FR-906 asks only
+for "a documented migration convention", and the build checklist suggested "even a simple
+ordered-SQL-files convention" would do. Plain ordered SQL files were genuinely attractive, because
+DDL is the most legible possible artefact for a thesis appendix and adds no dependency.
+
+They were rejected on the strength of `db-001`'s own failure case, which requires that applying
+migrations twice from empty must not error. Satisfying that means recording which files have been
+applied, in a table, transactionally, and getting the ordering guarantee right — which is a
+description of Alembic's `alembic_version` table. Hand-rolling it would mean writing and testing
+infrastructure that a mature dependency already provides, and the resulting code would need its own
+spec item to be trustworthy. Alembic was therefore adopted with revisions written by hand and
+autogenerate switched off, the latter because autogenerate does not understand PostGIS geometry
+columns and would emit a migration that nobody had read. The third option considered — letting the
+`postgis` image's `/docker-entrypoint-initdb.d` apply the DDL — was discarded outright: it fires
+only against an empty data directory, so it cannot migrate an existing database, and a silently
+skipped initialisation step is a failure mode this project has already observed once with the
+PostGIS extension itself.
+
+That decision forced a second one. Until this point the backend suite ran with no database at all,
+at 99.83 per cent coverage, and `db-005` deliberately preserves that property by requiring engine
+construction to be lazy and to open no connection. `db-001` cannot inherit it: a migration that has
+never been applied is an untested migration, and asserting that DDL is correct by reading it is the
+same class of error as asserting a test failed without running it. The tests therefore run against a
+disposable database in the `postgis` service that Compose already starts, carry a marker, and skip
+when `DATABASE_URL` is absent — so the native `backend/make check` remains runnable without Docker
+while the containerised surface runs the full set. The alternative, testcontainers-python starting
+its own container per session, was rejected on measured grounds rather than on principle: the same
+image was previously timed at roughly 2.5 times slower under amd64 emulation on this development
+machine, and paying that on every run to avoid a marker is a poor trade.
+
+*(Record here, once `db-001` is applied, whether the first migration ran cleanly twice from empty
+and what the missing-extension path actually reported — the failure case specifies a loud failure at
+migration time rather than a `type "geography" does not exist` error at first query, and that is a
+claim about an error message, which is only verifiable by causing it.)*
 
 ### Schema conformance as a generation-time guarantee
 

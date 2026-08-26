@@ -2221,6 +2221,57 @@ The real data carries this signal in quantity: **4,553 positioned rows, 3.4 per 
 
 Adding `contact_staleness_s` to `TrackPayload` is a change to `dal-001`, which is a passing item, so it is raised here rather than made in passing. The decision and its rationale belong in `docs/thesis_notes.md` once taken; what this entry records is what the field means and why its absence matters. See also §30 on why the adapter may not compensate by inventing a payload field of its own.
 
+## 34. Based on `docs/handoff.md` next steps are `db-005` and `db-001`. Clarify these work with me and confirm that these are the next strands of work
+
+**Confirmed, in that order — and the handoff overstates what `db-001` contains.**
+
+### What each item actually is
+
+| | `db-005` | `db-001` |
+|---|---|---|
+| Question it answers | *How does the process reach the database?* | *What is in the database?* |
+| Output | `sqlalchemy` and `psycopg` added and locked; one `Engine` per process created in the lifespan hook and disposed on shutdown; a `sessionmaker` bound to it; a FastAPI dependency yielding one `Session` per request | Six tables — `observations`, `anomalies`, `evidence_bundles`, `hypotheses`, `analyst_feedback`, `scenario_runs` — created by ordered migrations, with geometry columns on `observations.location` and `anomalies.affected_area` |
+| Needs a live database to prove? | **No.** Engine construction is lazy and opens no connection, which the spec requires precisely so this stays true | **Yes.** A migration that has never been applied is an untested migration |
+| Touches | `app/main.py`'s lifespan, a new `app/db/` module, `pyproject.toml`, `backend/.env.example` | Migration files, table definitions, and the test tier |
+
+The order is forced rather than preferred: a migration needs a URL and a connection, so `db-005` is `db-001`'s precondition. The reverse does not hold — `db-005` is provable against no database at all.
+
+### Why this is the next strand, and why Phase 5 is not
+
+Four things are waiting on it, and nothing else is:
+
+1. **Two passing items assert only half of what they claim, and say so in their own text.** `dal-002` states that "the `NOT NULL` and foreign-key guarantees over the same fields are `db-001`'s to prove, and `passes: true` here asserts the first claim only". `dal-003` makes the same split for provenance: the DAL must refuse to *construct* a record without it, and the schema must refuse to *store* one. Until `db-001` lands, one assertion in each pair is a claim rather than a test.
+2. **The only `ObservationRepository` is the in-memory fake in `backend/tests/fakes.py`.** The replay path runs end to end into a test double; nothing survives the process exiting.
+3. **`adp-007` was deferred behind it on purpose** (decided 2026-08-26). A replay command written before there is a real repository could only count without persisting, and would need a second pass to grow a `--persist` path.
+4. **The 2.46 s full-corpus replay figure measures the reader and the DAL only.** The figure that will bound a scenario run includes persistence, and cannot be taken until persistence exists.
+
+Phase 5 (`/api/v1/operational-picture`) is deliberately absent from that list. It serves a static fixture in the frontend's shape, and `docs/implementation.md` says outright that "nothing here needs the database, the generator, or the DAL". It neither blocks this work nor is blocked by it, so its position after the database items is a scheduling choice rather than a dependency — worth knowing, because a dependency cannot be reordered and a schedule can.
+
+### The correction: `db-001` is not where the PostGIS repository lands
+
+The handoff's Next step reads "`db-005` then `db-001` … at which point the PostGIS implementation of `ObservationRepository` lands". **That conflates two spec items.** `db-001`'s description is schema and migrations and nothing else; the repository layer is `db-003`, whose constraint is that route handlers contain no SQL, no session construction, and no spatial logic.
+
+The distinction is practical, not bureaucratic. Schema and repository fail differently and at different times: a wrong column type fails at migration time against an empty database, whereas a wrong repository fails at write time against a populated one. Fused into one item, a red test cannot tell you which of the two is wrong. Decided 2026-08-26 to keep them separate, so the sequence is `db-005` → `db-001` → `db-003`, and the handoff's wording is the thing that was wrong.
+
+### `db-002`'s columns are built by `db-001`'s migration
+
+These two items overlap, and the overlap is intentional rather than an error. `db-002` requires `generator`, `model_id`, `generation_params`, and `raw_response` on `hypotheses` "from the first migration, not a later one" — so the DDL belongs to `db-001`. What `db-002` proves separately is the *rejection*: a hypothesis written with `generator` set but `model_id` or `raw_response` null must be refused at the repository boundary for the two model arms.
+
+The consequence is that `db-001` cannot be built by writing only the tables the current code touches. `evidence_bundles`, `hypotheses`, `analyst_feedback`, and `scenario_runs` have no consumers yet and will have none for several phases. Building them anyway is not speculative work, because `docs/em_fusion_v2.md` §9 is explicit that `raw_response` "is not retrofittable after a campaign has run". A table built late is a migration; a *column* built late, after a campaign, is a campaign that has to be re-run.
+
+### The four things that were undecided, and now are not
+
+None of these were settled anywhere in the docs, and all four change what the first test asserts, so they were taken before any test was written.
+
+| Question | Decision | The alternative it beat |
+|---|---|---|
+| Migration mechanism | **Alembic**, revisions hand-written, autogenerate off | Ordered SQL files with our own runner. Alembic's version table *is* the "apply twice from empty must not error" failure case, so hand-rolling it means writing and testing the thing the dependency already provides. Autogenerate is off because it does not understand PostGIS geometry columns |
+| How database-backed tests run | A **disposable `test_em_fusion` database in the existing `postgis` service**, with DB tests marked and skipped when `DATABASE_URL` is absent | testcontainers-python, which starts its own container per session but costs startup time on every run — and §18 measured this image at roughly 2.5× slower under amd64 emulation. The marker is what preserves `db-005`'s requirement that unit tests need no live database |
+| Where the PostGIS repository lands | **`db-003`**, after `db-001` | Widening `db-001`. See the correction above |
+| Geometry column type | **`geometry(…, 4326)` with `::geography` casts at query time**, GiST-indexed | Storing `geography` directly. `db-004` requires the distance to be computed *by PostGIS* rather than in application code, and a cast satisfies that — the arithmetic is still PostGIS's. Geometry keeps the full function set available for the spatial clustering in Phase 6 |
+
+Both `db-005` and `db-001` are pre-existing spec items, but `db-001`'s description was written long before these four answers existed and names none of them. It is amended before tests are written rather than after — the lesson `adp-001` taught, where stale spec text survived several readings and was falsified by a decision taken in a different item.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -2257,6 +2308,11 @@ Adding `contact_staleness_s` to `TrackPayload` is a change to `dal-001`, which i
 | **Structurizr DSL** | A text format for writing a C4 model, so diagrams are generated from a diffable source rather than drawn by hand. |
 | **Bind mount** | Docker's `-v host_path:container_path`; exposes a host directory inside the container. Docker creates a missing host path rather than failing. |
 | **Seam** | An interface deliberately placed so one implementation can be swapped for another without touching callers — here, the DAL and the hypothesis service. |
+| **Migration** | A versioned, ordered schema change applied to a database. The unit in which a schema evolves without being rebuilt from empty. |
+| **Alembic** | SQLAlchemy's migration tool. Keeps an `alembic_version` table in the database recording which revisions have been applied. |
+| **Autogenerate** | Alembic's diff of models against the live schema. Off here: it does not understand PostGIS geometry columns. |
+| **Lifespan hook** | FastAPI's startup/shutdown context manager. Where a process-wide resource such as the Engine is created once and disposed. |
+| **`sessionmaker`** | A factory bound to one Engine that produces Sessions. One per process; one Session per request. |
 | **Basemap** | The background map — coastlines, roads, terrain, labels — that overlays are drawn on top of. Separate from the map library that renders it. |
 | **Tile** | One square piece of a basemap, addressed by zoom/x/y. Maps are fetched a tile at a time as you pan. |
 | **Raster tile** | A pre-rendered image tile. Styling is fixed at render time by whoever produced it. |
