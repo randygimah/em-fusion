@@ -2272,6 +2272,44 @@ None of these were settled anywhere in the docs, and all four change what the fi
 
 Both `db-005` and `db-001` are pre-existing spec items, but `db-001`'s description was written long before these four answers existed and names none of them. It is amended before tests are written rather than after — the lesson `adp-001` taught, where stale spec text survived several readings and was falsified by a decision taken in a different item.
 
+## 35. Amendment approved — write it. Amend `ops-003` as well to add `migrate`, and let's exclude the DB modules on `make test`
+
+**Done, with one refinement to the exclusion — because "`make test`" names two different targets and the instruction is ambiguous between them.**
+
+### The two surfaces, and why the difference matters here
+
+There are two `test` targets, deliberately not merged, and §29 already recorded that they drift silently:
+
+| | `backend/make test` | root `make test` |
+|---|---|---|
+| Runs | `uv run pytest` against the local venv | `docker compose run backend pytest`, plus Vitest |
+| Database reachable? | Only if the operator set `DATABASE_URL` and started the container | Yes, once `test-backend` drops `--no-deps` (part of the `ops-003` amendment) |
+| Coverage gate | 90 per cent | 90 per cent, from the same `PYTEST_ARGS` |
+
+Excluding the database modules from "`make test`" therefore resolves two ways. Read as *the native
+one*, it makes the two surfaces enforce different rules — which is the drift the root `Makefile`'s
+own comment says it exists to prevent. Read as *both*, it excludes the modules everywhere and they
+are then measured nowhere at all, which is worse than a failing gate because it is silent.
+
+### The refinement
+
+The exclusion is conditioned on **whether a database is reachable**, not on which Makefile was typed.
+It is the same signal the skip marker already uses, so the modules and their tests are skipped and
+omitted together, or neither. One rule — *measure coverage over what was exercisable here* — holds in
+both places, and the containerised run is the authoritative figure because it is the one where
+nothing is excluded.
+
+This is written into `db-001` as its fifth failure case rather than left as an implementation note,
+because the failure it guards against produces a green gate. An unconditional omission would let the
+PostGIS repository land in `db-003` with no coverage in any environment, and every command surface
+would keep reporting success.
+
+### What the `ops-003` amendment carries
+
+- **`migrate`** added to the enumerated target list, applying the Alembic revisions against the running database.
+- **`test-backend` loses `--no-deps`.** It currently starts the backend container alone, so the `postgis` service is not running and every database test would skip while the target reported success. That satisfies the letter of `ops-003` and defeats its purpose, so it is now an explicit failure case.
+- A note that this item **enumerates its targets**, which makes it the thing to amend whenever one is added. `replay` (`adp-007`) is the other one outstanding — the same trap the handoff flagged, now recorded in the item itself rather than only in a handoff that gets overwritten.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |

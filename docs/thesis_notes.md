@@ -1240,6 +1240,24 @@ its own container per session, was rejected on measured grounds rather than on p
 image was previously timed at roughly 2.5 times slower under amd64 emulation on this development
 machine, and paying that on every run to avoid a marker is a poor trade.
 
+A third decision followed from the second, and it is the one most likely to be got wrong quietly. With
+database tests skipping when no database is reachable, the modules they exercise are unreachable
+too, and a coverage gate of ninety per cent then fails for a reason that has nothing to do with the
+quality of the tests. The obvious fix is to exclude those modules from the native gate and leave the
+containerised gate alone. That fix, stated that way, makes the two command surfaces enforce two
+different rules, which is precisely the drift the root `Makefile` already carries a comment warning
+against — it keeps its pytest arguments deliberately in step with the backend's so that `make check`
+does not mean two different things depending on where it was typed.
+
+The exclusion was therefore conditioned on **database availability rather than on which Makefile was
+invoked**. One rule holds everywhere: measure coverage over what was actually exercisable in this
+environment. Natively, with no `DATABASE_URL`, the live-database modules are skipped and omitted
+together; in the container, with the `postgis` service healthy, they are neither. The two surfaces
+measure the same rule against different environments, and the containerised run is the authoritative
+number because it is the only one where nothing is excluded. The risk this leaves is recorded as a
+failure case in `db-001`: a module omitted in *both* environments is measured nowhere, and the
+exclusion that keeps the native gate honest becomes the hole that hides an untested repository.
+
 *(Record here, once `db-001` is applied, whether the first migration ran cleanly twice from empty
 and what the missing-extension path actually reported — the failure case specifies a loud failure at
 migration time rather than a `type "geography" does not exist` error at first query, and that is a
