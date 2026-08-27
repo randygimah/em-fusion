@@ -102,8 +102,10 @@ def _docstring_nodes(tree: ast.AST) -> set[int]:
 # --------------------------------------------------------------- configuration
 
 
-def test_missing_database_url_fails_loudly() -> None:
-    # spec: db-005
+def test_missing_database_url_fails_loudly(monkeypatch: pytest.MonkeyPatch) -> None:
+    # spec: db-005 -- delenv is explicit because conftest sets the variable for
+    # every test; without it this would assert against the fixture, not absence
+    monkeypatch.delenv("DATABASE_URL", raising=False)
     with pytest.raises(MissingDatabaseUrlError, match="DATABASE_URL"):
         db_session.database_url()
 
@@ -189,6 +191,15 @@ def test_get_engine_before_startup_fails_loudly() -> None:
     # spec: db-005 -- no lazy self-construction outside the lifespan hook
     with pytest.raises(EngineNotInitialisedError):
         db_session.get_engine()
+
+
+def test_get_sessionmaker_before_startup_fails_loudly() -> None:
+    # spec: db-005 -- the sibling of the check above. Written after the
+    # implementation, to close the one uncovered branch: get_engine had this
+    # path asserted and get_sessionmaker did not, which is exactly the asymmetry
+    # a coverage report exists to surface.
+    with pytest.raises(EngineNotInitialisedError):
+        db_session.get_sessionmaker()
 
 
 def test_dispose_engine_releases_and_clears_it(

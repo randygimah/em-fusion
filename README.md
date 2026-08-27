@@ -46,8 +46,16 @@ Both halves run natively if you prefer. Node >= 22.13 (`frontend/.nvmrc` pins it
 cd frontend && pnpm install && pnpm dev
 
 # backend — uvicorn on :8000
-cd backend && uv sync && uvicorn app.main:app --reload --port 8000
+cd backend && uv sync && cp .env.example .env && uvicorn app.main:app --reload --port 8000
 ```
+
+**The backend needs `DATABASE_URL` set to start.** It is read from the environment only, has no
+default, and a missing or empty value fails at startup rather than at the first query — a fallback
+connection string would let the service come up against the wrong database and report itself
+healthy. Compose passes the variable to the `backend` and `pipeline` services already; running
+natively, it comes from `backend/.env`. The database does not have to be *reachable* for the app to
+start: the engine is constructed without opening a connection, so `/api/v1/health` keeps answering
+when the database is down, and a degraded database does not present as an unreachable service.
 
 Backend dependencies live in `backend/pyproject.toml` and are pinned by `backend/uv.lock`; the lockfile is committed so a fresh clone reproduces the same environment. `backend/Makefile` holds the native lint/type/test commands.
 

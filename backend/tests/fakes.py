@@ -2,9 +2,9 @@
 
 A fake rather than a mock: it has real behaviour and can be asserted
 against, which is what lets `dal-002` be proven without a database. The
-PostGIS implementation of the same protocol lands with `db-001`; both are
-held to that protocol, so what is asserted here is DAL behaviour and not the
-storage engine's.
+PostGIS implementation of the same protocol lands with `db-003` (the schema
+it writes into is `db-001`'s); both are held to that protocol, so what is
+asserted here is DAL behaviour and not the storage engine's.
 
 Reused beyond dal-002 -- the detectors, the evidence bundle builder, and the
 grounding check all need canonical observations without a live database.

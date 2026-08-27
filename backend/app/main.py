@@ -5,16 +5,29 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1 import api_router
+from app.db.session import dispose_engine, init_engine
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Startup and shutdown hook.
 
-    Nothing to hold open yet. The database engine and the scenario replay loop
-    attach here when they land (docs/em_fusion_v2.md section 10).
+    The Engine is built here and nowhere else (`db-005`), so exactly one pool
+    exists per process and it is released on shutdown. Construction opens no
+    connection, so a database that is down does not stop the app starting --
+    `/api/v1/health` keeps answering, and a degraded database does not present
+    as an unreachable service. A *missing* `DATABASE_URL` is different and
+    fails here, loudly: that is misconfiguration rather than an outage, and
+    the alternative is discovering it at the first query.
+
+    The scenario replay loop attaches here when it lands
+    (docs/em_fusion_v2.md section 10).
     """
-    yield
+    init_engine()
+    try:
+        yield
+    finally:
+        dispose_engine()
 
 
 app = FastAPI(

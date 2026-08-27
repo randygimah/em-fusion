@@ -159,6 +159,7 @@ Added after the original checklist was written — a static snapshot cannot show
 ## Phase 6: Persistence (PostgreSQL + PostGIS)
 
 - [x] Add PostgreSQL + PostGIS via Docker Compose (backend + db services now; frontend service can join in Phase 11). *(Done 2026-08-13, ahead of this phase — the `frontend` service landed at the same time rather than waiting. `postgis` 15/3.5 on a named volume, health-gated, `DATABASE_URL` passed to `backend` and `pipeline`. Nothing connects to it yet: that is `db-005`.)*
+- [x] Connect to it: engine, session, and configuration. *(`db-005` passes 2026-08-28 — 21 tests, `app/db/session.py` at 100%. One `Engine` per process built in `app.main`'s lifespan and disposed on shutdown, a `sessionmaker` bound to it, and a per-request `Session` dependency that rolls back on exception. Construction opens no connection, so the unit suite still needs no database.)*
 - [ ] Create the core schema: observations, track/RF/source-health payloads, anomaly events, hypotheses, analyst feedback.
 - [ ] Include the reproducibility columns on `hypotheses` now: `generator` (`template|local|hosted`), `model_id`, `generation_params`, `raw_response`. Cheap while the table is empty; a migration plus an un-rerunnable campaign afterwards.
 - [ ] Add a repository layer; keep SQL/spatial logic out of route handlers.
