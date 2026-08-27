@@ -1263,6 +1263,49 @@ and what the missing-extension path actually reported — the failure case speci
 migration time rather than a `type "geography" does not exist` error at first query, and that is a
 claim about an error message, which is only verifiable by causing it.)*
 
+### Proving that tests fail: what a collection error hides
+
+The workflow this project follows requires new tests to be run and seen to fail before any
+implementation is written, on the principle that a test which passes against nothing is not testing
+what its name claims. Implementing `db-005` showed that the check is weaker than it looks when the
+tests are run against a module that does not yet exist.
+
+The first run of the twenty new tests produced a single collection error: the module could not be
+imported, so nothing ran. That satisfies the letter of the requirement — none of the tests passed —
+while establishing almost nothing, because a collection error is produced by every test in the file
+regardless of what it asserts. To get a per-test signal, a stub was written in which every function
+raised `NotImplementedError`, the suite was run against it, and the stub was deleted before the tests
+were committed. Eighteen tests failed. **Four passed**, and each of the three reasons was a real
+defect in the test rather than an accident of the stub.
+
+The first is a language detail with a general lesson. `NotImplementedError` is a subclass of
+`RuntimeError`, so a test asserting `pytest.raises(RuntimeError)` around an unimplemented function
+passes against the stub itself. Any "fails loudly" test written against the base class therefore
+proves nothing about the implementation, and the fix was to introduce named exception types —
+`MissingDatabaseUrlError`, `EngineNotInitialisedError` — which are still `RuntimeError` subclasses,
+so the loudness guarantee is unchanged while the assertion becomes specific. The second was a test
+that called `dispose_engine` twice and asserted no exception; a function whose body is `pass`
+satisfies that, so it was rewritten to exercise a full construct-and-dispose cycle first.
+
+The third and fourth are a category rather than a mistake, and the response to them is the part worth
+carrying into other work. Both were structural guards asserting an *absence* — that no `Engine` is
+constructed outside `app/db/`, and that no connection string is hardcoded anywhere under `app/`.
+Neither can fail today, because the violation they exist to catch does not exist yet; they are
+written for a future commit that introduces one. Deleting them because they pass would remove the
+only mechanism that will catch that commit. They were instead **mutation-tested**: the violation was
+introduced deliberately, the test was confirmed red, and the violation was reverted. A third mutation
+ran the check in the opposite direction, placing a connection string inside a *docstring* and
+confirming the test stayed green — because an earlier structural test in this project failed exactly
+when an implementation docstring began explaining the rule the test enforced. The mutation results
+are recorded in the tests' own docstrings with the date, so the evidence sits next to the assertion
+rather than in a commit message.
+
+The generalisable finding is that "the tests failed" is not one fact but three. A test can fail
+because the implementation is absent, which is what the workflow intends; because the test is wrong,
+which the workflow is meant to surface; or because the whole module could not load, which tells you
+nothing at all. Only the second and third are distinguishable by running against a stub, and the
+cost of building one is a few minutes.
+
 ### Schema conformance as a generation-time guarantee
 
 The original design treated schema validation as a post-hoc check with bounded retry and fallback.
