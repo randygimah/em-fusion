@@ -5,9 +5,11 @@ description = "ADS-B and synthetic RF anomaly monitoring and alerting system"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi",
+    "psycopg[binary]",
     "pyarrow",
     "pydantic",
     "python-dotenv",
+    "sqlalchemy",
     "uvicorn",
 ]
 
