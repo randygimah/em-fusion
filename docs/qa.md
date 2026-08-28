@@ -2413,6 +2413,74 @@ environment rather than from a committed default, since §28 and `dal-004` forbi
 committed anywhere. Deciding it now costs a paragraph; discovering it costs a debugging session on a
 container that fails for a reason the error message locates in the wrong place.
 
+## 38. Let's start the spec-to-test cycle for `db-001`
+
+**Two things in the amended text were wrong, and both were found by checking the spec against code written after it. Neither would have failed a test — they would have produced a schema that was quietly missing a table, and a test tier that could never run.**
+
+### The six tables have nowhere to put a quarantined record
+
+`dal-002` requires that invalid records are persisted "to quarantine with the failing field, the
+reason, and the source attribution". `db-001` named six tables, taken from the ERD in
+`docs/em_fusion_v2.md` §9, and none of them is a quarantine table. The ERD predates `dal-002`, so
+nothing ever reconciled the two.
+
+The tempting fix is the one that adds no table, and it is wrong. `ValidationStatus` already has a
+`QUARANTINED` member, which reads as an invitation to store the record in `observations` with a
+status flag. Compare the shapes:
+
+| | `CanonicalObservation` | `QuarantineRecord` |
+|---|---|---|
+| `source_id` | required | **optional** |
+| `source_type` | required | **optional** |
+| `observation_type` | required | **optional** |
+| `scenario_run_id` | required (in provenance) | required |
+| `timestamp`, `location`, `payload` | required | **absent entirely** |
+| `field`, `reason` | absent | required |
+
+The three fields an observation cannot do without are the three a quarantined record does not have,
+and that is not an oversight — they are the fields that failed validation. A record is quarantined
+*because* its latitude would not parse, so there is no location to store. Putting it in
+`observations` would mean making `timestamp`, `location` and `payload` nullable, which deletes the
+`NOT NULL` guarantee `dal-003` explicitly defers to `db-001`. The item would remove the assertion it
+exists to add.
+
+So: a seventh table, `quarantined_records`, and the ERD in §9 amended to match. Its nullability
+encodes the best-effort rule `dal-002` already states — `scenario_run_id` is `NOT NULL` because it
+comes from the ingest context rather than from the record, while `source_id`, `source_type` and
+`observation_type` are nullable because a record can fail precisely because it is missing the field
+that identifies it. The raw source row is still not stored, for the reason `app/dal/repository.py`
+gives: a quarantined OpenSky row carries a real `icao24`, and keeping it would put in the database
+the identifier `dal-004` exists to keep out.
+
+### The stated skip condition could never fire
+
+`db-001` said its database tests "skip when `DATABASE_URL` is absent". That was true when written on
+27 August. It was falsified on 28 August by `tests/conftest.py`, which sets `DATABASE_URL` for
+**every** test to an address where nothing listens, so that `db-005`'s engine tests have a value that
+resolves without connecting. The variable is now never absent, so the skip would never fire and the
+database tests would attempt to run — against port 1 — in every environment.
+
+This is the third time in this project that spec text has been falsified by later work in a
+*different* item. `adp-001` described a committed Parquet file that `adp-004`'s licence reversal had
+made gitignored; the previous handoff claimed a reader existed that did not. **The pattern is
+consistent enough to name: spec text describing the state of something outside its own item is a
+claim with no test behind it, and it decays silently.** Reading the spec immediately before writing
+tests — rather than trusting the reading done when it was amended — is what has caught it each time.
+
+The replacement is a separate `TEST_DATABASE_URL`, and the reason to prefer it is stronger than
+naming. `db-001`'s tests create and drop schema. Keying them on whatever `DATABASE_URL` happens to
+hold means that a developer running the suite with their normal environment loaded eventually runs a
+`DROP` against a database they cared about. Two variables make that impossible by construction rather
+than by remembering.
+
+### Worth recording as a limitation
+
+Both problems were found by reading, not by a failing test, and neither was reachable by one. A spec
+that misdescribes the world produces tests that faithfully assert the wrong thing — a green suite
+over a schema missing a table. The only mitigation in place is the workflow's requirement to read the
+item immediately before writing its tests, which is a procedural control rather than a technical one,
+and it should be stated as such rather than presented as rigour.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |

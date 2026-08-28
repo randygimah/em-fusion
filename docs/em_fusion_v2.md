@@ -401,6 +401,15 @@ erDiagram
         json provenance
         json payload
     }
+    QUARANTINED_RECORDS {
+        int id
+        string source_id
+        string source_type
+        string observation_type
+        int scenario_run_id
+        string field
+        string reason
+    }
     ANOMALIES {
         int id
         string anomaly_type
@@ -452,7 +461,20 @@ erDiagram
     HYPOTHESES ||--o{ ANALYST_FEEDBACK : receives
     SCENARIO_RUNS ||--o{ OBSERVATIONS : generates
     ANOMALIES }o--|| EVIDENCE_BUNDLES : grouped_into
+    SCENARIO_RUNS ||--o{ QUARANTINED_RECORDS : generates
 ```
+
+`QUARANTINED_RECORDS` was added 2026-08-29, when `db-001` was being specified and the ERD was found
+to have no home for the records `dal-002` requires. A quarantined record is **not** an observation
+with a status flag: it carries no timestamp, no location and no payload, because those are the fields
+that failed validation. Holding it in `OBSERVATIONS` would mean making those three columns nullable,
+which would remove exactly the `NOT NULL` guarantee `dal-003` defers to `db-001` — the schema would
+lose the assertion the item exists to add. Attribution is best-effort and the nullability says so:
+`scenario_run_id` is `NOT NULL` because it comes from the ingest context, while `source_id`,
+`source_type` and `observation_type` are nullable because a record can fail *because* it is missing
+the field that identifies it. The raw source row is deliberately not stored — a quarantined OpenSky
+row still carries a real `icao24`, and keeping it would put in the database the identifier `dal-004`
+exists to keep out.
 
 Track/RF/source-health specialisations live in the observation `payload` (typed via Pydantic), keeping the canonical table stable as sources are added. `hypotheses.generator` and `grounding_passed` exist so the evaluation harness can query comparisons directly.
 
