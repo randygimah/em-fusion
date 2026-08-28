@@ -2378,6 +2378,41 @@ but not nothing: a container that mounts the source directory would then pick up
 `.env` in preference to nothing, which is a way for a local value to reach a containerised run
 without anyone choosing it.
 
+## 37. I think I will mostly be running `make up`, so if Compose passes it to backend and pipeline without needing a `.env`, then there's no need to load it via `main.py`
+
+**Agreed, and this settles the open question left at the end of §36: `app/main.py` will not call `load_dotenv`.**
+
+The reasoning holds on the file as written. `compose.yaml` supplies `DATABASE_URL` to both the
+`backend` and `pipeline` services as `${DATABASE_URL:-postgresql+psycopg://…@postgis:5432/em_fusion}`,
+and the `:-` is a shell-style default rather than a placeholder — so a fresh clone with no `.env`
+gets a working value, pointing at the Compose service name rather than at `localhost`. Adding
+`load_dotenv` to the application entrypoint would introduce a second mechanism supplying the same
+variable for a path that is not the primary way this project is run, and a second place to look when
+the value is wrong is a cost paid on every future debugging session.
+
+The consequence to accept knowingly: **native `uvicorn` now requires `uv run --env-file .env` or an
+exported variable, permanently, and that is documented in `README.md` rather than fixed in code.**
+Someone who has previously run `python -m app.corpus.build`, which *does* load `.env`, will
+reasonably expect the server to behave the same way. The inconsistency between the two entrypoints is
+real; it is being accepted rather than resolved, because the entrypoint that behaves differently is
+the one that is almost always run through Compose.
+
+### The trap this leaves for `adp-007`
+
+Worth recording now, because it will be hit later and will look like a new bug. **`compose.yaml`
+passes `DATABASE_URL` and nothing else** — there is no `env_file:` key and no `PSEUDONYM_SEED` in any
+service's `environment:`. That is harmless today, because nothing running inside the container calls
+the pseudonymiser: the corpus is built natively, where `app/corpus/build.py` loads `.env` itself.
+
+It stops being harmless at `adp-007`, whose whole purpose is a `python -m app.replay` entrypoint run
+by a Makefile target in a container. Replay goes through the DAL, the DAL pseudonymises at ingest,
+and `Pseudonymiser.from_environment` fails loudly when `PSEUDONYM_SEED` is absent — correctly, but
+inside a container, with a message about project configuration held outside the repository. The fix
+belongs to `adp-007`: pass the seed into the `pipeline` and `backend` services, from the host
+environment rather than from a committed default, since §28 and `dal-004` forbid the value being
+committed anywhere. Deciding it now costs a paragraph; discovering it costs a debugging session on a
+container that fails for a reason the error message locates in the wrong place.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
