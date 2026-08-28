@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "ADS-B and synthetic RF anomaly monitoring and alerting system"
 requires-python = ">=3.11"
 dependencies = [
+    "alembic",
     "fastapi",
     "psycopg[binary]",
     "pyarrow",
@@ -97,4 +98,9 @@ pythonpath = ["."]
 addopts = [
     "--strict-markers",
     "--strict-config",
+]
+# `--strict-markers` means this list is the registry: an unregistered marker is
+# an error rather than a silent typo that deselects nothing.
+markers = [
+    "database: needs a live PostgreSQL with PostGIS. Skipped when TEST_DATABASE_URL is unset, which is what keeps the unit suite runnable with no Docker (db-005).",
 ]
