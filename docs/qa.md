@@ -2310,6 +2310,74 @@ would keep reporting success.
 - **`test-backend` loses `--no-deps`.** It currently starts the backend container alone, so the `postgis` service is not running and every database test would skip while the target reported success. That satisfies the letter of `ops-003` and defeats its purpose, so it is now an explicit failure case.
 - A note that this item **enumerates its targets**, which makes it the thing to amend whenever one is added. `replay` (`adp-007`) is the other one outstanding — the same trap the handoff flagged, now recorded in the item itself rather than only in a handoff that gets overwritten.
 
+## 36. Couple of questions on `db-005`: can we cache the engine and the sessionmaker using `lru_cache`, and since `DATABASE_URL` runs through an env, do I need to add it to an env file?
+
+**No to the first — it would fail two of `db-005`'s own tests. And the second exposed a defect in the README: the key is already in `.env.example`, but `backend/.env` is not read by the backend at all.**
+
+### Why `lru_cache` is the wrong tool here
+
+The idiom is real and widely used — the FastAPI documentation applies it to a settings object — so
+the answer is not that caching is bad, but that this particular thing is not a cache.
+
+| Problem | What happens |
+|---|---|
+| It reintroduces lazy self-construction | `@lru_cache` on `get_engine` builds an Engine on first call *from anywhere* — a route handler, a script, a stray import. `db-005` names "constructing an Engine inside a request handler" as a failure case; the cache does not prevent that, it hides it |
+| Disposal splits in two | `dispose_engine` would need `.dispose()` **and** `get_engine.cache_clear()`. Clearing the cache does not dispose the pool, so a caller who does one and not the other leaks it. Today one function does both |
+| On a zero-argument function it is a global with extra steps | Nothing is being memoised, because there is no key. The lifecycle just becomes less visible |
+| Keyed on the URL it is actively wrong | `@lru_cache def _engine_for(url)` builds a *second* Engine the moment a process sees a second URL, violating "exactly one Engine exists per process". Memoising per distinct argument is the opposite of a singleton |
+| Two caches can fall out of step | The sessionmaker must be bound to the current Engine. `init_engine` sets both in one place; two independent caches cannot guarantee that |
+
+Concretely, two committed tests fail under the cached version.
+`test_get_engine_before_startup_fails_loudly` asserts that a bare `get_engine()` raises
+`EngineNotInitialisedError`; the cached version returns a working Engine instead.
+`test_lifespan_creates_the_engine_and_disposes_it` asserts the same raise after the lifespan exits.
+Both are asserting the same property — that the lifespan is the only place an Engine comes from —
+and that property is exactly what the cache removes.
+
+Worth being clear that the cache is not even available for the settings-shaped use here: caching
+`database_url()` would break every test that monkeypatches the variable, because a cached read never
+sees the change.
+
+### The env file: the key exists, but nothing loads it
+
+The wrong assumption embedded in the question is a reasonable one, and it was in the README too: that
+because `DATABASE_URL` is read from the environment and `backend/.env.example` documents it, creating
+`backend/.env` makes the backend see it. **It does not.**
+
+`load_dotenv` is called in exactly one place in this repository — `app/corpus/build.py`, inside its
+own entrypoint, so that `PSEUDONYM_SEED` need not be exported by hand. `app/main.py` does not call
+it. A bare `uvicorn app.main:app` therefore fails at startup with `MissingDatabaseUrlError` even
+with a correct `.env` file sitting beside it, and the error message points at the environment rather
+than at the file, which is the least helpful possible place to look.
+
+What is actually needed, by how the backend is run:
+
+| How it runs | Needs `backend/.env`? | Where the value comes from |
+|---|---|---|
+| `make up`, or anything through Compose | **No** | `compose.yaml` passes `DATABASE_URL` to the `backend` and `pipeline` services, defaulting to `…@postgis:5432/em_fusion`. The host is the Compose service name, not `localhost` |
+| `pytest`, native or containerised | **No** | `tests/conftest.py` sets it for every test, deliberately to an address where nothing listens |
+| Native `uvicorn` | **Yes, and it must be loaded explicitly** | `uv run --env-file .env uvicorn app.main:app`, or export the variable |
+
+The README has been corrected to the third row; it previously showed `cp .env.example .env` followed
+by a bare `uvicorn`, which does not work.
+
+### The decision this leaves open
+
+There are two defensible fixes and only the documentation one has been applied. The alternative is to
+call `load_dotenv(DEFAULT_ENV_FILE, override=False)` in `app/main.py`, matching the convention
+`app/corpus/build.py` already set, so that `.env` works for both entrypoints and an explicitly
+exported variable still wins. That is more consistent, and it is what someone coming from
+`build.py` would reasonably expect. It is *not* in conflict with `db-005`'s "read from the
+environment only" constraint, because `load_dotenv` populates the environment before it is read —
+which is precisely what `build.py` does for the pseudonymisation seed.
+
+It has been left undone rather than slipped in, because it is a behaviour change to application
+startup and this project's workflow requires a spec item and a failing test before implementation
+code. Recorded here as an open question rather than a settled one. The argument against it is thin
+but not nothing: a container that mounts the source directory would then pick up a developer's local
+`.env` in preference to nothing, which is a way for a local value to reach a containerised run
+without anyone choosing it.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -2351,6 +2419,8 @@ would keep reporting success.
 | **Autogenerate** | Alembic's diff of models against the live schema. Off here: it does not understand PostGIS geometry columns. |
 | **Lifespan hook** | FastAPI's startup/shutdown context manager. Where a process-wide resource such as the Engine is created once and disposed. |
 | **`sessionmaker`** | A factory bound to one Engine that produces Sessions. One per process; one Session per request. |
+| **`lru_cache`** | Memoises a function's return per distinct argument tuple. A singleton is a different thing: one instance regardless of arguments. |
+| **`load_dotenv`** | Reads a `.env` file into the process environment. Does nothing unless something calls it — it is not automatic. |
 | **Basemap** | The background map — coastlines, roads, terrain, labels — that overlays are drawn on top of. Separate from the map library that renders it. |
 | **Tile** | One square piece of a basemap, addressed by zoom/x/y. Maps are fetched a tile at a time as you pan. |
 | **Raster tile** | A pre-rendered image tile. Styling is fixed at render time by whoever produced it. |

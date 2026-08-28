@@ -46,14 +46,20 @@ Both halves run natively if you prefer. Node >= 22.13 (`frontend/.nvmrc` pins it
 cd frontend && pnpm install && pnpm dev
 
 # backend — uvicorn on :8000
-cd backend && uv sync && cp .env.example .env && uvicorn app.main:app --reload --port 8000
+cd backend && uv sync && cp .env.example .env
+uv run --env-file .env uvicorn app.main:app --reload --port 8000
 ```
 
 **The backend needs `DATABASE_URL` set to start.** It is read from the environment only, has no
 default, and a missing or empty value fails at startup rather than at the first query — a fallback
 connection string would let the service come up against the wrong database and report itself
-healthy. Compose passes the variable to the `backend` and `pipeline` services already; running
-natively, it comes from `backend/.env`. The database does not have to be *reachable* for the app to
+healthy. Compose passes the variable to the `backend` and `pipeline` services already, so nothing is
+needed there.
+
+Running natively, note that **`backend/.env` is not read automatically**: only
+`python -m app.corpus.build` calls `load_dotenv`, and `app.main` does not. A bare
+`uvicorn app.main:app` fails at startup even with the file present. Use `uv run --env-file .env`
+as above, or export the variable. The database itself does not have to be *reachable* for the app to
 start: the engine is constructed without opening a connection, so `/api/v1/health` keeps answering
 when the database is down, and a degraded database does not present as an unreachable service.
 
