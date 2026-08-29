@@ -1306,6 +1306,65 @@ which the workflow is meant to surface; or because the whole module could not lo
 nothing at all. Only the second and third are distinguishable by running against a stub, and the
 cost of building one is a few minutes.
 
+### Building all seven tables in the first revision, four of them with no consumer
+
+`db-001`'s first Alembic revision creates `observations`, `quarantined_records`, `anomalies`,
+`evidence_bundles`, `hypotheses`, `analyst_feedback` and `scenario_runs`. At the time it was written
+only the first two had any code that would ever write to them, and four will have no consumer for
+several development phases. Building a schema ahead of the code that uses it is ordinarily a mistake,
+so the reasoning for doing it deliberately is worth recording.
+
+The argument is not symmetry or tidiness; it is that the cost of adding these objects late is not
+uniform. A *table* added late is an ordinary migration, and the project has a migration mechanism
+precisely so that this is cheap. A *column* added late is usually the same. But
+`hypotheses.raw_response` is neither: it stores the hosted model's verbatim output before parsing,
+and it is the entire mitigation for hosted-model retirement — the evaluation artefacts survive as
+recorded evidence even after the model behind them no longer exists. Adding it after the campaign has
+run does not recover the responses that were never stored. The campaign would have to be repeated, at
+its full cost in money and wall time, to obtain data that a `TEXT` column would have captured for
+nothing. The asymmetry between "cheap to add later" and "cannot be added later at all" is what
+decides it, and the four tables come along because a foreign key needs its target to exist.
+
+The same reasoning produced the two `CHECK` constraints on `hypotheses`. `confidence` is restricted
+to `Low`, `Medium` and `High`, which is a project-wide rule about not presenting a percentage or a
+decimal score to an analyst; putting it in the schema means the database cannot hold a value the
+interface would then have to invent a rendering for. `generator` is restricted to `template`,
+`local` and `hosted`, which keeps the RQ3 comparison a query — `generator IN ('hosted','template')` —
+rather than a reconstruction, and makes any fallback to the local arm visible in the data rather than
+inferred from a log.
+
+### The ERD had no home for a quarantined record, and the fix was a table rather than a status flag
+
+Specifying `db-001` surfaced an inconsistency that had been latent since `dal-002` was written. The
+entity-relationship diagram in the technical specification lists six tables and none of them holds a
+quarantine record, while `dal-002` requires that invalid records are persisted with the failing
+field, the reason and the source attribution. The diagram predates the item; nothing had reconciled
+them.
+
+The available fix that adds no table is the wrong one, and it is worth stating why, because it is
+superficially attractive. The canonical model's `ValidationStatus` enumeration already has a
+`QUARANTINED` member, which reads as an invitation to store the record in `observations` with a
+status flag. But the two shapes are not variants of one thing. A `CanonicalObservation` requires a
+timestamp, a location and a payload; a `QuarantineRecord` has none of the three, and its
+`source_id`, `source_type` and `observation_type` are optional where the observation's are required.
+That is not an oversight in the design — those are precisely the fields whose absence or invalidity
+caused the record to be quarantined. A record is rejected *because* its latitude will not parse, so
+there is no location to store.
+
+Storing it in `observations` therefore requires making `timestamp`, `location` and `payload`
+nullable, which removes exactly the `NOT NULL` guarantee that `dal-003` defers to `db-001`. The item
+would delete the assertion it exists to add, in order to avoid creating a table. A seventh table,
+`quarantined_records`, was added instead, and the diagram amended to match.
+
+Its nullability encodes the best-effort rule the DAL already states rather than restating it in
+prose: `scenario_run_id` is `NOT NULL` because it comes from the ingest context rather than from the
+record, so the run is known even when nothing else is, while `source_id`, `source_type` and
+`observation_type` are nullable because a record can fail because it lacks the field that identifies
+it. A `NOT NULL` on those would make the unattributable record unstorable and force the silent drop
+that `dal-002` exists to prevent. The raw source row is deliberately not stored: a quarantined
+OpenSky row still carries a real `icao24`, and keeping it would place in the database the identifier
+`dal-004` exists to keep out.
+
 ### Schema conformance as a generation-time guarantee
 
 The original design treated schema validation as a post-hoc check with bounded retry and fallback.

@@ -101,6 +101,15 @@ addopts = [
 ]
 # `--strict-markers` means this list is the registry: an unregistered marker is
 # an error rather than a silent typo that deselects nothing.
+filterwarnings = [
+    # SQLAlchemy does not know the PostGIS `geometry` type, because GeoAlchemy2
+    # is deliberately not a dependency yet -- `db-001` writes its geometry
+    # columns as explicit DDL, and the library earns its place at query time in
+    # `db-003`. Until then every table inspection warns once per column. Remove
+    # this line when GeoAlchemy2 lands; if it stops matching, the reason it
+    # existed has gone.
+    "ignore:Did not recognize type 'geometry':sqlalchemy.exc.SAWarning",
+]
 markers = [
     "database: needs a live PostgreSQL with PostGIS. Skipped when TEST_DATABASE_URL is unset, which is what keeps the unit suite runnable with no Docker (db-005).",
 ]

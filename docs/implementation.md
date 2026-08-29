@@ -160,12 +160,12 @@ Added after the original checklist was written — a static snapshot cannot show
 
 - [x] Add PostgreSQL + PostGIS via Docker Compose (backend + db services now; frontend service can join in Phase 11). *(Done 2026-08-13, ahead of this phase — the `frontend` service landed at the same time rather than waiting. `postgis` 15/3.5 on a named volume, health-gated, `DATABASE_URL` passed to `backend` and `pipeline`. Nothing connects to it yet: that is `db-005`.)*
 - [x] Connect to it: engine, session, and configuration. *(`db-005` passes 2026-08-28 — 21 tests, `app/db/session.py` at 100%. One `Engine` per process built in `app.main`'s lifespan and disposed on shutdown, a `sessionmaker` bound to it, and a per-request `Session` dependency that rolls back on exception. Construction opens no connection, so the unit suite still needs no database.)*
-- [ ] Create the core schema: observations, track/RF/source-health payloads, anomaly events, hypotheses, analyst feedback.
-- [ ] Include the reproducibility columns on `hypotheses` now: `generator` (`template|local|hosted`), `model_id`, `generation_params`, `raw_response`. Cheap while the table is empty; a migration plus an un-rerunnable campaign afterwards.
+- [x] Create the core schema: observations, track/RF/source-health payloads, anomaly events, hypotheses, analyst feedback. *(`db-001` passes 2026-08-29 — 22 database tests, 205 passed with a live PostGIS. **Seven** tables, not six: `quarantined_records` was added when the ERD was found to have no home for the records `dal-002` requires.)*
+- [x] Include the reproducibility columns on `hypotheses` now: `generator` (`template|local|hosted`), `model_id`, `generation_params`, `raw_response`. *(Done in the first revision. `generator` and `confidence` also carry CHECK constraints — confidence is Low/Medium/High and the database will not hold anything else.)*
 - [ ] Add a repository layer; keep SQL/spatial logic out of route handlers.
 - [ ] Implement at least one real spatial query (track discontinuities within N km of an RF anomaly zone) — this is the PostGIS justification.
-- [ ] Add a migration approach (even a simple ordered-SQL-files convention) and document it.
-- [ ] Backend tests run against a disposable test database.
+- [x] Add a migration approach and document it. *(Alembic, revisions hand-written, autogenerate off. Documented in `README.md`; rationale and the rejected alternatives in `thesis_notes.md`.)*
+- [x] Backend tests run against a disposable test database. *(A `database` marker plus `TEST_DATABASE_URL`; the fixture drops and recreates `public` per test so every migration test starts from genuinely empty. Skips when the variable is unset, so the unit tier still needs no Docker.)*
 
 ## Phase 7: Scenario Generator and Adapters
 

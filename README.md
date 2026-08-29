@@ -65,6 +65,54 @@ when the database is down, and a degraded database does not present as an unreac
 
 Backend dependencies live in `backend/pyproject.toml` and are pinned by `backend/uv.lock`; the lockfile is committed so a fresh clone reproduces the same environment. `backend/Makefile` holds the native lint/type/test commands.
 
+## Database migrations
+
+The schema is built by ordered [Alembic](https://alembic.sqlalchemy.org) revisions in
+`backend/alembic/versions/`, applied oldest-first. Alembic records what it has applied in an
+`alembic_version` table, so re-running is a no-op rather than an error.
+
+```bash
+cd backend
+uv run --env-file .env alembic upgrade head    # apply
+uv run --env-file .env alembic current         # what is applied
+```
+
+Three conventions, each load-bearing:
+
+- **Revisions are written by hand; `--autogenerate` is not used.** It does not understand PostGIS
+  geometry columns and would emit a revision nobody has read. New revisions are created with
+  `alembic revision -m "..."` and filled in.
+- **Migrations assert the PostGIS extension, they never create it.** `CREATE EXTENSION` needs
+  superuser and is the container image's job on a fresh data directory. A migration that created it
+  could never *fail* for its absence — and that failure is the point, because the alternative is a
+  schema that builds fine and a first spatial query that dies with `type "geography" does not exist`
+  a long way from the cause.
+- **`alembic.ini` holds no connection string.** The URL comes from `DATABASE_URL`; a DSN in a
+  committed file would be a credential in version control and would mean a stray `upgrade head`
+  addressed a database nobody chose.
+
+Spatial columns are stored as `geometry(..., 4326)` and cast to `::geography` at query time, so
+distance is computed by PostGIS while the full geometry function set stays available.
+
+### Running the database-backed tests
+
+They are marked `database` and **skip unless `TEST_DATABASE_URL` is set**, which is what keeps the
+unit suite runnable with no Docker:
+
+```bash
+make up                                        # or: docker compose up -d postgis
+docker compose exec postgis psql -U postgres -c "CREATE DATABASE test_em_fusion;"
+docker compose exec postgis psql -U postgres -d test_em_fusion -c "CREATE EXTENSION postgis;"
+
+cd backend
+TEST_DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/test_em_fusion \
+  uv run pytest
+```
+
+`TEST_DATABASE_URL` is deliberately a **different variable** from `DATABASE_URL`. These tests drop
+and recreate schema; pointing them at the application's own connection string would eventually run a
+`DROP` against a database you cared about.
+
 ## The aviation corpus
 
 The replayed telemetry is one hour of OpenSky state vectors, filtered to 49–54°N, 3–11°E. **Neither

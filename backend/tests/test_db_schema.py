@@ -16,10 +16,10 @@ cared about.
 from __future__ import annotations
 
 import pytest
-from alembic import command
 from alembic.config import Config
 from sqlalchemy import Engine, inspect, text
 
+from alembic import command
 from app.db.migrations import alembic_config
 from tests.conftest import requires_database
 
@@ -286,3 +286,25 @@ def test_quarantined_records_do_not_store_the_raw_source_row(
     columns = set(_columns(empty_database, "quarantined_records"))
 
     assert not columns & {"raw", "raw_row", "source_row", "payload", "icao24"}
+
+
+# Mutation results, 2026-08-29. These three assertions were each confirmed to
+# fail when the property they claim is removed, because two of them assert an
+# absence or a property PostgreSQL would not otherwise complain about:
+#
+#   * adding a `raw_row` column to `quarantined_records` turned the test above
+#     red;
+#   * deleting the `CREATE INDEX ... USING GIST` line turned both
+#     `test_spatial_columns_are_gist_indexed` cases red;
+#   * changing the columns from `geometry` to `geography` turned both
+#     `..._is_a_point/polygon_geometry_in_4326` cases red, while
+#     `test_db004s_query_shape_compiles_against_the_stored_columns` stayed
+#     green -- correctly, since a `::geography` cast is valid on either, which
+#     is why the column-type tests exist separately from the query-shape one.
+#
+# The GiST mutation is worth a note of its own: the first attempt at it edited
+# a multi-line source string that Black had already collapsed onto one line, so
+# the substitution silently matched nothing and the test "passed" against an
+# unmutated file. A mutation test that did not mutate proves less than no test
+# at all, because it reports confidence. Every mutation here now asserts that
+# its own substitution applied before the suite is run.
