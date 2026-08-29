@@ -1365,6 +1365,63 @@ that `dal-002` exists to prevent. The raw source row is deliberately not stored:
 OpenSky row still carries a real `icao24`, and keeping it would place in the database the identifier
 `dal-004` exists to keep out.
 
+### Testing a build file, and the limits of doing so structurally
+
+`ops-003` specifies the root `Makefile` as the project's containerised command surface, and the
+spec-driven workflow this project follows requires tests before implementation for every item without
+exception. A build file is an awkward subject for that rule: its correctness is ultimately whether
+the commands work against a real Docker daemon, which is an integration concern, and the obvious
+reading is that the item is simply untestable in the unit tier.
+
+That reading was rejected because the defect the item most needed to catch had already occurred and
+was structural rather than behavioural. The `test-backend` target ran with `--no-deps` for several
+weeks. That flag starts the backend container alone, so the database service never comes up, so every
+test marked as needing a database would skip — and the target would report success over a suite that
+had silently done less than its name claims. Nothing about that failure requires a daemon to detect:
+it is a flag in a file. The tests therefore parse the `Makefile` and assert its structure — that each
+enumerated target exists and is declared `.PHONY`, that no recipe swallows its own exit status with a
+leading hyphen or a trailing `|| true`, that no target invokes a host toolchain outside a Compose
+invocation, and that `test-backend` supplies a test database URL and depends on the target that
+provisions the database.
+
+The limitation is real and worth stating rather than hiding: a target can be structurally perfect and
+still fail. These tests do not prove the commands work; they prove the commands cannot silently do
+nothing. That is a narrower claim, and it happens to be the claim that matters, because a command
+that fails is visible and a command that quietly succeeds having done less is not. The integration
+half was covered once, by hand, by dropping the test database entirely and running the target from
+nothing — 232 tests passed where the previous configuration would have run 205 and skipped 27 without
+comment.
+
+The three absence assertions among them were mutation-tested, as the project now does routinely for
+any test that asserts something is *not* present: adding `|| true` to a recipe, adding a bare
+`uv run pytest`, and restoring `--no-deps` each turned the corresponding test red. That practice
+began when a structural test was found to pass vacuously and has since caught a test that reported
+confidence without having mutated anything at all.
+
+### Removing a specified mechanism rather than building it
+
+`ops-003` and `db-001` both carried a requirement, written on 27 August, that the native coverage
+gate omit modules requiring a live database exactly when those tests skip. The mechanism was designed
+carefully — conditioned on database availability rather than on which command surface was invoked, so
+that the two surfaces would enforce one rule rather than two — and recorded with its rationale before
+either item was built.
+
+When `db-001` was implemented the mechanism turned out to be unnecessary. The only module in question,
+`app/db/migrations.py`, resolves filesystem paths and reads a committed ini file; none of that needs a
+database, and four ordinary unit tests take it to full coverage with nothing omitted anywhere. The
+requirement had been written from an assumption about what the module would look like, made before it
+existed.
+
+The clause was removed from both items rather than left standing, and the reasoning is worth
+recording because the opposite choice is the tempting one. A specification that describes machinery
+nobody built is worse than one that never mentioned it: it reads as a completed design, it survives
+review because it is internally coherent, and the absence is discovered only when someone relies on
+it. This project has now been bitten three times by spec text that was true when written and was
+falsified by later work elsewhere, and the pattern in every case was text describing the state of
+something outside the item's own scope. Deleting the clause and naming the item that will reintroduce
+it — `db-003`, where the PostGIS repository genuinely cannot be exercised without a database — keeps
+the specification a description of what exists rather than a description of what was once intended.
+
 ### Schema conformance as a generation-time guarantee
 
 The original design treated schema validation as a post-hoc check with bounded retry and fallback.

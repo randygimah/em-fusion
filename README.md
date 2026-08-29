@@ -29,7 +29,9 @@ The frontend proxies `/api/` to the backend, so a browser only ever needs port 8
 | Target | Does |
 |---|---|
 | `make demo` | Build and run the stack in the foreground |
-| `make test` | Backend pytest and frontend Vitest, both in containers |
+| `make test` | Backend pytest and frontend Vitest, both in containers. Starts PostGIS and provisions the test database first, so the database-backed tests actually run |
+| `make migrate` | Apply the Alembic revisions to the running database |
+| `make db-test-create` | Create the disposable `test_em_fusion` database with PostGIS. Idempotent; `make test` depends on it |
 | `make lint` / `make type-check` / `make format` | ruff + Biome / mypy / black + ruff |
 | `make check` | All of the above, in the order `backend/Makefile` uses |
 | `make generate` | Run the data pipeline once into `data/` (not yet implemented) |
@@ -99,10 +101,18 @@ distance is computed by PostGIS while the full geometry function set stays avail
 They are marked `database` and **skip unless `TEST_DATABASE_URL` is set**, which is what keeps the
 unit suite runnable with no Docker:
 
+In containers, `make test` handles all of it — it provisions the database and passes the variable, so
+there is no manual step:
+
 ```bash
-make up                                        # or: docker compose up -d postgis
-docker compose exec postgis psql -U postgres -c "CREATE DATABASE test_em_fusion;"
-docker compose exec postgis psql -U postgres -d test_em_fusion -c "CREATE EXTENSION postgis;"
+make test
+```
+
+Natively, provision once and pass the variable yourself. Note the host is `localhost` here and
+`postgis` inside a container:
+
+```bash
+make db-test-create
 
 cd backend
 TEST_DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/test_em_fusion \
