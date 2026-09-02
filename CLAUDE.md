@@ -22,7 +22,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 EM Fusion is a human-in-the-loop AI prototype for explainable electromagnetic situational awareness: it fuses replayed aviation telemetry and synthetic RF observations through a Data Abstraction Layer, detects deviations deterministically, and turns evidence bundles into schema-validated, grounding-checked AI hypotheses for human analyst review. It is decision support, not autonomous decision-making. Confidence is always Low/Medium/High — never a percentage or decimal score — and that rule applies to any score shown in the UI.
 
-Development is deliberately incremental — see `docs/implementation.md` for the phase-by-phase build checklist (currently mid-way through Phase 3, Operational Picture Layout, 3-screen model). **Phase order is amended:** Phase 5 (FastAPI contract mirror) now runs before the Phase 3 view filter and Phase 4 playback, because both are server-side by specification and building them against a mock means building them twice. Read the phase-order note at the head of the phase list before picking up work. `frontend/` has real code; `backend/` has a minimal FastAPI skeleton (`app/main.py` plus `app/api/v1/` with `/api/v1/health` only, and lint/type/test tooling — see Commands below). `ai/`, `infrastructure/`, and `scenarios/` are still empty placeholders reserved for ML/classification code, Docker/deploy configs, and scenario fixtures respectively.
+Development is deliberately incremental — see `docs/implementation.md` for the phase-by-phase build checklist (currently mid-way through Phase 3, Operational Picture Layout, 3-screen model). **Phase order is amended:** Phase 5 (FastAPI contract mirror) now runs before the Phase 3 view filter and Phase 4 playback, because both are server-side by specification and building them against a mock means building them twice. Read the phase-order note at the head of the phase list before picking up work. `frontend/` has the shell and the contract; `backend/` has the Data Abstraction Layer, the OpenSky replay adapter, the PostGIS schema and its repository, and `/api/v1/health` as its only route. `ai/`, `infrastructure/`, and `scenarios/` are still empty placeholders reserved for ML/classification code, Docker/deploy configs, and scenario fixtures respectively.
 
 Scope is v2: exactly three screens (Operational Picture, Hypotheses, Scenario Control) — no TimescaleDB, no WebSockets (frontend polls), no multi-agent AI, no Isolation Forest/DBSCAN. Anomaly detection is deterministic only (threshold rules, rolling averages, z-score, PostGIS spatial clustering). The AI hypothesis layer is constrained: template generator first (fallback + evaluation baseline), then an AI generator, both schema-validated and grounding-checked before an analyst sees them.
 
@@ -50,14 +50,19 @@ A contents page for the repo. Use it to find the right file before searching; it
 | `frontend/src/assets/Design/Hypothesis_analysis_v2/` | Same, for screen 2 (Hypothesis Detail / Analyst Workbench). |
 | `frontend/src/assets/Design/Scenario_control_v2/` | Same, for screen 3 (Scenario Control). |
 
-**`backend/`** — FastAPI skeleton plus lint/type/test tooling.
+**`backend/`** — FastAPI app, the Data Abstraction Layer, the PostGIS persistence layer, corpus tooling, and lint/type/test tooling.
 
 | Path | What's in it |
 |---|---|
-| `backend/app/main.py` | The whole backend today: FastAPI app, `/api/v1/health` only, CORS for the Vite dev server. |
+| `backend/app/main.py` | FastAPI app, `/api/v1/health` only, CORS for the Vite dev server. Its lifespan builds the one Engine per process and disposes it. |
 | `backend/app/__init__.py` | Package marker. |
 | `backend/app/api/v1/` | Route modules, one per resource, assembled by `api_router` which declares the `/api/v1` prefix once. Handlers stay prefix-free. |
-| `backend/tests/` | Pytest home (`pyproject.toml` sets `testpaths = tests`). `test_health.py` covers `api-001`. |
+| `backend/app/dal/` | The Data Abstraction Layer. `models.py` is the canonical observation; `validation.py` accepts or rejects; `ingest.py` is the single entrypoint every adapter goes through; `pseudonymise.py` replaces source aircraft identifiers; `repository.py` is the **persistence port** — an interface, deliberately importing no storage engine. |
+| `backend/app/db/` | Everything that knows about PostgreSQL. `session.py` (Engine, sessionmaker, per-request Session), `migrations.py` (Alembic config paths), `repository.py` (the PostGIS implementation of the DAL's port — all SQL and spatial logic lives here). |
+| `backend/app/adapters/` | One module per source. `opensky.py` is the replay adapter: dialect translation only, no validation and no persistence. |
+| `backend/app/corpus/` | Build-time tooling for the OpenSky extract — `fetch.py`, `extract.py`, and the `python -m app.corpus.build` entrypoint. Not part of the replay path. |
+| `backend/alembic/` | Migration environment and `versions/0001_core_schema.py`, which creates all seven tables. Revisions are hand-written; autogenerate is off because it does not understand PostGIS geometry columns. |
+| `backend/tests/` | Pytest home (`pyproject.toml` sets `testpaths = tests`). `fakes.py` holds the in-memory repository, kept alongside the PostGIS one so the unit tier needs no Docker. Tests marked `database` skip unless `TEST_DATABASE_URL` is set. |
 
 **`docs/`** — all project documentation. See the Documents table below.
 

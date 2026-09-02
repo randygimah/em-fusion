@@ -1128,6 +1128,87 @@ where the assertion has something to bite on.
 text, and the result of mutation-testing it with a violation placed in a docstring. The equivalent
 check in `dal-004` failed exactly that way once already.)*
 
+### The repository port survived the database unchanged, and the prediction was right for the wrong reason
+
+The `dal-002` repository port was specified and built before any database existed, and a prediction
+was put on record at that point: that its signature would survive the PostgreSQL implementation, with
+geometry and atomicity the two places most likely to force a change and identity not a risk at all.
+The PostGIS implementation is now written, and the outcome is recorded here rather than left implicit
+in a passing test, because a prediction that is never scored is not a prediction.
+
+**The signature did not change.** `save_batch` still takes two sequences of Pydantic models and
+returns nothing. No session, no ORM model, no WKT or WKB string and no caller-supplied identifier
+crossed the boundary, and no parameter was added to accommodate one. Three structural tests now hold
+that shape in place, each mutation-tested rather than assumed, so a future widening fails a test
+instead of passing review.
+
+The prediction named the right two risks and overstated both. Geometry was a risk, but it resolved
+one level below the port: `Location` stays two floats, and the conversion to a point is a single
+function inside the repository. Atomicity was a risk, and it resolved at the same level, because the
+port's shape had already made it possible — `dal-002` had insisted on one call carrying both
+collections precisely so that the implementation would have a transaction to own. In other words the
+port survived contact with the database partly because the constraint that looked most likely to
+break it was the constraint that had been designed for it. That is a weaker result than "the port was
+specified well enough", and the weaker version is the honest one: the guarantee was specified, so the
+implementation had somewhere to put it.
+
+The one place identity did enter is worth recording because it was not predicted. Both models carry
+enum members that subclass `str`, and passing one to the driver is silently accepted while rendering
+as the Python identifier — `SourceType.OPENSKY` rather than `opensky`. That is not a signature
+problem and would not have shown up as one; it is a conversion the implementation has to remember,
+and the same trap is already documented one field over in the DAL's quarantine attribution. It was
+caught here by a test asserting the stored column value rather than the round-tripped model, which is
+the general lesson: a round-trip assertion cannot see a transformation that is symmetrical on the way
+in and out.
+
+*(Re-record the full-corpus replay wall time against this repository. The figure currently on record
+measures the reader and the DAL against an in-memory implementation and is not the number that will
+bound a scenario run.)*
+
+### The schema is reflected rather than redeclared, and that is what GeoAlchemy2 is for
+
+The repository needs to know the shape of two tables. The obvious approach is to declare them —
+SQLAlchemy Core `Table` objects, or ORM models, listing the columns a second time. That was rejected
+because `db-001`'s migration is the single source of truth for the schema, and a second declaration is
+a copy that drifts silently: a column renamed in a later revision would fail at write time with an
+error naming the copy rather than the schema, which is a long way from the cause.
+
+Reflecting the tables at first use instead leaves exactly one description of the schema in the
+repository. It also settles what GeoAlchemy2 is doing in the dependency list. The library was
+deliberately excluded at `db-001`, where its only use would have been to hide two lines of explicit
+DDL, and a warning filter was added to suppress SQLAlchemy's complaint that it did not recognise the
+`geometry` type. That warning was reflection failing. Registering the type is what makes a geometry
+column reflectable at all, so the dependency and the removal of the filter are the same change, and
+the filter came out in the same commit that added the library rather than being left to be noticed
+later. A suppression kept past its cause hides the next unrecognised type as well as the one it was
+written for.
+
+The cost is that construction of a repository no longer describes the schema in the source: a reader
+has to consult the migration. That is the correct direction for the trade — one description that must
+be read elsewhere beats two that can disagree — but it is a real loss of locality and is stated here
+rather than glossed.
+
+### The conditional coverage omission was specified twice and needed neither time
+
+`db-001` and then `db-003` both carried a clause requiring the coverage gate to omit live-database
+modules when `TEST_DATABASE_URL` is unset. It was removed from `db-001` when four unit tests took
+`app/db/migrations.py` to full coverage with nothing omitted. It has now been removed from `db-003`
+as well, and the second removal is on different and more interesting grounds.
+
+Here the module genuinely is unexercised without a database: it measures 53 per cent natively against
+100 per cent in the container. The mechanism was still not built, because measurement showed the
+native suite sits at 97.44 per cent overall — comfortably over the 90 per cent gate — so the omission
+would not have unblocked anything. What it would have done is raise the reported figure by hiding a
+module that was not run. **A 53 per cent reading is the more informative number**, because it says
+something true about the run that produced it, and the containerised run is already the authoritative
+one precisely because nothing is excluded there.
+
+The generalisable point is about when a coverage exclusion is legitimate. Omitting code that *cannot*
+be exercised in a given environment is bookkeeping; omitting code that simply *was not* exercised is
+suppression of a result. The two look identical in a configuration file. Specifying the rule twice
+before measuring it, and needing it neither time, is itself the finding: the clause was written from
+an assumption about what the numbers would be rather than from the numbers.
+
 ### Spatial columns stored as geometry and cast to geography at query time
 
 `db-004` requires that the distance in the spatial clustering query be "computed by PostGIS on
