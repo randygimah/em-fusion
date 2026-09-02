@@ -1098,6 +1098,36 @@ a table built late is an ordinary migration, whereas `raw_response` built late �
 campaign has run against a hosted model — is a campaign that has to be repeated, and §9 of the
 technical specification says as much explicitly.
 
+### The same split again, one level down: the repository and the rule that nothing bypasses it
+
+Reading `db-003` immediately before writing its tests showed that its description had drifted from
+what every planning document meant by it. The text specified a *route-handler* constraint — handlers
+must contain no SQL, no session construction and no spatial logic, checked by inspecting the route
+modules — while the handoff, the notes above and several session summaries all used `db-003` to mean
+"implement the repository port against PostGIS". Both are real obligations and both trace to the same
+functional requirement, FR-904, which is written as a single sentence with a semicolon in the middle:
+a repository layer shall hold all SQL and spatial logic; route handlers shall contain none.
+
+The item was split at that semicolon. `db-003` is now the repository existing and being correct;
+`db-006` is nothing bypassing it. The argument is the one already made for splitting `db-001` from
+`db-003`, applied a level down: the two fail at different times and against different conditions. A
+defective repository fails at write time against a populated database and is caught by its own tests.
+A query leaked into a route handler fails nothing at all — the endpoint returns correct data, the
+tests pass, and the only cost is architectural, paid later. Fused into one item, `passes: true` would
+again assert a conjunction rather than a claim.
+
+The split also fixed a scheduling error that the fused item concealed. The route-handler rule cannot
+be proved today, because the only route is `/api/v1/health` and there is nothing for a handler to
+bypass. Written as part of `db-003` it would either have been asserted vacuously against an empty set
+of modules — a test that passes because there is nothing to check, which is the failure mode recorded
+in the note on proving that tests fail — or it would have blocked the repository behind an endpoint
+that does not exist. As `db-006` it is scheduled with `api-002`, the first data-serving endpoint,
+where the assertion has something to bite on.
+
+*(Record here whether the check was written by parsing the route modules or by matching their source
+text, and the result of mutation-testing it with a violation placed in a docstring. The equivalent
+check in `dal-004` failed exactly that way once already.)*
+
 ### Spatial columns stored as geometry and cast to geography at query time
 
 `db-004` requires that the distance in the spatial clustering query be "computed by PostGIS on
