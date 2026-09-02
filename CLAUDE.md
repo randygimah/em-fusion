@@ -16,6 +16,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Capture questions and clarifications as you go.** Every question the user asks, and every clarification you give that corrects something they had misunderstood, gets appended to `docs/qa.md` as a numbered entry. Write the answer as it was actually needed — including the wrong assumption it corrected, because the correction is the useful part. Do this in the same turn as the explanation, not later. See the Concepts Q&A section below.
 
+**Keep the progress note current.** When a spec item lands that changes the story the published progress note tells, offer to update it before moving to the next item. It is the third leg of the write-up material alongside `thesis_notes.md` and `qa.md`. See the Progress Note section below.
+
 ## Project
 
 EM Fusion is a human-in-the-loop AI prototype for explainable electromagnetic situational awareness: it fuses replayed aviation telemetry and synthetic RF observations through a Data Abstraction Layer, detects deviations deterministically, and turns evidence bundles into schema-validated, grounding-checked AI hypotheses for human analyst review. It is decision support, not autonomous decision-making. Confidence is always Low/Medium/High — never a percentage or decimal score — and that rule applies to any score shown in the UI.
@@ -81,6 +83,7 @@ A contents page for the repo. Use it to find the right file before searching; it
 | `docs/implementation.md` | The phase-by-phase build checklist and the current position in it (mid-Phase 3). Read to find what comes next and which phase a spec item belongs to. A learning checklist, not a rigid sprint plan. |
 | `docs/thesis_notes.md` | **Write to it continuously, not just when read.** Dissertation skeleton and evidence base — Methodology, System Design and Architecture, Implementation, Evaluation. Every design decision, reversal, measurement, threat to validity, reference, and limitation goes here while fresh. See the Thesis Notes section below for what to capture and how to structure it. |
 | `docs/qa.md` | **Write to it continuously, not just when read.** Running Q&A on concepts used elsewhere — RF/EM terms, OpenSky state vectors, the generator's determinism model, detection methods, bounding boxes, PostGIS, evaluation scoring. **Explanatory, not authoritative**: it paraphrases decisions rather than making them. When scope changes, update `em_fusion_v2.md` and re-check this follows. See the Concepts Q&A section below for what to append and when. |
+| **The progress note** — <https://claude.ai/code/artifact/7f3060f9-29d5-46de-b12b-eddd3824cccc> | **Not a repo file: a published artifact.** "EM Fusion in Plain English" — the project and everything built so far, explained with figures for a reader who knows none of it. Update it in place at that URL as items land. See the Progress Note section below. |
 | `docs/scoring_rubric.md` | **Pre-registered — do not edit after the campaign starts.** The blind hypothesis-scoring instrument: Part A is the second scorer's handout (five dimensions, worded 1/3/5 anchors, worked example); Part B is method detail (corpus, weighted κ, adjudication rule, threats to validity). Read before touching `eval-004` or `eval-006`. Changes go in its change log with a reason, never a silent overwrite. |
 | `docs/architecture/workspace.dsl` | **The C4 model, and the source of truth for every architecture diagram.** Four views: L1 System Context, L2 Containers, L3 Backend Components, and a local-Compose Deployment view. Level 4 is deliberately skipped. Update it whenever a container, component, or external dependency is added or removed — a stale diagram that still renders is the failure mode this file exists to prevent. |
 | `docs/architecture/README.md` | How to view, validate, and export the model (`structurizr local` on port 9090, not 8080). Read before running Structurizr by hand. |
@@ -253,6 +256,32 @@ Do not record decisions here. A decision and its rationale belong in `docs/thesi
 ### When to write
 
 In the same turn as the explanation. An entry written later is reconstructed from memory and loses the misunderstanding it was correcting, which is the part worth keeping.
+
+## Progress Note
+
+The published artifact **EM Fusion in Plain English** — <https://claude.ai/code/artifact/7f3060f9-29d5-46de-b12b-eddd3824cccc> — is the third leg of the write-up material, and the only one written for someone outside the project. `thesis_notes.md` holds the reasoning and the rejected alternatives; `qa.md` explains what a decision *means*; the progress note tells the **story**, in plain English, with figures. Between them they are the raw material the dissertation is assembled from, which is why the note is kept current rather than reconstructed at write-up time.
+
+### What goes in
+
+- **The narrative thread.** What the system is for, what exists now, and how a reader gets from one to the other. Sections build on each other; a reader starts at the top and does not stop.
+- **Worked examples on real data.** One record followed all the way through the machinery, with the actual values. Never composed figures — everything is a measurement or a count, reformatted for reading.
+- **Figures where the geometry or the timing is the point.** Hand-authored inline SVG, drawn from real values (the bounding box, the two staleness clocks, the pipeline spine). A figure that restates the prose is decoration; a figure that shows something the prose cannot is the reason the format exists.
+- **What it deliberately does not do yet**, in its own section, so nobody oversells what has been built.
+- **Threats to validity**, stated in the plain-English form an examiner would need.
+
+### What stays out
+
+No spec IDs, no file paths, no function names, no commit hashes. A reader who has never opened the repository must be able to follow every sentence. Where the note and `thesis_notes.md` cover the same decision, the note says what it *means* and the notes say why it was *made* — the note is not a summary of the notes.
+
+### When to update
+
+- **When a spec item lands that changes the story** — a new source, a new stage of the pipeline turning from grey to solid, a measurement worth showing. Offer at the end of the item, before moving on.
+- **When a figure it carries goes stale** — the pipeline spine and the progress-by-area table both encode current state and are the first things to rot.
+- **When a number on it is superseded**, including by a correction. A figure that turns out to be wrong gets fixed on the note, not only in the notes.
+
+### How to update
+
+Republish **to the same URL** by passing it as `url` to the Artifact tool — publishing without it creates a second artifact and orphans the link. Keep the `<title>` and favicon stable across updates. The source file lives in the session scratchpad, so a new session re-reads the published page (`action: "read"`) before editing rather than rebuilding it from scratch.
 
 ## Handoff
 

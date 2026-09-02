@@ -2481,6 +2481,81 @@ over a schema missing a table. The only mitigation in place is the workflow's re
 item immediately before writing its tests, which is a procedural control rather than a technical one,
 and it should be stated as such rather than presented as rigour.
 
+## 39. Let's move onto `db-003`, but remind me what that is trying to achieve
+
+**It closes the only open seam in the ingest path: the DAL currently hands its output to an interface
+that has exactly one implementation, and that implementation is a fake used in tests.** `db-003` writes
+the real one, against PostgreSQL and PostGIS, so a replayed hour actually lands in the database
+instead of in a Python list.
+
+That is the *mechanical* answer. The reason the item exists as its own numbered capability, rather
+than as the last paragraph of `db-001`, is a research answer, and it is the more important one.
+
+### What the item is really testing
+
+`dal-002` required the DAL to persist through a **port** — an interface accepting canonical
+observations and quarantine records, with the storage engine hidden behind it. That port was defined
+and built *before any database existed*, deliberately, and its signature was constrained in two ways:
+
+| Constraint | Why it was imposed |
+|---|---|
+| No storage-engine type crosses it | No session, no engine, no WKT or WKB string, no caller-supplied primary key. A geometry type in the signature would mean the DAL knows about PostGIS, and the seam would be broken before it was built. |
+| One call, both collections | A batch of ten with three invalid must leave seven observations and three quarantine rows, or nothing. Split across two methods there is a window where the observations are stored and their quarantine rows are not. |
+
+Writing an interface against an imaginary database is easy. **The claim under test is that the
+interface was designed well enough to survive contact with a real one unchanged**, and that claim
+cannot be tested until the real one is written. `db-003` is where it gets tested.
+
+There is a prediction on record from the session that built the port, and it should be scored rather
+than quietly forgotten:
+
+> geometry and atomicity are the risks; identity is not.
+
+Meaning: the port passes latitude and longitude as plain numbers, and something has to turn them into
+a PostGIS point — that conversion is where a storage type is most likely to leak upward. And the
+one-unit-of-work guarantee has to become a real transaction, which is the other place the shape may
+not fit. Identity was judged safe because the port never lets the caller supply a primary key.
+
+**If the signature has to change, that is a finding, not a failure.** It is direct evidence about
+RQ1 — how well a Data Abstraction Layer can be specified ahead of its storage — and a changed
+signature with a recorded reason is a stronger result than an unchanged one asserted without test.
+
+### What `db-003` is not
+
+Two things it is repeatedly confused with:
+
+- **It is not the spatial query.** Finding track discontinuities within N kilometres of an RF anomaly
+  zone is `db-004`, and that is the item that justifies using a spatial database at all. `db-003`
+  builds the layer such a query will live in; it does not write it.
+- **It is not the schema.** That was `db-001`, and it is done. The tables exist and are empty.
+
+### A problem found while re-reading the item
+
+Two pieces of stale cross-reference text, both the pattern named in section 38 — a claim about
+something outside the item's own scope, with no test behind it, decaying silently:
+
+1. **`db-003`'s own description is narrower than the work everybody has been calling `db-003`.** It
+   describes a *route-handler* constraint: handlers must contain no SQL, no session construction and
+   no spatial logic, enforced by a test that greps route modules. That is a real and worthwhile rule,
+   but it is a rule about the API layer, and there are no data-serving route handlers yet — the only
+   route is `/api/v1/health`. Nothing in the text says "implement `ObservationRepository` against
+   PostGIS", which is what the handoff, the thesis notes and every session summary have meant by
+   `db-003` for weeks.
+2. **`dal-002` still says the PostGIS implementation "lands with `db-001`".** It does not; it lands
+   with `db-003`. This is the same conflation corrected in section 34, corrected then in the handoff
+   and in `tests/fakes.py`, and missed in the spec line that started it.
+
+### Worth recording as a limitation
+
+Section 38 recorded this decay pattern and offered one mitigation: read the item immediately before
+writing its tests. That mitigation worked again here — both problems were caught by reading, before
+any test was written. But it has now caught **four** stale claims across three items in two sessions,
+which is enough to say the procedural control is load-bearing rather than incidental, and that a spec
+file with free-text cross-references between items has no mechanism to keep them true. A machine-
+checkable reference format would; the project does not have one, and adopting one mid-build is not
+obviously worth the cost. Stated here as a known weakness of the method rather than presented as
+rigour.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
