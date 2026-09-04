@@ -397,3 +397,19 @@ def test_downgrading_the_completion_revision_drops_the_column(
 
     assert "completed_at" not in _columns(empty_database, "scenario_runs")
     assert "scenario_runs" in inspect(empty_database).get_table_names()
+
+
+# Mutation results, 2026-09-04, for the two `db-007` assertions above that
+# claim an *absence* and would otherwise pass against an empty change:
+#
+#   * adding `op.execute("UPDATE scenario_runs SET completed_at = now()")` to
+#     the revision turned `..._does_not_backfill_existing_runs` red, and only
+#     that one -- a backfill touches rows that already exist and is invisible
+#     to every other test here;
+#   * adding `server_default=sa.func.now()` to the column turned five tests
+#     red across this file and `test_db_repository.py`, because a default is
+#     visible both in the reflected column and in every run created afterwards.
+#
+# The pair is deliberate. A default and a backfill are the two ways the column
+# acquires a value nobody asked for, they fail differently, and each is caught
+# by a test that does not catch the other.

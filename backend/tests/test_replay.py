@@ -849,3 +849,11 @@ def test_an_interrupted_replay_leaves_its_run_incomplete(
     assert _count(replay_database, "scenario_runs") == 1
     assert _run_completed_at(replay_database) is None
     assert _count(replay_database, "observations") > 0
+
+
+# Mutation result, 2026-09-04: moving `complete_scenario_run` in `main` to
+# before the call to `replay` turned both the ordering test and the interrupted
+# test red. That is the mutation worth guarding, because a flag set up front is
+# not a visibly broken program -- every count still balances, the summary still
+# prints, and the only thing that changes is that a run which died half-way
+# through now claims to have finished.

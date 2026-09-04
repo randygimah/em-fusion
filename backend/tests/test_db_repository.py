@@ -743,3 +743,11 @@ def test_completing_a_run_that_does_not_exist_raises(
         complete_scenario_run(factory, MISSING_RUN_ID)
 
     assert _completed_at(migrated_database, RUN_ID) is None
+
+
+# Mutation result, 2026-09-04: deleting `WHERE id = :run_id` from
+# `complete_scenario_run` turned `..._does_not_complete_another` and
+# `..._that_does_not_exist_raises` red, and left the other two green -- which is
+# the point of holding a second run in the first of those. An UPDATE with no
+# predicate marks every run in the database complete and satisfies a test that
+# only ever looks at the run it asked for.
