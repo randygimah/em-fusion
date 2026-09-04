@@ -83,6 +83,14 @@ Seven commits on top of the last push. `29a3af8` (the progress-note republish an
 | `da416ca` | `docs: api-002 in the notes, qa 41, Phase 5 checklist` |
 | `700bac2` | `docs: refresh handoff for db-007 and api-002` |
 
+**Outside the repo:** the progress note was republished to the same URL —
+<https://claude.ai/code/artifact/7f3060f9-29d5-46de-b12b-eddd3824cccc>. It gained a section,
+"Asking the store a question": the six-section figure showing two real and four empty, why serving
+the mock for the empty four was refused, the blank-versus-`Low` table, the `FR-715` violation and
+the compiler error that found it, the parity check in both directions, and the measured
+412 / 58 KB / 0.40 s. The spine's store stage now says it is read as well as written, the analyst
+stage says the screen has not been pointed at the endpoint yet, and the totals read 16 of 83.
+
 Added: `backend/app/api/v1/operational_picture.py`, `backend/app/api/v1/schemas/`,
 `backend/tests/test_api_operational_picture.py`,
 `backend/alembic/versions/0002_scenario_run_completion.py`. Modified: `app/dal/models.py`
@@ -156,8 +164,6 @@ Owed, with an owner but no date:
 Open and unowned:
 
 - **7 commits unpushed.**
-- **The progress note has not been updated for `api-002`.** It now understates what exists: the
-  pipeline spine shows nothing being served, and the totals read 15 of 83.
 - **Root `make check` has still not been run in full**, though `format`, `lint`, `type-check`,
   `test-backend` and `test-frontend` were each run separately and are green.
 - **`make generate` is broken** — the `pipeline` service names `app.pipeline`, which does not exist
