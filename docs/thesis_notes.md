@@ -1082,11 +1082,50 @@ anyone with the corpus and the seed:
 | Batches | 1 | 12 |
 | Wall time | ~2.4 s | **14.25 s** |
 
-Persistence therefore costs roughly 5.8 times what reading and normalising cost, and 14.25 s is the
-figure that bounds a scenario run rather than the earlier one. Conditions: twelve batches of 300
-simulated seconds each, so twelve transactions; both processes in containers; PostgreSQL under
-amd64 emulation on Apple Silicon, which the container note elsewhere in this chapter measures at
-about 2.5x native, so this is a pessimistic figure rather than an optimistic one.
+The figure that bounds a scenario run is therefore about **14 seconds**, not the earlier one.
+Conditions: twelve batches of 300 simulated seconds each, so twelve transactions; both processes in
+containers; the backend container native `aarch64` and only `postgis` under `amd64` emulation, which
+the container note elsewhere in this chapter measures at about 2.5x native, so the persistence half
+is pessimistic rather than optimistic.
+
+**The comparison is not controlled, and an earlier draft of this section overclaimed from it.** It
+is tempting to read the two columns as "persistence costs 5.8 times what reading and normalising
+cost", and that was written down before it was examined. The baseline was taken natively on the host
+against an in-memory repository; the new figure is a container against an emulated database. The
+gap is mostly persistence — the emulated component is the database — but the two measurements differ
+in more than one variable and only a same-container run against the in-memory repository would
+isolate it. The CLI cannot currently do that, and the honest position is that the total is measured
+and the attribution is not.
+
+**Run-to-run variance is about 5 per cent**, measured as 13.60 s and 14.25 s for identical
+invocations, so the figure should be quoted as "about 14 s" rather than to two decimal places. This
+matters for the write-up: two decimal places on a figure with that spread implies a precision the
+method does not have.
+
+#### Batch size barely matters until it suddenly does
+
+The window length decides the unit of work, and `read_window` cannot push its time predicate into
+the Parquet reader — `iter_batches` takes no `filters` and the artefact is a single row group — so
+every window walks the whole 133,634-row file and keeps what falls in range. Twelve windows means
+twelve full scans. That is obviously wasteful and was expected to show:
+
+| Window length | Batches | Wall time |
+|---|---|---|
+| 3600 s | 1 | 13.99 s |
+| 900 s | 4 | 12.69 s |
+| 300 s | 12 | 13.60 s |
+| 60 s | 60 | 23.17 s |
+
+It does not show, until sixty batches. Eleven redundant scans are indistinguishable from noise,
+because a full scan costs roughly 0.16 s and per-row DAL work dominates by two orders of magnitude.
+At sixty batches about nine of the twenty-three seconds are re-reading, and the design starts to
+matter.
+
+Recorded because the inference runs the wrong way round from intuition. The redundant scan is a real
+inefficiency, visible in the source, and the obvious optimisation — read once, dispatch to windows —
+would have bought nothing at the batch sizes actually in use while adding a buffering concern. *(If
+scenario runs later drive much shorter windows, this is the first place to look, and the constant is
+now on record.)*
 
 Four independent cross-checks reproduced in the database what was derived from the raw Parquet
 months earlier: 30,276 observations carrying no altitude, 948 distinct aircraft, every geometry at
@@ -1098,6 +1137,26 @@ SRID 4326, and zero rows mentioning `icao24` or `callsign` anywhere in a stored 
 gone. That is the argument for `adp-007` in one sentence: a measurement whose method is not
 committed is not a measurement, it is a memory. Both values are now superseded rather than
 reconciled.
+
+#### The atomicity boundary, and the gap it leaves
+
+`adp-007` chose one window as the unit of work rather than one run, so `dal-002`'s all-or-nothing
+guarantee holds per batch: the accepted observations and the quarantine records for a five-minute
+slice commit together or neither. Across the run there is no enclosing transaction, and a failure at
+batch seven leaves batches one to six committed.
+
+The point worth carrying into the write-up is that **atomicity is always relative to a boundary
+somebody chose**, and the choice is an engineering trade rather than a property of the database. The
+whole-run alternative was declined because it holds a 133,634-row write open for the length of the
+replay and discards everything on a failure at 99 per cent.
+
+**The consequence was under-thought when the item was specified, and is recorded here rather than
+left to be discovered.** Nothing marks a run complete and nothing cleans up a partial one. A failed
+replay leaves its rows under a `scenario_runs` row; re-running creates a *new* run rather than
+resuming; and the two are indistinguishable by inspection. This is harmless while nothing reads
+runs, and actively misleading once the detection layer does — any count over `scenario_runs` taken
+before it is fixed may include partial runs. The fix is small in either direction, a completion flag
+set on success or a run deleted on failure, and neither exists yet.
 
 #### Two defects that the test suite could not reach
 

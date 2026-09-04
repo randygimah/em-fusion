@@ -3,8 +3,8 @@
 Written at the end of a working session so the next one starts with context rather than
 archaeology. Overwritten each session — this is the current state, not a log. History lives in git.
 
-**Session date:** 2026-08-28 to 2026-08-31
-**Branch:** `main`, **5 commits ahead of `origin/main` — not pushed.** Working tree clean.
+**Session date:** 2026-09-02 to 2026-09-04
+**Branch:** `main`, **4 commits ahead of `origin/main` — not pushed.** Working tree clean.
 
 ## Goal
 
@@ -14,201 +14,192 @@ deviations detected deterministically, evidence bundles turned into schema-valid
 grounding-checked AI hypotheses for analyst review. Decision support, not autonomous
 decision-making.
 
-This session closed the middle of the persistence strand: **`db-001`** (Alembic, the core schema,
-and the database-backed test tier) and then **`ops-003`** (the root `Makefile` targets that make
-that tier actually run in containers). `ops-003` was taken second and deliberately — without it the
-containerised run reported success over a suite that silently skipped every database test. The
-session also produced a plain-English progress note as a published artifact; see *Changed*.
+This session finished the persistence strand and connected it to an operator. **`db-003`** put the
+PostGIS implementation behind the DAL's repository port; **`adp-007`** put a command in front of the
+whole path. Between them, an hour of archived air traffic now goes from a file on disk to 133,134
+rows in PostGIS in about fourteen seconds, reproducibly, by typing `make replay`.
 
-Nothing has been written to a database yet. The schema exists and is empty; `db-003` is the item
-that fills it.
+`db-003` also answered the standing prediction about the port signature, and `adp-007` re-took the
+corpus timing figure that had been unreproducible for a month.
 
 ## Current state
 
-The store exists and is versioned. The repository port still has exactly one implementation, the
-in-memory fake in `backend/tests/fakes.py`.
+The pipeline is connected end to end from source to store. Nothing reads back out of the store yet —
+no endpoint, no detector.
 
 | | |
 |---|---|
-| Backend suite, native | **210 passed, 22 skipped, 99.84% coverage on `app/`.** Only miss is `app/corpus/extract.py:246`, pre-existing. The 22 skips are the `database`-marked tier |
-| Backend suite, containerised | **232 passed** via `make test-backend`, from a *dropped* `test_em_fusion` — the target provisions it. Nothing is excluded there, which is why it is the authoritative run |
-| Spec items passing | **12 of 80**: `api-001`, `adp-001`, `adp-004`, `adp-005`, `adp-006`, `dal-001`, `dal-002`, `dal-003`, `dal-004`, `db-005`, **`db-001`**, **`ops-003`** |
+| Backend suite, native | **237 passed, 41 skipped, 96.66%.** The 41 skips are the `database` tier |
+| Backend suite, containerised | **278 passed, 99.87%** via `make test-backend`. Authoritative: nothing is excluded there |
+| Spec items passing | **14 of 82**: `api-001`, `adp-001`, `adp-004`, `adp-005`, `adp-006`, **`adp-007`**, `dal-001`, `dal-002`, `dal-003`, `dal-004`, `db-001`, **`db-003`**, `db-005`, `ops-003` |
+| Full-corpus replay | 133,634 read, 133,134 accepted, 500 quarantined, 12 batches, **~14 s**. Cross-checks reproduced in the database: 30,276 without altitude, 948 distinct aircraft, all SRID 4326, zero rows mentioning `icao24` or `callsign` |
 | Corpus | Unchanged. Box 49–54°N, 3–11°E; 133,634 rows; content checksum `7ce83881…be05` |
-| Tooling | `backend/make check` green. `make migrate` verified: applies `0001_core_schema` to the running database, and a second run is a clean no-op. Root `make check` (lint, format, type-check, frontend) **still not run in full** |
-| New dependencies | `alembic` 1.19.1. Added bare, not `>=`-pinned, matching the file's existing style; `uv.lock` pins it |
+| New dependencies | `geoalchemy2`. Added bare, matching the file's style; `uv.lock` pins it |
+| Removed | The `geometry` `filterwarnings` entry in `pyproject.toml`, in the same change that added GeoAlchemy2 |
 
-### `db-001`, as built
+### The spec grew by two items
 
-`backend/alembic.ini`, `backend/alembic/env.py`, `backend/alembic/versions/0001_core_schema.py`, and
-`backend/app/db/migrations.py`. 22 database-marked tests in `tests/test_db_schema.py`, 4 non-database
-unit tests in `tests/test_db_migrations.py`.
+- **`db-006` (new, unbuilt).** `db-003`'s description turned out to specify a *route-handler* rule —
+  no SQL, no session, no spatial logic in handlers — while every planning document used `db-003` to
+  mean the PostGIS repository. FR-904 is one sentence with a semicolon; the item was split at it.
+  `db-006` is scheduled with `api-002`, because it cannot be proved before a data-serving route
+  exists and would otherwise assert vacuously over an empty set of modules.
+- **`adp-007` (new, now passing).** It had been referenced in four places for a month and never
+  written into `spec.jsonl`.
 
-**Seven tables, not six.** `quarantined_records` was added because the ERD in `em_fusion_v2.md` §9
-had no home for the records `dal-002` requires — see *Failed attempts*. The others: `scenario_runs`,
-`observations`, `evidence_bundles`, `anomalies`, `hypotheses`, `analyst_feedback`.
+### `db-003`, as built
 
-Details that will look arbitrary later:
+`app/db/repository.py` — `PostgisObservationRepository`, taking a `sessionmaker`. **The port
+signature did not change.** No session, no ORM model, no WKT/WKB string, no caller-supplied key
+crossed it. Three structural tests hold that shape, each mutation-tested.
 
-- **`sqlalchemy.url` in `alembic.ini` is deliberately empty** (NFR-401). `env.py` falls back to
-  `database_url()`, so the DSN is read from the environment in exactly one place.
-- **`alembic_config()` sets an absolute `script_location`**, because the backend is run from
-  `backend/`, from the repo root, and from `/app` in the container.
-- **`_require_postgis()` asserts rather than creates.** `CREATE EXTENSION` needs superuser and is the
-  image's job; a migration that creates it can never *fail* for its absence, which is the failure
-  case `db-001` exists to guard.
-- **Geometry columns are explicit DDL, not GeoAlchemy2.** That library earns its place at query time
-  in `db-003`. Here it would add a dependency to hide two lines. `pyproject.toml` carries a
-  `filterwarnings` entry ignoring SQLAlchemy's `Did not recognize type 'geometry'` — **remove it when
-  GeoAlchemy2 lands.**
-- **`hypotheses` carries `generator`/`model_id`/`generation_params`/`raw_response` from revision
-  one**, plus CHECK constraints on `generator` and `confidence`. The database cannot hold a
-  confidence that is not Low/Medium/High.
+The prediction on record — *geometry and atomicity are the risks, identity is not* — named the right
+risks and overstated both. Geometry resolved one level down, inside the repository; atomicity
+resolved because `dal-002` had already required one call carrying both collections, which is what
+gave the implementation a transaction to own. **The honest reading is not "the design survived
+contact with reality" but "the guarantee was written down early, so the implementation had somewhere
+to put it".** In `thesis_notes.md` in that weaker form.
 
-### `ops-003`, as built
+Two decisions worth not re-litigating:
 
-`tests/test_ops_command_surface.py` — 27 tests parsing the root `Makefile`. Three `Makefile` changes:
+- **The schema is reflected, not redeclared.** The migration stays the single source of truth; a
+  second declaration here would be a copy that drifts. This is also what GeoAlchemy2 is *for*: the
+  warning `db-001` suppressed was reflection failing, so the dependency and the removal of the
+  filter are the same change.
+- **Geometry is built as EWKT** (`WKTElement`) rather than cast in SQL, so a point cannot be
+  inserted with the SRID unset — and an unset SRID is 0, over which `db-004`'s `ST_DWithin` would
+  answer in degrees.
 
-- **`migrate`** — `compose run --rm backend alembic upgrade head`.
-- **`db-test-create`** — idempotent by checking `pg_database` first, because `createdb` on an
-  existing database exits non-zero. It creates the extension too, since the migrations assert it.
-- **`test-backend`** lost `--no-deps`, gained `db-test-create` as a prerequisite, `-e
-  TEST_DATABASE_URL`, and a read-only mount of the root `Makefile` at `/repo/Makefile` (Compose
-  mounts only `./backend`, so the tests could not otherwise see the file they assert against — same
-  pattern as `generate`'s `DATA_DIR` mount).
+### `adp-007`, as built
 
-**The tests are structural.** They parse the file; they do not prove a command works against a
-daemon. What they do prove is the narrower and more useful claim: that a target cannot *silently do
-nothing*. Three absence assertions were mutation-tested — `|| true` on a recipe, a bare
-`uv run pytest`, `--no-deps` restored — each turned the right test red.
+`app/replay.py` — `build_parser`, `windows`, `create_scenario_run`, `replay`, `main`. Plus a `make
+replay` target and `PSEUDONYM_SEED` in `compose.yaml`. 24 tests in `tests/test_replay.py`.
+
+Four decisions were fixed *before* implementation and are recorded in the item itself:
+
+1. **Replay creates its own `scenario_runs` row**, `scenario_type='replay-only'`, seed 0, null
+   ground truth. `observations` has a NOT NULL FK and no generator exists; `scn-001` supersedes it,
+   and the placeholder type is what makes those rows findable.
+2. **The unit of work is one window, not one run** — a deliberate weakening of `dal-002` at run
+   scale, held in place by a test so strengthening it later fails rather than passes.
+3. **It loads `.env`**, following `app/corpus/build.py` rather than `app/main.py`.
+4. ~~`${PSEUDONYM_SEED:?}`~~ — **reversed during implementation, see *Failed attempts*.**
 
 ## Files in flight
 
-Nothing in flight. The tree is clean; the 5 commits are local only.
+Nothing in flight. The tree is clean; the 4 commits are local only.
 
-- `backend/alembic/versions/0001_core_schema.py` — complete. `db-003` reads it, does not change it.
-- `backend/app/db/session.py` — unchanged this session, still complete.
-- `adp-007` is still **deliberately unwritten**. It is now unblocked in principle but should wait for
-  `db-003`, so the replay it commits actually persists.
-- **Still no committed way to re-run the full-corpus replay.** The ~2.4 s figure and the
-  133,134 / 500 counts came from an ad-hoc script in a scratch directory that is gone. That gap
-  remains the whole argument for `adp-007`.
+- `backend/app/replay.py` — complete. `scn-001` will replace its placeholder run row, not the module.
+- `backend/app/db/repository.py` — complete. `db-004`'s spatial query lands here, and it is the only
+  place SQL may go.
+- `docs/spec.jsonl` — `db-006` is written and **unbuilt**; read it before starting `api-002`, which
+  is where it lands.
 
 ## Changed
 
-Five commits on top of `297de4a`. **None pushed.**
+Four commits on top of `5f7f0f8`. **None pushed.**
 
 | Commit | What |
 |---|---|
-| `2d15994` | `spec: amend db-001 — seventh table, TEST_DATABASE_URL` |
-| `4f60aba` | `test: add tests for db-001` |
-| `54d137b` | `feat(db-001): core schema and migrations - tests pass` |
-| `23b687e` | `spec: amend ops-003 — db-test-create, drop the unbuilt omission clause` |
-| `e8c87e9` | `feat(ops-003): migrate and db-test-create targets, database tier runs in containers - tests pass` |
+| `d715b5d` | `spec: add adp-007, amend ops-003 for the replay target` |
+| `78aae11` | `test: add tests for adp-007` |
+| `42e1d81` | `feat(adp-007): replay entrypoint, corpus into PostGIS in 14.25 s - tests pass` |
+| `371c9a3` | `docs: qa 40, correct the replay measurement, refresh handoff` |
 
-Added: `backend/alembic.ini`, `backend/alembic/env.py`,
-`backend/alembic/versions/0001_core_schema.py`, `backend/app/db/migrations.py`,
-`backend/tests/test_db_schema.py`, `backend/tests/test_db_migrations.py`,
-`backend/tests/test_ops_command_surface.py`. Modified: root `Makefile` (three targets),
-`backend/tests/conftest.py` (the database tier: `requires_database`, `live_database_url`,
-`empty_database`, `database_without_postgis`), `backend/pyproject.toml` and `uv.lock` (alembic,
-`filterwarnings`, the `database` marker), `docs/spec.jsonl` (`db-001` and `ops-003` amended, both set
-passing), `docs/em_fusion_v2.md` §9 (ERD gained `QUARANTINED_RECORDS`), `docs/qa.md` (§38),
-`docs/thesis_notes.md` (five subsections), `docs/implementation.md` (Phase 6 ticks), `README.md`
-(migrations section, database-test section, two `Makefile` targets).
+Earlier this session, already pushed: the `db-003` split and implementation, the `CLAUDE.md`
+progress-note convention, and the handoff refresh.
 
-**Outside the repo:** a plain-English progress note was published as an artifact —
-<https://claude.ai/code/artifact/7f3060f9-29d5-46de-b12b-eddd3824cccc>. It explains the project and
-everything built so far for a reader who knows none of it, with three figures (the bounding box, the
-two staleness clocks, the pipeline spine). It is **updated on request, not automatically**, and
-republishing to that same URL requires passing the URL. It is a companion to `thesis_notes.md`, not
-a replacement: notes hold the reasoning, the artifact holds the explanation.
+Added: `backend/app/replay.py`, `backend/tests/test_replay.py`. Modified: `compose.yaml`
+(`PSEUDONYM_SEED` on `backend` and `pipeline`), root `Makefile` (`replay`, `REPLAY_ARGS`, and a
+read-only `compose.yaml` mount on `test-backend`), `backend/tests/test_ops_command_surface.py`
+(`replay` in the enumerated targets), `docs/spec.jsonl`, `docs/thesis_notes.md`, `docs/qa.md`,
+`docs/implementation.md`, `CLAUDE.md` (repo map refreshed — it still called the backend "a minimal
+FastAPI skeleton" and listed none of `app/dal/`, `app/db/`, `app/adapters/`, `app/corpus/`).
+
+**Outside the repo:** the progress note was updated twice —
+<https://claude.ai/code/artifact/7f3060f9-29d5-46de-b12b-eddd3824cccc>. It now carries a section on
+the port that was designed before the database existed, and one on the replay measurement with a
+figure showing the twelve batches. `CLAUDE.md` gained a **Progress Note** section defining what goes
+in it and how to republish to the same URL.
 
 ## Failed attempts
 
-- **Two spec claims in `db-001` were stale before its tests were written, and both were mine.** Each
-  was true when written and falsified by later work in a *different* item. Read immediately before
-  writing tests, which is the only reason they were caught:
-  - the six-table list, which predates `quarantined_records` existing at all;
-  - the conditional coverage-omission clause, which described machinery for a module that turned out
-    not to need it.
-  The pattern is named in `qa.md` §38: **spec text describing the state of something outside its own
-  item is a claim with no test behind it, and it decays silently.** The only mitigation found is
-  procedural — re-read the item immediately before writing its tests.
-- **A mutation test reported a false pass.** Black had collapsed
-  `op.execute(f"CREATE INDEX ...")` onto one line, so my multi-line replacement string matched
-  nothing and the GiST test "passed" against an unmutated file. Redone with
-  `assert s.count(old) == 1, "MUTATION DID NOT APPLY"` first — then confirmed red. **Every mutation
-  now asserts its own substitution applied before it asserts anything about the test.** A mutation
-  test that does not verify the mutation is a test of nothing.
-- **`test_geography_distance_works_over_the_stored_geometry` was a weak test.** It computed a
-  distance between two literal points, so it would have passed against a schema with no geometry
-  columns at all. Rewritten as `test_db004s_query_shape_compiles_against_the_stored_columns`, running
-  `db-004`'s actual `ST_DWithin` predicate against the real columns over zero rows.
-- **The ERD amendment failed on a wrong anchor.** I assumed `SCENARIO_RUNS ||--o{ OBSERVATIONS` was
-  the last relationship line in `em_fusion_v2.md` §9; it was `ANOMALIES }o--|| EVIDENCE_BUNDLES`. The
-  edit asserted its anchor and refused, before any write.
-- **`test_database_url` in `conftest.py` would have been collected by pytest** as a test, because of
-  its name. Renamed `live_database_url`.
-- **The container failed with `No module named 'alembic.config'`** on a stale image — Compose
-  bind-mounts source but not site-packages. Fixed with `make build-backend`. This is exactly the trap
-  the root `Makefile`'s own comment documents, and I walked into it anyway.
-- **I created `test_em_fusion` by hand while building `db-001`**, which made the green run depend on
-  an undocumented manual step — the thing `AC-12` forbids. `db-test-create` removed it, and the proof
-  was dropping the database entirely and running `make test-backend` from nothing.
-- **`app/db/migrations.py` sat at 70% coverage natively**, and the specified fix was the conditional
-  omission machinery. Four unit tests took it to 100% instead — path resolution and ini parsing need
-  no database. **The clause was then deleted from both `db-001` and `ops-003` rather than left
-  describing machinery that does not exist**, and named as returning with `db-003`. Written up in
-  `thesis_notes.md`: a spec describing unbuilt machinery is worse than one that never mentioned it,
-  because it reads as a completed design and survives review by being internally coherent.
-- **The full-corpus replay wall time is recorded inconsistently across three documents** —
-  `thesis_notes.md:1059` says **2.44 s**, `handoff.md` and `qa.md` §2246 both say **2.46 s**. The
-  measuring script is gone, so neither can be checked. Not yet reconciled; see *Owed* below. This is
-  a number that would otherwise have reached the dissertation twice with different values.
+- **I approved-and-then-reversed one of `adp-007`'s four fixed decisions, and only found out by
+  running it.** The item specified Compose's required-variable form, `${PSEUDONYM_SEED:?}`, so an
+  unset seed would fail on the host. **Compose interpolates the whole file for every command
+  regardless of profile**, so that makes `up`, `migrate`, `test` and `demo` all demand a seed only
+  `replay` needs — and `make demo` on a clean machine is `AC-12`. Verified: with the seed unset,
+  `docker compose config` itself exits non-zero. Replaced with plain `${PSEUDONYM_SEED}`; the loud
+  failure moved to `Pseudonymiser.from_environment`, which raises before anything is written.
+- **Two defects reached production that no test could have caught**, both found on the first real
+  `make replay`. They share a shape: *the place the code runs is not the place the tests describe.*
+  - `DEFAULT_ENV_FILE` was anchored to the repository root — correct natively, resolving to
+    `/backend/.env` in a container where Compose mounts `./backend` as `/app` and nothing above it
+    exists. **`app/corpus/build.py` still has this defect** and escapes it only by never being
+    containerised.
+  - Compose passes an unset host variable through as **an empty string**, and
+    `load_dotenv(override=False)` treats present-but-empty as present — so `/app/.env` was skipped
+    and the replay failed reporting a missing seed with the seed in a mounted file. Every test
+    either set the variable or deleted it; **none set it to empty, which is the one state the
+    platform actually produces.**
+- **I overstated a measurement, and a review question caught it.** `thesis_notes.md` and the progress
+  note both said persistence costs "5.8x" reading and normalising. The ~2.4 s baseline was native and
+  in-memory; the new figure is a container against an emulated database. The gap is *mostly*
+  persistence, but the two differ in more than one variable and it should not have been reported as
+  an attribution. Corrected, along with the precision: run-to-run variance is ~5%, so the figure is
+  "about 14 s", not 14.25 s.
+- **I assumed the twelve-batch replay paid for eleven redundant file scans.** `read_window` really
+  does walk the whole extract per window. Measured: 1 batch 13.99 s, 4 batches 12.69 s, 12 batches
+  13.60 s, 60 batches 23.17 s. A full scan is ~0.16 s and is swamped by per-row DAL work until about
+  sixty batches. The inefficiency is real and visible in the source; optimising it at current batch
+  sizes would have bought nothing.
+- **The Black-reflow trap, again.** An edit anchored on a multi-line `next(...)` in the test file
+  failed because Black had collapsed it onto one line — the same failure as the `db-001` mutation
+  test two sessions ago. The assertion caught it before any write; the lesson is that any anchor into
+  a formatted file should be re-read after formatting, not written from memory.
+- **A structural test matched my own explanatory comment rather than the setting it guards.** The
+  compose seed test picked the first line containing `PSEUDONYM_SEED`, which was a comment
+  explaining why the seed is handled the way it is. Corrected to strip comment lines. Same class as
+  the docstring-versus-import defect in §38 — text search cannot tell a rule from a description of
+  the rule.
+- **Deviation: three tests written after the implementation** — the `.env` loading test, the
+  empty-seed regression, and the second one closing the last uncovered line in `app/replay.py`. Each
+  says so in its own docstring.
 
 ## Next step
 
-1. **`db-003`** — the PostGIS `ObservationRepository`. Where the replay path first persists anything,
-   and where the conditional coverage-omission rule returns. It answers the standing prediction about
-   whether the port signature survived contact with a real database unchanged; the prediction on
-   record is that **geometry and atomicity are the risks and identity is not.** Record the answer
-   either way.
-2. **`adp-007`** — `python -m app.replay` plus a `make replay` target. `ops-003` will need amending
-   again, since its description enumerates the targets. Needs `PSEUDONYM_SEED` passed into the
-   `pipeline`/`backend` Compose services from the host environment first, never a committed default.
-3. **Phase 5** — `/api/v1/operational-picture` against the frontend contract, then swap the mock. Not
-   blocked by any of the above and never was; its position here is scheduling, not dependency.
+1. **Push the four commits.**
+2. **Phase 5 — `api-002`**: `/api/v1/operational-picture` returning the frontend contract's shape.
+   Then `api-003`, swapping the mock in `App.tsx` for a fetch. This is also where **`db-006`** gets
+   its first real test, since it needs a data-serving route to assert against.
+3. **`scn-001`/`scn-002`** — the scenario generator, which supersedes `adp-007`'s placeholder run.
 
 Owed, with an owner but no date:
 
-- **Reconcile the 2.44 / 2.46 s replay figure** across `thesis_notes.md`, `qa.md` and this file, or
-  strike it until `adp-007` can re-measure. Then re-record it against the PostGIS repository — the
-  current number measures the reader and the DAL only; the one that will bound a scenario run
-  includes persistence.
-- **`compose.yaml` passes `DATABASE_URL` and nothing else** — no `env_file:`, no `PSEUDONYM_SEED` in
-  any service. Harmless today; breaks `adp-007`, whose containerised replay pseudonymises at ingest
-  and will fail with an error message pointing at "project configuration held outside the
-  repository". Pass the seed from the host environment, never a committed default (`dal-004`).
+- **Nothing marks a scenario run complete, and nothing cleans up a partial one.** A failed replay
+  leaves rows under a `scenario_runs` row; re-running creates a new run rather than resuming; the two
+  are indistinguishable by inspection. Any count over `scenario_runs` may therefore include partial
+  runs. Fix is small in either direction — a completion flag set on success, or the run deleted on
+  failure — and neither exists. Recorded in `qa.md` §40 and `thesis_notes.md`.
+- **`app/corpus/build.py` resolves `.env` from the repository root** and will break the first time
+  anyone containerises the corpus build. One line, not yet changed, because editing a passing item
+  outside its own spec is how the drift in §38/§39 starts.
 - **Scenario type 4 must exclude the 10 tracks carrying a natural dropout** from injection sites.
-  Seven of the ten fall in the 100–300 s band the scenario injects, so without the exclusion the type
-  4 false-positive rate is confounded. The coverage report identifies the tracks.
+  Seven of the ten fall in the 100–300 s band the scenario injects.
 - **Re-run the coverage acceptance check as originally specified** — `Normal baseline` through the
   extract — once the scenario engine exists.
-- **Remove the `geometry` `filterwarnings` entry** from `backend/pyproject.toml` when GeoAlchemy2
-  lands with `db-003`. A permanent warning filter hides the next unrecognised type too.
 - **Record whether any Phase 6 detection rule needs altitude on more than 77% of samples**, given
   22.7% of positioned rows carry none.
 
 Open and unowned:
 
-- **5 commits are unpushed.**
-- **Root `make check` has still not been run in full.** Only `make test-backend` was run this
-  session; lint, format, type-check and the frontend suite were not exercised in containers.
-- **The frontend suite was not run this session.** `pnpm test` fails on the shell's default Node 20;
-  `frontend/.nvmrc` pins ≥ 22.13 and `nvm use` is required first.
-- **mypy does not check `tests/`.** `mypy app/ tests/` reported 18 errors when last measured, nearly
-  all from deliberate type violations in negative tests. Cost is quantified; the call is not made.
-- **CI still does not exist** (`ops-002`). Until it does, a green `make check` is evidence about one
-  machine at one moment.
-- Track 0: the data-egress question (employer) and the licence-version divergence (shipped 2017
-  `LICENSE.txt` vs the operative published terms) both remain open.
+- **4 commits unpushed.**
+- **Root `make check` has still not been run in full.** Only `make test-backend` this session.
+- **The frontend suite has not been run for three sessions.** `pnpm test` fails on the shell's
+  default Node 20; `frontend/.nvmrc` pins ≥ 22.13 and `nvm use` is required first.
+- **`make generate` is broken** — the `pipeline` service's command names `app.pipeline`, which does
+  not exist until `scn-003`. Carried knowingly; recorded in `ops-003`'s own text.
+- **mypy does not check `tests/`.** 18 errors when last measured, nearly all deliberate type
+  violations in negative tests.
+- **CI still does not exist** (`ops-002`).
+- Track 0: the data-egress question (employer) and the licence-version divergence both remain open.

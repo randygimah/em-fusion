@@ -2556,6 +2556,117 @@ checkable reference format would; the project does not have one, and adopting on
 obviously worth the cost. Stated here as a known weakness of the method rather than presented as
 rigour.
 
+## 40. Three from reviewing the replay work: is 14.25 s the total, is the atomicity trade-off "keep what worked", and what is the `.env` situation between the container and `build.py`?
+
+### 1. "The 300 s batch is essentially batching the 1 hr data into 12 intervals... all together it took 14.25 s?"
+
+**Yes — that is the total for all twelve.** The hour is cut into twelve five-minute slices; each is
+read, validated, pseudonymised and written as one unit; the timer runs across the whole loop.
+
+**But the question prompted a check that corrected something I had asserted without measuring.**
+`read_window` cannot push its time filter into the Parquet reader — `iter_batches` takes no
+`filters` and the artefact is a single row group — so it walks **the entire file for every window**
+and keeps the rows in range. Twelve windows means twelve full scans of 133,634 rows.
+
+That sounds expensive and measurably is not, until it is:
+
+| Window length | Batches | Wall time |
+|---|---|---|
+| 3600 s | 1 | 13.99 s |
+| 900 s | 4 | 12.69 s |
+| 300 s | 12 | 13.60 s |
+| 60 s | 60 | 23.17 s |
+
+Eleven redundant scans cost nothing detectable, because a full scan is roughly **0.16 s** and is
+swamped by per-row DAL work. At sixty batches about nine of the twenty-three seconds are pure
+re-reading, which is where the design would start to matter.
+
+Two things follow, and both are corrections rather than additions:
+
+- **Run-to-run variance is about 5 per cent** — 13.60 s and 14.25 s for the same configuration — so
+  the honest precision is "about 14 s", not 14.25 s.
+- **"Persistence costs 5.8x reading and normalising" was overstated.** The ~2.4 s baseline was taken
+  natively on the host against an in-memory store; this figure is a container against an emulated
+  PostgreSQL. The backend container runs native `aarch64` and only `postgis` runs emulated `x86_64`,
+  so the gap is *mostly* persistence — but it is not a controlled comparison and should not be
+  reported as one. A clean measurement would need the same code path in the same container against
+  the in-memory repository, which the CLI cannot currently do.
+
+### 2. "Atomicity is all or nothing... but in our case we keep going and keep the operations that work?"
+
+**Yes, and the part worth holding on to is that the boundary is a choice, not a property.**
+
+Atomicity always applies *relative to a unit somebody picked*. Two units are in play here:
+
+| Unit | Guarantee | Holds? |
+|---|---|---|
+| One batch (one window) | The accepted observations and the quarantine rows commit together or neither | **Yes** |
+| One run (twelve batches) | The whole replay commits or none of it does | **No, deliberately** |
+
+The per-batch guarantee is the one `dal-002` actually requires, and it is the one that matters: a
+run can never end having stored seven observations while losing the record of the three rejections.
+That is the bank-transfer property — debit and credit, or neither.
+
+The per-run guarantee was declined. Wrapping all twelve in one transaction means holding a
+133,634-row write open for the length of the replay, and a failure at 99 per cent discards
+everything. So batch 7 failing leaves batches 1–6 committed.
+
+**A consequence that was under-thought when this was specified, and is being recorded rather than
+discovered later:** nothing cleans up a partial run. The rows already written stay under their
+`scenario_runs` row, re-running creates a *new* run rather than resuming, and the database therefore
+accumulates partial runs that are indistinguishable from complete ones by inspection. Harmless while
+nothing reads runs; actively misleading once detection does. Either replay should mark a run
+complete on success — so an unmarked run is visibly partial — or it should delete its own run on
+failure. Neither exists. **Worth recording as a limitation:** any count taken over `scenario_runs`
+before that is fixed may include partial runs.
+
+### 3. "I still don't understand the env file situation between container and `build.py`"
+
+**Three entrypoints, three behaviours, and the inconsistency is deliberate in one place and was a
+bug in another.**
+
+The file is `backend/.env`. It holds `PSEUDONYM_SEED` and is never committed.
+
+| Entrypoint | Reads `.env`? | Why |
+|---|---|---|
+| `app/main.py` — the server | **No** | Always run through Compose, which supplies the environment itself (§37). |
+| `app/corpus/build.py` — corpus CLI | Yes | An operator command, run by hand, natively. |
+| `app/replay.py` — replay CLI | Yes | An operator command too — **and the first one ever run inside a container.** |
+
+That last row is where both defects lived.
+
+**The path.** `build.py` locates the file by walking up from its own location to the repository root
+and back down to `backend/.env`:
+
+```
+backend/app/corpus/build.py  ->  parents[3] = <repo>  ->  <repo>/backend/.env    correct
+/app/app/corpus/build.py     ->  parents[3] = /       ->  /backend/.env          does not exist
+```
+
+Compose mounts `./backend` as `/app`, so **nothing above `/app` exists** and the walk lands on the
+filesystem root. `build.py` carries this defect right now and is unaffected only because it is never
+run in a container. `replay.py` was written the same way and broke immediately. It now anchors to
+the package rather than the repository:
+
+```
+backend/app/replay.py  ->  parents[1] = backend/  ->  backend/.env    correct
+/app/app/replay.py     ->  parents[1] = /app      ->  /app/.env       the same file, through the mount
+```
+
+**The empty string.** `compose.yaml` passes `PSEUDONYM_SEED: ${PSEUDONYM_SEED}`. When the host shell
+does not have it, Compose does not omit the variable — **it sets it to the empty string.** And
+`load_dotenv(override=False)` means "do not overwrite variables that are already set", where set
+includes set-to-empty. So the file was skipped and the replay failed reporting a missing seed, with
+the seed present in a mounted file. The fix removes the variable when it is blank before loading,
+because an empty seed is not a seed — which `Pseudonymiser.from_environment` already says one layer
+down.
+
+**Worth recording as a limitation:** the two CLIs now behave differently from each other in a way no
+test covers — `build.py` still resolves `.env` from the repository root. It works today and will
+break the first time anyone containerises the corpus build. The fix is one line and has not been
+made, because changing a passing item outside its own spec is how the drift documented in §38 and
+§39 starts.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -2572,6 +2683,9 @@ rigour.
 | **Baseline delta** | An observation's deviation from its expected normal value — the quantity detectors act on. |
 | **Seed** | The pseudo-random generator's starting value; makes a "random" run exactly repeatable. |
 | **Ground truth** | What the generator actually injected — the known-correct answer detection is scored against. |
+| **Atomicity** | A set of operations commits together or not at all — always relative to a chosen unit. Here: per batch, not per run. |
+| **EWKT** | Extended Well-Known Text: a text form for a geometry that carries its SRID with it, e.g. `SRID=4326;POINT(7.5473 51.0905)`. |
+| **SRID** | Spatial Reference System Identifier — which model of the earth a coordinate refers to. 4326 is WGS 84, what GPS reports. |
 | **Precision / recall** | Precision: of the anomalies flagged, how many were real. Recall: of the real anomalies, how many were flagged. |
 | **False positive** | Flagging an anomaly that was not injected. The `Normal baseline` scenario exists to measure this. |
 | **Detection latency** | Simulated time from event onset to anomaly emission — never wall clock. |
