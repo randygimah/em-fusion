@@ -38,10 +38,17 @@ from collections.abc import Sequence
 from typing import Any
 
 from geoalchemy2 import WKTElement
-from sqlalchemy import MetaData, Table, insert, text
+from sqlalchemy import MetaData, RowMapping, Table, insert, text
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.dal.models import CanonicalObservation
+from app.dal.models import (
+    PAYLOAD_TYPES,
+    CanonicalObservation,
+    Location,
+    ObservationType,
+    Provenance,
+    ScenarioRunSummary,
+)
 from app.dal.repository import QuarantineRecord
 
 OBSERVATIONS = "observations"
@@ -197,3 +204,102 @@ def complete_scenario_run(session_factory: sessionmaker[Session], run_id: int) -
                 f"scenario run {run_id} does not exist, so it cannot be marked "
                 f"complete: {result.rowcount} rows updated."
             )
+
+
+def latest_run(session_factory: sessionmaker[Session]) -> ScenarioRunSummary | None:
+    """The run to serve, or None when nothing has ever run. Spec: api-002.
+
+    **A run known to have completed beats a more recent one that is not.** The
+    obvious query -- most recent by start time -- would serve a replay that
+    died half-way as though it were a whole hour, which is precisely the
+    ambiguity `db-007` added `completed_at` to remove. Falling back to the most
+    recent run when none has completed is deliberate: with nothing finished,
+    serving an unfinished run is more useful than serving nothing, and the
+    screen has no way to show data that was never written.
+
+    Ground truth is not selected. `api-009` requires it never to leave the run
+    record, and `ScenarioRunSummary` has no field to put it in.
+    """
+    with session_factory.begin() as session:
+        row = (
+            session.execute(
+                text(
+                    "SELECT id, scenario_type, seed, started_at, completed_at "
+                    "FROM scenario_runs "
+                    "ORDER BY (completed_at IS NOT NULL) DESC, "
+                    "started_at DESC, id DESC LIMIT 1"
+                )
+            )
+            .mappings()
+            .first()
+        )
+        return None if row is None else ScenarioRunSummary(**row)
+
+
+def latest_positions(
+    session_factory: sessionmaker[Session], run_id: int, window_seconds: int
+) -> list[CanonicalObservation]:
+    """Where each aircraft was last seen, within the run's final window.
+
+    Two reductions, both in SQL rather than in Python, because the alternative
+    is reading 133,134 rows into the application to discard all but a few
+    hundred of them.
+
+    `DISTINCT ON` keeps one row per aircraft -- the newest, by the `ORDER BY`
+    it requires -- which is the screen's question: where is each aircraft, not
+    everywhere each aircraft has been. The window bounds that to aircraft seen
+    near the end of the run: an aircraft last reported fifty minutes ago is not
+    in the sector now, and drawing it as though it were is the map lying.
+
+    The window is measured from the newest observation in the run rather than
+    from the wall clock, because a replayed hour from 2022 has no relationship
+    to the time now. Rows come back as `CanonicalObservation` -- the same model
+    that went in -- so nothing above this line learns a storage type.
+    """
+    with session_factory.begin() as session:
+        rows = (
+            session.execute(
+                text(
+                    "WITH final AS ("
+                    "  SELECT max(timestamp) AS ends_at FROM observations "
+                    "  WHERE scenario_run_id = :run_id"
+                    ") "
+                    "SELECT DISTINCT ON (payload->>'aircraft_id') "
+                    "  source_id, source_type, observation_type, timestamp, "
+                    "  data_mode, validation_status, provenance, payload, "
+                    "  ST_Y(location) AS lat, ST_X(location) AS lon "
+                    "FROM observations, final "
+                    "WHERE scenario_run_id = :run_id "
+                    "  AND timestamp > final.ends_at "
+                    "      - make_interval(secs => :window_seconds) "
+                    "ORDER BY payload->>'aircraft_id', timestamp DESC"
+                ),
+                {"run_id": run_id, "window_seconds": window_seconds},
+            )
+            .mappings()
+            .all()
+        )
+    return [_observation(row) for row in rows]
+
+
+def _observation(row: RowMapping) -> CanonicalObservation:
+    """One row back into the model it was written from.
+
+    The payload class is chosen by observation type rather than left to the
+    union to infer. `CanonicalObservation` rejects a track carrying an RF
+    payload, and a union in smart mode resolves by shape -- so an inferred
+    payload would be right until two payload types happened to share a shape,
+    and wrong in a way that reads as a validation bug rather than a read bug.
+    """
+    observation_type = ObservationType(row["observation_type"])
+    return CanonicalObservation(
+        source_id=row["source_id"],
+        source_type=row["source_type"],
+        observation_type=observation_type,
+        timestamp=row["timestamp"],
+        location=Location(lat=row["lat"], lon=row["lon"]),
+        data_mode=row["data_mode"],
+        validation_status=row["validation_status"],
+        provenance=Provenance(**row["provenance"]),
+        payload=PAYLOAD_TYPES[observation_type].model_validate(row["payload"]),
+    )

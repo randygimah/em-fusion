@@ -5,20 +5,23 @@ interface Props {
 }
 
 const OperationalPictureScreen = ({ operationalPicture }: Props) => {
-  const anomalyLabel = `${operationalPicture.detectionSummary.anomalyScore}%`;
-  const signalIntegrityLabel = `${operationalPicture.detectionSummary.signalIntegrity.toFixed(2)}`;
+  // A level or a dash. Never a percentage and never a decimal (FR-715,
+  // AC-11), and null is "no detector has run" rather than "nothing detected".
+  const { scenario, detectionSummary } = operationalPicture;
+  const anomalyLabel = detectionSummary.anomalyLevel ?? "—";
+  const signalIntegrityLabel = detectionSummary.signalIntegrity ?? "—";
   return (
     <main className="min-h-screen bg-[#0b0e15] text-[#e1e2ec]">
       <header className="flex items-center justify-between border-b border-[#424754] bg-[#1d2027] px-6 py-4">
         <div>
           <p className="font-mono text-xs uppercase tracking-[0.05em] text-[#8c909f]">EM Fusion</p>
-          <h1 className="text-xl font-semibold">{operationalPicture.scenario.name}</h1>
+          <h1 className="text-xl font-semibold">{scenario?.name ?? "No scenario run"}</h1>
         </div>
         <div className="text-left font-mono text-sm">
-          <p className="text-[#4cd7f6]">{operationalPicture.scenario.dataMode}</p>
+          <p className="text-[#4cd7f6]">{scenario?.dataMode ?? "unknown"}</p>
         </div>
         <div className="text-right font-mono text-sm">
-          <p className="text-[#4cd7f6]">{operationalPicture.scenario.health}</p>
+          <p className="text-[#4cd7f6]">{scenario?.health ?? "unknown"}</p>
         </div>
       </header>
 
@@ -68,11 +71,11 @@ const OperationalPictureScreen = ({ operationalPicture }: Props) => {
             <h2 className="font-mono text-sm uppercase tracking-[0.05em] text-[#c2c6d6]">Detection Summary</h2>
             <dl className="mt-4 space-y-3">
               <div className="flex justify-between">
-                <dt>Anomaly Score</dt>
+                <dt>Anomaly Level</dt>
                 <dd className="font-mono text-[#ffb786]">{anomalyLabel}</dd>
               </div>
               <div className="flex justify-between">
-                <dt>Signal Integrity Score</dt>
+                <dt>Signal Integrity</dt>
                 <dd className="font-mono text-[#4cd7f6]">{signalIntegrityLabel}</dd>
               </div>
             </dl>

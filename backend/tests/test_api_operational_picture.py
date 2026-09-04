@@ -98,11 +98,15 @@ DETECTION_FIELDS = ("anomalyLevel", "signalIntegrity")
 HOUR_START = datetime(2022, 6, 27, 12, 0, 0, tzinfo=UTC)
 
 #: Cologne, from row 0 of the extract, and the metric altitude that comes with
-#: it. 5753.1 m is 18,874 ft, which is not a round number in either unit — a
+#: it. 5753.1 m is 18,875 ft, which is not a round number in either unit — a
 #: conversion that silently did nothing would still look plausible otherwise.
+#: The expected value was first written as 18,874, from arithmetic done in my
+#: head rather than by the machine, and the implementation was correct and the
+#: test wrong. Corrected after the fact, which is a deviation from the order
+#: this project works in and is recorded as one.
 LAT, LON = 51.0905, 7.5473
 ALTITUDE_M = 5753.1
-ALTITUDE_FT = 18874
+ALTITUDE_FT = 18875
 
 RUN_ID = 1
 
@@ -346,6 +350,28 @@ def test_the_data_mode_comes_from_the_observations_actually_served() -> None:
     assert picture.scenario.dataMode == DataMode.REPLAYED.value
 
 
+def test_observations_from_two_modes_are_reported_as_mixed() -> None:
+    """Reported rather than resolved.
+
+    Nothing produces a mixed batch today, and `scn-001` is what will: a
+    scenario injects synthetic records into a replayed hour, so a run holds
+    both. The failure this guards is a screen labelled `replayed` while showing
+    injected records — a mislabel an analyst cannot see and has no reason to
+    doubt, in a system whose premise is that they can tell.
+    """
+    # spec: api-002, scn-001
+    picture = build_operational_picture(
+        run=_run(),
+        observations=[
+            _observation(),
+            _observation(aircraft_id="AC-injected", data_mode=DataMode.SYNTHETIC),
+        ],
+    )
+
+    assert picture.scenario is not None
+    assert picture.scenario.dataMode == "mixed"
+
+
 def test_a_run_with_no_observations_reports_an_unknown_data_mode() -> None:
     # spec: api-002 -- the failure case for the line above: with nothing served,
     # naming a mode would be a guess
@@ -432,9 +458,7 @@ def _save(engine: Engine, observations: Sequence[CanonicalObservation]) -> None:
 
 
 def _get(engine: Engine, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
-    monkeypatch.setenv(
-        "DATABASE_URL", engine.url.render_as_string(hide_password=False)
-    )
+    monkeypatch.setenv("DATABASE_URL", engine.url.render_as_string(hide_password=False))
     with TestClient(app) as client:
         response = client.get("/api/v1/operational-picture")
     assert response.status_code == 200
@@ -488,9 +512,7 @@ def test_the_endpoint_prefers_the_run_known_to_have_completed(
     payload = _get(picture_database, monkeypatch)
 
     assert payload["scenario"]["id"] == "1"
-    assert [track["name"] for track in payload["aircraftTracks"]] == [
-        "AC-48089ab4e5a9"
-    ]
+    assert [track["name"] for track in payload["aircraftTracks"]] == ["AC-48089ab4e5a9"]
 
 
 @pytest.mark.database

@@ -7,7 +7,8 @@ rather than a shared routes.py that every future feature would edit at once.
 
 from fastapi import APIRouter
 
-from app.api.v1 import health
+from app.api.v1 import health, operational_picture
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(health.router)
+api_router.include_router(operational_picture.router)

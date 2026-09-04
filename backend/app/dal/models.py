@@ -173,3 +173,26 @@ class CanonicalObservation(_Frozen):
                 f"{expected.__name__}, got {type(self.payload).__name__}"
             )
         return self
+
+
+class ScenarioRunSummary(BaseModel):
+    """What a run is, to anything that reads one back. Spec: api-002.
+
+    Deliberately not every column of `scenario_runs`. **There is no field for
+    ground truth**, because `api-009` requires the answer key never to leave the
+    run record and a model that cannot hold it cannot leak it on any run — a
+    stronger guarantee than remembering to strip it at each call site, and one a
+    test can assert once rather than per endpoint.
+
+    `completed_at` is carried because absence is the informative state
+    (`db-007`): a reader choosing between two runs needs to know which one is
+    known to have finished.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    id: int
+    scenario_type: str
+    seed: int
+    started_at: datetime
+    completed_at: datetime | None

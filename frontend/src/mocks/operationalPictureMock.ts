@@ -11,15 +11,15 @@ const operationalPicture: OperationalPicture = {
     {
       id: "hypothesis-001",
       title: "Possible localised GNSS degradation / interference",
-      confidence: "Medium Confidence",
+      confidence: "Medium",
       severity: "High",
       status: "under_review",
       evidence: "3 Synthetic Sources",
     },
   ],
   detectionSummary: {
-    anomalyScore: 74.2,
-    signalIntegrity: 0.92,
+    anomalyLevel: "High",
+    signalIntegrity: "Medium",
   },
   rfSensors: [
     {
