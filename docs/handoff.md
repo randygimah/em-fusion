@@ -31,7 +31,7 @@ no endpoint, no detector.
 |---|---|
 | Backend suite, native | **237 passed, 41 skipped, 96.66%.** The 41 skips are the `database` tier |
 | Backend suite, containerised | **278 passed, 99.87%** via `make test-backend`. Authoritative: nothing is excluded there |
-| Spec items passing | **14 of 82**: `api-001`, `adp-001`, `adp-004`, `adp-005`, `adp-006`, **`adp-007`**, `dal-001`, `dal-002`, `dal-003`, `dal-004`, `db-001`, **`db-003`**, `db-005`, `ops-003` |
+| Spec items passing | **14 of 83**: `api-001`, `adp-001`, `adp-004`, `adp-005`, `adp-006`, **`adp-007`**, `dal-001`, `dal-002`, `dal-003`, `dal-004`, `db-001`, **`db-003`**, `db-005`, `ops-003` |
 | Full-corpus replay | 133,634 read, 133,134 accepted, 500 quarantined, 12 batches, **~14 s**. Cross-checks reproduced in the database: 30,276 without altitude, 948 distinct aircraft, all SRID 4326, zero rows mentioning `icao24` or `callsign` |
 | Corpus | Unchanged. Box 49–54°N, 3–11°E; 133,634 rows; content checksum `7ce83881…be05` |
 | New dependencies | `geoalchemy2`. Added bare, matching the file's style; `uv.lock` pins it |
@@ -172,15 +172,19 @@ in it and how to republish to the same URL.
 2. **Phase 5 — `api-002`**: `/api/v1/operational-picture` returning the frontend contract's shape.
    Then `api-003`, swapping the mock in `App.tsx` for a fetch. This is also where **`db-006`** gets
    its first real test, since it needs a data-serving route to assert against.
-3. **`scn-001`/`scn-002`** — the scenario generator, which supersedes `adp-007`'s placeholder run.
+3. **`db-007`** — the run completion flag. Small, and cheapest now: the second Alembic revision is
+   easier against a database nothing yet reads than against one the detectors do.
+4. **`scn-001`/`scn-002`** — the scenario generator, which supersedes `adp-007`'s placeholder run.
 
 Owed, with an owner but no date:
 
-- **Nothing marks a scenario run complete, and nothing cleans up a partial one.** A failed replay
-  leaves rows under a `scenario_runs` row; re-running creates a new run rather than resuming; the two
-  are indistinguishable by inspection. Any count over `scenario_runs` may therefore include partial
-  runs. Fix is small in either direction — a completion flag set on success, or the run deleted on
-  failure — and neither exists. Recorded in `qa.md` §40 and `thesis_notes.md`.
+- **`db-007` is specified and unbuilt** (written 2026-09-05): a nullable `completed_at` on
+  `scenario_runs`, so a partial run is distinguishable from a finished one. Falls out of `adp-007`'s
+  per-batch unit of work. Deleting the run on failure was considered and rejected — the rows are
+  evidence, and a cascade over 133,634 observations is a surprising thing for a failure path to do.
+  A three-state `status` column was also rejected: a killed process cannot record its own failure, so
+  `failed` would be right for caught exceptions and silently wrong otherwise. Rationale in `qa.md`
+  §40.
 - **`app/corpus/build.py` resolves `.env` from the repository root** and will break the first time
   anyone containerises the corpus build. One line, not yet changed, because editing a passing item
   outside its own spec is how the drift in §38/§39 starts.
