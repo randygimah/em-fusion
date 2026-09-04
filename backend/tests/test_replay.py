@@ -799,9 +799,7 @@ def test_the_run_is_not_marked_complete_until_the_last_batch_commits(
 
     monkeypatch.setattr("app.replay.PostgisObservationRepository", ObservesCompletion)
 
-    code = main(
-        ["--data-dir", str(data_dir), "--window-seconds", "10"], env_file=None
-    )
+    code = main(["--data-dir", str(data_dir), "--window-seconds", "10"], env_file=None)
 
     assert code == 0
     assert len(observed) > 1
@@ -845,9 +843,7 @@ def test_an_interrupted_replay_leaves_its_run_incomplete(
 
     monkeypatch.setattr("app.replay.PostgisObservationRepository", FailsOnSecondBatch)
 
-    code = main(
-        ["--data-dir", str(data_dir), "--window-seconds", "10"], env_file=None
-    )
+    code = main(["--data-dir", str(data_dir), "--window-seconds", "10"], env_file=None)
 
     assert code == 1
     assert _count(replay_database, "scenario_runs") == 1

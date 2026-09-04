@@ -47,7 +47,7 @@ from app.dal.models import DataMode
 from app.dal.pseudonymise import SEED_ENV_VAR, Pseudonymiser
 from app.dal.repository import ObservationRepository
 from app.dal.validation import IngestContext
-from app.db.repository import PostgisObservationRepository
+from app.db.repository import PostgisObservationRepository, complete_scenario_run
 from app.db.session import dispose_engine, get_sessionmaker, init_engine
 
 #: Repository root, two levels up from `backend/app/`. Correct natively; in
@@ -316,13 +316,19 @@ def main(
     init_engine()
     try:
         repository = PostgisObservationRepository(get_sessionmaker())
+        scenario_run_id = create_scenario_run()
         summary = replay(
             path=extract,
             spans=spans,
-            scenario_run_id=create_scenario_run(),
+            scenario_run_id=scenario_run_id,
             repository=repository,
             pseudonymiser=pseudonymiser,
         )
+        # `db-007`, and deliberately the last statement in the try block. The
+        # run is marked after every batch has committed, so a replay that dies
+        # part-way leaves the flag null -- which is the only state a killed
+        # process can be trusted to leave behind.
+        complete_scenario_run(get_sessionmaker(), scenario_run_id)
     except Exception as error:  # noqa: BLE001 -- reported, not swallowed
         print(f"replay failed: {error}", file=sys.stderr)
         return 1

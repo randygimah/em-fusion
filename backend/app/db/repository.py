@@ -38,7 +38,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from geoalchemy2 import WKTElement
-from sqlalchemy import MetaData, Table, insert
+from sqlalchemy import MetaData, Table, insert, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.dal.models import CanonicalObservation
@@ -160,3 +160,40 @@ def _quarantine_row(record: QuarantineRecord) -> dict[str, Any]:
         "field": record.field,
         "reason": record.reason,
     }
+
+
+def complete_scenario_run(session_factory: sessionmaker[Session], run_id: int) -> None:
+    """Mark a run as having finished. Spec: db-007.
+
+    A free function rather than a method on the repository above, because
+    every producer of a run has to set this and not every producer writes
+    observations -- `scn-001`'s generator will create runs, and a run marked
+    complete only by whoever happened to hold an observation repository would
+    be a rule enforced by coincidence.
+
+    The timestamp is `now()` rather than a value from the caller, for the same
+    reason `quarantined_records.created_at` is a server default: when a run
+    finished is the database's clock to keep, and two producers on two machines
+    would otherwise write completion times that cannot be ordered against each
+    other.
+
+    Raises `LookupError` when the run does not exist. PostgreSQL reports no
+    error for an `UPDATE` that matches nothing -- it reports zero rows
+    affected -- so a caller holding the wrong id would otherwise mark nothing
+    and be told it worked, which is the silent completion this column exists to
+    make impossible.
+    """
+    with session_factory.begin() as session:
+        # `session.connection()` rather than `session.execute()`, which is
+        # typed as returning a `Result` and does not carry `rowcount` -- the
+        # one thing this function needs from it. Same connection, same
+        # transaction, as `_tables` above.
+        result = session.connection().execute(
+            text("UPDATE scenario_runs SET completed_at = now() WHERE id = :run_id"),
+            {"run_id": run_id},
+        )
+        if result.rowcount != 1:
+            raise LookupError(
+                f"scenario run {run_id} does not exist, so it cannot be marked "
+                f"complete: {result.rowcount} rows updated."
+            )
