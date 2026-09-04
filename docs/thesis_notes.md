@@ -1378,6 +1378,51 @@ rather than returning quietly when the run id does not exist, because PostgreSQL
 for an `UPDATE` that matches nothing: it reports zero rows affected, and a caller holding a wrong id
 would otherwise be told that a run it never marked had been marked.
 
+### The contract violated the project's own no-fake-precision rule, and the endpoint was the last cheap moment to find out
+
+`FR-715` and `AC-11` state that no confidence, severity or score is rendered as a percentage or a
+decimal anywhere in the interface. The rule exists because a hypothesis presented as "87% confident"
+invites an analyst to treat a generated number as a measurement, and the system's entire claim is
+that it supports a human judgement rather than substituting for one. The committed frontend contract
+declared `anomalyScore: number` and `signalIntegrity: number`, and the screen rendered them as
+`74.2%` and `0.92`. The violation had been in the repository since the screen was first built and no
+test had ever looked for it.
+
+It surfaced while specifying the endpoint, because that item's deliverable is a parity test between
+the TypeScript contract and the response models. A test whose purpose is to make a shape hard to
+change is also, unavoidably, a test that defends whatever shape it is pointed at, so the moment
+before writing it is the cheapest moment the contract will ever be changeable. The fields became
+`Low | Medium | High`, and `anomalyScore` was renamed `anomalyLevel` because it is no longer a score.
+
+Two details are worth keeping. First, the type system located the violation rather than a reviewer:
+changing the declaration produced a compile error reading `Property 'toFixed' does not exist on type
+'Level'`, which is the decimal formatting the requirement forbids, named by the compiler at the exact
+line. Second, the rendering half of this problem already had a home — `ui-001` specifies a shared
+primitive that accepts only the three levels — so the endpoint item removed the violation and left
+the primitive to the item that owns it, rather than absorbing work because it happened to be nearby.
+
+### Absence is served as absence: null rather than a neutral reading
+
+Four of the six sections in the operational picture have no producer: there is no detector, no radio
+source and no hypothesis generator. The question is what an endpoint should return for a section
+whose machinery does not exist, and the tempting answer — a neutral value, `Low`, a zero — is wrong
+for a specific reason. `Low` is a claim about the data. It says the anomaly level was assessed and
+found low, which is false, and an analyst has no way to distinguish that from a system that has
+genuinely assessed it. Null is a claim about the system: nothing has assessed this. Only the second
+statement is true, so only the second is served, and the screen renders a dash.
+
+This is the same reasoning that made `db-007`'s completion flag nullable a day earlier, and the
+repetition is the useful part: in both cases a value that is right most of the time was rejected in
+favour of an absence that is right always. It also made `scenario` itself nullable, which is what
+lets an empty database return a valid empty picture rather than a 500 — a property `op-001` had
+already anticipated by requiring the data-mode badge to render when scenario data is absent.
+
+The alternative that was actually available — serving the frontend mock from the backend, so the
+screen stayed populated — was rejected without much difficulty. Invented data flowing through a real
+endpoint into a real screen is indistinguishable from the genuine article at the point where it
+matters, and a system whose thesis is that AI output must be grounded and checked before an analyst
+sees it cannot make an exception for its own placeholder content.
+
 ## Implementation
 
 <!-- Notable technical decisions per phase (link to implementation.md phases), challenges and
@@ -1939,6 +1984,39 @@ trusting the result — and this adds its complement: mutate only from a committ
 "revert" means what it is assumed to mean. Both rules exist because a mutation test is the one kind
 of test whose *passing* is the failure signal, which makes it uniquely capable of manufacturing
 false confidence.
+
+### The first endpoint measured: 412 tracks, 58 KB, 0.4 seconds
+
+The operational picture endpoint was verified against the development database rather than only
+against fixtures. It returned the run identified as complete, 412 aircraft — the latest position of
+each aircraft seen in the final five minutes of the replayed hour — in a 58 KB payload, in about
+1.04 s cold and 0.40 s warm over three consecutive calls.
+
+Two of those numbers were predicted before the code existed and reproduced exactly, which is worth
+recording as evidence that the corpus is understood rather than merely stored: 412 came from a
+manual SQL count taken while writing the specification, and 94 of the 412 tracks carry no altitude,
+which is 22.8% against the 22.7% measured over the whole corpus in an earlier session.
+
+The 0.40 s figure matters for the item after this one. A frontend poll is what will consume it, and a
+poll interval shorter than the response time produces overlapping requests rather than fresher data.
+Whether 0.4 s is dominated by the two queries, by the emulated database, or by JSON serialisation of
+412 objects has not been measured, and the attribution is deliberately not claimed — the same
+discipline the replay timing figure had to be corrected into.
+
+### Two reductions kept in SQL, and one policy kept out of it
+
+The tracks query does two things that could have been done in Python and are not: `DISTINCT ON`
+keeps one row per aircraft, and a window bound keeps only aircraft seen near the end of the run. Both
+exist to avoid reading 133,134 rows into the application in order to discard all but a few hundred.
+The window is measured from the newest observation in the run rather than from the wall clock,
+because a replayed hour from 2022 has no relationship to the time now — an obvious point that is easy
+to get wrong once a playback clock exists.
+
+What deliberately stayed out of SQL is the choice of *which* run to serve. That is a policy — prefer
+a run known to have completed over a more recent one that is not — and expressing it as an `ORDER BY`
+clause inside a joined query would have buried the reasoning in a place where it cannot be stated.
+It is two calls instead of one, and the second call is the one that can carry a docstring explaining
+why the obvious query is wrong.
 
 ## Evaluation
 

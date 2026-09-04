@@ -2667,6 +2667,72 @@ break the first time anyone containerises the corpus build. The fix is one line 
 made, because changing a passing item outside its own spec is how the drift documented in §38 and
 §39 starts.
 
+## 41. Why is the detection summary null rather than `Low`, and what does "contract parity in both directions" actually check?
+
+**Two separate things, and the first one is the more important.**
+
+### Null, not `Low`
+
+Four of the six sections in the operational picture have no code behind them: there is no detector,
+no radio source and no hypothesis generator. The endpoint still has to return all six, because the
+contract says so. The question is what to put in them.
+
+| Option | What it says to an analyst | True? |
+|---|---|---|
+| `anomalyLevel: "Low"` | The anomaly level was assessed and is low | **No** |
+| `anomalyLevel: 0` | Same, with a number attached | **No**, and it breaks `FR-715` too |
+| Serve the mock | These are real readings from real sensors | **No** |
+| `anomalyLevel: null` | Nothing has assessed this | **Yes** |
+
+`Low` is a claim about the *data*. Null is a claim about the *system*. Only the second one can be
+made truthfully right now, so it is the one that is served, and the screen shows a dash.
+
+This is the same move as `db-007`'s completion flag, one day earlier: a value that is right most of
+the time was rejected in favour of an absence that is right always. It is worth noticing the pattern
+because it will come up again — the same question arises for every section that gets a producer
+later than the screen that displays it.
+
+It also made `scenario` nullable, which is what lets an empty database return a valid empty picture
+instead of a 500. A screen that cannot render until someone has run a replay is a screen nobody can
+develop against.
+
+### Parity in both directions
+
+The shape of the payload is declared twice, in two languages, and nothing checks them against each
+other:
+
+```
+frontend/src/types/operationalPicture.ts   ← TypeScript, what the screen expects
+backend/app/api/v1/schemas/...             ← Pydantic, what the server sends
+```
+
+"Both directions" means two failures are caught, not one:
+
+| Change | Without the test | With it |
+|---|---|---|
+| Field added in TypeScript only | The screen reads `undefined` and renders an empty panel | Parity test fails |
+| Field added in Python only | The extra field is silently ignored by the screen | Parity test fails |
+
+The test parses the TypeScript file and compares the **set** of field names per interface against the
+Pydantic models' serialised field names. Comparing sets is what makes it symmetric — a subset check
+in either direction would catch one failure and miss the other.
+
+Two traps are guarded explicitly. First, it parses rather than searching for text: a search for a
+field name is satisfied by a *comment* mentioning it, which is the defect in §38 and one that has now
+been hit twice. Second, it **raises rather than skips** when the contract file is not readable —
+`frontend/` is not mounted into the backend container by default, and a skipped parity test reports
+success over a check that never ran, which is precisely the failure it exists to catch.
+
+Verified by mutation: adding one field to the TypeScript contract and nowhere else turns exactly one
+parity case red and leaves the other six green.
+
+**Worth recording as a limitation.** The parity check compares field *names*, not types — with two
+exceptions, the detection-summary fields, which are asserted to be non-numeric on both sides because
+that is the `FR-715` violation this item removed. A field that becomes a string on one side and stays
+a number on the other would still pass. Full type parity would mean generating one side from the
+other, which is a larger change than this item justified.
+
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -2775,3 +2841,5 @@ made, because changing a passing item outside its own spec is how the drift docu
 | **Position staleness** | `time - lastposupdate`: the age of the coordinate inside a state vector row. Not the age of the row, which is emitted on a fixed cadence regardless, and not the interval since the aircraft was last heard from. |
 | **Contact staleness** | `time - lastcontact`: the interval since any message was received from the aircraft. Capped near 300 s by OpenSky's own drop timeout, whereas position staleness is uncapped — which is what makes the difference between them a usable discriminator. |
 | **Inter-sample gap** | The interval between consecutive rows for one `icao24`. What `coverage.json` measures, and a different axis from staleness: between rows rather than within one. |
+| **Contract parity** | Two declarations of one payload shape — the TypeScript type and the Pydantic models — checked against each other by a test, because no compiler spans both languages. Symmetric: a field added on either side alone fails. See §41. |
+| **Level** | The Low / Medium / High vocabulary every confidence, severity and score is expressed in (`FR-715`, `AC-11`). Never a percentage and never a decimal, so that a generated judgement cannot be mistaken for a measurement. |
