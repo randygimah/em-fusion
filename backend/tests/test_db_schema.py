@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import pytest
 from alembic.config import Config
-from sqlalchemy import Engine, inspect, text
+from sqlalchemy import DateTime, Engine, inspect, text
 
 from alembic import command
 from app.db.migrations import alembic_config
@@ -308,3 +308,92 @@ def test_quarantined_records_do_not_store_the_raw_source_row(
 # unmutated file. A mutation test that did not mutate proves less than no test
 # at all, because it reports confidence. Every mutation here now asserts that
 # its own substitution applied before the suite is run.
+
+
+# --------------------------------------------------------------- run completion
+
+#: The revision `0002` builds on, and the target a downgrade returns to. Named
+#: rather than `-1` so the downgrade test says which schema it expects to land
+#: in, and fails visibly if a third revision is inserted between the two.
+CORE_SCHEMA = "0001_core_schema"
+
+
+def _upgrade_to(engine: Engine, revision: str) -> None:
+    command.upgrade(_config_for(engine), revision)
+
+
+def _insert_run(engine: Engine) -> int:
+    with engine.connect() as connection:
+        run_id = connection.execute(
+            text(
+                "INSERT INTO scenario_runs "
+                "(scenario_type, parameters, seed, started_at) "
+                "VALUES ('replay-only', '{}'::jsonb, 0, now()) RETURNING id"
+            )
+        ).scalar_one()
+        connection.commit()
+    return int(run_id)
+
+
+def _completed_at(engine: Engine, run_id: int) -> object:
+    with engine.connect() as connection:
+        return connection.execute(
+            text("SELECT completed_at FROM scenario_runs WHERE id = :id"),
+            {"id": run_id},
+        ).scalar_one()
+
+
+def test_scenario_runs_carries_a_nullable_completed_at(
+    empty_database: Engine,
+) -> None:
+    """Nullable, timezone-aware, and with no default of any kind.
+
+    All three properties are the column's meaning rather than its style. A NOT
+    NULL would make a run unwritable until it had finished; a server default
+    would stamp every row complete at the moment it was created, which records
+    an intention rather than an outcome; and a naive timestamp would record a
+    completion time whose clock nobody can identify afterwards.
+    """
+    # spec: db-007
+    _upgrade(empty_database)
+
+    column = _columns(empty_database, "scenario_runs")["completed_at"]
+
+    assert column["nullable"] is True
+    assert column["default"] is None
+    assert isinstance(column["type"], DateTime)
+    assert column["type"].timezone is True
+
+
+def test_the_completion_revision_does_not_backfill_existing_runs(
+    empty_database: Engine,
+) -> None:
+    """The named failure case: a run that predates the column stays unknown.
+
+    Backfilling is the tempting move, because it leaves no nulls behind. It is
+    also exactly wrong here: the rows already in the database are the runs
+    whose completion nobody recorded, so stamping them complete would erase the
+    only evidence that the question is open.
+    """
+    # spec: db-007
+    _upgrade_to(empty_database, CORE_SCHEMA)
+    run_id = _insert_run(empty_database)
+
+    _upgrade(empty_database)
+
+    assert _completed_at(empty_database, run_id) is None
+
+
+def test_downgrading_the_completion_revision_drops_the_column(
+    empty_database: Engine,
+) -> None:
+    # spec: db-007 -- the presence assertion before the downgrade is what makes
+    # this fail while the column does not exist. Without it the test passes on
+    # an unmigrated database, which is the shape of a test that proves nothing.
+    _upgrade(empty_database)
+    assert "completed_at" in _columns(empty_database, "scenario_runs")
+
+    command.downgrade(_config_for(empty_database), CORE_SCHEMA)
+
+    assert "completed_at" not in _columns(empty_database, "scenario_runs")
+    assert "scenario_runs" in inspect(empty_database).get_table_names()

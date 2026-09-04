@@ -51,7 +51,7 @@ from app.dal.pseudonymise import Pseudonymiser
 from app.dal.repository import ObservationRepository, QuarantineRecord
 from app.dal.validation import IngestContext
 from app.db.migrations import alembic_config
-from app.db.repository import PostgisObservationRepository
+from app.db.repository import PostgisObservationRepository, complete_scenario_run
 from tests.conftest import requires_database
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
@@ -652,3 +652,94 @@ def test_geoalchemy2_is_a_declared_dependency() -> None:
     )
 
     assert "geoalchemy2" in [name.lower() for name in config["project"]["dependencies"]]
+
+
+# ------------------------------------------------------------- run completion
+
+
+def _completed_at(engine: Engine, run_id: int) -> object:
+    with engine.connect() as connection:
+        return connection.execute(
+            text("SELECT completed_at FROM scenario_runs WHERE id = :id"),
+            {"id": run_id},
+        ).scalar_one()
+
+
+def _insert_second_run(engine: Engine, run_id: int) -> None:
+    with engine.connect() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO scenario_runs "
+                "(id, scenario_type, parameters, seed, started_at) "
+                "VALUES (:id, 'normal-baseline', '{}'::jsonb, 43, now())"
+            ),
+            {"id": run_id},
+        )
+        connection.commit()
+
+
+@pytest.mark.database
+@requires_database
+def test_a_newly_created_run_is_not_marked_complete(
+    migrated_database: Engine,
+) -> None:
+    # spec: db-007 -- the column's meaning stated as an assertion: a run is not
+    # known to have finished until something says so. A server default added
+    # later would turn this red, which is the point of asserting it separately
+    # from the marking test below.
+    assert _completed_at(migrated_database, RUN_ID) is None
+
+
+@pytest.mark.database
+@requires_database
+def test_completing_a_run_marks_it(migrated_database: Engine) -> None:
+    # spec: db-007
+    factory = sessionmaker(bind=migrated_database, autoflush=False)
+
+    complete_scenario_run(factory, RUN_ID)
+
+    assert _completed_at(migrated_database, RUN_ID) is not None
+
+
+@pytest.mark.database
+@requires_database
+def test_completing_one_run_does_not_complete_another(
+    migrated_database: Engine,
+) -> None:
+    """The WHERE clause, asserted rather than read.
+
+    An `UPDATE scenario_runs SET completed_at = now()` with no predicate marks
+    every run in the database complete and passes every other test in this
+    section, because the fixture holds exactly one run. The second run is what
+    makes the omission visible.
+    """
+    # spec: db-007
+    other_run = RUN_ID + 1
+    _insert_second_run(migrated_database, other_run)
+    factory = sessionmaker(bind=migrated_database, autoflush=False)
+
+    complete_scenario_run(factory, RUN_ID)
+
+    assert _completed_at(migrated_database, RUN_ID) is not None
+    assert _completed_at(migrated_database, other_run) is None
+
+
+@pytest.mark.database
+@requires_database
+def test_completing_a_run_that_does_not_exist_raises(
+    migrated_database: Engine,
+) -> None:
+    """An UPDATE matching no rows is a success by default, and must not be.
+
+    PostgreSQL reports no error for an `UPDATE ... WHERE id = 9999` against a
+    table with no such row; it reports zero rows affected. Left unchecked, a
+    caller holding the wrong run id would mark nothing and be told it worked,
+    which is the silent completion this column exists to make impossible.
+    """
+    # spec: db-007
+    factory = sessionmaker(bind=migrated_database, autoflush=False)
+
+    with pytest.raises(LookupError):
+        complete_scenario_run(factory, MISSING_RUN_ID)
+
+    assert _completed_at(migrated_database, RUN_ID) is None

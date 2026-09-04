@@ -733,3 +733,123 @@ def test_replay_does_not_borrow_the_pipeline_service() -> None:
     assert recipe is not None
     assert "app.replay" in recipe.group(0)
     assert "--profile pipeline" not in recipe.group(0)
+
+
+# ------------------------------------------------- run completion, against the database
+
+
+def _run_completed_at(engine: Engine) -> object:
+    """The single run's `completed_at`, read on a connection of its own.
+
+    Deliberately not the session the replay is writing through. Read inside
+    that transaction it would show whatever the replay had done but not yet
+    committed, and the property under test is what a *later* reader sees.
+    """
+    with engine.connect() as connection:
+        return connection.execute(
+            text("SELECT completed_at FROM scenario_runs")
+        ).scalar_one()
+
+
+@pytest.mark.database
+@requires_database
+def test_a_finished_replay_marks_its_run_complete(
+    data_dir: Path, replay_database: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # spec: db-007, adp-007
+    monkeypatch.setenv(SEED_ENV_VAR, "a-test-seed-not-the-real-one")
+    monkeypatch.setenv(
+        "DATABASE_URL", replay_database.url.render_as_string(hide_password=False)
+    )
+
+    code = main(["--data-dir", str(data_dir)], env_file=None)
+
+    assert code == 0
+    assert _run_completed_at(replay_database) is not None
+
+
+@pytest.mark.database
+@requires_database
+def test_the_run_is_not_marked_complete_until_the_last_batch_commits(
+    data_dir: Path, replay_database: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The ordering, observed from inside the writes rather than inferred.
+
+    A flag written before the work records an intention, and an intention is
+    indistinguishable from an outcome once the process is gone. The repository
+    is replaced with one that reads the run's `completed_at` on each call, so a
+    completion set up front shows up as a non-null observation partway through
+    rather than as a passing test.
+    """
+    # spec: db-007
+    monkeypatch.setenv(SEED_ENV_VAR, "a-test-seed-not-the-real-one")
+    monkeypatch.setenv(
+        "DATABASE_URL", replay_database.url.render_as_string(hide_password=False)
+    )
+    observed: list[object] = []
+
+    class ObservesCompletion(PostgisObservationRepository):
+        def save_batch(
+            self,
+            observations: Sequence[CanonicalObservation],
+            quarantined: Sequence[QuarantineRecord],
+        ) -> None:
+            observed.append(_run_completed_at(replay_database))
+            super().save_batch(observations, quarantined)
+
+    monkeypatch.setattr("app.replay.PostgisObservationRepository", ObservesCompletion)
+
+    code = main(
+        ["--data-dir", str(data_dir), "--window-seconds", "10"], env_file=None
+    )
+
+    assert code == 0
+    assert len(observed) > 1
+    assert observed == [None] * len(observed)
+    assert _run_completed_at(replay_database) is not None
+
+
+@pytest.mark.database
+@requires_database
+def test_an_interrupted_replay_leaves_its_run_incomplete(
+    data_dir: Path, replay_database: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The first named failure case, and the reason the column is nullable.
+
+    `adp-007` made one window the unit of work, so a replay that dies part-way
+    leaves its earlier batches committed. Those rows are kept -- they are
+    evidence about what went wrong, and a cascading delete over the corpus is a
+    surprising thing for a failure path to do -- so the run must instead be
+    left unmarked, which is what makes the partial run findable afterwards.
+    """
+    # spec: db-007, adp-007
+    monkeypatch.setenv(SEED_ENV_VAR, "a-test-seed-not-the-real-one")
+    monkeypatch.setenv(
+        "DATABASE_URL", replay_database.url.render_as_string(hide_password=False)
+    )
+
+    class FailsOnSecondBatch(PostgisObservationRepository):
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            super().__init__(*args, **kwargs)
+            self.calls = 0
+
+        def save_batch(
+            self,
+            observations: Sequence[CanonicalObservation],
+            quarantined: Sequence[QuarantineRecord],
+        ) -> None:
+            self.calls += 1
+            if self.calls == 2:
+                raise RuntimeError("the database is not having it")
+            super().save_batch(observations, quarantined)
+
+    monkeypatch.setattr("app.replay.PostgisObservationRepository", FailsOnSecondBatch)
+
+    code = main(
+        ["--data-dir", str(data_dir), "--window-seconds", "10"], env_file=None
+    )
+
+    assert code == 1
+    assert _count(replay_database, "scenario_runs") == 1
+    assert _run_completed_at(replay_database) is None
+    assert _count(replay_database, "observations") > 0
