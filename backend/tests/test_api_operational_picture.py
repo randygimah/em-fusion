@@ -608,3 +608,20 @@ def test_the_payload_carries_no_decimal_score(
         value is None or value in {"Low", "Medium", "High"}
         for value in summary.values()
     )
+
+
+# Mutation results, 2026-09-04. Three of the assertions above claim an absence
+# or a preference, and would each pass against a plausible wrong implementation:
+#
+#   * adding a `ground_truth` field to `ScenarioRunSummary` turned
+#     `..._has_no_field_for_ground_truth` red -- it had passed against an empty
+#     stub during the red run, which is what an absence assertion does;
+#   * adding a field to the TypeScript contract and nowhere else turned exactly
+#     one parity case red, `[Scenario]`, and left the other six green;
+#   * removing `(completed_at IS NOT NULL) DESC` from the run query -- the
+#     ordinary "most recent run" a reasonable person would write -- turned
+#     `..._prefers_the_run_known_to_have_completed` red and nothing else.
+#
+# On the frontend side, restoring the percentage sign to the anomaly label
+# turned three of the six screen tests red, including the whole-screen
+# assertion that no percentage appears anywhere (AC-11).
