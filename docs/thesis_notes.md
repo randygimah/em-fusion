@@ -1341,6 +1341,43 @@ at every call site rather than once in the schema, so a query that forgets the c
 computes distance in degrees. That is a testable failure — `db-004`'s own boundary case, a
 discontinuity just outside the radius, catches it — and it is recorded here as the price paid.
 
+### A run's completion is one nullable column, not a status with three values
+
+The replay entrypoint chose one window as its unit of work rather than one run, which means a replay
+interrupted half-way leaves its committed batches in the database and its run row looking exactly
+like a run that finished. Nothing read runs at the time, so the ambiguity cost nothing; it becomes
+wrong the moment the evaluation campaign counts runs or a detector reads a window out of one. The
+fix is a single nullable `completed_at` on `scenario_runs`, set after the final batch commits.
+
+The alternative considered was the one that reads better: a `status` column holding `running`,
+`failed` or `complete`. It was rejected because it cannot be honest. A process killed outright — the
+container stopped, the machine sleeping, the operator's interrupt — cannot record its own failure, so
+`failed` would be correct for exceptions the program caught and silently wrong for every other way a
+run ends. That produces the worst kind of column: one that looks authoritative and is not. A single
+null collapses running, failed and crashed into the one proposition a later reader can actually
+assert, which is that the run is *not known to have finished*. The information given up is real —
+the database cannot distinguish a crash from a replay still in progress — and it is given up
+deliberately, because a distinction that is right most of the time is worse than an absence that is
+right always.
+
+Three smaller decisions follow from the same reasoning. The column is nullable with **no server
+default**, because a default stamps completion at the moment the row is created and so records an
+intention rather than an outcome. The revision performs **no backfill**, because the rows already in
+the database are precisely the runs whose completion nobody recorded, and stamping them complete
+would erase the only evidence that the question is open — the migration was applied to a development
+database holding one such run, and it stayed null, which is the behaviour asserted rather than the
+one hoped for. And **nothing is deleted on failure**: the rows a partial run wrote are evidence
+about what went wrong, and a cascading delete over 133,634 observations is a surprising thing for a
+failure path to do to a database.
+
+The function that sets the flag lives in the storage layer as a free function rather than as a
+method on the observation repository, because every producer of a run has to set it and not every
+producer writes observations — the scenario generator will create runs — and a rule enforced only by
+whoever happens to be holding an observation repository is a rule enforced by coincidence. It raises
+rather than returning quietly when the run id does not exist, because PostgreSQL reports no error
+for an `UPDATE` that matches nothing: it reports zero rows affected, and a caller holding a wrong id
+would otherwise be told that a run it never marked had been marked.
+
 ## Implementation
 
 <!-- Notable technical decisions per phase (link to implementation.md phases), challenges and
@@ -1853,6 +1890,55 @@ the referenced function raises `NameError` at *import* time, which crash-loops `
 leaves the container unhealthy while the source file looks correct in an editor. A bare `TestClient`
 call does not execute the lifespan at all, so a passing suite would not have caught it; entering the
 client as a context manager does. Startup-path code needs a test that actually runs the startup path.
+
+### The replay figure moved from about fourteen seconds to about ten, and the conditions are the answer
+
+Verifying the completion flag against the real corpus produced a number that contradicted one
+already written down. Three consecutive full replays of the hour measured 9.75 s, 9.64 s and 10.01 s
+— about 9.8 s — against the 13.60 s and 14.25 s recorded a session earlier and reported on the
+progress note as "about 14 s". The counts were identical in every run (133,634 read, 133,134
+accepted, 500 quarantined, 12 batches), so this is the same work taking meaningfully less time.
+
+The condition that differs and can be named is the state of the stack. The earlier figures were
+taken shortly after the database container was started, against a freshly migrated and empty schema;
+these three were taken against a container that had been up for some time and a database that
+already held a previous replay's 133,134 rows. The naive expectation runs the other way — inserting
+into a larger table should be slower, not faster — which points at the container rather than the
+data, and the plausible mechanism is the emulation layer: the PostGIS image runs translated on this
+machine, and a translation cache that is cold on the first heavy workload after start is warm
+afterwards. That is a hypothesis and is recorded as one. What can be stated without qualification is
+that the replay time varies by roughly 40 per cent with the state of the surrounding stack, which is
+larger than the run-to-run variance of about 5 per cent measured earlier and which no single figure
+quoted in the write-up should be allowed to hide.
+
+The methodological point is the one worth carrying: a wall-time figure for this system is a property
+of the machine and its warm-up state as much as of the code, and the useful reporting form is a
+range with its conditions rather than a single number. The batch-size comparison taken earlier
+survives this — the four batch sizes were measured in one session against the same warm state, so
+the shape of that comparison holds even though its absolute values do not.
+
+A second, independent check fell out of the column itself. `completed_at - started_at` for the
+verified run read 9.765 s against the summary's self-reported 9.75 s, which is the first time the
+replay's own measurement has been corroborated by a clock the application does not control.
+
+### A mutation test reverted with `git checkout` deleted the implementation it was testing
+
+The mutation-testing discipline this project uses — apply the mutation, assert the substitution
+actually applied, run the tests, revert — was run against an implementation that had not yet been
+committed. The revert step is `git checkout <file>`, which restores the file from the index, and the
+index still held the version from the *test* commit. Two files of finished implementation were
+destroyed, and the next mutation run then reported failures that looked like the mutation working
+and were in fact the absence of any implementation at all.
+
+That second part is the interesting failure, not the first. Losing the work cost ten minutes of
+retyping. The dangerous outcome was a mutation test that produced exactly the red result it was
+supposed to produce, for entirely the wrong reason, and would have been recorded as evidence had the
+assertion guarding the substitution not failed first and made the discrepancy visible. The mutation
+discipline already carries one rule learned this way — assert that the mutation applied before
+trusting the result — and this adds its complement: mutate only from a committed baseline, so that
+"revert" means what it is assumed to mean. Both rules exist because a mutation test is the one kind
+of test whose *passing* is the failure signal, which makes it uniquely capable of manufacturing
+false confidence.
 
 ## Evaluation
 
