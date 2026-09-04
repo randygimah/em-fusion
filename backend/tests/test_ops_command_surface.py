@@ -40,6 +40,10 @@ REQUIRED_TARGETS = {
     "generate",
     "migrate",
     "db-test-create",
+    # spec: adp-007 -- added 2026-09-04 with the replay entrypoint. ops-003's
+    # own text makes this set the enforcement of "this item enumerates its
+    # targets", so a new target lands here and not only in the Makefile.
+    "replay",
     "test",
     "test-backend",
     "test-frontend",
