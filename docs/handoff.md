@@ -4,7 +4,7 @@ Written at the end of a working session so the next one starts with context rath
 archaeology. Overwritten each session — this is the current state, not a log. History lives in git.
 
 **Session date:** 2026-09-04
-**Branch:** `main`, **5 commits ahead of `origin/main` — not pushed.** Working tree clean.
+**Branch:** `main`, **in sync with `origin/main`** apart from this handoff. Working tree clean.
 
 ## Goal
 
@@ -92,7 +92,7 @@ Nothing in flight. The tree is clean.
 
 ## Changed
 
-Five commits on top of `7871acf`. **None pushed.**
+Five commits on top of `7871acf`, **pushed**.
 
 | Commit | What |
 |---|---|
@@ -106,8 +106,13 @@ Added: `backend/alembic/versions/0002_scenario_run_completion.py`. Modified:
 `backend/app/db/repository.py`, `backend/app/replay.py`, the three test files, `docs/spec.jsonl`,
 `docs/thesis_notes.md`, `docs/implementation.md`.
 
-**Not done:** the progress note still says "about 14 s" and still lists the partial-run problem as an
-open gap. Both are now wrong. Offered and not yet actioned.
+**Outside the repo:** the progress note was republished to the same URL —
+<https://claude.ai/code/artifact/7f3060f9-29d5-46de-b12b-eddd3824cccc>. The wall-time figure is now
+"about ten seconds" with a panel explaining that an earlier version of the page said fourteen and
+why; the batch-size table gained the condition it was measured under; the partial-run bullet moved
+out of the gaps list into a new section, "So which of the two are you looking at?", with a figure
+contrasting a stamped run against an unstamped one; three tables in the storage list are now marked
+as written to; the totals read 15 of 83.
 
 ## Failed attempts
 
@@ -133,12 +138,10 @@ open gap. Both are now wrong. Offered and not yet actioned.
 
 ## Next step
 
-1. **Push the five commits.**
-2. **Update the progress note** — the wall-time figure and the partial-run gap are both stale.
-3. **Phase 5 — `api-002`**: `/api/v1/operational-picture` returning the frontend contract's shape.
+1. **Phase 5 — `api-002`**: `/api/v1/operational-picture` returning the frontend contract's shape.
    Then `api-003`, swapping the mock in `App.tsx` for a fetch. This is also where **`db-006`** gets
    its first real test, since it needs a data-serving route to assert against.
-4. **`scn-001`/`scn-002`** — the scenario generator, which supersedes `adp-007`'s placeholder run
+2. **`scn-001`/`scn-002`** — the scenario generator, which supersedes `adp-007`'s placeholder run
    and becomes the second producer that has to set `completed_at`.
 
 Owed, with an owner but no date:
@@ -157,7 +160,6 @@ Owed, with an owner but no date:
 
 Open and unowned:
 
-- **5 commits unpushed.**
 - **Root `make check` has still not been run in full.** `format`, `lint`, `type-check` and
   `test-backend` were each run separately this session and were green.
 - **The frontend suite has not been run for four sessions.** `pnpm test` fails on the shell's
