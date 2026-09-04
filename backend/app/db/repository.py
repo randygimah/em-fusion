@@ -25,9 +25,11 @@ carries its SRID with it, so a point cannot be inserted with the SRID
 unset -- and an unset SRID is 0, over which `db-004`'s `ST_DWithin` would
 silently answer in degrees rather than metres.
 
-EWKT (Extended Well-Known Text) is a text format used to describe map shapes and location data. 
-It is a superset of WKT (Well-Known Text) that includes additional information, such as the spatial reference system identifier (SRID). 
-In EWKT, geometries are represented in a human-readable text format, making it easier to understand and work with spatial data.
+EWKT (Extended Well-Known Text) is a text format for describing map shapes and
+location data. It is a superset of WKT (Well-Known Text) that carries additional
+information, notably the spatial reference system identifier (SRID). Geometries
+are written in a human-readable form, which makes spatial data easier to read
+and work with.
 """
 
 from __future__ import annotations

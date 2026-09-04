@@ -93,6 +93,20 @@ def _read(candidates: Sequence[Path]) -> str:
     )
 
 
+def _settings(block: str) -> list[str]:
+    """The lines of a block that are settings rather than commentary.
+
+    Added during implementation, not before it: the first version of the two
+    tests below searched every line mentioning the seed, and matched the
+    explanatory comment written above the setting instead of the setting
+    itself. That is the same defect as matching a docstring rather than an
+    import (`docs/qa.md` section 38) -- a text search cannot tell a rule from a
+    description of the rule. Recorded here because a test corrected after its
+    implementation exists is a deviation from the workflow.
+    """
+    return [line for line in block.splitlines() if not line.strip().startswith("#")]
+
+
 def _service_block(compose: str, service: str) -> str:
     """The lines belonging to one service, by indentation.
 
@@ -378,6 +392,74 @@ def test_an_unreachable_database_exits_non_zero(
     assert capsys.readouterr().err.strip()
 
 
+def test_the_seed_may_come_from_the_env_file(
+    data_dir: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """One of `adp-007`'s four fixed decisions: this CLI loads `.env`.
+
+    It follows `app/corpus/build.py` rather than `app/main.py`, so the two
+    operator commands behave alike and the server stays the single documented
+    exception (`docs/qa.md` section 37). It matters more since the seed stopped
+    being a required Compose variable: `backend/.env` is mounted into the
+    container at `/app/.env`, so this is what makes `make replay` work without
+    anyone exporting anything.
+
+    Reaching the database means the seed was found, so an exit code of 1
+    against the unreachable URL every test carries is the assertion. Added
+    after the implementation, to close the one uncovered line in the module --
+    a deviation from the workflow, recorded rather than quietly absorbed.
+    """
+    # spec: adp-007
+    monkeypatch.setenv(SEED_ENV_VAR, "placeholder-so-teardown-removes-it")
+    monkeypatch.delenv(SEED_ENV_VAR)
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        f"{SEED_ENV_VAR}=a-test-seed-not-the-real-one\n", encoding="utf-8"
+    )
+
+    code = main(["--data-dir", str(data_dir)], env_file=env_file)
+
+    assert code == 1
+    assert SEED_ENV_VAR not in capsys.readouterr().err
+
+
+def test_an_empty_seed_in_the_environment_does_not_shadow_the_env_file(
+    data_dir: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Found by running `make replay`, not by this suite. Added 2026-09-04.
+
+    Compose passes the seed through from the host, so an unset host variable
+    arrives inside the container as `PSEUDONYM_SEED=""` -- present, and empty.
+    `load_dotenv(override=False)` treats present-but-empty as present, so
+    `/app/.env` was skipped and the replay failed with the seed sitting in a
+    file two directories away. Every existing test either set the variable or
+    deleted it; none set it to empty, which is the one state Compose actually
+    produces.
+
+    Recorded as a deviation: this test was written after the fix, because the
+    fix was written after a real run. It is also the argument for `adp-007`
+    existing at all -- the defect was unreachable from the test suite and
+    obvious on first use.
+    """
+    # spec: adp-007
+    monkeypatch.setenv(SEED_ENV_VAR, "")
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        f"{SEED_ENV_VAR}=a-test-seed-not-the-real-one\n", encoding="utf-8"
+    )
+
+    code = main(["--data-dir", str(data_dir)], env_file=env_file)
+
+    assert code == 1  # reached the unreachable database, so the seed was found
+    assert SEED_ENV_VAR not in capsys.readouterr().err
+
+
 # ------------------------------------------------------- against the database
 
 
@@ -582,24 +664,34 @@ def test_the_seed_reaches_the_services_that_ingest() -> None:
     compose = _read(COMPOSE_PATHS)
 
     for service in ("backend", "pipeline"):
-        assert SEED_ENV_VAR in _service_block(compose, service)
+        settings = _settings(_service_block(compose, service))
+        assert any(SEED_ENV_VAR in line for line in settings)
 
 
-def test_an_unset_seed_fails_on_the_host_rather_than_in_the_container() -> None:
-    """The `${VAR:?}` form, so Compose refuses before the container starts.
+def test_the_seed_is_passed_through_with_no_default_of_any_kind() -> None:
+    """Substitution only: `${PSEUDONYM_SEED}`, never a value and never a default.
 
-    Plain `${VAR}` substitutes empty, the container starts, and the failure
-    surfaces from inside it with a message about configuration held outside the
-    repository -- which locates the problem one machine away from the person
-    who can fix it.
+    `adp-007` originally specified Compose's required form, `${VAR:?}`, so that
+    an unset seed failed on the host. **That was wrong and was corrected during
+    implementation** (2026-09-04): Compose interpolates the entire file for
+    every command regardless of profile, so a required variable here makes
+    `up`, `migrate`, `test` and `demo` all demand a seed that only `replay`
+    needs -- and `make demo` on a clean machine is `AC-12`. Verified: with the
+    seed unset, `docker compose config` itself exits non-zero.
+
+    The loud failure is not lost, it moved. `Pseudonymiser.from_environment`
+    raises before anything is written, naming `backend/.env.example`, and
+    `app/replay.py` loads `backend/.env`, so the ordinary path needs no export
+    at all. `test_an_unset_seed_fails_before_the_database_is_touched` is the
+    test that holds that guarantee.
     """
     # spec: adp-007
     compose = _read(COMPOSE_PATHS)
 
     for service in ("backend", "pipeline"):
-        block = _service_block(compose, service)
-        line = next(entry for entry in block.splitlines() if SEED_ENV_VAR in entry)
-        assert f"${{{SEED_ENV_VAR}:?" in line
+        settings = _settings(_service_block(compose, service))
+        line = next(entry for entry in settings if SEED_ENV_VAR in entry)
+        assert line.split(":", 1)[1].strip() == f"${{{SEED_ENV_VAR}}}"
 
 
 def test_no_seed_value_is_committed_anywhere_in_the_command_surface() -> None:
@@ -618,7 +710,7 @@ def test_no_seed_value_is_committed_anywhere_in_the_command_surface() -> None:
     """
     # spec: adp-007
     for source in (_read(COMPOSE_PATHS), _read(MAKEFILE_PATHS)):
-        for line in source.splitlines():
+        for line in _settings(source):
             if SEED_ENV_VAR not in line:
                 continue
             assert not re.search(rf"{SEED_ENV_VAR}\s*[:=]\s*\S", line) or "${" in line

@@ -35,6 +35,20 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://postgres:postgres@postgis:5432/em_fusion}
+      # Passed through from the host with no default of any kind. A committed
+      # default would be a published reverse mapping -- an icao24 is a 24-bit
+      # space, so seed plus source reconstructs every pseudonym by exhaustive
+      # search (dal-004, docs/qa.md 37).
+      #
+      # Deliberately NOT the `${VAR:?}` required form, which adp-007 originally
+      # specified. Compose interpolates the whole file for every command
+      # regardless of profile, so a required variable here makes `up`,
+      # `migrate`, `test` and `demo` all demand a seed that only `replay`
+      # needs -- and `make demo` on a clean machine is AC-12. The loud failure
+      # is kept where it belongs instead: Pseudonymiser.from_environment
+      # raises before anything is written, naming backend/.env.example, and
+      # app/replay.py loads backend/.env so the ordinary path needs no export.
+      PSEUDONYM_SEED: ${PSEUDONYM_SEED}
     volumes:
       - ./backend:/app
       - ./data:/data
@@ -54,6 +68,20 @@ services:
     # it is here so the first repository lands against a working connection string.
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://postgres:postgres@postgis:5432/em_fusion}
+      # Passed through from the host with no default of any kind. A committed
+      # default would be a published reverse mapping -- an icao24 is a 24-bit
+      # space, so seed plus source reconstructs every pseudonym by exhaustive
+      # search (dal-004, docs/qa.md 37).
+      #
+      # Deliberately NOT the `${VAR:?}` required form, which adp-007 originally
+      # specified. Compose interpolates the whole file for every command
+      # regardless of profile, so a required variable here makes `up`,
+      # `migrate`, `test` and `demo` all demand a seed that only `replay`
+      # needs -- and `make demo` on a clean machine is AC-12. The loud failure
+      # is kept where it belongs instead: Pseudonymiser.from_environment
+      # raises before anything is written, naming backend/.env.example, and
+      # app/replay.py loads backend/.env so the ordinary path needs no export.
+      PSEUDONYM_SEED: ${PSEUDONYM_SEED}
     volumes:
       - ./backend:/app
       - ./data:/data

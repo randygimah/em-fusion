@@ -5,7 +5,7 @@
 .DEFAULT_GOAL := help
 .PHONY: help build build-backend build-frontend-test up demo down restart \
         logs ps shell db-shell db-reset migrate db-test-create \
-        generate ensure-artifacts \
+        generate ensure-artifacts replay \
         test test-backend test-frontend lint format type-check check smoke clean
 
 COMPOSE ?= docker compose
@@ -17,6 +17,9 @@ DATA_DIR ?= data
 # on where it was typed. CI (ops-002) calling one of them is what will stop this
 # drifting again.
 PYTEST_ARGS ?= --tb=short --cov=app --cov-report=term-missing --cov-fail-under=90
+
+# Extra arguments for `replay`, e.g. REPLAY_ARGS="--window-seconds 60".
+REPLAY_ARGS ?=
 
 # Artefacts the pipeline generates and `demo` needs on disk before it starts.
 # Deliberately empty for now. The OpenSky extract is not generated here and is
@@ -106,6 +109,20 @@ db-test-create: ## Create the disposable test database with PostGIS
 
 ## ---------------------------------------------------------------- data
 
+# Deliberately the `backend` service, not `pipeline`. The pipeline service's
+# command names `app.pipeline`, a module that does not exist until `scn-003`,
+# so `generate` is broken today; pointing `replay` at that service would make
+# this target work by changing what the service means and leave `generate`
+# broken behind a name that now looks used. Mirrors `migrate` instead.
+# DATA_DIR is mounted and --data-dir passed explicitly, rather than relying on
+# the module default: inside the container the repository root above ./backend
+# does not exist, so that default resolves to /data/opensky only by accident of
+# where the mount lands. Same mount pattern as `generate`.
+replay: ## Replay the archived corpus into the running database
+	$(COMPOSE) run --rm \
+		-v "$(abspath $(DATA_DIR)):/data" \
+		backend python -m app.replay --data-dir /data/opensky $(REPLAY_ARGS)
+
 generate: ## Run the pipeline once, writing into DATA_DIR (default data/)
 	mkdir -p "$(DATA_DIR)"
 	$(COMPOSE) --profile pipeline run --rm \
@@ -137,13 +154,17 @@ test: test-backend test-frontend ## Run backend and frontend test suites
 # `database`-marked test skips -- and the target reports success over a suite
 # that silently did less than it claims (ops-003, db-001).
 #
-# The root Makefile is mounted read-only because tests/test_ops_command_surface.py
-# asserts against this file, and Compose mounts only ./backend into the
-# container. Same pattern as `generate`'s DATA_DIR mount.
+# The root Makefile and compose.yaml are mounted read-only because
+# tests/test_ops_command_surface.py and tests/test_replay.py assert against
+# them, and Compose mounts only ./backend into the container. Same pattern as
+# `generate`'s DATA_DIR mount. Those tests raise rather than skip when the
+# mount is missing: a skip here would be the same failure mode they exist to
+# catch, one level up.
 test-backend: build-backend db-test-create ## Pytest inside the backend container
 	$(COMPOSE) run --rm \
 		-e TEST_DATABASE_URL="$(TEST_DATABASE_URL)" \
 		-v "$(abspath Makefile):/repo/Makefile:ro" \
+		-v "$(abspath compose.yaml):/repo/compose.yaml:ro" \
 		backend pytest $(PYTEST_ARGS)
 
 test-frontend: build-frontend-test ## Vitest inside the frontend build stage

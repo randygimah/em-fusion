@@ -1066,9 +1066,59 @@ field existed, and arrived at the far end of the pipeline unchanged — so it ev
 neighbour. A leak check over the first 2,000 observations found no `icao24` key and none of three
 known transponder addresses, which is `dal-004` holding on real data rather than on fixtures.
 
-*(Wall time was taken on the development machine against an in-memory repository, so it measures the
-read and the DAL, not persistence. Re-record it once the PostGIS repository lands, since that is the
-figure that will actually bound a scenario run.)*
+*(Superseded 2026-09-04 by the figure below, taken through `adp-007` against PostGIS.)*
+
+#### Re-measured through the replay entrypoint
+
+The figures above were taken with an ad-hoc script that no longer exists, against the in-memory
+repository. `adp-007` replaced it with a committed entrypoint, and the run below is reproducible by
+anyone with the corpus and the seed:
+
+| Measure | In-memory (2026-08-26) | PostGIS via `make replay` (2026-09-04) |
+|---|---|---|
+| Rows read | 133,634 | 133,634 |
+| Accepted | 133,134 | 133,134 |
+| Quarantined | 500 | 500 |
+| Batches | 1 | 12 |
+| Wall time | ~2.4 s | **14.25 s** |
+
+Persistence therefore costs roughly 5.8 times what reading and normalising cost, and 14.25 s is the
+figure that bounds a scenario run rather than the earlier one. Conditions: twelve batches of 300
+simulated seconds each, so twelve transactions; both processes in containers; PostgreSQL under
+amd64 emulation on Apple Silicon, which the container note elsewhere in this chapter measures at
+about 2.5x native, so this is a pessimistic figure rather than an optimistic one.
+
+Four independent cross-checks reproduced in the database what was derived from the raw Parquet
+months earlier: 30,276 observations carrying no altitude, 948 distinct aircraft, every geometry at
+SRID 4326, and zero rows mentioning `icao24` or `callsign` anywhere in a stored payload. The last is
+`dal-004` holding over the full corpus rather than over a fixture.
+
+**The earlier figure was also recorded inconsistently** — 2.44 s in this document against 2.46 s in
+`qa.md` and the handoff — which nobody could adjudicate, because the script that produced it was
+gone. That is the argument for `adp-007` in one sentence: a measurement whose method is not
+committed is not a measurement, it is a memory. Both values are now superseded rather than
+reconciled.
+
+#### Two defects that the test suite could not reach
+
+Both were found on the first real invocation, and both are worth recording because they share a
+shape: the container is a different environment from the one the tests describe, and the tests
+described the environment rather than the deployment.
+
+The first was a path. `DEFAULT_ENV_FILE` was anchored to the repository root, two levels above
+`backend/app/` — correct natively, and resolving to `/backend/.env` inside a container where Compose
+mounts `./backend` as `/app` and nothing above it exists. `app/corpus/build.py` carries the same
+defect and gets away with it only because it is never run in a container. The fix anchors the path
+to the package instead, which resolves to the same file both ways.
+
+The second was subtler and is the more useful one. Compose passes `PSEUDONYM_SEED` through from the
+host, so an *unset* host variable arrives inside the container as an empty string — present, and
+empty. `load_dotenv(override=False)` treats present-but-empty as present, so it declined to read
+`backend/.env`, and the replay failed reporting a missing seed with the seed sitting in a mounted
+file. Every existing test either set the variable or deleted it; none set it to the empty string,
+which is the one state the deployment actually produces. **A test suite that enumerates the states a
+developer thinks of will not cover the state the platform generates.** Both defects now carry
+regression tests, written after the fix, which is a deviation recorded in the tests themselves.
 
 ### Persistence split into three items: connectivity, schema, then repository
 
