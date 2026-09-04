@@ -4,7 +4,7 @@ Written at the end of a working session so the next one starts with context rath
 archaeology. Overwritten each session — this is the current state, not a log. History lives in git.
 
 **Session date:** 2026-09-04
-**Branch:** `main`, **in sync with `origin/main`** apart from this handoff. Working tree clean.
+**Branch:** `main`, **7 commits ahead of `origin/main`.** Working tree clean.
 
 ## Goal
 
@@ -14,159 +14,155 @@ deviations detected deterministically, evidence bundles turned into schema-valid
 grounding-checked AI hypotheses for analyst review. Decision support, not autonomous
 decision-making.
 
-This session built **`db-007`**, the scenario run completion flag, ahead of Phase 5 rather than
-after it. The reasoning was that a second Alembic revision is cheaper against a database nothing
-reads than against one the detectors do, and the item is small.
-
-It also produced a measurement that contradicts one already published, and a process failure in the
-mutation-testing routine. Both are below.
+This session built **`db-007`** (the scenario run completion flag) and **`api-002`** (the operational
+picture endpoint). The store now has a reader as well as a writer: an hour of archived air traffic
+goes in by `make replay` and comes back out as a served payload.
 
 ## Current state
 
-The pipeline is connected end to end from source to store, and a run now records whether it
-finished. Nothing reads back out of the store yet — no endpoint, no detector.
-
 | | |
 |---|---|
-| Backend suite, containerised | **288 passed, 99.87%** via `make test-backend`. Authoritative: nothing is excluded there |
-| Spec items passing | **15 of 83** — `api-001`, `adp-001`, `adp-004`–`adp-007`, `dal-001`–`dal-004`, `db-001`, `db-003`, `db-005`, `db-007`, `ops-003` |
-| Lint / types | `make lint` and `make type-check` both green |
-| Full-corpus replay | 133,634 read, 133,134 accepted, 500 quarantined, 12 batches. **Timing revised — see below** |
-| Migrations | Two revisions. `0002_scenario_run_completion` applied to the development database this session |
-| New dependencies | None |
+| Backend suite | **323 passed, 99.89%** via `make test-backend` |
+| Frontend suite | **7 passed** via `make test-frontend` — **the first run in four sessions**, in its container, so the Node 20 problem never arises |
+| Lint / types | `make lint` and `make type-check` green |
+| Spec items passing | **16 of 83** — `api-001`, **`api-002`**, `adp-001`, `adp-004`–`adp-007`, `dal-001`–`dal-004`, `db-001`, `db-003`, `db-005`, `db-007`, `ops-003` |
+| Endpoint, live | Run 8, **412 tracks, 58 KB, ~1.04 s cold and ~0.40 s warm** over three calls |
+| Migrations | Two revisions, both applied to the development database |
+| New dependencies | None, in either half |
 
 ### `db-007`, as built
 
-- **`backend/alembic/versions/0002_scenario_run_completion.py`** — `completed_at`, a nullable
-  `timestamptz` on `scenario_runs`, no server default, no backfill.
-- **`complete_scenario_run(session_factory, run_id)`** in `app/db/repository.py` — a free function,
-  not a repository method, because every producer of a run must set the flag and the scenario
-  generator will create runs without writing observations. Raises `LookupError` when the id matches
-  no row, because an `UPDATE` matching nothing is a success by default.
-- **`app/replay.py`** marks its run as the last statement of the `try` block, after every batch has
-  committed.
+`completed_at` on `scenario_runs` — nullable `timestamptz`, no server default, no backfill. A free
+function `complete_scenario_run` in `app/db/repository.py`, not a repository method, because every
+producer of a run must set it and `scn-001`'s generator will create runs without writing
+observations. It raises `LookupError` on an unknown id, since an `UPDATE` matching nothing is a
+success by default. `app/replay.py` marks its run as the last statement of the `try` block.
 
-10 tests across `test_db_schema.py`, `test_db_repository.py` and `test_replay.py` — the file-per-
-module convention wins over a file-per-spec-item one. Four mutations recorded in the test files
-themselves: removing the `WHERE` clause, setting the flag before the batches, backfilling in the
-revision, and adding a server default. Each turns the intended tests red and no others.
+Verified on the development database: the run predating the migration stayed null, and the new run's
+`completed_at - started_at` read 9.765 s against the command's self-reported 9.75 s.
 
-One decision was not in the item as first written and was added to it before the tests: **an unknown
-run id must raise.** Committed as `spec: amend db-007`.
+### `api-002`, as built
 
-### Verified on the development database, not only on fixtures
+`GET /api/v1/operational-picture`. Serves the run **known to have completed** in preference to a more
+recent unfinished one — `db-007` paying off a day after it landed — and that run's final-window
+positions, one per aircraft, altitude converted from metres to feet.
 
-`make migrate` then `make replay`, against a database already holding a replay from an earlier
-session:
+**The four sections with no producer are served empty, and the detection summary is null rather than
+`Low`.** `Low` is a claim about the data; null is a claim about the system, and only the second is
+true. `scenario` is nullable for the same reason, which is what lets an empty database return a valid
+empty picture rather than a 500.
 
-- the pre-existing run **stayed null** — the no-backfill failure case, on real rows rather than a
-  fixture;
-- the new run recorded `completed_at - started_at` of **9.765 s** against the summary's
-  self-reported **9.75 s**. First time the replay's own timing has been corroborated by a clock the
-  application does not control.
+**The contract violated `FR-715`/`AC-11` and this item fixed it.** `anomalyScore: number` and
+`signalIntegrity: number` were rendered as `74.2%` and `0.92`. They are now `Low | Medium | High`,
+and `anomalyScore` is `anomalyLevel` because it is no longer a score. The rendering primitive stays
+`ui-001`'s job; this item only removed the violation.
 
-### The replay timing figure is revised, and is condition-dependent
-
-Three consecutive full replays measured **9.75 s, 9.64 s, 10.01 s — about 9.8 s**, against the
-13.60 s and 14.25 s recorded last session and published on the progress note as "about 14 s". The
-counts were identical in every run, so this is the same work taking less time.
-
-The condition that differs and can be named: the earlier figures were taken shortly after the
-database container started, against a freshly migrated empty schema; these were taken against a
-long-running container and a database already holding 133,134 rows. The naive expectation runs the
-other way, which points at the emulated PostGIS image warming up rather than at the data. **That is
-a hypothesis and is recorded as one.** What is safe to state is that the figure varies by roughly
-40% with the state of the stack — far more than the ~5% run-to-run variance measured earlier.
-
-The batch-size comparison from last session survives: those four sizes were measured in one session
-against the same warm state, so the shape holds even though the absolute values do not.
+Four mutations recorded, each turning the intended tests red and no others: a `ground_truth` field on
+the run summary, a field added to the TypeScript contract alone, the ordinary "most recent run"
+query, and the percentage sign restored to the screen.
 
 ## Files in flight
 
 Nothing in flight. The tree is clean.
 
-- `backend/app/db/repository.py` — `db-004`'s spatial query lands here, and it is still the only
-  place SQL may go.
-- `docs/spec.jsonl` — `db-006` is written and **unbuilt**; read it before starting `api-002`, which
-  is where it lands.
+- `backend/app/db/repository.py` — now holds writes, the run lifecycle, and two reads. `db-004`'s
+  spatial query lands here and it is still the only place SQL may go.
+- `docs/spec.jsonl` — **`db-006` is written and unbuilt**, and it is now unblocked: it needed a
+  data-serving route to assert against and there is one.
 
 ## Changed
 
-Five commits on top of `7871acf`, **pushed**.
+Seven commits on top of the last push. `29a3af8` (the progress-note republish and handoff catch-up) and this handoff bracket the five below.
 
 | Commit | What |
 |---|---|
-| `ebb51c0` | `spec: amend db-007 — an unknown run id must fail loudly` |
-| `580d1b3` | `test: add tests for db-007` |
-| `a12d7ff` | `feat(db-007): scenario run completion flag - tests pass` |
-| `0dc008b` | `feat(db-007): mutation results, db-007 passes` |
-| `b1a1efd` | `docs: db-007 in the notes, the revised replay timing, refresh handoff` |
+| `2e129a5` | `spec: amend api-002 — band the detection scores, say what is served` |
+| `f1de2a9` | `test: add tests for api-002` |
+| `c653a63` | `feat(api-002): operational picture endpoint - tests pass` |
+| `0d7905b` | `feat(api-002): mutation results, api-002 passes` |
+| `da416ca` | `docs: api-002 in the notes, qa 41, Phase 5 checklist` |
+| `700bac2` | `docs: refresh handoff for db-007 and api-002` |
 
-Added: `backend/alembic/versions/0002_scenario_run_completion.py`. Modified:
-`backend/app/db/repository.py`, `backend/app/replay.py`, the three test files, `docs/spec.jsonl`,
-`docs/thesis_notes.md`, `docs/implementation.md`.
-
-**Outside the repo:** the progress note was republished to the same URL —
-<https://claude.ai/code/artifact/7f3060f9-29d5-46de-b12b-eddd3824cccc>. The wall-time figure is now
-"about ten seconds" with a panel explaining that an earlier version of the page said fourteen and
-why; the batch-size table gained the condition it was measured under; the partial-run bullet moved
-out of the gaps list into a new section, "So which of the two are you looking at?", with a figure
-contrasting a stamped run against an unstamped one; three tables in the storage list are now marked
-as written to; the totals read 15 of 83.
+Added: `backend/app/api/v1/operational_picture.py`, `backend/app/api/v1/schemas/`,
+`backend/tests/test_api_operational_picture.py`,
+`backend/alembic/versions/0002_scenario_run_completion.py`. Modified: `app/dal/models.py`
+(`ScenarioRunSummary`), `app/db/repository.py`, `app/replay.py`, `app/api/v1/__init__.py`, the root
+`Makefile` (a read-only `frontend/src/types` mount on `test-backend`), and on the frontend the
+contract type, the mock, the screen, `src/test/setup.ts` and both test files.
 
 ## Failed attempts
 
 - **A mutation test reverted with `git checkout` deleted the implementation it was testing.** The
-  routine is: mutate, assert the substitution applied, run, revert. It was run against an
-  implementation that had not been committed, so `git checkout <file>` restored the version from the
-  *test* commit and destroyed two files of finished work. Retyping cost ten minutes. **The dangerous
-  part was the next mutation run, which produced exactly the red result it was meant to produce, for
-  entirely the wrong reason** — the absence of any implementation at all — and would have been
-  recorded as evidence had the guard assertion not failed first. New rule alongside "assert the
-  mutation applied": **mutate only from a committed baseline.**
-- **A `-k` expression passed through `PYTEST_ARGS` was split by the shell.**
-  `PYTEST_ARGS="... -k complete or interrupted"` reached pytest as three arguments and pytest tried
-  to collect a file called `or`. Make does not re-quote. Run the whole file instead.
+  routine is: mutate, assert the substitution applied, run, revert. It ran against an implementation
+  that had not been committed, so the revert restored the version from the *test* commit and
+  destroyed two files of finished work. **The dangerous part was the next mutation run, which
+  produced exactly the red result it was meant to produce for entirely the wrong reason** — nothing
+  was implemented — and would have been recorded as evidence had the guard assertion not failed
+  first. New rule alongside "assert the mutation applied": **mutate only from a committed baseline.**
+  Followed for `api-002`'s four mutations.
+- **Testing Library's auto-cleanup was never running.** Vitest here has no `globals: true`, so
+  Testing Library never registered its teardown, and renders accumulated across tests in a file.
+  Three of the new screen tests failed with "found multiple elements" — which reads as a duplicate
+  element bug in the component rather than as a missing teardown in the harness. Fixed once in
+  `src/test/setup.ts`. It had been invisible because the file previously held a single test.
+- **A test constant was wrong and the implementation was right.** The metres-to-feet expectation was
+  written as 18,874 from arithmetic done in my head; 5753.1 m is exactly 18,875 ft. Corrected after
+  the implementation, which is a deviation from the workflow's order, and it is noted in the test.
+- **`-k` passed through `PYTEST_ARGS` was split by the shell**; Make does not re-quote, and pytest
+  tried to collect a file called `or`. Run the whole file instead.
 - **mypy rejected `result.rowcount`.** `Session.execute` is typed as returning `Result`, which does
-  not carry it. Switched to `session.connection().execute(...)`, which returns a `CursorResult` —
-  the same connection and the same transaction, and the same call the reflection code one function
-  up already makes. No cast.
-- **A number I published was wrong, for the second session running.** Last session it was an
-  attribution ("5.8× the read"); this session it is the total itself. The pattern is the same both
-  times: a figure measured once, under conditions that were not recorded alongside it, then quoted
-  as a property of the system.
+  not carry it. Switched to `session.connection().execute(...)`, which returns a `CursorResult`.
+- **The replay timing figure I published was wrong.** See below — recorded here because it is the
+  second session running in which a number I wrote down had to be corrected.
+
+## The replay figure is condition-dependent
+
+Three consecutive full replays measured **9.75, 9.64 and 10.01 s** against the 13.60 s and 14.25 s
+recorded last session and published as "about 14 s". The counts were identical, so this is the same
+work taking less time. The nameable difference is the stack: the earlier figures came from a
+just-started container writing into an empty store, these from a long-running container and a
+database already holding 133,134 rows. The naive expectation runs the other way, which points at the
+emulated PostGIS image warming up — **a hypothesis, recorded as one.** What is safe to state is a
+~40% swing with stack state against ~5% run-to-run. The batch-size comparison survives, since those
+four were measured together against the same state.
 
 ## Next step
 
-1. **Phase 5 — `api-002`**: `/api/v1/operational-picture` returning the frontend contract's shape.
-   Then `api-003`, swapping the mock in `App.tsx` for a fetch. This is also where **`db-006`** gets
-   its first real test, since it needs a data-serving route to assert against.
-2. **`scn-001`/`scn-002`** — the scenario generator, which supersedes `adp-007`'s placeholder run
-   and becomes the second producer that has to set `completed_at`.
+1. **`db-006`** — the enforcement half of `FR-904`, and now unblocked: a structural check that route
+   modules hold no SQL, no session construction and no spatial logic. It must parse rather than match
+   text, and be mutation-tested in both directions. Cheapest immediately after `api-002`, while the
+   only route it can assert over is the one just written.
+2. **`api-003`** — the frontend fetches the endpoint on a poll, falling back to the mock and showing
+   a degraded indicator. Note the measured **0.40 s** warm response when choosing the interval: a
+   poll shorter than the response time produces overlapping requests, not fresher data.
+3. **`scn-001`/`scn-002`** — the scenario generator, which supersedes `adp-007`'s placeholder run and
+   becomes the second producer that has to set `completed_at`.
 
 Owed, with an owner but no date:
 
-- **`create_scenario_run` is still raw SQL in `app/replay.py`** while `complete_scenario_run` is in
-  the storage layer. The run lifecycle is split across two modules. Left deliberately: `adp-007`
-  justified the placement and `scn-001` will move it, and editing a passing item outside its own
+- **`create_scenario_run` is still raw SQL in `app/replay.py`** while the other three run-lifecycle
+  operations are in the storage layer. `scn-001` will move it; editing a passing item outside its own
   spec is how the drift in §38/§39 started.
+- **The parity test compares field names, not types**, with the two detection fields as the
+  exception. A field that became a string on one side and stayed a number on the other would pass.
+  Recorded as a limitation in `qa.md` §41.
 - **`app/corpus/build.py` resolves `.env` from the repository root** and will break the first time
-  anyone containerises the corpus build. One line, unchanged, for the same reason.
+  anyone containerises the corpus build.
 - **Scenario type 4 must exclude the 10 tracks carrying a natural dropout** from injection sites.
-  Seven of the ten fall in the 100–300 s band the scenario injects.
 - **Re-run the coverage acceptance check as originally specified** once the scenario engine exists.
-- **Record whether any Phase 6 detection rule needs altitude on more than 77% of samples**, given
-  22.7% of positioned rows carry none.
+- **Record whether any Phase 6 detection rule needs altitude on more than 77% of samples** — 94 of
+  the 412 tracks served by the endpoint carry none, which is 22.8% against the corpus-wide 22.7%.
 
 Open and unowned:
 
-- **Root `make check` has still not been run in full.** `format`, `lint`, `type-check` and
-  `test-backend` were each run separately this session and were green.
-- **The frontend suite has not been run for four sessions.** `pnpm test` fails on the shell's
-  default Node 20; `frontend/.nvmrc` pins ≥ 22.13 and `nvm use` is required first.
-- **`make generate` is broken** — the `pipeline` service's command names `app.pipeline`, which does
-  not exist until `scn-003`. Carried knowingly; recorded in `ops-003`'s own text.
+- **7 commits unpushed.**
+- **The progress note has not been updated for `api-002`.** It now understates what exists: the
+  pipeline spine shows nothing being served, and the totals read 15 of 83.
+- **Root `make check` has still not been run in full**, though `format`, `lint`, `type-check`,
+  `test-backend` and `test-frontend` were each run separately and are green.
+- **`make generate` is broken** — the `pipeline` service names `app.pipeline`, which does not exist
+  until `scn-003`. Carried knowingly.
 - **mypy does not check `tests/`.** 18 errors when last measured, nearly all deliberate type
   violations in negative tests.
 - **CI still does not exist** (`ops-002`).
-- Track 0: the data-egress question (employer) and the licence-version divergence both remain open.
+- Track 0: the data-egress question (employer) and the licence-version divergence remain open.
