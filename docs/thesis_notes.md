@@ -2018,6 +2018,36 @@ clause inside a joined query would have buried the reasoning in a place where it
 It is two calls instead of one, and the second call is the one that can carry a docstring explaining
 why the obvious query is wrong.
 
+### The rule found the code written the day before it, and a grep would not have
+
+`db-006` is the enforcement half of the requirement that all SQL and spatial logic live in a
+repository and none in a route handler. It was split out of the repository item deliberately and
+held back until a data-serving route existed, on the grounds that a check written earlier would have
+reported a clean API layer containing one health endpoint and nothing at all to bypass.
+
+The first thing it caught was the endpoint written the previous day. Not a query — a type
+annotation. The handler declared its injected parameter as `sessionmaker[Session]`, which meant the
+route module imported SQLAlchemy in order to describe something it never constructed. The fix was to
+name the type once in the storage layer and import that name instead, which leaves the API layer
+unable to say the word `sqlalchemy` at all. That is a stronger property than "holds no SQL" and a
+much easier one to check: "no storage engine is imported" is a fact about the import graph, while
+"holds no SQL" is an argument about strings.
+
+The item required the check to be mutation-tested **in both directions**, and the second direction
+is the one that justifies the whole approach. A real query placed in the handler turned three
+assertions red at once — the import, the statement, and the constructor — which is what stating one
+property three ways is for. The identical text written into the module's docstring, phrased as a
+prohibition, left all thirteen tests green. Run against the same file at the same moment, `grep -c`
+returned 1.
+
+That pair is the argument, and it is worth stating in the write-up as more than a technicality. A
+text-matching check fails on the clearest possible documentation of the rule it enforces. The
+rational response to such a check is to stop writing the rule down — so the check does not merely
+fail to enforce the property, it actively drives out the explanation of why the property matters.
+This project has now hit the same defect three times (`dal-004`, a `compose.yaml` test during
+`adp-007`, and this item's own specified failure case), which is why every structural check here
+parses.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;

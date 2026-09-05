@@ -3,8 +3,8 @@
 Written at the end of a working session so the next one starts with context rather than
 archaeology. Overwritten each session — this is the current state, not a log. History lives in git.
 
-**Session date:** 2026-09-04
-**Branch:** `main`, **7 commits ahead of `origin/main`.** Working tree clean.
+**Session date:** 2026-09-04 to 2026-09-05
+**Branch:** `main`, **4 commits ahead of `origin/main`** — everything through `api-002` and the progress note is pushed. Working tree clean.
 
 ## Goal
 
@@ -14,18 +14,18 @@ deviations detected deterministically, evidence bundles turned into schema-valid
 grounding-checked AI hypotheses for analyst review. Decision support, not autonomous
 decision-making.
 
-This session built **`db-007`** (the scenario run completion flag) and **`api-002`** (the operational
-picture endpoint). The store now has a reader as well as a writer: an hour of archived air traffic
+This session built **`db-007`** (the scenario run completion flag), **`api-002`** (the operational
+picture endpoint) and **`db-006`** (nothing in the API layer touches storage directly). The store now has a reader as well as a writer: an hour of archived air traffic
 goes in by `make replay` and comes back out as a served payload.
 
 ## Current state
 
 | | |
 |---|---|
-| Backend suite | **323 passed, 99.89%** via `make test-backend` |
+| Backend suite | **336 passed, 99.89%** via `make test-backend` |
 | Frontend suite | **7 passed** via `make test-frontend` — **the first run in four sessions**, in its container, so the Node 20 problem never arises |
 | Lint / types | `make lint` and `make type-check` green |
-| Spec items passing | **16 of 83** — `api-001`, **`api-002`**, `adp-001`, `adp-004`–`adp-007`, `dal-001`–`dal-004`, `db-001`, `db-003`, `db-005`, `db-007`, `ops-003` |
+| Spec items passing | **17 of 83** — `api-001`, `api-002`, `adp-001`, `adp-004`–`adp-007`, `dal-001`–`dal-004`, `db-001`, `db-003`, `db-005`, **`db-006`**, `db-007`, `ops-003` |
 | Endpoint, live | Run 8, **412 tracks, 58 KB, ~1.04 s cold and ~0.40 s warm** over three calls |
 | Migrations | Two revisions, both applied to the development database |
 | New dependencies | None, in either half |
@@ -61,14 +61,37 @@ Four mutations recorded, each turning the intended tests red and no others: a `g
 the run summary, a field added to the TypeScript contract alone, the ordinary "most recent run"
 query, and the percentage sign restored to the screen.
 
+### `db-006`, as built
+
+`backend/tests/test_api_route_purity.py` — 13 tests over every module under `app/api/`, all by AST.
+Five rules: no storage-engine import, no `app.db` import other than `repository` and `session`, no
+SQL statement in a non-docstring string, no PostGIS function, no session or Engine constructed.
+
+**It was red on arrival for a real reason.** `api-002`'s route imported `sqlalchemy.orm` to annotate
+a parameter it never constructed. Fixed by naming the type once in `app/db/session.py` as
+`SessionFactory`, which leaves the API layer unable to say `sqlalchemy` at all — a fact about the
+import graph rather than an argument about strings.
+
+Mutation-tested both ways, as the item requires:
+
+| Mutation | Result |
+|---|---|
+| A real query in the handler | 3 assertions red — the import, the statement, the constructor |
+| The same text inside the module docstring | all 13 green, while `grep -c` on that file returned 1 |
+
+The second row is the item's whole justification, written up in `thesis_notes.md`: a text-matching
+check fails on the clearest documentation of the rule it enforces, so it does not merely fail to
+enforce the property — it drives out the explanation of why the property matters. Third appearance of
+this defect (`dal-004`, a `compose.yaml` test during `adp-007`, and here).
+
 ## Files in flight
 
 Nothing in flight. The tree is clean.
 
 - `backend/app/db/repository.py` — now holds writes, the run lifecycle, and two reads. `db-004`'s
   spatial query lands here and it is still the only place SQL may go.
-- `docs/spec.jsonl` — **`db-006` is written and unbuilt**, and it is now unblocked: it needed a
-  data-serving route to assert against and there is one.
+- `docs/spec.jsonl` — nothing specified-and-unbuilt is blocking. `api-003` is next and needs no
+  new spec work.
 
 ## Changed
 
@@ -82,6 +105,11 @@ Seven commits on top of the last push. `29a3af8` (the progress-note republish an
 | `0d7905b` | `feat(api-002): mutation results, api-002 passes` |
 | `da416ca` | `docs: api-002 in the notes, qa 41, Phase 5 checklist` |
 | `700bac2` | `docs: refresh handoff for db-007 and api-002` |
+| `8032069` | `docs: progress note republished for api-002` |
+| `f775dd4` | `test: add tests for db-006` |
+| `9a509a6` | `feat(db-006): route modules name no storage engine - tests pass` |
+| `60b421b` | `feat(db-006): mutation results, db-006 passes` |
+| `424283e` | `docs: db-006 in the notes, refresh handoff` |
 
 **Outside the repo:** the progress note was republished to the same URL —
 <https://claude.ai/code/artifact/7f3060f9-29d5-46de-b12b-eddd3824cccc>. It gained a section,
@@ -136,14 +164,10 @@ four were measured together against the same state.
 
 ## Next step
 
-1. **`db-006`** — the enforcement half of `FR-904`, and now unblocked: a structural check that route
-   modules hold no SQL, no session construction and no spatial logic. It must parse rather than match
-   text, and be mutation-tested in both directions. Cheapest immediately after `api-002`, while the
-   only route it can assert over is the one just written.
-2. **`api-003`** — the frontend fetches the endpoint on a poll, falling back to the mock and showing
+1. **`api-003`** — the frontend fetches the endpoint on a poll, falling back to the mock and showing
    a degraded indicator. Note the measured **0.40 s** warm response when choosing the interval: a
    poll shorter than the response time produces overlapping requests, not fresher data.
-3. **`scn-001`/`scn-002`** — the scenario generator, which supersedes `adp-007`'s placeholder run and
+2. **`scn-001`/`scn-002`** — the scenario generator, which supersedes `adp-007`'s placeholder run and
    becomes the second producer that has to set `completed_at`.
 
 Owed, with an owner but no date:
@@ -163,7 +187,7 @@ Owed, with an owner but no date:
 
 Open and unowned:
 
-- **7 commits unpushed.**
+- **4 commits unpushed.**
 - **Root `make check` has still not been run in full**, though `format`, `lint`, `type-check`,
   `test-backend` and `test-frontend` were each run separately and are green.
 - **`make generate` is broken** — the `pipeline` service names `app.pipeline`, which does not exist
