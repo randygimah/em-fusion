@@ -2796,6 +2796,102 @@ rather than statements — which means every place this project chooses to repor
 matching obligation on the interface that displays it.
 
 
+## 43. Explain `scn-001` in plain English — what are we actually trying to achieve?
+
+**One sentence: a scenario run must be repeatable from a single number, and that number must
+actually control what happens.**
+
+### What a scenario is, first
+
+Everything ingested so far is *real* — an archived hour of aircraft broadcasts, replayed. Nothing has
+gone wrong in it, because nothing went wrong that Monday over the North Sea. A system whose purpose
+is to detect and explain electromagnetic interference cannot be evaluated on an hour in which there
+is none.
+
+A **scenario** is a staged incident laid over that real hour. The generator invents synthetic radio
+observations — a grid of sensors reporting power on eight channels — and, for some scenario types,
+perturbs the aircraft tracks as well. It then writes down exactly what it staged: what was injected,
+where, in which channels, and in which window. That written-down record is the **ground truth**, and
+it is the only reason any later measurement means anything. Without it, "the detector found an
+anomaly" is an anecdote; with it, "the detector found the anomaly that was injected at 12:14 in cell
+17, and raised no others" is a measurement.
+
+### What `scn-001` adds on top of that
+
+Staging an incident requires invented numbers: where the interference sits, how strong it is, how
+noise varies per sensor, which of the eight channels bleed. Invented numbers come from a random
+number generator, and a random number generator is precisely the thing that makes a run
+unrepeatable.
+
+`scn-001` says the run must be **fully determined by three inputs** — the scenario type, the
+parameters, and an integer seed. Same three in, byte-identical observation stream out. Every time,
+on any machine, forever.
+
+### The half people forget
+
+The property is two-sided, and the spec names both failures:
+
+| Failure | Why it is a failure |
+|---|---|
+| Same type, parameters and seed → **different** output | The run is not repeatable; the ground truth describes something that will never occur again |
+| **Different** seeds → **identical** output | The seed controls nothing |
+
+The second one is the trap. A generator that ignores its seed entirely passes the first test
+perfectly — it is trivially reproducible, and it is also useless, because a batch of thirty runs
+would be thirty copies of one run. Reproducibility on its own is satisfied by a constant.
+
+### What actually breaks it
+
+Three specific things, all named in the item, and none of them look like bugs:
+
+| Leak | How it shows up |
+|---|---|
+| Wall-clock time | Anything calling "what time is it now" during generation. The run differs by the second it was started, and the difference is invisible until two runs are compared |
+| Unseeded randomness | One call to a global random function instead of the run's own seeded generator |
+| Process-dependent ordering | Iterating a set, relying on a hash whose seed varies per process, or collecting results from parallel workers in completion order |
+
+The third is the nastiest, because it is not random at all in the ordinary sense — it is stable
+within one process and different across two, so it survives every test run in a loop and fails when
+someone re-runs the campaign a week later.
+
+### Why the dissertation depends on it
+
+Four reasons, in ascending order of how much trouble their absence causes:
+
+1. **Debugging.** A detection that fails on run 14 can only be investigated if run 14 can be produced
+   again.
+2. **Ground truth stays true.** The answer key describes a specific stream. If the stream is not
+   reproducible, the key describes something that no longer exists.
+3. **The generator comparison is otherwise confounded.** The central research question compares a
+   template generator against an AI one. If the two arms see even slightly different evidence, the
+   comparison measures scenario variation rather than generator quality — and the difference would be
+   invisible in the results.
+4. **The whole campaign reduces to one number.** `scn-003` derives twenty to thirty run seeds from a
+   single base seed. Reproducibility at the run level means the entire evaluation is repeatable from
+   one integer written in the write-up, which is the difference between a claim an examiner can
+   check and one they must take on trust.
+
+The constraint that the seed is **recorded even when it was generated automatically** exists for the
+same reason. A run nobody chose a seed for is a run that can never be repeated unless the seed it
+happened to use was written down at the time.
+
+### An ordering problem worth resolving before starting
+
+`scn-001` is a property, not a feature: it has no output of its own. Proving "same seed, same stream"
+requires a stream, and the stream comes from the scenario types (`scn-002`), which emit through the
+synthetic RF adapter (`adp-002`), which reports on a sensor and channel grid that does not exist yet
+(`scn-005`).
+
+`normal-baseline` cannot stand in as the minimal case either: it injects nothing by definition — that
+is what makes it the false-positive control — so determinism over it is nearly vacuous.
+
+The practical readings are: build `scn-005` first, since a fixed sensor and channel layout is pure
+configuration with no randomness in it and nothing else can emit until it exists; then land `scn-001`
+together with the smallest seeded emitter that actually has randomness to be deterministic about.
+Recorded here because building `scn-001` "first" in the order the identifiers suggest would mean
+building a determinism harness with nothing to be deterministic about.
+
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -2906,3 +3002,6 @@ matching obligation on the interface that displays it.
 | **Inter-sample gap** | The interval between consecutive rows for one `icao24`. What `coverage.json` measures, and a different axis from staleness: between rows rather than within one. |
 | **Contract parity** | Two declarations of one payload shape — the TypeScript type and the Pydantic models — checked against each other by a test, because no compiler spans both languages. Symmetric: a field added on either side alone fails. See §41. |
 | **Level** | The Low / Medium / High vocabulary every confidence, severity and score is expressed in (`FR-715`, `AC-11`). Never a percentage and never a decimal, so that a generated judgement cannot be mistaken for a measurement. |
+| **Scenario** | A staged incident laid over the replayed real hour: synthetic radio observations, and for some types perturbed tracks, plus a written record of exactly what was staged. See §43. |
+| **Ground truth** | The generator's own record of what it injected — where, in which channels, in which window. Recorded at generation time and never inferred from detector output, which is what makes a detection measurable rather than anecdotal. Never leaves the run record (`api-009`). |
+| **Seed** | The integer that determines every invented number in a run. Same type, parameters and seed must give a byte-identical stream; different seeds must not. Always recorded, including when generated automatically. |
