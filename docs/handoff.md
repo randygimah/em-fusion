@@ -218,6 +218,15 @@ four were measured together against the same state.
 
 Owed, with an owner but no date:
 
+- **Adopt TanStack Query at the Phase 3 view filter, not before.** Decided 2026-09-05 and written
+  into `docs/implementation.md` at the point it becomes right: a second polled endpoint (`api-007`,
+  then `api-008`) is the trigger. `src/lib/api.ts` stays the fetcher, so the swap touches the hook
+  only. Rationale in `docs/qa.md` §42 and `thesis_notes.md`.
+- **`scenario.health` renders as a bare `unknown` in the top-right of the status bar** and reads as a
+  fault rather than as a statement. The value is correct — nothing monitors health yet — and the
+  presentation is not. Deliberately left for `op-001`, which rebuilds that bar with a real
+  system-health strip; patching one word in a bar about to be replaced is how a passing item drifts.
+
 - **`create_scenario_run` is still raw SQL in `app/replay.py`** while the other three run-lifecycle
   operations are in the storage layer. `scn-001` will move it; editing a passing item outside its own
   spec is how the drift in §38/§39 started.

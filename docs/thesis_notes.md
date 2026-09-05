@@ -1444,6 +1444,34 @@ successful response. The mutation that proves this matters is the "fall back sil
 a failed poll restore the mock and clear the flag, and three tests fail; without them, the interface
 would look healthy while displaying fiction.
 
+### Data fetching written by hand, with the adoption point for a library fixed in advance
+
+The frontend polls through a forty-line hook rather than a data-fetching library such as TanStack
+Query. The choice is not a judgement that the library is unsuitable — polling on an interval is
+precisely what it is best at, and its keep-previous-data behaviour is the retain-the-last-good rule
+expressed as configuration. The judgement is about proportion: with one screen consuming one
+endpoint, the library's real advantages — request deduplication across components, a shared cache,
+retry with backoff, suspending polls for a hidden tab — have nothing to act on.
+
+What makes this a decision rather than an omission is that the adoption point was fixed at the same
+time and written into the build checklist, in the Phase 3 view-filter subsection. That is where a
+second polled endpoint appears, joined by the playback window in Phase 4: two consumers issuing
+overlapping requests, with a filter selection that must survive poll ticks. Those are the problems
+the library exists to solve, and continuing to hand-write at that point would be the mistake this
+note is trying to avoid in the other direction.
+
+The cost of deferring is deliberately kept low by the structure already in place. One module performs
+the fetch and a test asserts that no other module does, so the library would slot in behind that
+boundary and the swap would touch the hook alone. The tests assert behaviour through the rendered
+screen rather than through the hook's internals, so they would survive the substitution — which is
+also the strongest evidence that they were testing the right things.
+
+The write-up angle is worth stating plainly, because it applies to several decisions in this project:
+the dependency list is short, and each entry can be defended in a sentence naming what it does that
+hand-written code could not. "A data-fetching library, for a single endpoint" is a weaker sentence
+than the hook is, and a dependency that cannot be defended in a sentence is one that will have to be
+defended at length in a viva.
+
 ## Implementation
 
 <!-- Notable technical decisions per phase (link to implementation.md phases), challenges and

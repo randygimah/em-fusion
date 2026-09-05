@@ -115,6 +115,7 @@ Added after the original checklist was written. The exception-first default stan
 - [ ] Leave drill-down tables unfiltered. They are the show-everything view by definition.
 - [ ] Filter server-side via a `view` query parameter, not by fetching everything and discarding client-side. Phase 5 is now built first, so this goes straight into the backend — no mock shim.
 - [ ] Carry per-collection suppressed counts in the response. Once the backend filters, the excluded rows never arrive, so the "+n nominal hidden" footer can no longer be computed from the payload — this amends the panel built above.
+- [ ] **Adopt TanStack Query here, not before.** Decided 2026-09-05: `api-003` polls one endpoint from one screen with a forty-line hook, and a data-fetching library earns nothing against that. This subsection is the trigger — a second polled endpoint, two consumers of overlapping requests, and a selection that must survive poll ticks are the problems the library exists to solve. `src/lib/api.ts` stays the fetcher either way, so the swap touches the hook and nothing else. Rationale in `docs/qa.md` §42.
 - [ ] Test: the selection persists across poll ticks rather than resetting to the default.
 - [ ] Test: the hidden count stays truthful when the backend filtered, not zero.
 

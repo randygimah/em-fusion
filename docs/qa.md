@@ -2733,6 +2733,69 @@ a number on the other would still pass. Full type parity would mean generating o
 other, which is a larger change than this item justified.
 
 
+## 42. Can we use TanStack Query for the fetch, or is polling a bad fit for it? And why does the top bar say `unknown` — is the fetch broken?
+
+**Two separate answers: "yes but not yet", and "no, that value is correct".**
+
+### TanStack Query
+
+**Not because polling is a bad fit — polling is the thing it is best at.** `refetchInterval` is
+exactly this use case, `placeholderData: keepPreviousData` is the keep-the-last-good rule as one
+config line, and it is not a push transport, so `FR-807` is untouched. The reason to hold off is
+proportion, not suitability.
+
+| What it would add | Does it bite today? |
+|---|---|
+| Request dedup across components | No — one screen, one consumer |
+| Shared cache | No — nothing else reads the picture |
+| Retry with backoff | No — the next poll is five seconds away regardless |
+| Pausing polls on a hidden tab | Mildly — a demo left open in a background tab keeps asking |
+| Loading and error state as data | No — the hook has two states and both are asserted |
+
+Against that: a runtime dependency, a provider in `main.tsx`, and forty lines of hook whose every
+behaviour is already covered by tests and verified in a browser.
+
+**The trigger is written into `docs/implementation.md`**, in the Phase 3 view-filter subsection. That
+is where a second polled endpoint arrives (`api-007`), joined by `track-window` in Phase 4
+(`api-008`) — two consumers issuing overlapping requests, with a filter selection that must survive
+poll ticks. Those are the problems the library exists to solve, and at that point writing it by hand
+becomes the wrong call.
+
+The swap is cheap when it comes: `src/lib/api.ts` stays the fetcher, and the existing tests assert
+through the screen rather than through the hook, so most of them survive unchanged.
+
+There is also a write-up angle. The dependency list is short and every entry is defensible in one
+sentence; "a data-fetching library, for a single endpoint" is a weaker sentence than the hook is.
+
+### Why the top bar says `unknown`
+
+**The fetch is fine.** `unknown` is the value the endpoint is deliberately sending:
+
+```json
+{"scenario": {"id": "8", "name": "replay-only", "dataMode": "replayed", "health": "unknown"}}
+```
+
+Nothing in the system monitors health yet — not the database, not the adapters, not the replay's
+liveness. The mock used to say `Healthy`, which was a reassurance nothing had performed. `unknown` is
+the same decision as the two dashes in the Detection Summary, and the same decision as `db-007`'s
+blank completion stamp: **absence reported as absence** rather than filled in with something
+plausible. See §41.
+
+**But reading it as a fault is a fair reaction, and that is a presentation problem.** The dashes work
+because they sit beside labels — "Anomaly Level —" reads as *not assessed*. A bare `unknown` in the
+top-right corner, where a health status used to sit, reads as *something broke*. The value is right
+and the framing is missing.
+
+Deliberately not fixed here: `op-001` owns that status bar and rebuilds it with a real system-health
+strip, and patching one word in a bar that is about to be replaced is the kind of edit that makes a
+passing item drift from its spec.
+
+**Worth recording as a limitation of the honest-absence rule:** an absence is only legible when
+something explains what is absent. Served without a label, `unknown` and `null` look like failures
+rather than statements — which means every place this project chooses to report absence carries a
+matching obligation on the interface that displays it.
+
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
