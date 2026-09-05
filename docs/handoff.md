@@ -4,7 +4,7 @@ Written at the end of a working session so the next one starts with context rath
 archaeology. Overwritten each session — this is the current state, not a log. History lives in git.
 
 **Session date:** 2026-09-04 to 2026-09-05
-**Branch:** `main`, **4 commits ahead of `origin/main`** — everything through `api-002` and the progress note is pushed. Working tree clean.
+**Branch:** `main`, **9 commits ahead of `origin/main`.** Working tree clean.
 
 ## Goal
 
@@ -14,18 +14,21 @@ deviations detected deterministically, evidence bundles turned into schema-valid
 grounding-checked AI hypotheses for analyst review. Decision support, not autonomous
 decision-making.
 
-This session built **`db-007`** (the scenario run completion flag), **`api-002`** (the operational
-picture endpoint) and **`db-006`** (nothing in the API layer touches storage directly). The store now has a reader as well as a writer: an hour of archived air traffic
+This session built **`db-007`** (the run completion flag), **`api-002`** (the operational picture
+endpoint), **`db-006`** (nothing in the API layer touches storage directly) and **`api-003`**
+(the dashboard polls that endpoint). **Phase 5 is complete: 8 of 8 items, nothing open.** The
+loop is closed — an hour of archived air traffic goes in by `make replay` and comes out on a
+screen in a browser, with no mock in the path. The store now has a reader as well as a writer: an hour of archived air traffic
 goes in by `make replay` and comes back out as a served payload.
 
 ## Current state
 
 | | |
 |---|---|
-| Backend suite | **336 passed, 99.89%** via `make test-backend` |
-| Frontend suite | **7 passed** via `make test-frontend` — **the first run in four sessions**, in its container, so the Node 20 problem never arises |
+| Backend suite | **340 passed, 99.89%** via `make test-backend` |
+| Frontend suite | **23 passed** via `make test-frontend`, in its container |
 | Lint / types | `make lint` and `make type-check` green |
-| Spec items passing | **17 of 83** — `api-001`, `api-002`, `adp-001`, `adp-004`–`adp-007`, `dal-001`–`dal-004`, `db-001`, `db-003`, `db-005`, **`db-006`**, `db-007`, `ops-003` |
+| Spec items passing | **18 of 83** — `api-001`–`api-003`, `adp-001`, `adp-004`–`adp-007`, `dal-001`–`dal-004`, `db-001`, `db-003`, `db-005`, `db-006`, `db-007`, `ops-003` |
 | Endpoint, live | Run 8, **412 tracks, 58 KB, ~1.04 s cold and ~0.40 s warm** over three calls |
 | Migrations | Two revisions, both applied to the development database |
 | New dependencies | None, in either half |
@@ -84,14 +87,48 @@ check fails on the clearest documentation of the rule it enforces, so it does no
 enforce the property — it drives out the explanation of why the property matters. Third appearance of
 this defect (`dal-004`, a `compose.yaml` test during `adp-007`, and here).
 
+### `api-003`, as built
+
+`src/lib/api.ts` is the only module that reaches the network; `src/hooks/useOperationalPicture.ts`
+owns the 5 s poll, the fallback and the degraded flag; `App.tsx` was the entire change on the screen
+side — **no component was touched**, which is the contract-first structure paying off exactly as it
+was designed to.
+
+Two behaviours are stronger than the item's literal wording, and both are recorded in the amended
+item and in `thesis_notes.md`:
+
+- **A failed poll keeps the last real payload** and changes only the indicator. The mock is the
+  fallback only while nothing real has ever arrived. Reverting measured data to invented data on a
+  network blip is a downgrade in honesty as well as usefulness.
+- **The app reports itself degraded from first paint**, because the mock is what is on screen at that
+  moment.
+
+`no push transport anywhere in the repo` is asserted in both suites, since neither container can see
+the whole repository: the frontend scans `src/` and `package.json`, the backend scans `app/` and
+`pyproject.toml`. The backend half also checks for `@router.websocket`, which needs no dependency and
+would therefore pass an import-only check.
+
+### Verified in a browser, which no test could do
+
+Every polling test mocks `fetch`. Against the running stack, in Chrome:
+
+| Step | Observed |
+|---|---|
+| Load `localhost:8080` | Renders `replay-only`, `replayed`, dashes — the real payload |
+| Watch the network | 5 × `GET /api/v1/operational-picture`, all 200, through nginx |
+| `docker compose stop backend` | Badge appears; the last real picture stays on screen |
+| `docker compose start backend` | Badge clears on the next successful poll |
+
+Two of those four are unreachable from the suite: that nginx proxies the versioned prefix without
+rewriting it, and that the interval survives a restart rather than wedging after the first failure.
+
 ## Files in flight
 
 Nothing in flight. The tree is clean.
 
 - `backend/app/db/repository.py` — now holds writes, the run lifecycle, and two reads. `db-004`'s
   spatial query lands here and it is still the only place SQL may go.
-- `docs/spec.jsonl` — nothing specified-and-unbuilt is blocking. `api-003` is next and needs no
-  new spec work.
+- `docs/spec.jsonl` — nothing specified-and-unbuilt is blocking.
 
 ## Changed
 
@@ -110,6 +147,10 @@ Seven commits on top of the last push. `29a3af8` (the progress-note republish an
 | `9a509a6` | `feat(db-006): route modules name no storage engine - tests pass` |
 | `60b421b` | `feat(db-006): mutation results, db-006 passes` |
 | `424283e` | `docs: db-006 in the notes, refresh handoff` |
+| `961eab1` | `spec: amend api-003 — placement, interval, degraded from first paint` |
+| `06b964f` | `test: add tests for api-003` |
+| `c5a1525` | `feat(api-003): poll the endpoint, fall back visibly - tests pass` |
+| `650c7bd` | `feat(api-003): mutation results, api-003 passes` |
 
 **Outside the repo:** the progress note was republished to the same URL —
 <https://claude.ai/code/artifact/7f3060f9-29d5-46de-b12b-eddd3824cccc>. It gained a section,
@@ -164,10 +205,7 @@ four were measured together against the same state.
 
 ## Next step
 
-1. **`api-003`** — the frontend fetches the endpoint on a poll, falling back to the mock and showing
-   a degraded indicator. Note the measured **0.40 s** warm response when choosing the interval: a
-   poll shorter than the response time produces overlapping requests, not fresher data.
-2. **`scn-001`/`scn-002`** — the scenario generator, which supersedes `adp-007`'s placeholder run and
+1. **`scn-001`/`scn-002`** — the scenario generator, which supersedes `adp-007`'s placeholder run and
    becomes the second producer that has to set `completed_at`.
 
 Owed, with an owner but no date:
@@ -187,7 +225,7 @@ Owed, with an owner but no date:
 
 Open and unowned:
 
-- **4 commits unpushed.**
+- **9 commits unpushed.**
 - **Root `make check` has still not been run in full**, though `format`, `lint`, `type-check`,
   `test-backend` and `test-frontend` were each run separately and are green.
 - **`make generate` is broken** — the `pipeline` service names `app.pipeline`, which does not exist

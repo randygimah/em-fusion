@@ -1423,6 +1423,27 @@ endpoint into a real screen is indistinguishable from the genuine article at the
 matters, and a system whose thesis is that AI output must be grounded and checked before an analyst
 sees it cannot make an exception for its own placeholder content.
 
+### A failed poll keeps the last real data rather than reverting to the mock
+
+The specification for frontend data access said the application should fall back to the mock on a
+fetch failure and show a degraded indicator rather than blanking. Implemented literally, that means a
+single failed request replaces real telemetry with invented example data. The intent behind the
+sentence is "do not blank", and blanking is not the only way to mislead: silently swapping measured
+data for fabricated data is worse, because a blank screen at least announces itself.
+
+The implemented behaviour keeps whatever is already displayed and changes only the indicator. The
+mock remains the fallback while nothing real has ever arrived, which is the case the sentence was
+written for. Stale real data behind a "not live" badge is both more useful and more honest than fresh
+invented data behind no badge at all.
+
+A second decision follows from the same argument and is less obvious: **the application reports
+itself degraded from the first paint**, before any request has resolved. At that moment the screen is
+showing the example payload, and example data presented as though it were the system's own output is
+precisely the failure this project exists to argue against. The indicator clears on the first
+successful response. The mutation that proves this matters is the "fall back silently" reading — make
+a failed poll restore the mock and clear the flag, and three tests fail; without them, the interface
+would look healthy while displaying fiction.
+
 ## Implementation
 
 <!-- Notable technical decisions per phase (link to implementation.md phases), challenges and
@@ -2047,6 +2068,34 @@ fail to enforce the property, it actively drives out the explanation of why the 
 This project has now hit the same defect three times (`dal-004`, a `compose.yaml` test during
 `adp-007`, and this item's own specified failure case), which is why every structural check here
 parses.
+
+### The end-to-end check the tests could not perform
+
+Every test of the polling layer mocks `fetch`. That is the right way to test the behaviour — the
+failure paths are otherwise unreachable — but it means the suite says nothing about whether the
+browser, the nginx container, the proxy configuration and the backend actually agree. This project
+has already shipped two defects of exactly that shape, both found on a first real invocation and
+neither reachable from any test, and the lesson recorded then was that *the place the code runs is
+not the place the tests describe*.
+
+So the item was finished with a manual pass against the running stack, in a real browser:
+
+| Step | Observed |
+|---|---|
+| Load the dashboard | The screen renders `replay-only`, `replayed`, and dashes for the detection summary — the real payload, not the example one |
+| Watch the network | Five successive `GET /api/v1/operational-picture`, all 200, at the five-second interval, through nginx |
+| Stop the backend container | The degraded badge appears, and the last real picture stays on screen — it does not revert to the example data |
+| Start it again | The badge clears on the next successful poll |
+
+Two of those four could not have been established by the test suite at all: that nginx proxies the
+versioned prefix without rewriting it, and that the interval survives a container restart rather than
+wedging after the first failure. The third row is the one worth keeping for the write-up, because it
+is the specified behaviour observed rather than asserted — the interface degrading honestly under a
+genuinely dead backend rather than a mocked one.
+
+An honest caveat: the first read after restarting the container still showed the degraded badge,
+because the backend had not finished starting. That was correct behaviour and briefly looked like a
+bug, which is a reminder that a manual check needs its own controls as much as an automated one does.
 
 ## Evaluation
 
