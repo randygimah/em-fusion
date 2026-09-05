@@ -2125,6 +2125,101 @@ An honest caveat: the first read after restarting the container still showed the
 because the backend had not finished starting. That was correct behaviour and briefly looked like a
 bug, which is a reminder that a manual check needs its own controls as much as an automated one does.
 
+### Phase 5 in review: the seam held, and the phase served real data rather than the fixture it was planned around
+
+Phase 5 was specified as a contract mirror. Its stated purpose was to establish the seam between the
+dashboard and a backend, and its stated method was an endpoint returning a static fixture in the
+frontend's shape — "the point is to establish the seam, not the data". It completed with eight of
+eight items done, and it did not do that. The endpoint serves real rows out of PostGIS, because
+persistence and the replay adapter landed before this phase was reached and a fixture would have
+meant writing the endpoint twice while putting invented data on an analyst's screen in the interim.
+The plan was written when there was no database to read; the correction is recorded in
+`docs/implementation.md` at the head of the phase rather than silently applied.
+
+The phase order had already been amended once, for a different reason, and that amendment can now be
+judged. Phase 5 was moved ahead of the Phase 3 view filter and the Phase 4 playback on the grounds
+that both are server-side by specification, so building them against a mock would mean building them
+twice. Nothing in the phase contradicted that reasoning, and one thing strengthened it: the view
+filter's suppressed counts and the playback window's truncation reporting have no mock equivalent at
+all, and both now have a real endpoint and a real polling client to extend rather than a client-side
+approximation to throw away.
+
+#### The contract-first prediction, scored
+
+The frontend was built contract-first from the start: components take a typed value, screens never
+import the mock, and `App.tsx` was designated in advance as the single seam where a real fetch would
+replace the mock import. That is a prediction, and this phase is where it was tested. The diff for
+the change that replaced the mock with a live API, over the frontend source and excluding tests:
+
+| File | Change |
+|---|---|
+| `src/lib/api.ts` | new, 39 lines |
+| `src/hooks/useOperationalPicture.ts` | new, 62 lines |
+| `src/App.tsx` | +10 −3 |
+| `src/screens/operationalPicture.tsx` | +10 −1 |
+| **Total** | **4 files, 118 insertions, 3 deletions** |
+
+The honest reading is not "one file changed". A hundred and one of the hundred and eighteen lines are
+the two new modules that did not previously exist, which is transport code that had to be written
+somewhere. Of the two existing files, `App.tsx` is the designated seam and behaved exactly as
+designated. The screen changed too — and the detail that matters is *what* changed in it: an optional
+boolean prop and a badge that renders when the data is not live. **Nothing about how the screen
+consumes its data changed at all.** Had the degraded indicator not been required, the screen would
+have been untouched.
+
+So the claim that survives contact is narrower than the one originally made, and more useful: the
+contract-first structure meant that changing the *source* of the data cost nothing in the components,
+while changing what is *displayed* cost exactly what displaying something new always costs. The
+prediction was about provenance and it held for provenance. This is the same shape as the repository
+port's result one layer down — the guarantee was specified early, so the implementation had somewhere
+to put it — and the repetition across two independent boundaries is worth more to the argument than
+either instance alone.
+
+#### What the phase produced
+
+Four capabilities, of which one predated the phase's active work: the health endpoint, the
+operational picture endpoint, the rule that route handlers hold no storage logic, and the polling
+client. Thirty-nine new backend test functions and sixteen frontend ones, leaving the suites at 340
+and 23 respectively, at 99.89% backend coverage. The end of the phase is the first moment the system
+runs end to end without a mock in the path: an hour of archived air traffic enters by one command and
+leaves as pixels in a browser.
+
+#### Three limitations the phase leaves behind
+
+The first is in the parity check, which is the phase's central mechanism. It compares field *names*
+between the TypeScript contract and the response models, not types, with the two detection fields as
+a deliberate exception because they carried the requirement violation this phase removed. A field
+that became a string on one side and stayed a number on the other would pass. Closing that properly
+means generating one declaration from the other, which is a larger change than any item here
+justified.
+
+The second is that the frontend's structural checks scrub rather than parse. The backend's equivalent
+reads an abstract syntax tree, in which comments do not exist and docstrings can be identified;
+the frontend's strips comments and string literals with regular expressions before matching, because
+parsing TypeScript would mean adding the compiler as a dependency for a single test. Both halves were
+mutation-tested and both behave correctly, but they are not equally strong, and the weaker one guards
+the half of the codebase with fewer other checks.
+
+The third is that "green" still means one machine. Continuous integration does not exist, so every
+figure in this section was produced on a single developer laptop, on containers whose database runs
+under processor emulation. That is already known to move a wall-time measurement by forty per cent.
+
+#### The pattern the phase surfaced
+
+Three separate decisions in this phase independently reached the same conclusion: report absence as
+absence. A run that may not have finished carries a null completion stamp rather than a status guess;
+a detection summary with no detector behind it is null rather than `Low`; a system with no health
+monitoring reports `unknown` rather than `Healthy`. In each case a plausible value was available and
+rejected because it would have been a claim about the world rather than a statement about the system.
+
+The phase also surfaced the obligation that comes with it, and did so through a reader's reaction
+rather than by analysis: shown a bare `unknown` in the corner of a status bar, the natural reading is
+that something is broken. An absence is only legible when something explains what is absent. The two
+dashes in the detection panel read correctly because they sit beside labels; the same value with no
+label reads as a fault. Every place this project chooses to report absence therefore carries a
+matching obligation on the interface that displays it, and the interface work that discharges those
+obligations sits in a later phase than the decisions that created them.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;
