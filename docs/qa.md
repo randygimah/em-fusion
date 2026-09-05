@@ -2978,6 +2978,89 @@ channelises it this way. Eight channels is the smallest grid that supports the a
 the detection rules need, and no claim is made that a result here transfers to a real spectrum
 monitor.
 
+## 45. I'm struggling to wrap my head around the receivers and their relationship with the channels — "four above and three below", "adjacent channels", the "distance window". Can this be explained better?
+
+**The thing that makes it hard is that "next to" is being used for two entirely separate
+relationships, and §44 used the word for both without ever saying so.** There is a *pitch* axis and a
+*distance* axis. They are independent, they carry different evidence, and the design's whole trick is
+that the same question is asked along each. Once they are separated the rest is arithmetic.
+
+### The wrong picture to have
+
+The natural reading of "seven sensors, eight channels" is that these are two halves of one structure —
+that a channel is something a sensor *has*, the way a room has a door, and that "adjacent" therefore
+means something like "the sensor next door". It does not. A better mental model:
+
+> Each of the seven receivers independently produces **eight numbers** every ten seconds. That is a
+> 7 × 8 grid of numbers at every instant. "Adjacent" can mean *along the row* (slices on one
+> receiver) or *down the column* (receivers on one slice), and those are different tests.
+
+### What a receiver is, before anything else
+
+**A meter, not an ear.** It decodes nothing and listens to no conversation. It measures how much
+radio energy is arriving and reports the number. Frequency is the "pitch" of a radio wave, in MHz;
+different services sit at different pitches, which is how they coexist. Satellite navigation sits at
+**1575.42 MHz**.
+
+The one design decision everything else rests on: rather than report a single loudness figure for
+everything it can hear, the receiver splits its range into eight narrow bands and reports **eight
+numbers**. A single figure could only ever say "it is noisy here". Eight can say *where in the band*
+the noise is — and the shape of that answer is the evidence.
+
+### Why the shape is evidence
+
+| Pattern across the eight slices | What it means |
+|---|---|
+| All eight roughly level | Background hiss. Nothing to say. |
+| One slice up, the two either side untouched | **Physically odd.** Anything really radiating spills into neighbouring slices. Far more easily explained by the meter reporting a wrong number for one slice — so suspect the *receiver*. |
+| A slice up with its neighbours also raised, tapering outwards | What an actual emission looks like — so suspect the *world*. |
+
+Now the same logic, one axis over: if one receiver is hot and the receivers near it are quiet, that
+is again the instrument; if several nearby receivers are hot together, something is really happening
+out there.
+
+### The two axes side by side
+
+| | Pitch axis | Distance axis |
+|---|---|---|
+| What is compared | Eight slices on **one** receiver | Seven receivers on **one** slice |
+| "Next to" means | The slice immediately above or below | Any receiver within 70 km |
+| Isolated reading | One slice hot, its two neighbours quiet | One receiver hot, its nearby receivers quiet |
+| → so probably | The instrument is at fault | The instrument is at fault |
+| Shared reading | Several adjacent slices raised | Several nearby receivers raised |
+| → so probably | Something is really transmitting | Something out there is really happening |
+
+Two independent pieces of evidence with identical logic. Agreeing, they make a far stronger case than
+either alone; **disagreeing, they are the kind of ambiguity an analyst should be shown rather than
+have resolved for them** — which is the point of the whole system.
+
+The asymmetry between the two columns is worth naming. The pitch-axis neighbours are fixed by the
+channel plan and never change. The distance-axis neighbours depend entirely on where the receivers
+were put — which is why positions had to be *chosen and measured* rather than scattered, and why the
+distance window exists at all. §44 covers that measurement.
+
+### "Four below and three above" is counting, not a choice
+
+The plan has eight slices, and 1575.42 MHz has to be the centre of one of them. That uses one slice
+and leaves seven, which fall four below and three above. Seven does not split evenly. There is
+nothing to be done about it short of using nine slices.
+
+**The number on each side was never the requirement**, which is why the earlier "four either side"
+wording went unnoticed for so long — it was describing a decision nobody had actually made. The
+requirement is that there is **at least one slice on each side**, so "did its neighbours see it too?"
+can be asked in both directions. Put the navigation frequency at the very *edge* of the plan and it
+has a neighbour on one side only: the check still runs, still reports success, and is now silently
+answering half the question. That is the failure the layout validation exists to make impossible.
+
+### Worth recording as a limitation
+
+This channel plan is **a plausible abstraction, not an RF-accurate channelisation**. The real GPS L1
+band is far wider than 16 MHz and no real receiver divides it this way. Eight slices is the smallest
+grid that supports the adjacency reasoning above, and no claim is made that a result obtained here
+transfers to a real spectrum monitor. The same caveat applies to the noise-spills-sideways argument:
+it is true of real emissions in general, but the *degree* of spill is a property of the transmitter
+and is here a parameter we choose rather than a measured fact.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -3091,6 +3174,7 @@ monitor.
 | **Scenario** | A staged incident laid over the replayed real hour: synthetic radio observations, and for some types perturbed tracks, plus a written record of exactly what was staged. See §43. |
 | **Ground truth** | The generator's own record of what it injected — where, in which channels, in which window. Recorded at generation time and never inferred from detector output, which is what makes a detection measurable rather than anecdotal. Never leaves the run record (`api-009`). |
 | **Layout** | The fixed geometry of the synthetic RF side: which sensors exist, where, and on which channels. Configuration read from a file and validated on load, not constants in the code (`scn-005`). See §44. |
+| **Pitch axis / distance axis** | The two independent senses of "next to": slices adjacent in frequency on one receiver, and receivers within the radius of each other. Same reasoning applied along each. See §45. |
 | **Channel** | One 2 MHz slice of the monitored spectrum, identified by an index. Eight of them, centred 1567.42–1581.42 MHz. The axis that lets a rule distinguish noise confined to one channel from noise smeared across the band. |
 | **GNSS L1** | 1575.42 MHz, the civil GPS signal frequency. One channel is centred exactly on it, with four below and three above, and it is the band the `gnss-degradation` scenario targets. |
 | **Discrimination radius** | The distance at which a layout is asserted to be discriminating: every sensor has at least one other within it and at least one beyond it. 70 km, chosen from a measured valid band of [55.7, 85.7) km. See §44. |
