@@ -153,6 +153,14 @@ Seven commits on top of the last push. `29a3af8` (the progress-note republish an
 | `650c7bd` | `feat(api-003): mutation results, api-003 passes` |
 
 **Outside the repo:** the progress note was republished to the same URL —
+<https://claude.ai/code/artifact/7f3060f9-29d5-46de-b12b-eddd3824cccc>. New section, "The screen
+stops making things up": why five seconds, the three-row table of what a failed request could show
+and which is honest, a timeline figure of eight polls with the backend stopped in the middle, the
+by-hand browser checks, and a subsection on the rule the machine can now check (the parse-versus-grep
+contrast from `db-006`). The spine's lede now explains that the pipeline's two ends meet around a
+missing middle; the analyst stage reads "One of three, live"; totals read 18 of 83.
+
+**Outside the repo:** the progress note was republished to the same URL —
 <https://claude.ai/code/artifact/7f3060f9-29d5-46de-b12b-eddd3824cccc>. It gained a section,
 "Asking the store a question": the six-section figure showing two real and four empty, why serving
 the mock for the empty four was refused, the blank-versus-`Low` table, the `FR-715` violation and
