@@ -279,3 +279,23 @@ def test_each_forbidden_shape_is_recognised(statement: str) -> None:
     # spec: db-006 -- one case per rule, so a regex that stops matching is a
     # named failure rather than a silently emptier check
     assert violations(f"def read():\n    {statement}\n") != []
+
+
+# Mutation results, 2026-09-05, run in both directions as `db-006` requires.
+#
+#   * A real query in the handler -- `session.execute(text("SELECT count(*) FROM
+#     observations"))` with its import -- turned three tests red at once:
+#     the storage-engine import, the SQL statement, and the constructor. One
+#     violation tripping three independent rules is the point of stating the
+#     same property three ways.
+#   * The identical text written inside the module's docstring, as a
+#     prohibition ("a handler must never write ..."), left all thirteen green.
+#     `grep -c` over the same file at the same moment returned 1. That pair is
+#     the whole argument for parsing: the grep-based check would have failed on
+#     the clearest possible documentation of the rule it was enforcing, and the
+#     rational response to such a check is to stop writing the rule down.
+#
+# The first assertion here was red on arrival for a real reason, which is rarer
+# than it should be for a structural test: `app/api/v1/operational_picture.py`
+# imported `sqlalchemy.orm` to annotate a parameter it never constructed. Fixed
+# by naming the type in `app/db/session.py` instead.
