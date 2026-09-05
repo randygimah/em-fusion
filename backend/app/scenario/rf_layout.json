@@ -1,0 +1,23 @@
+{
+  "sensors": [
+    {"sensor_id": "RF-01", "station_name": "Schiphol", "lat": 52.3105, "lon": 4.7683},
+    {"sensor_id": "RF-02", "station_name": "Rotterdam", "lat": 51.9569, "lon": 4.4375},
+    {"sensor_id": "RF-03", "station_name": "Lelystad", "lat": 52.4603, "lon": 5.5272},
+    {"sensor_id": "RF-04", "station_name": "Eindhoven", "lat": 51.45, "lon": 5.3745},
+    {"sensor_id": "RF-05", "station_name": "Weeze", "lat": 51.6024, "lon": 6.1422},
+    {"sensor_id": "RF-06", "station_name": "Dusseldorf", "lat": 51.2895, "lon": 6.7668},
+    {"sensor_id": "RF-07", "station_name": "Koln-Bonn", "lat": 50.8659, "lon": 7.1427}
+  ],
+  "channels": [
+    {"index": 0, "centre_frequency_mhz": 1567.42, "bandwidth_mhz": 2.0, "band": "GNSS-L1"},
+    {"index": 1, "centre_frequency_mhz": 1569.42, "bandwidth_mhz": 2.0, "band": "GNSS-L1"},
+    {"index": 2, "centre_frequency_mhz": 1571.42, "bandwidth_mhz": 2.0, "band": "GNSS-L1"},
+    {"index": 3, "centre_frequency_mhz": 1573.42, "bandwidth_mhz": 2.0, "band": "GNSS-L1"},
+    {"index": 4, "centre_frequency_mhz": 1575.42, "bandwidth_mhz": 2.0, "band": "GNSS-L1"},
+    {"index": 5, "centre_frequency_mhz": 1577.42, "bandwidth_mhz": 2.0, "band": "GNSS-L1"},
+    {"index": 6, "centre_frequency_mhz": 1579.42, "bandwidth_mhz": 2.0, "band": "GNSS-L1"},
+    {"index": 7, "centre_frequency_mhz": 1581.42, "bandwidth_mhz": 2.0, "band": "GNSS-L1"}
+  ],
+  "interval_seconds": 10,
+  "discrimination_radius_km": 70.0
+}

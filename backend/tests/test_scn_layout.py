@@ -31,6 +31,7 @@ any connection exists and before any observation has been written.
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -234,7 +235,7 @@ def test_too_few_sensors_is_rejected(tmp_path: Path) -> None:
 # spec: scn-005
 def test_duplicate_sensor_ids_are_rejected(tmp_path: Path) -> None:
     def collide(document: Any) -> None:
-        document["sensors"][1]["sensor_id"] = document["sensors"][0]["sensor_id"]
+        document["sensors"][-1]["sensor_id"] = document["sensors"][0]["sensor_id"]
 
     with pytest.raises(LayoutError):
         load_layout(_mutated(tmp_path, collide))
@@ -260,6 +261,19 @@ def test_a_plan_with_no_channel_on_l1_is_rejected(tmp_path: Path) -> None:
 
     with pytest.raises(LayoutError):
         load_layout(_mutated(tmp_path, detune))
+
+
+# spec: scn-005 -- eight channels (FR-108). Fewer stops supporting the
+# narrowband-versus-broadband distinction that keeps spectral extent a
+# parameter of gnss-degradation rather than a sixth scenario type.
+# Written after the implementation, to cover a rejection branch the first
+# pass of this file missed -- a deviation from the spec-test-code order.
+def test_a_plan_with_the_wrong_number_of_channels_is_rejected(tmp_path: Path) -> None:
+    def truncate(document: Any) -> None:
+        document["channels"] = document["channels"][:6]
+
+    with pytest.raises(LayoutError):
+        load_layout(_mutated(tmp_path, truncate))
 
 
 # spec: scn-005 -- adjacency by index must be adjacency in frequency, or
@@ -337,7 +351,7 @@ def test_unparseable_json_is_rejected(tmp_path: Path) -> None:
 # silently would apply a default the author believed they had overridden.
 def test_an_unknown_key_is_rejected(tmp_path: Path) -> None:
     def misspell(document: Any) -> None:
-        document["interval_second"] = document.pop("interval_seconds")
+        document["interval_second"] = document["interval_seconds"]
 
     with pytest.raises(LayoutError):
         load_layout(_mutated(tmp_path, misspell))
@@ -386,6 +400,20 @@ def test_neighbours_at_the_configured_radius(
     assert list(shipped.neighbours(sensor_id)) == expected
 
 
+# spec: scn-005 -- the radius is inclusive. No pair in the shipped layout sits
+# exactly on it, so the boundary is unobservable unless a test puts one there:
+# whether a sensor at exactly the configured distance counts as a neighbour
+# decides anom-007's evidence on any layout tuned to its radius.
+def test_a_sensor_at_exactly_the_radius_counts_as_a_neighbour(
+    shipped: RfLayout,
+) -> None:
+    exact = shipped.distance_km("RF-01", "RF-02")
+    assert "RF-02" in shipped.neighbours("RF-01", radius_km=exact)
+    assert "RF-02" not in shipped.neighbours(
+        "RF-01", radius_km=math.nextafter(exact, 0.0)
+    )
+
+
 # spec: scn-005 -- a sensor is not its own neighbour; anom-007 compares a
 # sensor against others.
 def test_a_sensor_is_not_its_own_neighbour(shipped: RfLayout) -> None:
@@ -405,9 +433,7 @@ def test_neighbours_of_an_unknown_sensor_raises(shipped: RfLayout) -> None:
     ("index", "expected"),
     [(0, [1]), (3, [2, 4]), (4, [3, 5]), (6, [5, 7]), (7, [6])],
 )
-def test_adjacent_channels(
-    shipped: RfLayout, index: int, expected: list[int]
-) -> None:
+def test_adjacent_channels(shipped: RfLayout, index: int, expected: list[int]) -> None:
     assert list(shipped.adjacent_channels(index)) == expected
 
 

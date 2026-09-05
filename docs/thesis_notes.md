@@ -1472,6 +1472,62 @@ hand-written code could not. "A data-fetching library, for a single endpoint" is
 than the hook is, and a dependency that cannot be defended in a sentence is one that will have to be
 defended at length in a viva.
 
+### Turning "positioned so a zone contains some and excludes others" into a check
+
+`FR-109` asks that RF sensor positions be chosen "so that a candidate interference zone contains some
+sensors and excludes others". As written this is a design intention rather than a property: it names
+no radius, no threshold, and nothing a program could evaluate. A requirement in that form is
+satisfied by whatever layout the author happens to write down, which is the same as not constraining
+the layout at all — and the cost of getting it wrong would not appear until Phase 6, where the
+symptom would be a detection rate nobody could explain rather than an error anybody could locate.
+
+The requirement was therefore restated as two invariants at a recorded radius, both checked when the
+layout is loaded and before any observation exists. **Every sensor must have at least one other
+sensor within the radius**, or the neighbour comparison `anom-007` depends on has nothing to compare
+that sensor against, and the sensor-fault rule silently degenerates into "this sensor is abnormal".
+**Every sensor must have at least one other beyond it**, or a zone centred anywhere contains the
+entire layout and `anom-005`'s spatial-coherence test is satisfied by every event, discriminating
+nothing. The two run in opposite directions, which is what makes them a pair rather than a single
+density heuristic: the first forbids a layout that is too sparse, the second one that is too dense,
+and a layout satisfying both necessarily contains the internal structure the fusion rules read.
+
+The shipped layout is seven sensors at real airfield positions inside the corpus bounding box
+(49–54°N, 3–11°E) — Schiphol, Rotterdam, Lelystad, Eindhoven, Weeze, Düsseldorf and Köln/Bonn. Seven
+rather than six or eight for two reasons: an odd count leaves no tie in any future "most neighbours
+stayed nominal" reasoning, and seven was the smallest count that produced two separated groups joined
+by a bridge sensor rather than one undifferentiated cluster. Every sensor stands inside the bounding
+box because a sensor outside it would watch airspace the replayed telemetry never covers, so
+`anom-005` could never fuse its readings with a track cluster — a constraint that is obvious once
+stated and invisible until it is.
+
+The radius is the interesting number, because the invariants do not hold at every value and the
+range over which they do is a property of the layout rather than of the configuration. Measured
+against the shipped positions, **both invariants hold for any radius in [55.7, 85.7) km** and fail
+outside it: below 55.7 km Eindhoven loses its only neighbour, and at 85.7 km Rotterdam and Eindhoven
+become neighbours and the chain begins to collapse toward the fully connected case. The configured
+value is **70 km**, chosen near the middle of that band rather than at either end, so that a later
+adjustment to a sensor position or to `anom-005`'s configured distance does not silently destroy the
+property it depends on. That the valid band was measured at all is the substantive point: the
+alternative is a radius chosen because it sounded plausible, with no knowledge of how close it sits
+to the edge of working.
+
+One thing this deliberately does not do is fix the detectors' radii. `anom-005`'s fusion distance and
+`anom-007`'s neighbour radius are separate configuration in their own items and may legitimately
+differ from each other and from this one; what the layout records is the radius at which it is
+*asserted* discriminating, and the measured band is the range those detector radii should be chosen
+from. *(Record here whether either detector was in fact configured outside [55.7, 85.7) km, and what
+the layout validation had to become if so.)*
+
+An arithmetic error in the specification surfaced while writing this. Both `scn-005` and
+`docs/em_fusion_v2.md` §5 described the channel plan as "one channel on L1 with four either side",
+which requires nine channels; the plan has eight, and the frequency list places L1 at index 4 with
+four channels below and three above. The list was right and the sentence was wrong, and both
+documents were corrected. The substantive requirement the sentence was reaching for — that frequency
+adjacency runs in *both* directions from L1, so `anom-007`'s frequency-neighbour test is not
+one-sided — is preserved and is now enforced directly, by rejecting any plan whose L1 channel sits at
+either end. The lesson is narrow but worth stating: a prose restatement of a table is a second source
+of truth, and it drifted from the table it restated before anything was built from either.
+
 ## Implementation
 
 <!-- Notable technical decisions per phase (link to implementation.md phases), challenges and
@@ -2219,6 +2275,58 @@ dashes in the detection panel read correctly because they sit beside labels; the
 label reads as a fault. Every place this project chooses to report absence therefore carries a
 matching obligation on the interface that displays it, and the interface work that discharges those
 obligations sits in a later phase than the decisions that created them.
+
+### Four tests that did not test what they claimed, and the stub that would have caught them
+
+`db-005` established that a collection error is the weakest possible red: it is produced by every
+test in a file regardless of what that test asserts, so it proves only that nothing passed. The
+response recorded there was to write a throwaway stub in which every function raises, run against it
+to get a per-test signal, and delete the stub before committing. **That practice was not followed for
+`scn-005`.** The new test file was run, produced a single `ModuleNotFoundError`, and was committed on
+the strength of it, with the intention of substituting a mutation sweep after implementation.
+
+The sweep was run — twenty-five mutations across the validation rules, the distance function, the two
+accessors and the loader — and it found **four tests that passed for reasons unrelated to what their
+names claimed**. Each is a distinct failure mode, and the four together are a better argument for the
+stub than the original `db-005` finding was.
+
+Two were *shadowed rules*: a mutation disabling the rule under test was still caught, but by a
+different rule. Removing the sensor-identifier uniqueness check left `test_duplicate_sensor_ids_are_rejected`
+green, because the test collided two adjacent sensors and the resulting layout then failed the
+*discrimination* invariant instead — excluding "the other RF-01" stranded Rotterdam with no
+neighbour. Removing the channel-count check left its test green because the contiguity rule was
+written as `indices != list(range(CHANNEL_COUNT))`, which tests the count as well as the order and
+made the count rule unreachable. The first was fixed in the test, by colliding the two ends of the
+layout instead, where both sensors keep their real neighbours; the second was fixed in the
+*implementation*, by making the contiguity rule compare against the plan's own length so each rule
+tests exactly one thing. A rule that cannot be observed to fail on its own is either redundant or
+untested, and the two cases are indistinguishable until something tries to tell them apart.
+
+The third was an *unobservable boundary*. Changing the neighbour test from `distance <= radius` to
+`distance < radius` broke nothing, because no pair in the shipped layout sits exactly on the radius.
+Whether the radius is inclusive is not a detail: it decides `anom-007`'s evidence on any layout tuned
+to it, and it was settled by nothing at all. A test now places a pair exactly on the boundary by
+deriving the radius from the measured distance, and asserts both that the pair is a neighbour at that
+value and that it is not one nudge below it.
+
+The fourth was a *test proving the wrong thing entirely*. `test_an_unknown_key_is_rejected` renamed a
+field, which removes a required key as well as adding an unknown one, so it stayed green when Pydantic's
+`extra="forbid"` was removed: it had been proving required-field enforcement all along, which another
+test already covered. It now adds a key without removing one.
+
+The finding is that the stub is not merely a stronger form of the same check. A per-test red
+distinguishes "this test fails because the implementation is absent" from "this test cannot fail",
+and all four defects above are in the second category — they would have been visible in about two
+minutes against a stub, and instead cost a twenty-five-mutation sweep, two test rewrites and one
+implementation change after the code was already written. The mutation sweep is the more thorough
+instrument and remains necessary for structural guards that assert an absence; it is a poor
+substitute for the cheap check it was used to replace. *(The practice for the remaining Phase 7 items
+is the stub first, then mutations on the absence guards only.)*
+
+One further deviation is recorded plainly: a rejection branch for a channel plan of the wrong length
+had no test at all in the first pass of the file, and was found by the coverage report after the
+implementation was written. The test was added afterwards, which reverses the specified order, and
+says so in its own comment.
 
 ## Evaluation
 

@@ -2892,6 +2892,92 @@ Recorded here because building `scn-001` "first" in the order the identifiers su
 building a determinism harness with nothing to be deterministic about.
 
 
+## 44. What is `scn-005` actually fixing, and why does the sensor layout need a radius attached to it?
+
+**It fixes the part of the synthetic RF world that never varies** — which sensors exist, where they
+stand, which channels they listen on, and how often they report. Everything that changes between runs
+belongs to `scn-002`. The radius is attached because without one, the requirement that gives the
+layout its shape cannot be checked at all.
+
+### The two halves of the layout
+
+| | What it fixes | Why it is fixed rather than generated |
+|---|---|---|
+| **Sensors** | Seven ground stations, each at a recorded latitude and longitude | Detectors reason about *which* sensors saw something. If positions moved between runs, two runs would not be comparable, and the evaluation campaign compares runs. |
+| **Channels** | Eight slices of radio spectrum, each 2 MHz wide, centred 1567.42 → 1581.42 MHz | The channel axis is what lets a rule say "the noise is confined to one channel" instead of only "this sensor is noisy" — the difference between a sensor fault and an emitter. |
+
+Every sensor reports on every channel at every interval, ten seconds apart in simulated time. That
+density is deliberate: with a complete grid, a *missing* reading is a detectable gap, whereas on a
+sparse grid a genuine dropout and a sensor with nothing to report look identical.
+
+### The requirement that could not be checked as written
+
+`FR-109` says sensor positions must be chosen "so that a candidate interference zone contains some
+sensors and excludes others". That sentence describes an intention, and a program cannot evaluate it:
+it names no distance and no threshold, so **any** set of positions satisfies it.
+
+The wrong assumption worth naming is that this is a note to the author — something to keep in mind
+while placing sensors. It is not. It is the precondition for two detection rules meaning anything:
+
+- `anom-007` decides "this one sensor is faulty" by checking that its **neighbours stayed nominal**. A
+  sensor with no neighbours has nothing to check, and the rule quietly becomes "this sensor is
+  abnormal", which is what it was supposed to improve on.
+- `anom-005` fuses radio noise with aircraft track gaps only when both fall **in the same area**. If
+  every sensor is inside every plausible area, that condition is always true and adds no information.
+
+So the requirement became two rules, tested at a stated radius, and checked when the layout file is
+read rather than when a detector runs:
+
+1. every sensor has **at least one other sensor within** the radius;
+2. every sensor has **at least one other sensor beyond** it.
+
+They point in opposite directions on purpose. The first forbids a layout spread too thin, the second
+one packed too tight, and passing both means the layout has internal structure for a spatial rule to
+find.
+
+### Why the radius has a range, and why the middle of it was chosen
+
+The shipped layout is seven Dutch and German airfield positions inside the corpus bounding box. Their
+distances, in kilometres:
+
+| From | Nearest neighbour | Next nearest |
+|---|---|---|
+| Schiphol | Rotterdam, 45.3 | Lelystad, 54.1 |
+| Rotterdam | Schiphol, 45.3 | Eindhoven, 85.7 |
+| Lelystad | Schiphol, 54.1 | Rotterdam, 93.0 |
+| Eindhoven | Weeze, 55.7 | Rotterdam, 85.7 |
+| Weeze | Düsseldorf, 55.5 | Eindhoven, 55.7 |
+| Düsseldorf | Köln/Bonn, 53.9 | Weeze, 55.5 |
+| Köln/Bonn | Düsseldorf, 53.9 | Weeze, 107.5 |
+
+Read the two invariants off that table and a **band** falls out rather than a single value. Below
+**55.7 km**, Eindhoven has no neighbour and rule 1 fails. At **85.7 km**, Rotterdam and Eindhoven
+become neighbours and the layout starts collapsing toward everything-sees-everything. So both rules
+hold for any radius in **[55.7, 85.7) km**, and for no radius outside it.
+
+The configured value is **70 km** — near the middle, not at an edge. The reason is robustness rather
+than realism: at 56 km the property would be true and one small position edit from being false, and
+nothing would announce the change. Fourteen kilometres of margin on each side means a later
+adjustment has to be substantial before it breaks anything, and if it does, the layout is rejected
+when it loads instead of producing quiet nonsense six phases later.
+
+### A correction to the specification, recorded because the arithmetic was wrong
+
+Both `scn-005` and `docs/em_fusion_v2.md` §5 described the plan as "one channel on L1 with four
+either side". Four either side plus L1 is nine channels; the plan has eight. The frequency list was
+right and the sentence was wrong: L1 sits at index 4, with **four channels below and three above**.
+
+The point the sentence was reaching for survives and is now enforced directly. L1 must not be at
+either end of the plan, so that frequency adjacency runs in **both** directions from it — a channel
+at the edge would give `anom-007` a one-sided neighbour test, and "the adjacent channels were clean"
+would be half a claim.
+
+Worth recording as a limitation: this channel plan is a *plausible abstraction, not an RF-accurate
+channelisation*. The real GPS L1 band is considerably wider than 16 MHz, and no real receiver
+channelises it this way. Eight channels is the smallest grid that supports the adjacency reasoning
+the detection rules need, and no claim is made that a result here transfers to a real spectrum
+monitor.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -3004,4 +3090,8 @@ building a determinism harness with nothing to be deterministic about.
 | **Level** | The Low / Medium / High vocabulary every confidence, severity and score is expressed in (`FR-715`, `AC-11`). Never a percentage and never a decimal, so that a generated judgement cannot be mistaken for a measurement. |
 | **Scenario** | A staged incident laid over the replayed real hour: synthetic radio observations, and for some types perturbed tracks, plus a written record of exactly what was staged. See §43. |
 | **Ground truth** | The generator's own record of what it injected — where, in which channels, in which window. Recorded at generation time and never inferred from detector output, which is what makes a detection measurable rather than anecdotal. Never leaves the run record (`api-009`). |
+| **Layout** | The fixed geometry of the synthetic RF side: which sensors exist, where, and on which channels. Configuration read from a file and validated on load, not constants in the code (`scn-005`). See §44. |
+| **Channel** | One 2 MHz slice of the monitored spectrum, identified by an index. Eight of them, centred 1567.42–1581.42 MHz. The axis that lets a rule distinguish noise confined to one channel from noise smeared across the band. |
+| **GNSS L1** | 1575.42 MHz, the civil GPS signal frequency. One channel is centred exactly on it, with four below and three above, and it is the band the `gnss-degradation` scenario targets. |
+| **Discrimination radius** | The distance at which a layout is asserted to be discriminating: every sensor has at least one other within it and at least one beyond it. 70 km, chosen from a measured valid band of [55.7, 85.7) km. See §44. |
 | **Seed** | The integer that determines every invented number in a run. Same type, parameters and seed must give a byte-identical stream; different seeds must not. Always recorded, including when generated automatically. |
