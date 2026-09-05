@@ -15,14 +15,13 @@ stated.
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session, sessionmaker
 
 from app.api.v1.schemas.operational_picture import (
     OperationalPicture,
     build_operational_picture,
 )
 from app.db.repository import latest_positions, latest_run
-from app.db.session import get_sessionmaker
+from app.db.session import SessionFactory, get_sessionmaker
 
 router = APIRouter()
 
@@ -34,7 +33,7 @@ FINAL_WINDOW_SECONDS = 300
 
 @router.get("/operational-picture", tags=["operational-picture"])
 def get_operational_picture(
-    sessions: sessionmaker[Session] = Depends(get_sessionmaker),
+    sessions: SessionFactory = Depends(get_sessionmaker),
 ) -> OperationalPicture:
     """The current picture, or an empty one. spec: api-002.
 

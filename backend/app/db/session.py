@@ -41,6 +41,14 @@ from sqlalchemy.orm import Session, sessionmaker
 
 DATABASE_URL_ENV = "DATABASE_URL"
 
+#: What a caller is handed to reach the database with, named here so callers do
+#: not have to import SQLAlchemy to say what they were given. That matters for
+#: the API layer specifically: `db-006` requires route modules to name no
+#: storage engine at all, and a handler that has to write `sessionmaker[Session]`
+#: in its own signature imports one purely to describe a parameter it never
+#: constructs. The alias moves that import to the layer that already owns it.
+SessionFactory = sessionmaker[Session]
+
 _engine: Engine | None = None
 _session_factory: sessionmaker[Session] | None = None
 

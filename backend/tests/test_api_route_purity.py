@@ -112,7 +112,10 @@ def violations(source: str) -> list[tuple[str, str]]:
             for module in modules:
                 if module.split(".")[0] in STORAGE_PACKAGES:
                     found.append(("storage-engine", module))
-                elif module.startswith("app.db") and module not in ALLOWED_STORAGE_MODULES:
+                elif (
+                    module.startswith("app.db")
+                    and module not in ALLOWED_STORAGE_MODULES
+                ):
                     found.append(("past-the-repository", module))
 
         elif isinstance(node, ast.Constant) and isinstance(node.value, str):
