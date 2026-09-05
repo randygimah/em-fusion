@@ -175,10 +175,21 @@ Added after the original checklist was written — a static snapshot cannot show
 
 ## Phase 7: Scenario Generator and Adapters
 
+**Order within this phase, settled 2026-09-05: `scn-005` first, then `scn-001` with the first seeded
+emitter, then `scn-002`'s types.** The identifiers suggest starting at `scn-001`, and that is the
+wrong way round. `scn-001` is a *property* — same type, parameters and seed give a byte-identical
+stream — and proving it requires a stream to prove it over. The stream comes from the scenario types,
+which emit through the synthetic RF adapter, which reports on a sensor and channel grid that does not
+exist yet. `normal-baseline` cannot stand in as the minimal case either: it injects nothing by
+definition, which is what makes it the false-positive control, so determinism over it is nearly
+vacuous. `scn-005` is the one item here with no dependency on the others — a fixed layout is pure
+configuration with no randomness in it — so it goes first, and `scn-001` lands with the smallest
+seeded emitter that actually has something to be deterministic about. See `docs/qa.md` §43.
+
+- [ ] Fix the RF grid as configuration before writing the generator (spec `scn-005`): six to eight sensors at recorded positions, eight 2 MHz channels centred 1567.42–1581.42 MHz with one channel exactly on GNSS L1. Position sensors so a candidate interference zone contains some and excludes others — otherwise `anom-005` and `anom-007` have nothing to discriminate.
 - [ ] Build a parameterised scenario generator: scenario type + parameters (noise amplitude, gap duration, sensor count, area, timing, seed).
 - [ ] Every run is reproducible from its seed and parameters — this is the foundation of the evaluation harness.
 - [ ] Implement adapter 1: replayed OpenSky telemetry from the archived file.
-- [ ] Fix the RF grid as configuration before writing the generator (spec `scn-005`): six to eight sensors at recorded positions, eight 2 MHz channels centred 1567.42–1581.42 MHz with one channel exactly on GNSS L1. Position sensors so a candidate interference zone contains some and excludes others — otherwise `anom-005` and `anom-007` have nothing to discriminate.
 - [ ] Implement adapter 2: synthetic RF observation generator under scenario control, emitting on the full sensor × channel × time grid. Every sensor reports every channel every interval, so a missing reading is a detectable gap rather than an ambiguous absence.
 - [ ] Add spectral extent as a **parameter** of `gnss-degradation` — narrowband confined to the L1 channel, or broadband across the grid. Not a sixth scenario type.
 - [ ] **Ground truth never leaves the run record** (spec `api-009`). Assert it: no observation, anomaly, bundle, or API response carries the scenario type or injected event for a scorable run. A detector that can see the answer invalidates every metric.
