@@ -2,9 +2,12 @@ import type { OperationalPicture as OperationalPictureData } from "../types/oper
 
 interface Props {
   operationalPicture: OperationalPictureData; //screen accepts data as a prop, which is of type OperationalPictureData
+  // spec: api-003 — true while the picture on screen is not live: before the
+  // first response, and after any failed poll.
+  degraded?: boolean;
 }
 
-const OperationalPictureScreen = ({ operationalPicture }: Props) => {
+const OperationalPictureScreen = ({ operationalPicture, degraded = false }: Props) => {
   // A level or a dash. Never a percentage and never a decimal (FR-715,
   // AC-11), and null is "no detector has run" rather than "nothing detected".
   const { scenario, detectionSummary } = operationalPicture;
@@ -22,6 +25,11 @@ const OperationalPictureScreen = ({ operationalPicture }: Props) => {
         </div>
         <div className="text-right font-mono text-sm">
           <p className="text-[#4cd7f6]">{scenario?.health ?? "unknown"}</p>
+          {degraded && (
+            <p className="mt-1 border border-[#df7412] px-2 py-0.5 text-xs uppercase tracking-[0.05em] text-[#ffb786]">
+              Degraded — not live
+            </p>
+          )}
         </div>
       </header>
 

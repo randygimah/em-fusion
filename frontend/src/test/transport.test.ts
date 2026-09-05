@@ -42,7 +42,7 @@ const NETWORK_CALLS = [/\bfetch\s*\(/, /\bXMLHttpRequest\b/, /\baxios\b/];
 // Block comments, then line comments, then the three kinds of string literal —
 // in that order, so a comment containing a quote cannot leave an unterminated
 // string behind for the next pass to mangle.
-export const scrub = (source: string): string =>
+const scrub = (source: string): string =>
   source
     .replace(/\/\*[\s\S]*?\*\//g, " ")
     .replace(/\/\/[^\n]*/g, " ")
