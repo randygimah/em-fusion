@@ -109,3 +109,9 @@ describe("polling the operational picture", () => {
     expect(screen.getByText("replay-only")).toBeInTheDocument();
   });
 });
+
+// Mutation result, 2026-09-05: making a failed poll replace the picture with
+// the mock and clear the degraded flag — the "fall back silently" reading of
+// this item — turned three tests red. That is the reading these tests exist to
+// rule out: the screen would look healthy while showing invented data, which
+// is the one failure this project cannot afford to ship.

@@ -120,3 +120,17 @@ describe("transport", () => {
     expect(NETWORK_CALLS.some((pattern) => pattern.test(code))).toBe(true);
   });
 });
+
+// Mutation results, 2026-09-05, both directions, as the backend's route-purity
+// check is held to:
+//
+//   * `new WebSocket("/live")` in the screen turned "has no push transport
+//     anywhere" red (and sixteen tests in total, since a screen that opens a
+//     socket no longer renders);
+//   * a second `fetch(...)` in the screen turned "reaches the network from
+//     exactly one module" red, and nothing else;
+//   * the same two transports named in a *comment* left all 23 green, while
+//     `grep -c` over that file at that moment returned 1.
+//
+// The last one is why the scrubber exists. A check that cannot tell a rule
+// from a description of the rule punishes writing the rule down.
