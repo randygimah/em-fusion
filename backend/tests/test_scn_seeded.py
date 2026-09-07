@@ -50,10 +50,12 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from pydantic import ValidationError
 from sqlalchemy import Engine, text
 from sqlalchemy.orm import sessionmaker
 
 from alembic import command
+from app import replay
 from app.db.migrations import alembic_config
 from app.db.repository import create_scenario_run
 from app.scenario.emitter import (
@@ -304,6 +306,32 @@ def test_a_supplied_seed_is_never_replaced() -> None:
     assert spec.seed == SEED
 
 
+def test_the_recorded_parameters_do_not_repeat_the_seed() -> None:
+    # spec: scn-001
+    # The seed has a column of its own on `scenario_runs`. A value stored twice
+    # is a value that can disagree with itself, and the copy is the one a later
+    # reader would have no reason to distrust.
+    recorded = _spec().as_parameters()
+
+    assert "seed" not in recorded
+    assert recorded["noise_sigma_db"] == BaselineParameters().noise_sigma_db
+
+
+def test_a_run_cannot_start_at_a_naive_timestamp() -> None:
+    # spec: scn-001
+    # A start with no zone is a start in whichever zone the machine is in, so
+    # the same run emits different timestamps in London and in Berlin -- a
+    # wall-clock leak wearing a parameter's clothes.
+    with pytest.raises(ValidationError, match="timezone"):
+        RunSpec(
+            scenario_type="normal-baseline",
+            parameters=BaselineParameters(),
+            seed=SEED,
+            start=datetime(2022, 6, 27, 12, 0, 0),
+            duration_seconds=DURATION_SECONDS,
+        )
+
+
 def test_a_generated_seed_fits_the_seed_column() -> None:
     # spec: scn-001
     # `scenario_runs.seed` is a 32-bit signed integer. A wider value fails at
@@ -368,6 +396,15 @@ def test_a_stream_survives_a_changed_pythonhashseed(layout: RfLayout) -> None:
 
     assert first["digest"] == second["digest"]
     assert first["digest"] == stream_digest(emit_baseline(layout, _spec()))
+
+
+def test_the_digest_refuses_a_value_it_cannot_render() -> None:
+    # spec: scn-001
+    # "Byte-identical" is a claim about one serialisation. A value the encoder
+    # falls back on -- an object rendered as its repr, and so as its memory
+    # address -- would make the digest differ per process while looking fine.
+    with pytest.raises(TypeError, match="canonical serialisation"):
+        stream_digest([{"payload": object()}])
 
 
 # ------------------------------------------------- the grid, and what it carries
@@ -466,7 +503,15 @@ def test_replay_holds_no_sql_of_its_own() -> None:
     }
 
     assert "sqlalchemy" not in imports
-    assert not hasattr(__import__("app.replay", fromlist=["x"]), "create_scenario_run")
+
+    # Defines none of its own. `hasattr` would be the wrong question and was
+    # the first thing written here: the module holds the *name* either way,
+    # because importing it binds it. What matters is whose function it is.
+    defined = {
+        node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)
+    }
+    assert "create_scenario_run" not in defined
+    assert replay.create_scenario_run is create_scenario_run
 
 
 @pytest.fixture

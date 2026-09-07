@@ -34,7 +34,8 @@ and work with.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+import json
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from geoalchemy2 import WKTElement
@@ -167,6 +168,55 @@ def _quarantine_row(record: QuarantineRecord) -> dict[str, Any]:
         "field": record.field,
         "reason": record.reason,
     }
+
+
+def create_scenario_run(
+    session_factory: sessionmaker[Session],
+    *,
+    scenario_type: str,
+    parameters: Mapping[str, Any],
+    seed: int,
+) -> int:
+    """Open a run and return its id. Spec: scn-001.
+
+    A free function beside `complete_scenario_run` and for the same reason:
+    every producer of a run creates one, and not every producer writes
+    observations. It lives here rather than in the command that happens to call
+    it -- `app/replay.py` held this SQL from `adp-007` until `scn-001` arrived
+    to claim it -- because the repository is the only place SQL may go, and a
+    second `INSERT` written by the next producer would be a second definition
+    of what a run is.
+
+    **The seed is written, always.** It is the argument rather than a default,
+    so a caller cannot open a run without deciding one, and `RunSpec.create`
+    draws it before this is ever reached. A run whose seed was never recorded
+    cannot be repeated, which is `scn-001`'s third failure case.
+
+    `started_at` is `now()` -- the database's clock, as with `completed_at` --
+    and `ground_truth` is left null: what a run staged is `scn-002`'s to write,
+    and `api-009` requires it never to leave the run record in any case.
+
+    Parameters are serialised here rather than bound as a dictionary, because a
+    `text()` statement carries no type information for psycopg to adapt
+    against. Sorted keys so that two runs configured identically produce
+    identical rows.
+    """
+    with session_factory.begin() as session:
+        return int(
+            session.execute(
+                text(
+                    "INSERT INTO scenario_runs "
+                    "(scenario_type, parameters, seed, started_at) "
+                    "VALUES (:scenario_type, CAST(:parameters AS jsonb), "
+                    ":seed, now()) RETURNING id"
+                ),
+                {
+                    "scenario_type": scenario_type,
+                    "parameters": json.dumps(dict(parameters), sort_keys=True),
+                    "seed": seed,
+                },
+            ).scalar_one()
+        )
 
 
 def complete_scenario_run(session_factory: sessionmaker[Session], run_id: int) -> None:

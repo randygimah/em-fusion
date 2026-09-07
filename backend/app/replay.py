@@ -2,10 +2,14 @@
 
 The operator surface over machinery that already exists. `adp-001` reads
 windows, the DAL validates and pseudonymises, `db-003` writes; this module
-parses arguments, wires the three together, and reports what happened. It
-holds no reading logic and no SQL of its own beyond the one run row it
-creates, because anything it invented here would be a second implementation
-of something already tested elsewhere.
+parses arguments, wires the four together, and reports what happened. It holds
+no reading logic and **no SQL at all**, because anything it invented here would
+be a second implementation of something already tested elsewhere.
+
+The one exception was the run row it inserted itself, borrowed from `scn-001`
+before a generator existed to create one. `scn-001` has now claimed it:
+`create_scenario_run` is in the storage layer with the rest of the run
+lifecycle, and this module no longer imports SQLAlchemy.
 
 **It fails before it writes.** The seed is read, the manifest parsed and the
 span checked before an Engine is built, so a misconfigured invocation leaves
@@ -40,14 +44,17 @@ from typing import TextIO
 
 from dotenv import load_dotenv
 from pydantic import BaseModel, ConfigDict, model_validator
-from sqlalchemy import text
 
 from app.adapters.opensky import Window, available_window, replay_window
 from app.dal.models import DataMode
 from app.dal.pseudonymise import SEED_ENV_VAR, Pseudonymiser
 from app.dal.repository import ObservationRepository
 from app.dal.validation import IngestContext
-from app.db.repository import PostgisObservationRepository, complete_scenario_run
+from app.db.repository import (
+    PostgisObservationRepository,
+    complete_scenario_run,
+    create_scenario_run,
+)
 from app.db.session import dispose_engine, get_sessionmaker, init_engine
 
 #: Repository root, two levels up from `backend/app/`. Correct natively; in
@@ -76,10 +83,16 @@ MANIFEST_NAME = "manifest.json"
 
 #: The scenario type a replay-created run carries. A replay injects nothing,
 #: so it is not one of the five scenario types -- but `observations` has a NOT
-#: NULL foreign key to `scenario_runs` and no generator exists yet, so a run
-#: has to come from somewhere. Written with a type nothing else uses, so
-#: `scn-001` can find these rows rather than have to infer them.
+#: NULL foreign key to `scenario_runs`, so a run has to come from somewhere.
+#: Written with a type nothing else uses, so a query can tell replayed runs
+#: from generated ones rather than have to infer it.
 REPLAY_SCENARIO_TYPE = "replay-only"
+
+#: A replay invents no numbers, so it has no randomness for a seed to control.
+#: Zero is recorded rather than left null because the column is NOT NULL, and
+#: because "reproducible from the corpus and the span" is the truthful claim
+#: about a replay -- a seed here would imply one it does not have.
+REPLAY_SEED = 0
 
 
 class ReplaySummary(BaseModel):
@@ -179,27 +192,6 @@ def windows(span: Window, seconds: int) -> list[Window]:
         tiles.append(Window(start=start, end=min(start + step, span.end)))
         start += step
     return tiles
-
-
-def create_scenario_run() -> int:
-    """Insert the placeholder run this replay's observations belong to.
-
-    The only SQL in this module, and it is here rather than in the repository
-    because it is `scn-001`'s row being borrowed rather than the repository's
-    to own. `ground_truth` is null: a replay injects nothing, and `api-009`
-    requires it never leave the run record in any case.
-    """
-    with get_sessionmaker().begin() as session:
-        return int(
-            session.execute(
-                text(
-                    "INSERT INTO scenario_runs "
-                    "(scenario_type, parameters, seed, started_at) "
-                    "VALUES (:kind, '{}'::jsonb, 0, now()) RETURNING id"
-                ),
-                {"kind": REPLAY_SCENARIO_TYPE},
-            ).scalar_one()
-        )
 
 
 def replay(
@@ -316,7 +308,12 @@ def main(
     init_engine()
     try:
         repository = PostgisObservationRepository(get_sessionmaker())
-        scenario_run_id = create_scenario_run()
+        scenario_run_id = create_scenario_run(
+            get_sessionmaker(),
+            scenario_type=REPLAY_SCENARIO_TYPE,
+            parameters={},
+            seed=REPLAY_SEED,
+        )
         summary = replay(
             path=extract,
             spans=spans,
