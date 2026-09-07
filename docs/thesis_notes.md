@@ -1579,6 +1579,98 @@ one-sided — is preserved and is now enforced directly, by rejecting any plan w
 either end. The lesson is narrow but worth stating: a prose restatement of a table is a second source
 of truth, and it drifted from the table it restated before anything was built from either.
 
+### Determinism by keyed derivation rather than by a seeded sequence
+
+`scn-001` requires that a scenario run be fully determined by its type, its parameters and an integer
+seed, and names three ways that guarantee leaks: wall-clock time, unseeded randomness, and
+process-dependent ordering. The obvious implementation defends against the first two and *is* the
+third. Constructing one `random.Random(seed)` and drawing from it as the sensor–channel–time grid is
+walked makes the output a function of the traversal order, which is a property of the loop rather
+than of the run. Reordering the layout file would then change every reading; generating two sensors
+concurrently would change every reading; and inserting one additional draw per cell during
+development — which `scn-002` will do the moment it adds an injected component — would shift the
+whole stream after the point of insertion. None of these announce themselves, because each produces
+a stream that is still perfectly reproducible within the process that produced it.
+
+The design adopted instead derives each value from the seed and the coordinates of the thing being
+valued: a BLAKE2b digest over the seed, the sensor identifier, the channel index, the tick index and
+a short tag naming the quantity, reduced to a float in `[0, 1)`. No cell can observe any other, so
+traversal order is not an input at all and the third leak is closed by construction rather than by
+discipline. Three consequences follow that were not the reason for the choice but justify it more
+strongly than the original argument did. A single cell can be recomputed years later without
+replaying the run that produced it, which is what a spot check of a recorded ground truth actually
+needs. Generation may be parallelised or reordered at any point without invalidating a stored result.
+And — the one that matters most for the phases still to come — **adding a new derived quantity to a
+cell does not disturb the quantities already there**, because each is namespaced by its own tag,
+whereas under a sequential design every value drawn after the new one would change and every ground
+truth recorded before it would cease to describe the stream it was recorded against.
+
+Two details in that scheme are load-bearing and neither is obvious. The keys are joined with the
+ASCII unit separator rather than concatenated, because `("RF-1", 12)` and `("RF-11", 2)` are the same
+string under concatenation, and a collision does not produce an error: it produces two cells with
+identical readings, which is precisely the correlated-neighbour structure `anom-005` exists to find.
+And the digest comes from `hashlib` rather than the built-in `hash`, which Python salts per process —
+a stream derived through it is identical across every test in one run of the suite and different the
+next morning, which is to say reproducible for exactly as long as it takes to be trusted.
+
+Normally distributed noise is produced by Box–Muller over two derived uniforms rather than by
+`random.gauss`. The transform is then owned by this project and visible in it, instead of being
+whichever algorithm the standard library implements in a given version; a campaign that must
+regenerate identically across the life of the project cannot afford to depend on that. The
+guard against `log(0)` — mapping the first uniform from `[0, 1)` to `(0, 1]` — matters for the same
+reason the separator does: the failure is reachable with probability 2⁻⁵³, which is rare enough to
+survive every test ever run against it and to appear once inside a campaign.
+
+Readings are rounded to a hundredth of a decibel before they are emitted, and the honest reason is
+not presentation. Floating-point arithmetic is deterministic, but `log` and `cos` are provided by the
+platform's maths library and their final unit in the last place is a property of that library rather
+than of the arithmetic. Rounding places that difference below the value that gets serialised, which
+converts "identical on identical builds" into a reproducibility claim that needs no footnote about
+the C library. A hundredth of a decibel is orders of magnitude below any threshold a Phase 8 detector
+will use, so nothing is lost that the system can see. The alternative — emit full precision and
+qualify the claim — was rejected because the qualification would have to appear in the write-up
+beside every number derived from a regenerated run.
+
+The cost of the scheme is a hash computation per derived value rather than a state advance in a
+pseudo-random generator, and it is small enough not to matter: a full hour of the shipped layout is
+20,160 records, emitted in **0.11 s** and digested in **0.10 s** on the development machine, measured
+over three consecutive runs that varied by 5 ms. At `scn-003`'s batch of thirty runs that is under
+seven seconds of generation, against a replay of the same hour that takes about ten.
+
+### The run record moves to the storage layer, and the seed is written before anything is emitted
+
+`adp-007` needed a `scenario_runs` row before it could write an observation, and no generator existed
+to create one, so the replay command inserted the row itself with the SQL written inline — recorded
+at the time as a borrowing, with a comment naming `scn-001` as the item that would reclaim it. It has
+now been reclaimed: `create_scenario_run` sits beside `complete_scenario_run` in the storage layer, a
+free function rather than a repository method for the same reason `db-007` gave, namely that every
+producer of a run creates one while only some producers write observations.
+
+The seed is a required argument rather than a defaulted one, so no caller can open a run without
+having decided a seed, and `RunSpec.create` draws one before the row is written when none was
+supplied. This is what makes `scn-001`'s third failure case unreachable rather than merely
+discouraged: a generated seed cannot fail to be recorded, because the value is generated *into* the
+object the row is written from. Writing the test for it surfaced a constraint that would otherwise
+have been found much later and much more expensively — `scenario_runs.seed` is a 32-bit signed
+integer column, so a seed drawn from a wider range inserts successfully until it does not, at some
+unpredictable run inside a batch. The draw is bounded to the column's width, and a test asserts it.
+
+The replay's own run row now records a seed of zero, and the value is a claim worth stating
+precisely: a replay invents no numbers, so it has no randomness for a seed to control, and its
+reproducibility comes from the corpus and the requested span rather than from a seed. Zero is
+recorded rather than null only because the column is `NOT NULL`. *(This is a small ambiguity to note
+as a limitation: a reader cannot distinguish "seed zero was chosen" from "no seed applies" by looking
+at the column alone. The `replay-only` scenario type is what disambiguates it, and any later query
+over seeds should filter on the type rather than trust the value.)*
+
+The structural consequence is the third instance of a pattern this project keeps rediscovering.
+Because the run row's SQL has left the command module, `app/replay.py` no longer imports SQLAlchemy
+at all, so "no SQL outside the repository" is a fact about the import graph rather than an argument
+about the contents of strings — the same move `db-006` made when it named `SessionFactory` in
+`app/db/session.py` so the API layer could not say `sqlalchemy`. A rule that can be checked by
+looking at what a module imports is enforceable; a rule that requires reading what a module *says*
+is not.
+
 ## Implementation
 
 <!-- Notable technical decisions per phase (link to implementation.md phases), challenges and
@@ -2378,6 +2470,90 @@ One further deviation is recorded plainly: a rejection branch for a channel plan
 had no test at all in the first pass of the file, and was found by the coverage report after the
 implementation was written. The test was added afterwards, which reverses the specified order, and
 says so in its own comment.
+
+### A property built third in its own phase, on the smallest emitter that could carry it
+
+Phase 7 begins with `scn-001` by identifier and could not begin with it in practice. The item states
+a property — same type, parameters and seed give a byte-identical stream — and a property has no
+output of its own to test. Proving it requires a stream, the stream comes from the scenario types
+(`scn-002`), the types emit through the synthetic RF adapter (`adp-002`), and the adapter reports on
+a sensor and channel grid that did not exist until `scn-005`. The `normal-baseline` type cannot serve
+as the minimal case either, because it injects nothing by definition — that is what makes it the
+false-positive control — so determinism over it would be nearly vacuous.
+
+The order was therefore reversed deliberately: `scn-005` first, as the one item in the phase with no
+dependency on the others, then `scn-001` together with the smallest emitter that has randomness to be
+deterministic about. What that emitter turned out to be is worth recording, because it is not a
+scenario type and the distinction keeps the three items from collapsing into one. It emits the
+unperturbed baseline — a nominal noise floor with seeded per-cell variation, one reading per sensor
+per channel per interval — and nothing else. Injection and the ground-truth record belong to
+`scn-002`; wiring the stream through the Data Abstraction Layer into storage belongs to `adp-002`.
+The emitter produces source records in the same shape the OpenSky adapter produces, carrying no
+provenance, no data mode and no scenario run identifier, because those describe the run rather than
+the record and are attached at the DAL. It carries no scenario type or ground truth either, per
+`api-009`: `RunSpec` holds the scenario type because the run record needs it, and the emitter never
+reads it. The moment an emitter branches on scenario type, the generator can see the answer key.
+
+The generalisable point for the write-up is that the numbering of a backlog is not a build order. The
+identifiers here encode the order the capabilities were *thought of*, which put the property that
+constrains everything first and the configuration everything depends on last.
+
+### The generator measured across two platforms, and what four mutations showed
+
+The reproducibility claim was tested rather than asserted, on two axes.
+
+The first is cross-platform identity. The same run — the shipped seven-sensor layout, seed 20220627,
+a sixty-second span, default parameters — was emitted on the development host and inside the Linux
+container, and the SHA-256 over the canonical serialisation of the 336 records was identical:
+`92e53488…c5ed`, with cell zero reading −96.92 dBm at a −1.92 dB delta in both. The conditions matter
+more than the digest: **macOS on arm64 under Python 3.14.3 against Linux on aarch64 under Python
+3.13.15**, so the result spans an operating system and a Python minor version. It does not span a
+processor architecture, which is the obvious remaining gap. *(Record here whether the digest survives
+an x86-64 run, which the first CI job under `ops-002` will produce for free.)*
+
+The second axis is whether the tests would notice if the property failed. Four mutations were applied
+from a committed baseline, each confirmed to have been substituted before the suite was run, and each
+reverted afterwards. The two rows to read are the first and the third.
+
+| Mutation | Tests red | Tests green |
+|---|---|---|
+| `derive_unit` uses the built-in salted `hash` | 2 | **19** |
+| A wall-clock read inside the per-cell reading | 5 | 16 |
+| The emitter ignores its seed entirely | **1** | 20 |
+| `replay.py` re-implements the run row in SQL | 1 | (that test only) |
+
+A generator whose stream differs between processes — which is to say a generator that cannot
+reproduce a campaign at all — leaves nineteen of twenty-one tests green, including every test whose
+name contains the word "identical". A generator that ignores its seed completely, and would therefore
+turn `scn-003`'s batch of thirty runs into thirty copies of one run, is caught by exactly one test.
+Both defects are invisible to the check a developer naturally writes, which is to emit twice in one
+process and compare. **The two tests that catch them are the two the item's failure cases name and
+the two that are easiest to leave out**: the cross-process comparison, which requires spawning
+children under differing `PYTHONHASHSEED` values, and the arm asserting that *different* seeds give
+different output. This is the strongest available argument for writing a spec's failure cases down
+before the tests rather than after.
+
+The cross-process test carries a guard for the same reason: each child also reports `hash("em-fusion")`,
+and the test asserts those two values differ before it compares the digests. Without it, an
+environment variable that failed to take effect would produce two identical digests and a passing
+test that had measured nothing.
+
+Two smaller findings sit alongside these. The parse-versus-grep defect appeared for the fourth time
+in this project: the module that most clearly documents why the built-in `hash` and the `random`
+module are not used says `hash` three times and `random` twice, all in prose, and the syntax-tree
+check over it passes. A text search would have flagged the file precisely because it explains the
+rule — which does not merely fail to enforce the property, it drives the explanation out of the
+codebase. And the practice recorded at the end of `scn-005` — write a stub, run the new tests against
+it, and get a per-test red before implementing — **was not followed here**. The first run produced a
+single collection error, which satisfies the letter of the workflow and establishes nothing, exactly
+as the `db-005` entry above describes. The cost was one defective test that survived to the green
+stage: a check that `app/replay.py` no longer owns the run row asserted `not hasattr(module,
+"create_scenario_run")`, which is false as soon as the module imports the name it is supposed to
+use. It was rewritten to assert that the module defines no function of that name and that the name it
+holds *is* the storage layer's function, which is both sharper and what was meant. In fairness to the
+stub practice, a stub would not have caught this one — the flaw only becomes visible once the import
+exists — but the deviation is recorded because the reason for skipping it was momentum rather than
+judgement.
 
 ## Evaluation
 

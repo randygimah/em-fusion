@@ -3242,6 +3242,146 @@ data-science sense — no feature space, no reduction, no orthogonality claim. T
 independent of one another and are expected to correlate; each is reported separately, and no
 composite score is computed from them at any point.
 
+## 47. The next implementation is `scn-001` — what actually gets built for an item that is a *property* rather than a feature?
+
+**Three things, and only one of them is the property.** The unspoken assumption worth correcting
+first is that a property item is a test-only item: that because `scn-001` says "same seed, same
+stream", the work is a test file and nothing else. It is not. A property needs a subject, and here
+the subject had to be built alongside it.
+
+| What landed | Why it belongs to this item |
+|---|---|
+| **The baseline emitter** | The smallest thing with randomness to be deterministic *about*: one reading per sensor per channel per interval, a nominal noise floor with seeded variation, nothing injected |
+| **The derivation scheme** | *How* a number is invented decides whether the property holds at all — see below |
+| **The run record** | A run whose seed was never written down cannot be repeated, so "the seed is always recorded" is part of the property, not administration around it |
+
+What did **not** land, and the boundary is what stops these three items collapsing into one:
+injection and the ground-truth record are `scn-002`'s; wiring the stream through the Data
+Abstraction Layer into the database is `adp-002`'s. The emitter produces *source records* — the same
+shape the OpenSky adapter produces — and hands them to nobody. It also never reads the scenario type
+it carries, because an emitter that branches on scenario type is an emitter that can see the answer
+key (`api-009`).
+
+### The part that is easy to get wrong: how a number is invented
+
+There are two ways to produce seeded noise for a grid of sensors, channels and time steps, and they
+are not equivalent.
+
+| | How it works | What breaks |
+|---|---|---|
+| **Sequential draws** | One generator seeded once, drawn from as the grid is walked | Output is a function of *loop order*. Reorder the layout file, generate two sensors in parallel, or add one extra draw per cell later, and every value changes |
+| **Keyed derivation** (chosen) | Each value hashed from the seed plus the cell's own coordinates | Nothing to break: no cell can see any other, so order is not an input |
+
+The sequential design does not merely permit the third leak in §43 — process-dependent ordering — it
+*is* that leak. And the reason to care shows up in the very next item: `scn-002` will add an injected
+component to each cell. Under sequential draws that extra draw shifts every value after it, so every
+ground truth recorded before the change stops describing the stream it was recorded against. Under
+keyed derivation the existing values do not move, because each quantity is namespaced by its own tag.
+
+Two details in the chosen scheme are not cosmetic:
+
+- **Keys are joined with a separator character**, because `("RF-1", 12)` and `("RF-11", 2)` are the
+  same string when concatenated. A collision does not raise anything — it gives two cells identical
+  readings, which is exactly the correlated-neighbour pattern `anom-005` hunts for.
+- **The hash is `hashlib`, never the built-in `hash`**, which Python salts per process. See §48.
+
+### Why "emit it twice and compare" is not a proof
+
+This is the correction worth keeping. The natural test — emit the stream twice in one process, assert
+the two are identical — passes against generators that are catastrophically broken. Four deliberate
+mutations were applied to the finished code to measure this, each reverted afterwards:
+
+| What was broken | Tests that noticed | Tests that stayed green |
+|---|---|---|
+| Values derived through the per-process salted `hash` | 2 | **19** |
+| A wall-clock read inside each reading | 5 | 16 |
+| The emitter ignores its seed entirely | **1** | 20 |
+| The replay command re-implements the run row in SQL | 1 | — |
+
+Read the first and third rows together. A generator whose output differs between processes cannot
+reproduce a campaign at all, and nineteen of twenty-one tests are perfectly happy with it — including
+every test with the word "identical" in its name, because within one process it *is* identical. A
+generator that ignores its seed completely, turning a batch of thirty runs into thirty copies of one
+run, is caught by a single test.
+
+The two tests that catch them are the two the spec's failure cases name, and the two most likely to
+be left out:
+
+1. **Different seeds must give different output.** Reproducibility on its own is satisfied by a
+   constant.
+2. **The stream must survive a changed `PYTHONHASHSEED`**, checked by emitting in two child processes
+   under different values of it. This one cannot be tested from inside a single process by any means
+   at all, because the salt is fixed for the life of the process.
+
+That second test carries its own guard: each child also reports the hash of a fixed string, and the
+test asserts *those* differ before it compares the streams. Without the guard, an environment
+variable that quietly failed to apply would produce two matching digests and a test that had measured
+nothing.
+
+### What "byte-identical" was actually measured against
+
+The same run — seven sensors, eight channels, sixty seconds, seed 20220627 — was emitted in two
+places and the SHA-256 over its canonical serialisation compared:
+
+| Where | Records | Digest | Cell 0 |
+|---|---|---|---|
+| macOS, arm64, Python 3.14.3 | 336 | `92e53488…c5ed` | −96.92 dBm, −1.92 dB delta |
+| Linux, aarch64, Python 3.13.15 | 336 | `92e53488…c5ed` | −96.92 dBm, −1.92 dB delta |
+
+One operating system apart and one Python minor version apart. **Not** one processor architecture
+apart — both are 64-bit ARM — which is the honest gap in the claim and the first thing a CI job on
+x86-64 will close.
+
+Readings are rounded to a hundredth of a decibel before serialisation, and that rounding is what makes
+the claim safe rather than lucky: `log` and `cos` come from the platform's maths library, and their
+last bit is a property of that library rather than of the arithmetic. Rounding puts the difference
+below the number that gets hashed. A hundredth of a decibel is far below any threshold a detector
+will use, so nothing observable is lost.
+
+### Worth recording as a limitation
+
+Two-platform agreement is evidence, not proof, and it is bounded by the platforms available. The
+architecture axis is untested. And the property is only as good as the serialisation it is measured
+through: the digest refuses any value it cannot render canonically, precisely so that an object
+falling back to its memory address cannot make two identical streams look different — or, worse, make
+a difference invisible.
+
+## 48. If nothing in the scenario package may use `random`, where does the seed itself come from?
+
+**From `secrets`, and the distinction is that a seed is an *input*, not an output.**
+
+The rule the package enforces is that no invented number in the output may come from anywhere except
+the run's three inputs. That is checked structurally, by parsing the package's own source: no import
+of `random`, `time` or `uuid`, and no call to a clock or to the built-in `hash`. `secrets` is
+deliberately *not* on that list, and the reason is worth being precise about.
+
+| | Where the entropy goes | Reproducible? |
+|---|---|---|
+| `random.gauss()` inside the emitter | Straight into a reading, unrecorded | **No** — nothing written down can bring the value back |
+| `secrets.randbelow()` in `RunSpec.create` | Into the seed, which is then written to the run record before anything is emitted | **Yes** — the recorded seed regenerates the entire stream |
+
+Entropy is not the problem. *Unrecorded* entropy is the problem. Drawing a seed at random and writing
+it down is the ordinary way a reproducible experiment gets a starting point; drawing a noise value at
+random is the thing that makes the experiment unrepeatable. The two look identical in the source and
+differ entirely in consequence, which is why the check permits one module and forbids the other
+rather than banning randomness outright.
+
+Two practical constraints came out of building it:
+
+- **The seed is generated into the object the run record is written from**, so a generated seed
+  cannot fail to be recorded. This is the spec's third failure case made unreachable rather than
+  merely discouraged.
+- **The draw is bounded to 2³¹−1**, because `scenario_runs.seed` is a 32-bit signed integer column. A
+  wider draw inserts successfully most of the time and fails at an unpredictable run inside a batch,
+  hours after the value was chosen. Found by writing the test, not by the failure.
+
+The replay command's run row records a seed of **0**, and that is a statement rather than a
+placeholder: a replay invents nothing, so it has no randomness for a seed to control, and its
+reproducibility comes from the archived corpus and the requested span. *(Worth recording as a small
+limitation: zero is indistinguishable from "no seed applies" by looking at the column alone. The
+`replay-only` scenario type is what disambiguates it, so a query over seeds should filter on the type
+rather than trust the number.)*
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -3365,3 +3505,9 @@ composite score is computed from them at any point.
 | **GNSS L1** | 1575.42 MHz, the civil GPS signal frequency. One channel is centred exactly on it, with four below and three above, and it is the band the `gnss-degradation` scenario targets. |
 | **Discrimination radius** | The distance at which a layout is asserted to be discriminating: every sensor has at least one other within it and at least one beyond it. 70 km, chosen from a measured valid band of [55.7, 85.7) km. See §44. |
 | **Seed** | The integer that determines every invented number in a run. Same type, parameters and seed must give a byte-identical stream; different seeds must not. Always recorded, including when generated automatically. |
+| **Keyed derivation** | Producing a value by hashing the seed together with the coordinates of the thing being valued, rather than by drawing from a seeded sequence. Order-independent by construction, so parallelising or reordering generation cannot change a single reading. See §47. |
+| **Sequential draw** | The alternative: one seeded generator, drawn from as a loop runs. Output becomes a function of loop order, which is the process-dependent-ordering leak rather than a defence against it. |
+| **Salted hash** | Python's built-in `hash()`, whose result for a string varies per process. Stable within one run of a test suite and different the next morning — reproducible for exactly as long as it takes to be trusted. |
+| **Tick** | One interval of simulated time in a run; the layout fixes its length at 10 s. Position in the run, counted from zero — never a wall-clock reading. |
+| **Stream digest** | The SHA-256 over a run's canonical serialisation, with keys sorted and record order preserved. One definition of "the bytes", so byte-identity can be asserted, stored, or quoted without holding the stream. |
+| **Source record vs observation** | What the emitter produces and what the DAL produces. The first has no provenance, no data mode and no run identifier; the second has all three. `scn-001` emits the first only. |
