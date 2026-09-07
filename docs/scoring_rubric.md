@@ -40,6 +40,10 @@ operational, and there are no consequences to any judgement you make.
 Roughly **40 hypotheses, about 90 minutes**, plus a short calibration round first (below). Do it in
 one or two sittings rather than five — consistency matters more than freshness.
 
+You give **five numbers per hypothesis** in the first pass, and two more per hypothesis in a short
+second pass at the end — around 280 entries in total. That sounds worse than it is: most of the time
+goes on reading, and the scores themselves are quick once the anchors are familiar.
+
 ## How to score
 
 For each hypothesis, give a **1 to 5** on each of five dimensions. The 1, 3, and 5 points are
@@ -247,6 +251,21 @@ than more automation. See `docs/qa.md` Q7.
 constrained-generation architecture under study, contaminating the headline comparison. Excluded by
 design, not by oversight, and stated as such in the write-up.
 
+**Why five rather than one overall score.** "Is this hypothesis any good" is unanswerable as a single
+number, and collapsing to one would destroy the finding the study is after. If the hosted arm beats
+the template on alternatives but not on actionability, that is a result about *where* constrained
+generation helps; as a single score it is just a number that moved. The schema mapping above is what
+makes each dimension a test of a specific claim rather than a general impression.
+
+**What "dimension" means here, and what it does not.** The term is rating-scale vocabulary: one
+independent axis of judgement, scored on its own, with worded anchors at 1, 3 and 5. It carries none
+of its data-science sense — there is no feature space, no dimensionality reduction, and **no
+orthogonality claim**. The five are expected to correlate with one another, and dimension 5 is
+explicitly not an average of the other four. Each is reported separately and **no composite score is
+computed from them at any point**; the averaging in the adjudication rule below is across *raters* on
+a single dimension, never across dimensions. Worth pre-empting in the Evaluation chapter, because
+"five dimensions" invites the wrong reading from a technical examiner. See `docs/qa.md` Q47.
+
 ## Corpus and procedure
 
 - **Sampling unit is the evidence bundle**, not the scenario run. Roughly 5 bundles from each of the
@@ -262,6 +281,21 @@ design, not by oversight, and stated as such in the write-up.
   partial-overlap alternative.
 - **Paired within bundle**: both arms are scored against the same evidence, so bundle difficulty
   cancels out of the arm difference.
+
+**Scoring volume per rater**, which is what the participant is actually being asked for and the figure
+quoted to them:
+
+```
+5 dimensions × 40 items   = 200   pass 1, ordinal 1-5
+2 judgements × 40 items   =  80   pass 2, categorical
+                            ---
+                            280   values from one rater
+```
+
+Plus 25 discarded values from the five-item calibration round. The 280 figure is stated in the
+participant information sheet in `docs/ethics_form_answers.md` and on the ethics approval form; if the
+corpus size or the dimension count ever changes, those three places change together or the consent is
+no longer informed by the right number.
 
 ## Analysis
 
@@ -304,3 +338,5 @@ Results describe this prototype on this data, not hypothesis generation in gener
 | Date | Change | Reason |
 |---|---|---|
 | 2026-08-07 | Initial version. | Pre-registration before any campaign run. |
+| 2026-09-06 | Part B: added "Why five rather than one overall score" and "What 'dimension' means here, and what it does not". | Clarification only — no dimension, anchor, or procedure altered. Records that the term is rating-scale vocabulary carrying no orthogonality claim, that the five are expected to correlate, and that no composite is computed across them. Pre-empts a misreading by a technical examiner. See `docs/qa.md` Q47. |
+| 2026-09-06 | Part B: added the per-rater scoring volume (280 values) to "Corpus and procedure"; Part A: added the same figure to "What you'll be given". | Derived from figures already fixed (40 items × 5 dimensions, plus 40 × 2 pass-2 judgements), not a change to them. Needed because the number is quoted to the participant in the information sheet and on the ethics approval form, and the three must agree. Makes explicit that the five calibration items sit **outside** the 40 — previously only implied by 20 bundles × 2 arms = 40. |

@@ -495,6 +495,57 @@ Four things happened that no adapter did: provenance was attached, the run was r
 identifiers were replaced, and the record was marked validated. Three source columns — `alert`, `spi`
 and `squawk` — were dropped as carrying nothing the detection rules read.
 
+### Reversal: the evaluation is human-participant research after all, and a change of rater is what made it so
+
+The proposal states, in TOR 9, that "the project collects no data from human participants." That
+sentence was accurate to the design as it stood when it was written, and it is no longer accurate. The
+reversal is worth recording precisely because nothing about the *data* changed — the study collects
+exactly what it always intended to collect, roughly 280 ordinal values and no demographic field
+whatsoever — and the ethical classification flipped anyway.
+
+What changed was the identity of the second rater. The proposal expected the university supervisor,
+and a supervisor scoring a student's output sits plausibly within the supervisory relationship rather
+than within a research procedure. Securing the second scorer during Track 0 resolved instead to a
+professional colleague. That single substitution introduces recruitment, an approach made
+specifically for the study, a person with no prior stake in it, and a power dimension arising from
+shared employment. TOR 9 had in fact anticipated the possibility — its closing sentence commits to
+voluntariness and to avoiding line-management relationships should the rater be a colleague — but it
+did not follow the consequence through to the classification itself, and so the two halves of that
+paragraph now contradict each other.
+
+The decisive feature, and the one that resisted the intuition longest, is the inter-rater agreement
+statistic. Quadratic-weighted Cohen's κ is a measurement of how closely two people agreed with one
+another. It feels like a property of the instrument, and is reported as evidence about the rubric's
+reliability, but it is computed from human judgements and its subject is a pair of humans. A study
+cannot report a statistic about people and simultaneously claim to have studied none. The conflation
+being corrected is between *personal data processing*, which this study almost entirely avoids, and
+*human-participant research*, which it plainly is; the ethics form asks the second question and the
+project's own framing had been answering the first.
+
+The decision was made on asymmetry rather than on a fine judgement about where the boundary sits.
+Declaring participants where none were required costs an information sheet, a consent form and a
+supervisor signature. Declaring none where they were required is, in the form's own words, a notable
+grade deduction and possible academic misconduct. Where the two errors are that unequal, the
+borderline case is not worth adjudicating; the expensive-to-be-wrong answer is simply taken. The
+declaration remains within module-level approval — competent adults, no vulnerable groups, no
+special-category data, no deception, no physical intervention — so the four-to-eight-week committee
+gate that drove the withdrawal of the task-based user study is not reopened by it.
+
+Two consequences are carried forward rather than resolved. Recruiting from one's own workplace
+introduces perceived obligation, mitigated by excluding anyone in a line-management relationship in
+either direction and by approaching once without follow-up, but not eliminated. And with two raters,
+one of whom is the author, the second is identifiable by elimination to anyone who knows they were
+asked; pseudonymising the score sheet does not touch this and at N=2 no design can. The handling is
+disclosure before consent rather than a claim of anonymity the study cannot deliver, with reporting
+constrained to "an independent second rater," unnamed, with no comment on how they scored. Both are
+stated as limitations in the Evaluation chapter rather than argued away.
+
+The form answers, participant information sheet, consent form and recruitment text are drafted in
+`docs/ethics_form_answers.md`; the conceptual correction is `docs/qa.md` §46. *(Record here the date
+the form was signed off by the supervisor, and whether one colleague or two were ultimately recruited
+— the latter would move the agreement statistic from Cohen's κ to a pairwise or Fleiss form and
+requires a change-log entry against the pre-registered rubric.)*
+
 ## System Design and Architecture
 
 <!-- Actual architecture as built vs as planned (docs/em_fusion_v2.md section 7) and why it

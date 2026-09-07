@@ -3061,6 +3061,187 @@ transfers to a real spectrum monitor. The same caveat applies to the noise-spill
 it is true of real emissions in general, but the *degree* of spill is a property of the transmitter
 and is here a parameter we choose rather than a measured fact.
 
+## 46. This is the ethics form I have to complete. I am not doing a human study, however I will eventually have a human rater using the scoring rubric to rate evaluations from the two generators — at most two participants, work colleagues, no personal information collected except the score. How should I approach filling it out?
+
+**No — it *is* a human study, and the form has to be answered as one.** That is the correction, and
+everything else follows from it. The instinct behind "I am not doing a human study" is sound: nothing
+personal is collected, nobody is being measured, the ratings are an instrument pointed at software
+rather than at a person. All of that is true and none of it is the test.
+
+### The distinction being conflated
+
+Two separate things were being treated as one:
+
+| | What it is | What triggers it |
+|---|---|---|
+| **Personal data processing** | Holding information that identifies a living person | Collecting names, contact details, demographics, anything attributable |
+| **Human-participant research** | Recruiting a person to take part in a designed procedure and using what they produce as evidence | Asking someone to do something for your study |
+
+A study can be one without the other, and this project is exactly that case: **heavy on
+human participation, almost empty of personal data.** The ethics form asks the second question. "No
+personal information except the score" answers the first and says nothing about the second.
+
+### Why the rating exercise crosses the line
+
+Four features, any one of which would be enough:
+
+1. **Recruitment.** A person is approached and asked to take part. Not observed incidentally, not
+   already producing the data for other reasons — approached, for the study.
+2. **A designed procedure.** They follow a protocol fixed in advance: a rubric, a calibration round,
+   two passes in a required order, with information deliberately withheld between them.
+3. **Data they generate is the evidence.** Their judgements are not a by-product; roughly 280 values
+   from one person become a headline result.
+4. **A statistic about the humans.** Inter-rater agreement — quadratic-weighted Cohen's κ — measures
+   *how closely two people agreed with each other*. It is not possible to report a statistic whose
+   subject is a pair of humans and simultaneously claim no humans were studied.
+
+The fourth is the one that settles it and the one easiest to miss, because κ feels like a property of
+the instrument. It is computed *from* people.
+
+### What changed since the proposal said otherwise
+
+`proposal_draft.md` TOR 9 states plainly: *"The project collects no data from human participants."*
+That was written when the second rater was expected to be the **supervisor**, where the rating plausibly
+reads as supervision of a student's own work rather than participation in it. TOR 9's last sentence
+already anticipated the alternative — *"Should the rater be a colleague rather than my supervisor,
+participation will be genuinely voluntary…"* — without following the consequence through. Moving from
+supervisor to colleague is what moved the study across the boundary. This is a reversal to declare,
+not to paper over; it is recorded in `thesis_notes.md` under Methodology.
+
+### The asymmetry, which is the actual argument
+
+Ethics declarations are not a judgement call to be optimised. Compare the two errors:
+
+| | Cost of being wrong |
+|---|---|
+| **Declare YES, didn't need to** | One information sheet, one consent form, one supervisor signature. All drafted. |
+| **Declare NO, needed YES** | Page 1 of the form: *"risks a notable deduction in your grade and may risk a case of Academic misconduct."* |
+
+There is no reading where NO is cheaper. And YES here does **not** mean a full committee application
+with its four-to-eight-week wait — this remains inside **module-level approval**: competent adults, no
+vulnerable groups, no special-category data, no deception, no physical intervention, voluntary, with a
+right to withdraw. It is the low-risk form, correctly completed.
+
+### The two things that genuinely need care
+
+Not the data — the data is trivial. These:
+
+**The colleague relationship.** Recruiting from your own workplace introduces perceived obligation
+even where none is intended. Mitigations, all in the drafted material: exclude anyone in a
+line-management relationship in *either* direction; approach once and do not follow up; state
+explicitly in writing that declining carries no consequence and will not be raised again.
+
+**Identifiability by elimination.** With two raters and one of them the author, "Rater 2" is
+identifiable to anyone who knows who was asked. Pseudonymising the score sheet does not fix this and
+at N=2 nothing can. The honest handling is to disclose it to the participant *before* they consent
+rather than to claim an anonymity the design cannot deliver, and to constrain the reporting: "an
+independent second rater," no name, no employer, no comment on how they scored.
+
+### Worth recording as a limitation
+
+Two, both already carried in `scoring_rubric.md` Part B and both now with an ethics dimension as well.
+Small N is driven by the second rater's available time, which is a *participant burden* constraint,
+not merely a statistical one — the corpus was sized to what a person could reasonably be asked to do.
+And the blinding is imperfect by acknowledgement: the participant is told, in the information sheet,
+that arm identity is withheld until debrief, which is disclosure of withholding rather than deception,
+but the residual threat to the comparison stands either way.
+
+Draft answers for every field of the form, plus a participant information sheet, consent form, and
+recruitment email, are in `docs/ethics_form_answers.md`. Six decisions are still owed before it can be
+signed — most importantly whether one colleague scores or two, since a third rater invalidates Cohen's
+κ and would require a change-log entry against the pre-registered rubric.
+
+## 47. When you say 5 dimensions, what do you mean?
+
+**Five separate things each hypothesis gets scored on, each rated 1–5 on its own.** Not five questions
+in a questionnaire and not five steps in a process — "dimension" is the rating-scale term for an
+independent axis of judgement. One hypothesis comes out of the first pass carrying five numbers, not
+one.
+
+| # | Dimension | The question it asks |
+|---|---|---|
+| 1 | **Evidence use** | Does it reason *from* the evidence, or just repeat it back? |
+| 2 | **Uncertainty** | Is it honest about what it doesn't know, and does it say what difference that makes? |
+| 3 | **Alternative explanations** | Does it offer genuine competing possibilities, and say what would tell them apart? |
+| 4 | **Recommended action** | Could an analyst actually act on it, or is it "investigate further"? |
+| 5 | **Overall usefulness** | Would this help someone working under time pressure? |
+
+Each has worded anchors at the 1, 3 and 5 points in `docs/scoring_rubric.md` Part A; 2 and 4 are for
+anything in between.
+
+### Why five rather than one overall score
+
+Because "is this hypothesis any good" is unanswerable as a single number, and because each dimension
+is tied to a specific claim the thesis makes. Four of the five map one-to-one onto fields of the
+hypothesis output schema:
+
+| Dimension | Schema field |
+|---|---|
+| Evidence use | `supporting_evidence` |
+| Uncertainty | `evidence_against_or_uncertainty` |
+| Alternatives | `alternative_explanations` |
+| Actionability | `recommended_human_action` |
+| Overall usefulness | the whole output |
+
+The separation is what makes the comparison informative. If the AI arm beats the template on
+alternatives but not on actionability, that is a finding about *where* constrained generation helps.
+Collapsed into a single score it is not a finding at all, just a number that moved.
+
+### Dimension 1 is the one carrying the research argument
+
+It exists because of a gap nothing automated can close. After the grounding gate, every hypothesis
+reaching a scorer is 100% schema-valid and 100% grounded on **both** arms — that is what constrained
+decoding plus a grounding check mean, and it is why neither metric can separate the arms. The
+grounding check proves a cited rule ID *exists in the evidence pack*. It cannot establish that the
+finding was used *meaningfully*. Dimension 1 is precisely that gap, and it is the reason RQ3 needs
+human judgement rather than more automation. See §7.
+
+### Dimension 5 is not an average of the other four
+
+The rubric tells the rater explicitly that if their overall judgement disagrees with the four
+component scores, they should leave it disagreeing. It is there to catch a hypothesis that scores
+respectably part-by-part and is useless taken as a whole — an output that ticks every structural box
+without advancing the analyst's reasoning.
+
+### What the anchors look like in practice
+
+The worked example in Part A scores two hypotheses built from the same evidence pack:
+
+| Dimension | A | B |
+|---|---|---|
+| Evidence use | 2 | 5 |
+| Uncertainty | 1 | 5 |
+| Alternatives | 2 | 5 |
+| Actionability | 1 | 5 |
+| Overall usefulness | 2 | 5 |
+
+**A is not wrong.** Every claim it makes is accurate and every rule ID it cites is real. It scores low
+because it lists the findings without connecting them, copies the pack's uncertainties without saying
+what they do to the conclusion, names two undifferentiated alternatives, and recommends "review the
+affected area". Accuracy is not usefulness — which is exactly why the instrument has dimensions rather
+than a single correctness check.
+
+### Where the "280 values" figure in the ethics form comes from
+
+```
+5 dimensions × 40 items   = 200   (pass 1, ordinal 1-5)
+2 judgements × 40 items   =  80   (pass 2, categorical)
+                            ---
+                            280   values from one rater
+```
+
+The two pass-2 judgements are **cause correctness** (correct / partly correct / incorrect) and
+**confidence calibration** (too low / about right / too high). They are categorical rather than 1–5,
+and they are collected only after every item has been scored on all five dimensions, because knowing
+the right answer changes how good an explanation feels. Reported as counts, not means.
+
+### Note the vocabulary trap
+
+"Dimension" is doing rating-scale work here and has nothing to do with dimensionality in the
+data-science sense — no feature space, no reduction, no orthogonality claim. The five are not assumed
+independent of one another and are expected to correlate; each is reported separately, and no
+composite score is computed from them at any point.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -3073,6 +3254,11 @@ and is here a parameter we choose rather than a measured fact.
 | **GNSS L1** | The 1575.42 MHz band carrying civil GPS/Galileo signals; the band the interference scenario targets. |
 | **SNR** | Signal-to-noise ratio — signal strength relative to background noise. Falls when noise rises. |
 | **Noise floor** | Background RF power with no signal present; the reference that "elevated noise" is elevated above. |
+| **Human-participant research** | Research in which a person is recruited into a designed procedure and what they produce is used as evidence — independent of whether personal data is collected. |
+| **Module-level ethics approval** | A blanket departmental approval covering low-risk student projects; a short form plus supervisor sign-off, rather than a full committee application. |
+| **Pseudonymous** | Identifiers replaced by a code, with the mapping held separately. Not the same as anonymous: re-identification remains possible while the mapping exists. |
+| **Dimension** (scoring) | One independent axis of judgement on the rating instrument, scored 1–5 on its own. Five per hypothesis; no composite is computed. |
+| **Anchor** (scoring) | The written description of what a given score means on a dimension. This rubric words the 1, 3 and 5 points and leaves 2 and 4 for anything in between. |
 | **dBm** | Power in decibels relative to 1 milliwatt. Logarithmic; +10 dB is 10× the power. Less negative = stronger. |
 | **Baseline delta** | An observation's deviation from its expected normal value — the quantity detectors act on. |
 | **Seed** | The pseudo-random generator's starting value; makes a "random" run exactly repeatable. |
