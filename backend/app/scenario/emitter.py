@@ -45,6 +45,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.dal.models import ObservationType, SourceType
+from app.scenario.incident import Incident, IncidentParameters, ScenarioType
 from app.scenario.layout import Channel, RfLayout, SensorSite
 from app.scenario.seeding import derive_gaussian, new_seed
 
@@ -85,8 +86,13 @@ class RunSpec(_Frozen):
     whose recorded parameters describe something other than what was emitted.
     """
 
-    scenario_type: str = Field(min_length=1)
+    scenario_type: ScenarioType
     parameters: BaselineParameters
+    #: What this run stages, if it stages anything. Carried even for
+    #: `normal-baseline`, because `ground_truth` records the spectral extent a
+    #: run was configured with whether or not it used it -- a batch varying one
+    #: parameter should say so on every row, including the control.
+    incident: IncidentParameters = IncidentParameters()
     seed: int = Field(ge=0)
     start: datetime
     duration_seconds: int = Field(gt=0)
@@ -106,10 +112,11 @@ class RunSpec(_Frozen):
     def create(
         cls,
         *,
-        scenario_type: str,
+        scenario_type: ScenarioType | str,
         start: datetime,
         duration_seconds: int,
         parameters: BaselineParameters | None = None,
+        incident: IncidentParameters | None = None,
         seed: int | None = None,
     ) -> RunSpec:
         """Build a spec, drawing a seed if none was supplied.
@@ -119,8 +126,9 @@ class RunSpec(_Frozen):
         never be emitted under a seed nobody recorded.
         """
         return cls(
-            scenario_type=scenario_type,
+            scenario_type=ScenarioType(scenario_type),
             parameters=BaselineParameters() if parameters is None else parameters,
+            incident=IncidentParameters() if incident is None else incident,
             seed=new_seed() if seed is None else seed,
             start=start,
             duration_seconds=duration_seconds,
@@ -132,7 +140,7 @@ class RunSpec(_Frozen):
         The seed is not in here: it has a column of its own, and a value stored
         twice is a value that can disagree with itself.
         """
-        return self.parameters.model_dump()
+        return {**self.parameters.model_dump(), **self.incident.model_dump()}
 
 
 def ticks(layout: RfLayout, spec: RunSpec) -> tuple[datetime, ...]:
@@ -149,13 +157,51 @@ def ticks(layout: RfLayout, spec: RunSpec) -> tuple[datetime, ...]:
     )
 
 
+def _injection_db(
+    spec: RunSpec,
+    incident: Incident | None,
+    sensor: SensorSite,
+    channel: Channel,
+    tick: int,
+    timestamp: datetime,
+) -> float:
+    """How much this cell's floor is raised, in decibels. Zero for most cells.
+
+    Derived under its own key -- `"injection"` rather than `"noise"` -- which is
+    what keeps `scn-001`'s guarantee intact: the noise value for a cell is
+    computed from the same inputs whether or not anything is staged, so adding
+    an incident cannot move a reading the incident does not touch. Under a
+    sequential generator this would be impossible, because the extra draw would
+    shift everything after it.
+
+    The magnitude varies per cell rather than being a flat step. A perfectly
+    uniform elevation across a zone is not what interference looks like, and a
+    detector tuned against it would be tuned against an artefact of the
+    generator.
+    """
+    if incident is None or not incident.touches(
+        sensor.sensor_id, channel.index, timestamp
+    ):
+        return 0.0
+    spread = 1.0 + 0.25 * derive_gaussian(
+        spec.seed, sensor.sensor_id, channel.index, tick, "injection"
+    )
+    return incident.elevation_db * max(spread, 0.0)
+
+
 def _reading(
-    spec: RunSpec, sensor: SensorSite, channel: Channel, tick: int
+    spec: RunSpec,
+    sensor: SensorSite,
+    channel: Channel,
+    tick: int,
+    timestamp: datetime,
+    incident: Incident | None,
 ) -> dict[str, Any]:
     parameters = spec.parameters
     noise_db = round(
         parameters.noise_sigma_db
-        * derive_gaussian(spec.seed, sensor.sensor_id, channel.index, tick, "noise"),
+        * derive_gaussian(spec.seed, sensor.sensor_id, channel.index, tick, "noise")
+        + _injection_db(spec, incident, sensor, channel, tick, timestamp),
         _DECIMALS,
     )
     return {
@@ -175,7 +221,9 @@ def _reading(
     }
 
 
-def emit_baseline(layout: RfLayout, spec: RunSpec) -> tuple[dict[str, Any], ...]:
+def emit_rf(
+    layout: RfLayout, spec: RunSpec, incident: Incident | None = None
+) -> tuple[dict[str, Any], ...]:
     """The whole run, as source records, in a fixed order.
 
     Dense by construction: every sensor reports every channel at every tick, so
@@ -202,12 +250,23 @@ def emit_baseline(layout: RfLayout, spec: RunSpec) -> tuple[dict[str, Any], ...]
             "observation_type": ObservationType.RF,
             "timestamp": timestamp,
             "location": {"lat": sensor.lat, "lon": sensor.lon},
-            "payload": _reading(spec, sensor, channel, tick),
+            "payload": _reading(spec, sensor, channel, tick, timestamp, incident),
         }
         for tick, timestamp in enumerate(ticks(layout, spec))
         for sensor in sensors
         for channel in channels
     )
+
+
+def emit_baseline(layout: RfLayout, spec: RunSpec) -> tuple[dict[str, Any], ...]:
+    """The same run with nothing staged in it.
+
+    Kept as a name of its own rather than folded into a default argument,
+    because `scn-002` asks for it explicitly: "the quiet run for this seed" is
+    what an injected run is compared against to prove the injection added
+    rather than moved.
+    """
+    return emit_rf(layout, spec, None)
 
 
 def _plain(value: object) -> str:
