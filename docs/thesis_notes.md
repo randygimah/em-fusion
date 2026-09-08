@@ -345,12 +345,24 @@ rare, occupy the same duration band that scenario type 4 will inject into. Withi
 ten surviving interior airborne gaps measure 20, 100, 110, 200, 280, 280, 300, 970, 1,160 and 1,440
 seconds — seven of the ten falling between 100 and 300 seconds, which is squarely where a plausible
 injected coverage gap sits. This is the confound `adp-004` names as a failure case, and it is present
-rather than avoided. Its magnitude is small and now quantified: it touches 10 of 948 tracks, or 1.05%,
-against 1.84% for the widest candidate rejected above. It is also mitigable rather than merely
-tolerable, because the coverage report identifies exactly which tracks carry a natural dropout, so the
-scenario generator can refuse those tracks as injection sites and the evaluation can account for the
-exclusion. *(Record here whether that exclusion was implemented in the generator, and the measured
-false-positive rate on scenario type 4 with and without it.)*
+rather than avoided.
+
+**Two corrections to this paragraph, both found by `adp-008` when the analysis was made
+reproducible.** The first is arithmetic: the ten gaps are *not* ten tracks. Three aircraft carry two
+gaps each, so the confound touches **7 of 948 tracks, or 0.74%**, not the 1.05% recorded here
+originally. The error was an inference — ten gaps read as ten aircraft — and it survived because the
+hand analysis reported durations and nothing else. The comparison with the rejected widest candidate
+is left unrecomputed and should be treated as indicative only, since that figure was derived the same
+way. The second correction is to the claim that "the coverage report identifies exactly which tracks
+carry a natural dropout". It does not, and never did: `coverage.json` records a cadence, an aircraft
+count, a gap count, a maximum, three percentiles and a clean-cadence fraction, with no identity in it
+anywhere and neither the interior nor the airborne filter applied. The mitigation had no input, and
+would have been discovered to have none at the point someone tried to use it.
+
+`adp-008` supplies that input, and the ten durations it reports against the real extract are
+identical to the ten recorded above — which is the evidence that it reproduces the hand analysis
+rather than merely resembling it. *(Record here the measured false-positive rate on scenario type 4
+with and without the exclusion, once `scn-002` can run one.)*
 
 A second limitation follows from the null-position retention rule rather than the box. The 500
 retained rows with no coordinates are drawn in file order from the whole hour, not from within the
@@ -2554,6 +2566,50 @@ holds *is* the storage layer's function, which is both sharper and what was mean
 stub practice, a stub would not have caught this one — the flaw only becomes visible once the import
 exists — but the deviation is recorded because the reason for skipping it was momentum rather than
 judgement.
+
+### A mitigation that had been recorded as available was not, and making it real corrected the threat it mitigates
+
+The coverage-gap scenario injects a dropout by suppressing an aircraft's reports for a window, and
+the corpus already contains a small number of natural dropouts in the same duration band. The
+mitigation recorded in the threat-to-validity note above was to refuse those tracks as injection
+sites, and it was described as cheap on the grounds that the coverage report already identified
+them. It did not. `coverage.json` reports a distribution and keeps no identity, so the mitigation
+had no input and would have been found to have none at the moment `scn-002` reached for it — after
+the scenario generator was being written, which is the expensive moment rather than the cheap one.
+
+The gap between the recorded claim and the artefact is the finding worth carrying into the write-up.
+It was not a mistake in the analysis, which was correct, but in the *retention* of it: the hand
+analysis was run, its conclusion was written into the notes, and the thing that would let anyone act
+on the conclusion was never produced. A number in a document and a capability in a system are
+different objects, and prose is very willing to describe the second while recording only the first.
+
+`adp-008` produces the exclusion list as a committed artefact rebuilt by the same command that builds
+the corpus. Three decisions in it are worth recording. **Identities are pseudonyms**, because the
+artefact is committed and `icao24` is a 24-bit space, so a committed list of source identifiers would
+hand a reader the mapping `dal-004` exists to prevent — the generator therefore derives the pseudonym
+for each candidate track and tests membership, rather than the reverse. **Two filters separate a
+coverage failure from an artefact of the bounding box**: a gap counts only when both bracketing rows
+sit at least a quarter of a degree inside the boundary and the aircraft is airborne at both ends,
+which is the same correction the box sweep needed when its naive figure reported gaps of 3,140
+seconds in a 3,600-second file. **Where a rule is uncertain the analysis over-reports** — a row whose
+ground flag is missing is treated as airborne, so its gap is listed — because being wrongly on the
+list costs one candidate injection site out of hundreds, while being wrongly absent from it costs the
+false-positive rate for an entire scenario type. The asymmetry is not close, and recording it stops
+the choice being made by whichever branch happened to be written first.
+
+Running it against the real extract reproduced the ten recorded durations exactly — 20, 100, 110,
+200, 280, 280, 300, 970, 1,160 and 1,440 seconds — which is strong evidence that the reproducible
+analysis and the hand one are the same analysis. It also showed the ten gaps belong to seven
+aircraft, correcting the confound figure from 1.05% of the fleet to 0.74%. Both corrections are
+recorded against the original paragraph rather than replacing it.
+
+Two smaller deviations are recorded plainly. Three branches of the module had no test in the first
+pass and were found by the coverage report afterwards, so their tests were written after the
+implementation and say so in their own comments — the same reversal of order that `scn-005` recorded,
+and the second time the coverage report has been the thing that noticed. And two of this file's own
+tests were wrong on first run: one assumed each aircraft carries at most one gap, which is what the
+corrected figure above disproves, and one used a fixture in which the second aircraft had a
+qualifying gap of its own while asserting that only one gap existed.
 
 ## Evaluation
 

@@ -3382,6 +3382,58 @@ limitation: zero is indistinguishable from "no seed applies" by looking at the c
 `replay-only` scenario type is what disambiguates it, so a query over seeds should filter on the type
 rather than trust the number.)*
 
+## 49. Why can't the coverage report tell the generator which tracks to avoid? It already measures the gaps.
+
+**Because it measures how long the gaps were, not whose they were** — and the exclusion needs the
+identity, which is the one thing the report throws away.
+
+This is worth separating carefully, because the two questions sound like one:
+
+| Question | Answer | Where it lives |
+|---|---|---|
+| *Is this bounding box clean enough to use?* | A distribution: a maximum, three percentiles, a clean-cadence fraction | `coverage.json`, and it answers this well |
+| *Which specific aircraft must the generator refuse to inject onto?* | A list of identities | Nowhere, until now |
+
+The first question was asked when the box was being chosen, and answered. The second is asked by the
+scenario generator every time it stages a coverage gap, and the notes had recorded that the first
+answer covered it. It does not. The report groups rows by aircraft in order to measure intervals and
+then discards the grouping, keeping only the durations.
+
+### Two filters the aggregate report also does not apply
+
+Even with identities attached, a raw interval is not evidence of a coverage failure:
+
+| Filter | What it removes | Why it matters |
+|---|---|---|
+| **Interior** | Gaps where either end sits near the box boundary | An aircraft that flies out of the box and back in leaves an empty interval, and nothing went wrong. This is the correction that took the naive maximum from 3,140 s in a 3,600 s file down to something meaningful |
+| **Airborne** | Gaps where the aircraft is on the ground at either end | A parked aircraft stops reporting because it has been switched off |
+
+Applying both to the real extract leaves ten gaps. That number was already recorded; what was not
+recorded is that they belong to **seven** aircraft, three of which carry two gaps each. The
+difference matters because the mitigation excludes *tracks*, not gaps, so the cost of the exclusion
+is seven candidate injection sites out of 948 — 0.74% of the fleet, not the 1.05% the notes had.
+
+### Why the committed list holds pseudonyms rather than aircraft addresses
+
+The artefact is committed to the repository, and a 24-bit aircraft address is small enough to
+enumerate exhaustively. Committing real addresses beside a project that pseudonymises them
+everywhere else would hand a reader the mapping the pseudonymisation exists to prevent. So the list
+stores the pseudonym, and the generator — which sees real addresses, because it perturbs records
+before they reach the front door — derives the pseudonym for each candidate and asks whether *that*
+is on the list.
+
+One consequence to keep in mind: the list is meaningful only against the seed that produced it,
+which is why it records that seed's fingerprint. Rebuild the corpus under a different seed and every
+identifier in the file changes, while every duration stays the same.
+
+### Worth recording as a limitation
+
+Where the rules are uncertain the analysis deliberately over-reports — a row with no ground flag is
+treated as airborne, so its gap is listed. Being wrongly on the list costs one injection site out of
+hundreds; being wrongly absent from it costs the false-positive rate for an entire scenario type.
+That is a deliberate asymmetry rather than a conservative default applied by habit, and it means the
+list should be read as "tracks that might carry a natural gap", not "tracks that certainly do".
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -3510,4 +3562,6 @@ rather than trust the number.)*
 | **Salted hash** | Python's built-in `hash()`, whose result for a string varies per process. Stable within one run of a test suite and different the next morning — reproducible for exactly as long as it takes to be trusted. |
 | **Tick** | One interval of simulated time in a run; the layout fixes its length at 10 s. Position in the run, counted from zero — never a wall-clock reading. |
 | **Stream digest** | The SHA-256 over a run's canonical serialisation, with keys sorted and record order preserved. One definition of "the bytes", so byte-identity can be asserted, stored, or quoted without holding the stream. |
+| **Interior airborne gap** | A reporting gap whose bracketing rows both sit well inside the bounding box with the aircraft flying at both ends. The only kind that is evidence about coverage rather than about the box. Ten of them exist in the corpus, across seven tracks. See §49. |
+| **Exclusion list** | The committed set of tracks the coverage-gap scenario refuses as injection sites, identified by pseudonym. Without it a natural dropout and an injected one are indistinguishable and the false-positive rate for that scenario type means nothing. |
 | **Source record vs observation** | What the emitter produces and what the DAL produces. The first has no provenance, no data mode and no run identifier; the second has all three. `scn-001` emits the first only. |
