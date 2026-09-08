@@ -24,7 +24,7 @@ Three consequences that are easy to undo by accident:
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -188,6 +188,7 @@ def replay_window(
     context: IngestContext,
     repository: ObservationRepository,
     pseudonymiser: Pseudonymiser,
+    transform: Callable[[Mapping[str, Any]], Mapping[str, Any] | None] | None = None,
 ) -> IngestResult:
     """Drive one window through the DAL and report what it did.
 
@@ -195,5 +196,24 @@ def replay_window(
     building either here would couple the adapter to a storage engine and to
     process configuration, and would break the seam `db-003` requires before
     it is built.
+
+    `transform` is the seam `scn-002` stages incidents through: it sees each
+    record after the reader and before the DAL, and may alter it or return None
+    to withhold it. Deliberately a plain callable rather than a scenario type,
+    so this module keeps knowing nothing about scenarios -- `read_window` stays
+    the pure reader `adp-001` specifies, and the driver decides what, if
+    anything, is applied.
+
+    **A withheld record is dropped, not quarantined.** Quarantine means "this
+    record was malformed"; a staged coverage gap means the aircraft was never
+    heard from, and a run that filed its own injections as data-quality
+    failures would hand the detector the answer in the quarantine table.
     """
-    return ingest_batch(read_window(path, window), context, repository, pseudonymiser)
+    records = read_window(path, window)
+    if transform is not None:
+        records = (
+            transformed
+            for transformed in (transform(record) for record in records)
+            if transformed is not None
+        )
+    return ingest_batch(records, context, repository, pseudonymiser)

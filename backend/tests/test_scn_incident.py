@@ -32,7 +32,6 @@ import pytest
 
 from app.scenario.emitter import BaselineParameters, RunSpec, emit_baseline, emit_rf
 from app.scenario.incident import (
-    Incident,
     IncidentParameters,
     ScenarioType,
     SpectralExtent,
@@ -114,7 +113,9 @@ def test_there_are_exactly_five_scenario_types() -> None:
 
 def test_normal_baseline_plans_no_incident(layout: RfLayout) -> None:
     # spec: scn-002
-    assert plan_incident(layout, _spec(scenario_type=ScenarioType.NORMAL_BASELINE)) is None
+    assert (
+        plan_incident(layout, _spec(scenario_type=ScenarioType.NORMAL_BASELINE)) is None
+    )
 
 
 def test_normal_baseline_is_byte_identical_to_the_quiet_run(layout: RfLayout) -> None:
@@ -133,9 +134,7 @@ def test_gnss_degradation_raises_the_l1_channel_only_when_narrowband(
     layout: RfLayout,
 ) -> None:
     # spec: scn-002
-    spec = _spec(
-        incident=IncidentParameters(spectral_extent=SpectralExtent.NARROWBAND)
-    )
+    spec = _spec(incident=IncidentParameters(spectral_extent=SpectralExtent.NARROWBAND))
     incident = plan_incident(layout, spec)
     assert incident is not None
 
@@ -244,9 +243,7 @@ def test_the_snr_falls_where_the_power_rises(layout: RfLayout) -> None:
 
 def test_a_sensor_fault_affects_one_sensor(layout: RfLayout) -> None:
     # spec: scn-002, anom-007
-    incident = plan_incident(
-        layout, _spec(scenario_type=ScenarioType.RF_SENSOR_FAULT)
-    )
+    incident = plan_incident(layout, _spec(scenario_type=ScenarioType.RF_SENSOR_FAULT))
     assert incident is not None
 
     assert len(incident.sensors) == 1
@@ -361,12 +358,17 @@ def test_no_record_carries_the_scenario_type_or_the_injection(
 ) -> None:
     # spec: scn-002, api-009
     spec = _spec()
-    records = _run(layout, spec)
-    keys = set(records[0]) | set(records[0]["payload"])
+    injected = _run(layout, spec)[0]
+    quiet = _baseline(layout, spec)[0]
 
-    assert not {key for key in keys if "scenario" in key or "ground" in key}
-    assert "injected" not in keys
-    assert "incident" not in keys
+    # Compared against the quiet run rather than searched for suspicious words.
+    # The substring form of this test passes here only by luck -- an RF payload
+    # happens to carry no field named like `on_ground`, which is what caught
+    # the same assertion on the track side. An injection may change what a
+    # field says; it may never add one.
+    assert set(injected) == set(quiet)
+    assert set(injected["payload"]) == set(quiet["payload"])
+    assert "ground_truth" not in injected["payload"]
 
 
 def test_an_injected_cell_is_labelled_the_same_as_a_quiet_one(
@@ -381,6 +383,8 @@ def test_an_injected_cell_is_labelled_the_same_as_a_quiet_one(
     incident = plan_incident(layout, spec)
     assert incident is not None
 
-    labels = {record["payload"]["signal_type"] for record in emit_rf(layout, spec, incident)}
+    labels = {
+        record["payload"]["signal_type"] for record in emit_rf(layout, spec, incident)
+    }
 
     assert len(labels) == 1

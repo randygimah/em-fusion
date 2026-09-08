@@ -42,6 +42,7 @@ from app.scenario.seeding import derive_unit
 
 if TYPE_CHECKING:  # pragma: no cover -- import cycle, types only
     from app.scenario.emitter import RunSpec
+    from app.scenario.tracks import TrackPerturber
 
 
 class ScenarioType(str, Enum):
@@ -191,13 +192,21 @@ def plan_incident(layout: RfLayout, spec: RunSpec) -> Incident | None:
     )
 
 
-def ground_truth(spec: RunSpec, incident: Incident | None) -> dict[str, Any]:
+def ground_truth(
+    spec: RunSpec,
+    incident: Incident | None,
+    perturber: TrackPerturber | None = None,
+) -> dict[str, Any]:
     """The answer key, for `scenario_runs.ground_truth`.
 
     Written for every run including the clean one, where it says that nothing
     was staged. An absent record and a record saying "nothing" are different
     claims, and only the second is evidence when the false-positive rate is
     computed (`anom-008`).
+
+    Aircraft are named by pseudonym, never by source identifier. This record is
+    stored in the database and is readable; a real aircraft address in it would
+    reintroduce by the back door exactly what `dal-004` removes at the front.
     """
     scenario_type = ScenarioType(spec.scenario_type)
     return {
@@ -212,4 +221,6 @@ def ground_truth(spec: RunSpec, incident: Incident | None) -> dict[str, Any]:
             if incident
             else None
         ),
+        "track_mode": perturber.mode.value if perturber else None,
+        "aircraft": sorted(perturber.affected) if perturber else [],
     }

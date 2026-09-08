@@ -42,6 +42,7 @@ from typing import Any
 
 import pytest
 
+from app.dal.pseudonymise import Pseudonymiser
 from app.scenario.emitter import BaselineParameters, RunSpec
 from app.scenario.incident import IncidentParameters, ScenarioType, ground_truth
 from app.scenario.tracks import (
@@ -50,7 +51,6 @@ from app.scenario.tracks import (
     load_exclusions,
     plan_track_perturbation,
 )
-from app.dal.pseudonymise import Pseudonymiser
 
 PSEUDONYMISER = Pseudonymiser(seed="a-test-seed-not-the-real-one")
 
@@ -119,18 +119,14 @@ def _perturber(
 ) -> TrackPerturber:
     perturbation = plan_track_perturbation(spec)
     assert perturbation is not None
-    return TrackPerturber(
-        perturbation, pseudonymiser=PSEUDONYMISER, excluded=excluded
-    )
+    return TrackPerturber(perturbation, pseudonymiser=PSEUDONYMISER, excluded=excluded)
 
 
 def _targeted_aircraft(spec: RunSpec, count: int = 200) -> set[str]:
     """Which of a synthetic fleet this run would touch."""
     perturber = _perturber(spec)
     return {
-        f"{index:06x}"
-        for index in range(count)
-        if perturber.targets(f"{index:06x}")
+        f"{index:06x}" for index in range(count) if perturber.targets(f"{index:06x}")
     }
 
 
@@ -139,7 +135,10 @@ def _targeted_aircraft(spec: RunSpec, count: int = 200) -> set[str]:
 
 def test_normal_baseline_perturbs_no_track() -> None:
     # spec: scn-002, anom-008
-    assert plan_track_perturbation(_spec(scenario_type=ScenarioType.NORMAL_BASELINE)) is None
+    assert (
+        plan_track_perturbation(_spec(scenario_type=ScenarioType.NORMAL_BASELINE))
+        is None
+    )
 
 
 def test_a_sensor_fault_perturbs_no_track() -> None:
@@ -147,12 +146,17 @@ def test_a_sensor_fault_perturbs_no_track() -> None:
     # A faulty receiver says nothing about the aircraft it is listening to. If
     # this staged a track effect too, the sensor-fault rule and the fusion rule
     # would both fire and the scenario would stop being a single-cause case.
-    assert plan_track_perturbation(_spec(scenario_type=ScenarioType.RF_SENSOR_FAULT)) is None
+    assert (
+        plan_track_perturbation(_spec(scenario_type=ScenarioType.RF_SENSOR_FAULT))
+        is None
+    )
 
 
 def test_a_coverage_gap_suppresses_and_gnss_degradation_freezes() -> None:
     # spec: scn-002
-    gap = plan_track_perturbation(_spec(scenario_type=ScenarioType.AIRCRAFT_COVERAGE_GAP))
+    gap = plan_track_perturbation(
+        _spec(scenario_type=ScenarioType.AIRCRAFT_COVERAGE_GAP)
+    )
     gnss = plan_track_perturbation(_spec(scenario_type=ScenarioType.GNSS_DEGRADATION))
     assert gap is not None and gnss is not None
 
@@ -383,10 +387,60 @@ def test_a_perturbed_record_carries_no_trace_of_the_scenario() -> None:
     perturber = _perturber(spec)
     target = next(iter(_targeted_aircraft(spec)))
 
+    untouched = _record(icao24=target, at=BEFORE)
     record = perturber.apply(_record(icao24=target, at=DURING))
     assert record is not None
-    keys = set(record) | set(record["payload"])
 
-    assert not {key for key in keys if "scenario" in key or "ground" in key}
-    assert "perturbed" not in keys
-    assert "injected" not in keys
+    # Compared against an unperturbed record rather than searched for
+    # suspicious words. The first version of this test asked whether any key
+    # contained "ground", which matches `on_ground` -- a legitimate field about
+    # whether the aircraft is airborne, and nothing to do with ground truth.
+    # A perturbation may change what a field says; it may never add a field.
+    assert set(record) == set(untouched)
+    assert set(record["payload"]) == set(untouched["payload"])
+    assert "ground_truth" not in record["payload"]
+
+
+# ------------------------------------------------------------- the seam
+
+
+def test_replay_window_applies_a_transform_and_honours_a_drop(
+    tmp_path: Path,
+) -> None:
+    """The seam perturbation runs in. Spec: scn-002.
+
+    Asserted through the real composition rather than by calling the perturber
+    directly: the claim is that a perturbation actually reaches the DAL on the
+    replay path, and a transform the driver forgot to pass would leave every
+    unit test in this file green.
+    """
+    # spec: scn-002, adp-001
+    from app.adapters.opensky import Window, replay_window
+    from app.corpus.extract import write_parquet
+    from app.dal.models import DataMode
+    from app.dal.validation import IngestContext
+    from tests.fakes import InMemoryObservationRepository
+    from tests.test_adp_opensky import _row
+
+    path = tmp_path / "extract.parquet"
+    write_parquet([_row(0), _row(10), _row(20)], path)
+    repository = InMemoryObservationRepository()
+
+    result = replay_window(
+        path,
+        Window(
+            start=datetime(2022, 6, 27, 12, 0, 0, tzinfo=UTC),
+            end=datetime(2022, 6, 27, 12, 1, 0, tzinfo=UTC),
+        ),
+        IngestContext(data_mode=DataMode.REPLAYED, scenario_run_id=1),
+        repository,
+        PSEUDONYMISER,
+        transform=lambda record: None if record["timestamp"].second == 10 else record,
+    )
+
+    # Three rows read, one suppressed: a dropped record is gone, not
+    # quarantined. Quarantine means "this record was wrong"; a staged gap means
+    # the aircraft was never heard, and the two must not be confused.
+    assert result.accepted == 2
+    assert result.quarantined == 0
+    assert len(repository.observations) == 2
