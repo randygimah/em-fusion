@@ -85,6 +85,12 @@ BASE_TIME = 1656331200
 #: under test is that this analysis reproduces that one.
 RECORDED_GAPS_S = (20, 100, 110, 200, 280, 280, 300, 970, 1160, 1440)
 
+#: Ten gaps, but only seven tracks: three aircraft carry two each. The notes
+#: read the ten as ten tracks and put the confound at 1.05% of the fleet; it is
+#: seven of 948, or 0.74%. Asserted separately from the durations so the two
+#: claims cannot be conflated again.
+RECORDED_AIRCRAFT = 7
+
 
 # ------------------------------------------------------------------- builders
 
@@ -209,6 +215,55 @@ def test_rows_with_no_position_are_ignored() -> None:
     assert found[0].duration_s == 200
 
 
+def test_a_missing_ground_flag_counts_as_airborne() -> None:
+    # spec: adp-008
+    # Written after the implementation, which reverses the workflow's order and
+    # says so: the coverage report found the branch untested, and the branch
+    # encodes a decision rather than a detail. Where the rules are uncertain
+    # this over-reports, because being on the list costs one candidate
+    # injection site out of hundreds, and being absent from it when the track
+    # carries a real dropout costs the false-positive rate for a whole scenario
+    # type.
+    rows = [
+        _row(time=BASE_TIME, onground=""),
+        _row(time=BASE_TIME + 200, onground=""),
+    ]
+    found = _gaps(rows)
+
+    assert len(found) == 1
+    assert found[0].duration_s == 200
+
+
+def test_a_row_that_cannot_be_read_is_ignored_rather_than_fatal() -> None:
+    # spec: adp-008
+    # Also written after the fact. The corpus build must not die on one
+    # unparseable coordinate: the extract is rebuilt from a licensed download
+    # that nobody in this project controls, and a crash here would take the
+    # whole artefact set with it.
+    rows = [
+        _row(time=BASE_TIME),
+        {"time": str(BASE_TIME + 100), "icao24": "4d22ec", "lat": "n/a", "lon": "7.0"},
+        _row(time=BASE_TIME + 200),
+    ]
+    found = _gaps(rows)
+
+    assert len(found) == 1
+    assert found[0].duration_s == 200
+
+
+def test_a_row_with_no_aircraft_identifier_is_ignored() -> None:
+    # spec: adp-008
+    # There is nothing to exclude from injection without an identity, and a
+    # blank one would collapse every such row onto a single pseudonym --
+    # inventing gaps between unrelated aircraft.
+    rows = [
+        _row(time=BASE_TIME, icao24=""),
+        _row(time=BASE_TIME + 200, icao24=""),
+    ]
+
+    assert _gaps(rows) == []
+
+
 def test_rows_out_of_time_order_are_sorted_before_measuring() -> None:
     # spec: adp-008
     # A negative interval would silently drop below any minimum and hide a real
@@ -226,16 +281,20 @@ def test_each_aircraft_is_measured_separately() -> None:
     # Two aircraft interleaved in the file must not have a gap computed across
     # them, which would report a dropout for a pair that were both reporting
     # normally throughout.
+    # The second aircraft reports on the cadence throughout, so the only gap
+    # available is the first aircraft's. A measurement taken across the two
+    # would report 100 s gaps for a pair that never stopped reporting.
     rows = [
         _row(time=BASE_TIME, icao24="aaaaaa"),
         _row(time=BASE_TIME + 100, icao24="bbbbbb"),
+        _row(time=BASE_TIME + 110, icao24="bbbbbb"),
         _row(time=BASE_TIME + 200, icao24="aaaaaa"),
-        _row(time=BASE_TIME + 210, icao24="bbbbbb"),
     ]
     found = _gaps(rows)
 
     assert len(found) == 1
     assert found[0].aircraft_id == PSEUDONYMISER.aircraft("aaaaaa")
+    assert found[0].duration_s == 200
 
 
 # ------------------------------------------------------------- what is written
@@ -352,7 +411,8 @@ def test_the_analysis_reproduces_the_recorded_interior_airborne_gaps() -> None:
     )
 
     assert sorted(gap.duration_s for gap in found) == sorted(RECORDED_GAPS_S)
-    assert len({gap.aircraft_id for gap in found}) == len(RECORDED_GAPS_S)
+    # And the correction the durations alone hide: ten gaps, seven tracks.
+    assert len({gap.aircraft_id for gap in found}) == RECORDED_AIRCRAFT
 
 
 @requires_extract

@@ -40,6 +40,7 @@ from app.corpus.extract import (
     read_rows,
     write_parquet,
 )
+from app.corpus.natural_gaps import build_natural_gaps_report, find_natural_gaps
 from app.dal.pseudonymise import Pseudonymiser
 
 CHUNK_BYTES = 1024 * 1024
@@ -261,5 +262,18 @@ def build_corpus(
 
     coverage = coverage_report(kept, cadence_s=cadence_s)
     (data_dir / "coverage.json").write_text(json.dumps(coverage, indent=2) + "\n")
+
+    # `adp-008`, written on every build rather than by a command of its own.
+    # The list describes one extract under one seed, so producing it anywhere
+    # other than beside the extract invites the two drifting apart -- and an
+    # absent file reads to the generator as "nobody looked", which is not the
+    # same answer as "no track qualifies".
+    gaps = find_natural_gaps(kept, box=box, pseudonymiser=pseudonymiser)
+    natural_gaps = build_natural_gaps_report(
+        gaps, box=box, seed_fingerprint=pseudonymiser.fingerprint()
+    )
+    (data_dir / "natural_gaps.json").write_text(
+        json.dumps(natural_gaps, indent=2) + "\n"
+    )
 
     return manifest

@@ -375,8 +375,10 @@ def fresh_clone(tmp_path: Path) -> Iterator[tuple[Path, bytes]]:
 def test_one_run_produces_the_extract_manifest_and_coverage_report(
     fresh_clone: tuple[Path, bytes],
 ) -> None:
-    # spec: adp-005 — the whole point of the item: a clone plus one command is a
-    # working corpus, without the licensed bytes ever being committed.
+    # spec: adp-005, adp-008 — the whole point of the item: a clone plus one
+    # command is a working corpus, without the licensed bytes ever being
+    # committed. `adp-008` added a fourth artefact to that set rather than a
+    # command of its own, so this assertion grew with it.
     data_dir, payload = fresh_clone
     opener, _ = _opener_for(payload)
 
@@ -395,6 +397,7 @@ def test_one_run_produces_the_extract_manifest_and_coverage_report(
         "opensky_extract.parquet",
         "manifest.json",
         "coverage.json",
+        "natural_gaps.json",
     }
 
 

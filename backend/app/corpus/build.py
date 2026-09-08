@@ -211,7 +211,12 @@ def main(
         return 1
 
     print("Wrote:", file=out)
-    for name in ("opensky_extract.parquet", "manifest.json", "coverage.json"):
+    for name in (
+        "opensky_extract.parquet",
+        "manifest.json",
+        "coverage.json",
+        "natural_gaps.json",
+    ):
         print(f"  {data_dir / name}", file=out)
     print(f"content_sha256:        {written['content_sha256']}", file=out)
     print(f"download_date:         {written['download_date']}", file=out)

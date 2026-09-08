@@ -1,0 +1,74 @@
+{
+  "min_gap_s": 20,
+  "interior_margin_deg": 0.25,
+  "bounding_box": {
+    "lat_min": 49.0,
+    "lat_max": 54.0,
+    "lon_min": 3.0,
+    "lon_max": 11.0
+  },
+  "pseudonym_seed_sha256": "8696f2f27f195c1f3c957258e32ce4fabd67bcd01781950a63ad0b21495e1de7",
+  "aircraft": 7,
+  "gaps": [
+    {
+      "aircraft_id": "AC-1563649276a0",
+      "start": 1656332930,
+      "end": 1656333210,
+      "duration_s": 280
+    },
+    {
+      "aircraft_id": "AC-4571a313ce6f",
+      "start": 1656332150,
+      "end": 1656332350,
+      "duration_s": 200
+    },
+    {
+      "aircraft_id": "AC-4571a313ce6f",
+      "start": 1656332700,
+      "end": 1656333000,
+      "duration_s": 300
+    },
+    {
+      "aircraft_id": "AC-491c19c32915",
+      "start": 1656332020,
+      "end": 1656332300,
+      "duration_s": 280
+    },
+    {
+      "aircraft_id": "AC-4d86df5e0757",
+      "start": 1656332250,
+      "end": 1656333690,
+      "duration_s": 1440
+    },
+    {
+      "aircraft_id": "AC-8b751cd2b907",
+      "start": 1656333050,
+      "end": 1656334020,
+      "duration_s": 970
+    },
+    {
+      "aircraft_id": "AC-a88964884b98",
+      "start": 1656331710,
+      "end": 1656332870,
+      "duration_s": 1160
+    },
+    {
+      "aircraft_id": "AC-a88964884b98",
+      "start": 1656334180,
+      "end": 1656334280,
+      "duration_s": 100
+    },
+    {
+      "aircraft_id": "AC-c8a4863e5a6d",
+      "start": 1656332940,
+      "end": 1656332960,
+      "duration_s": 20
+    },
+    {
+      "aircraft_id": "AC-c8a4863e5a6d",
+      "start": 1656333990,
+      "end": 1656334100,
+      "duration_s": 110
+    }
+  ]
+}
