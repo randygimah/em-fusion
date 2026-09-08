@@ -336,7 +336,32 @@ def test_a_successful_run_exits_zero_and_writes_the_three_artefacts(
         "opensky_extract.parquet",
         "manifest.json",
         "coverage.json",
+        "natural_gaps.json",
     }
+
+
+def test_the_run_writes_the_injection_exclusion_list(
+    clone: tuple[Path, bytes],
+) -> None:
+    """The list scenario type 4 refuses injection sites from. Spec: adp-008.
+
+    Written on every build, including when nothing qualifies: an empty list is
+    the answer "no track carries a natural gap", and an absent file is the
+    answer "nobody looked", which the generator cannot tell apart.
+    """
+    # spec: adp-008, adp-006
+    data_dir, payload = clone
+
+    assert _run(data_dir, payload, "--accept-licence") == 0
+
+    report = json.loads((data_dir / "natural_gaps.json").read_text())
+    assert isinstance(report["gaps"], list)
+    assert report["bounding_box"] == BOX_IN_MANIFEST
+    # Regenerated against the same seed as the extract it describes, so a seed
+    # change is visible here as well as in the manifest.
+    assert (
+        report["pseudonym_seed_sha256"] == _manifest(data_dir)["pseudonym_seed_sha256"]
+    )
 
 
 def test_the_summary_names_what_was_written(
@@ -351,6 +376,7 @@ def test_the_summary_names_what_was_written(
     assert "opensky_extract.parquet" in out
     assert "manifest.json" in out
     assert "coverage.json" in out
+    assert "natural_gaps.json" in out
     assert _manifest(data_dir)["content_sha256"] in out
 
 
