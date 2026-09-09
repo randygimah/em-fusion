@@ -71,7 +71,9 @@ def _spec(
     )
 
 
-def _record(*, icao24: str, lat: float, lon: float, at: datetime = DURING) -> dict[str, Any]:
+def _record(
+    *, icao24: str, lat: float, lon: float, at: datetime = DURING
+) -> dict[str, Any]:
     return {
         "source_id": "opensky-replay",
         "source_type": "opensky",
@@ -124,9 +126,12 @@ def test_both_halves_of_a_run_share_one_centre(layout: RfLayout) -> None:
         for site in layout.sensors
         if site.sensor_id == incident.sensors[0] or site.sensor_id in incident.sensors
     )
-    assert great_circle_km(
-        perturbation.centre_lat, perturbation.centre_lon, centre.lat, centre.lon
-    ) < perturbation.radius_km
+    assert (
+        great_circle_km(
+            perturbation.centre_lat, perturbation.centre_lon, centre.lat, centre.lon
+        )
+        < perturbation.radius_km
+    )
 
 
 def test_an_aircraft_outside_the_zone_is_never_touched(layout: RfLayout) -> None:
@@ -246,7 +251,10 @@ def test_the_ambiguous_run_also_stages_a_co_located_gap(layout: RfLayout) -> Non
     )
     assert (
         great_circle_km(
-            perturbation.centre_lat, perturbation.centre_lon, deviating.lat, deviating.lon
+            perturbation.centre_lat,
+            perturbation.centre_lon,
+            deviating.lat,
+            deviating.lon,
         )
         < 1.0
     )

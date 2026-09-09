@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python3 -c ' *)"
+      "Bash(python3 -c ' *)",
+      "Bash(.venv/bin/python -m pytest tests/test_scn_ambiguous.py -q --no-header)"
     ]
   }
 }

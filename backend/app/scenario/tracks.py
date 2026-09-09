@@ -51,7 +51,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from app.dal.pseudonymise import Pseudonymiser
-from app.scenario.incident import ScenarioType
+from app.scenario.incident import ScenarioType, centre_sensor_id
+from app.scenario.layout import RfLayout, great_circle_km
 from app.scenario.seeding import derive_unit
 
 if TYPE_CHECKING:  # pragma: no cover -- import cycle, types only
@@ -91,24 +92,53 @@ class TrackPerturbation:
     end: datetime
     fraction: float
     seed: int
+    centre_lat: float
+    centre_lon: float
+    radius_km: float
 
     def covers(self, at: datetime) -> bool:
         return self.start <= at < self.end
 
+    def contains(self, lat: float | None, lon: float | None) -> bool:
+        """Whether a reported position falls inside the staged zone.
 
-def plan_track_perturbation(spec: RunSpec) -> TrackPerturbation | None:
+        A record with no position is outside it. Such a row is bound for
+        quarantine on the missing coordinate anyway, and inventing a location
+        in order to decide whether to perturb it would be inventing data --
+        which is the one thing a generator that produces ground truth must not
+        do quietly.
+        """
+        if lat is None or lon is None:
+            return False
+        return (
+            great_circle_km(self.centre_lat, self.centre_lon, lat, lon)
+            <= self.radius_km
+        )
+
+
+def plan_track_perturbation(
+    layout: RfLayout, spec: RunSpec
+) -> TrackPerturbation | None:
     """What this run stages on the tracks, or None when it stages nothing.
 
-    Shares the incident's window rather than taking one of its own: the fusion
-    rule looks for RF noise and track effects in the *same* window, so two
-    windows that merely overlapped would make the scenario's own detectability
-    a function of how far they happened to drift apart.
+    **One centre per run, shared with the RF half.** The zone is derived from
+    the seed by the same function `plan_incident` uses, so for the two types
+    that stage on both sides the radio anomaly and the track effect are
+    co-located by construction rather than by a caller remembering to line them
+    up. `anom-005` fuses on co-location in space as well as in time, so two
+    independently placed halves would make a scenario's own detectability a
+    function of how far apart they happened to land.
+
+    The window is shared for the same reason, and `aircraft-coverage-gap` gets
+    a zone of its own despite having no radio incident -- its dropouts have to
+    cluster somewhere or `anom-004` has nothing to group.
     """
     scenario_type = ScenarioType(spec.scenario_type)
     mode = _MODES.get(scenario_type)
     if mode is None:
         return None
 
+    centre = layout.site(centre_sensor_id(layout, spec.seed))
     start = spec.start + timedelta(seconds=spec.incident.start_offset_s)
     return TrackPerturbation(
         mode=mode,
@@ -116,6 +146,9 @@ def plan_track_perturbation(spec: RunSpec) -> TrackPerturbation | None:
         end=start + timedelta(seconds=spec.incident.duration_s),
         fraction=DEFAULT_AFFECTED_FRACTION,
         seed=spec.seed,
+        centre_lat=centre.lat,
+        centre_lon=centre.lon,
+        radius_km=spec.incident.radius_km,
     )
 
 
@@ -180,6 +213,10 @@ class TrackPerturber:
         """
         timestamp = record["timestamp"]
         if not self._perturbation.covers(timestamp):
+            return dict(record)
+
+        location = record.get("location") or {}
+        if not self._perturbation.contains(location.get("lat"), location.get("lon")):
             return dict(record)
 
         identifier = record["payload"].get("icao24")

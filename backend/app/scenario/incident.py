@@ -148,8 +148,13 @@ def _channels(layout: RfLayout, extent: SpectralExtent) -> tuple[int, ...]:
     return (_l1_index(layout),)
 
 
-def _centre_sensor(layout: RfLayout, seed: int) -> str:
+def centre_sensor_id(layout: RfLayout, seed: int) -> str:
     """The receiver the incident is centred on, chosen from the seed.
+
+    Public because the track half needs the same answer: one centre per run,
+    shared by both, is what makes the radio anomaly and the track effect
+    co-located by construction (`scn-002`). Two copies of this draw would be
+    two zones that agree until someone edits one of them.
 
     Receivers are sorted before indexing so the choice depends on the layout's
     contents rather than on the order they happen to appear in the file --
@@ -173,7 +178,7 @@ def plan_incident(layout: RfLayout, spec: RunSpec) -> Incident | None:
         return None
 
     parameters = spec.incident
-    centre = _centre_sensor(layout, spec.seed)
+    centre = centre_sensor_id(layout, spec.seed)
     if scenario_type in _SINGLE_SENSOR_TYPES:
         sensors: tuple[str, ...] = (centre,)
     else:

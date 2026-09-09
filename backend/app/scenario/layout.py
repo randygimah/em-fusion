@@ -79,7 +79,13 @@ class LayoutError(ValueError):
     """
 
 
-def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+def great_circle_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Great-circle distance in kilometres.
+
+    Public because `scn-002` asks the same question of an aircraft that this
+    module asks of a receiver -- "is it inside the zone" -- and two
+    implementations of one distance is how two answers start disagreeing.
+    """
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
     d_phi = phi2 - phi1
     d_lambda = math.radians(lon2 - lon1)
@@ -179,7 +185,7 @@ class RfLayout(_Frozen):
         radius = self.discrimination_radius_km
         for site in self.sensors:
             distances = [
-                _haversine_km(site.lat, site.lon, other.lat, other.lon)
+                great_circle_km(site.lat, site.lon, other.lat, other.lon)
                 for other in self.sensors
                 if other.sensor_id != site.sensor_id
             ]
@@ -196,7 +202,10 @@ class RfLayout(_Frozen):
                 )
         return self
 
-    def _site(self, sensor_id: str) -> SensorSite:
+    def site(self, sensor_id: str) -> SensorSite:
+        """One receiver by identifier. Raises `KeyError` if it is not in this
+        layout, because an unknown identifier is a caller bug rather than an
+        empty result."""
         for site in self.sensors:
             if site.sensor_id == sensor_id:
                 return site
@@ -204,8 +213,8 @@ class RfLayout(_Frozen):
 
     def distance_km(self, sensor_id: str, other_id: str) -> float:
         """Great-circle distance between two sensors, in kilometres."""
-        a, b = self._site(sensor_id), self._site(other_id)
-        return _haversine_km(a.lat, a.lon, b.lat, b.lon)
+        a, b = self.site(sensor_id), self.site(other_id)
+        return great_circle_km(a.lat, a.lon, b.lat, b.lon)
 
     def neighbours(
         self, sensor_id: str, radius_km: float | None = None
@@ -217,12 +226,12 @@ class RfLayout(_Frozen):
         empty result, which would read as "no neighbours" and quietly turn the
         neighbour test into a pass.
         """
-        origin = self._site(sensor_id)
+        origin = self.site(sensor_id)
         limit = self.discrimination_radius_km if radius_km is None else radius_km
         ranked = sorted(
             (
                 (
-                    _haversine_km(origin.lat, origin.lon, other.lat, other.lon),
+                    great_circle_km(origin.lat, origin.lon, other.lat, other.lon),
                     other.sensor_id,
                 )
                 for other in self.sensors

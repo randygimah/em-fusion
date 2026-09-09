@@ -44,7 +44,13 @@ import pytest
 
 from app.dal.pseudonymise import Pseudonymiser
 from app.scenario.emitter import BaselineParameters, RunSpec
-from app.scenario.incident import IncidentParameters, ScenarioType, ground_truth
+from app.scenario.incident import (
+    IncidentParameters,
+    ScenarioType,
+    centre_sensor_id,
+    ground_truth,
+)
+from app.scenario.layout import load_layout
 from app.scenario.tracks import (
     TrackMode,
     TrackPerturber,
@@ -53,6 +59,8 @@ from app.scenario.tracks import (
 )
 
 PSEUDONYMISER = Pseudonymiser(seed="a-test-seed-not-the-real-one")
+
+LAYOUT = load_layout()
 
 SEED = 20220627
 START = datetime(2022, 6, 27, 12, 0, 0, tzinfo=UTC)
@@ -63,6 +71,12 @@ WINDOW_S = 300
 #: Inside the staged window, and outside it on both sides. Written as offsets
 #: from the run start so the three move together if the window does.
 DURING = START + timedelta(seconds=OFFSET_S + 10)
+
+#: Inside the staged zone. Pass 3 added the spatial axis the spec always
+#: called for -- "aircraft inside the affected area" -- so a record has to be
+#: somewhere the incident reaches before anything happens to it. These fixtures
+#: previously sat near Koln-Bonn, which the zone for this seed excludes.
+_CENTRE = LAYOUT.site(centre_sensor_id(LAYOUT, SEED))
 BEFORE = START + timedelta(seconds=OFFSET_S - 10)
 AFTER = START + timedelta(seconds=OFFSET_S + WINDOW_S + 10)
 
@@ -88,6 +102,8 @@ def _record(
     at: datetime = DURING,
     position_staleness_s: float = 1.06,
     contact_staleness_s: float = 0.0,
+    lat: float = _CENTRE.lat,
+    lon: float = _CENTRE.lon,
 ) -> dict[str, Any]:
     """One track source record, in the shape the OpenSky adapter emits.
 
@@ -99,7 +115,7 @@ def _record(
         "source_type": "opensky",
         "observation_type": "track",
         "timestamp": at,
-        "location": {"lat": 51.0905, "lon": 7.5473},
+        "location": {"lat": lat, "lon": lon},
         "payload": {
             "icao24": icao24,
             "callsign": "CXI27NM ",
@@ -117,7 +133,7 @@ def _record(
 def _perturber(
     spec: RunSpec, *, excluded: frozenset[str] = frozenset()
 ) -> TrackPerturber:
-    perturbation = plan_track_perturbation(spec)
+    perturbation = plan_track_perturbation(LAYOUT, spec)
     assert perturbation is not None
     return TrackPerturber(perturbation, pseudonymiser=PSEUDONYMISER, excluded=excluded)
 
@@ -136,7 +152,9 @@ def _targeted_aircraft(spec: RunSpec, count: int = 200) -> set[str]:
 def test_normal_baseline_perturbs_no_track() -> None:
     # spec: scn-002, anom-008
     assert (
-        plan_track_perturbation(_spec(scenario_type=ScenarioType.NORMAL_BASELINE))
+        plan_track_perturbation(
+            LAYOUT, _spec(scenario_type=ScenarioType.NORMAL_BASELINE)
+        )
         is None
     )
 
@@ -147,7 +165,9 @@ def test_a_sensor_fault_perturbs_no_track() -> None:
     # this staged a track effect too, the sensor-fault rule and the fusion rule
     # would both fire and the scenario would stop being a single-cause case.
     assert (
-        plan_track_perturbation(_spec(scenario_type=ScenarioType.RF_SENSOR_FAULT))
+        plan_track_perturbation(
+            LAYOUT, _spec(scenario_type=ScenarioType.RF_SENSOR_FAULT)
+        )
         is None
     )
 
@@ -155,9 +175,11 @@ def test_a_sensor_fault_perturbs_no_track() -> None:
 def test_a_coverage_gap_suppresses_and_gnss_degradation_freezes() -> None:
     # spec: scn-002
     gap = plan_track_perturbation(
-        _spec(scenario_type=ScenarioType.AIRCRAFT_COVERAGE_GAP)
+        LAYOUT, _spec(scenario_type=ScenarioType.AIRCRAFT_COVERAGE_GAP)
     )
-    gnss = plan_track_perturbation(_spec(scenario_type=ScenarioType.GNSS_DEGRADATION))
+    gnss = plan_track_perturbation(
+        LAYOUT, _spec(scenario_type=ScenarioType.GNSS_DEGRADATION)
+    )
     assert gap is not None and gnss is not None
 
     assert gap.mode is TrackMode.SUPPRESS
