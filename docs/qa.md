@@ -3434,6 +3434,130 @@ hundreds; being wrongly absent from it costs the false-positive rate for an enti
 That is a deliberate asymmetry rather than a conservative default applied by habit, and it means the
 list should be read as "tracks that might carry a natural gap", not "tracks that certainly do".
 
+## 50. What is even a normal baseline — is that just signal noise?
+
+**Half of it is. The half that is not is most of the data, and it is real.**
+
+The wrong assumption worth naming first is that the quiet run is an empty file, or a synthetic
+nothing used as a placeholder. It is neither. Every run of this system carries two streams, and the
+quiet run carries both in full:
+
+| Stream | In a quiet run | Share of the data |
+|---|---|---|
+| **Replayed aircraft reports** | Untouched. Real recorded traffic, exactly as archived | 133,134 reports from 948 aircraft, per hour |
+| **Invented radio readings** | A noise floor with a seeded wobble on it | 5,040 readings per fifteen minutes; 20,160 per hour |
+
+So the radio half is noise, yes — but *specific, reproducible* noise, and calling it "just" noise
+understates what it is for. It does three jobs at once:
+
+1. **It is the reference.** The Phase 8 baseline engine learns what normal looks like per receiver
+   and per slice by averaging over quiet runs. There is nothing else to learn it from.
+2. **It is the false-alarm control.** On a quiet run every finding is by definition wrong, because
+   nothing was staged. That is the only run from which a false-positive rate can be computed, and it
+   is why the spec's first failure case is `normal-baseline` injecting *anything at all*.
+3. **It is the substrate.** The other four kinds of run are this run plus an addition, which is why
+   it matters so much that adding an incident leaves every reading outside it untouched.
+
+### What a single quiet reading actually looks like
+
+```
+sensor RF-04 · slice 5 (1577.42 MHz) · 12:02:00
+  power        -93.91 dBm      ← a nominal -95 dBm floor, plus this cell's own wobble
+  clarity       18.91 dB
+  departure     +1.09 dB       ← how far this reading sits from the floor
+  signal type   noise          ← the same on every reading in every run, staged or not
+```
+
+The floor is −95 dBm and the wobble has a spread of about 1.5 dB, so a quiet reading is almost
+always within three decibels of the floor. A staged incident raises it by 8 dB, which is several
+times the natural spread — comfortably detectable, deliberately so, because the first campaign should
+not be measuring a detector's behaviour at the edge of its sensitivity.
+
+### The trap in the last line
+
+`signal type` says `noise` on a staged reading too. It would be very natural to label the affected
+readings `interference`, and it would put the answer key on every record in a field both the
+detection rules and the analyst can read. The system would then be measured on its ability to read a
+label it wrote itself. A test asserts that every reading in a staged run carries the same label as
+every reading in a quiet one.
+
+### Worth recording as a limitation
+
+The quiet run is quiet in the spectrum and *real* in the traffic, which means it is not uniformly
+clean: about 1% of the aircraft in the corpus carry a genuine reporting gap of their own. Those are
+identified and excluded from injection, but they remain in a quiet run, where they are exactly the
+kind of thing a coverage-gap detector might legitimately fire on. The false-positive rate for that
+scenario type therefore has a floor that is a property of the corpus rather than of the detector.
+
+## 51. What does an evaluation of these scenarios actually look like — from a deterministic ground-truth view, and from a non-deterministic LLM view?
+
+**Two completely different instruments, and conflating them is the mistake to avoid.** One half of
+the system is marked by arithmetic; the other cannot be, and pretending otherwise would either
+invent a precision that is not there or abandon measurement entirely.
+
+### The deterministic half: set comparison
+
+The generator writes down what it staged, before the run, in a record the detector cannot read.
+Marking is then a comparison of two sets:
+
+| | |
+|---|---|
+| **Answer key** | receivers *Rotterdam, Schiphol* · navigation slice · 12:02:00–12:07:00 · 3 aircraft |
+| **Detector output** | whatever findings the rules produced, each with a place, a window and a kind |
+
+Every finding is a hit, a false alarm or a miss, and across 20–30 runs per scenario type those counts
+become precision, recall, F1 and a false-positive rate. Nothing here is a judgement. Two people
+running the same twenty runs get the same numbers, and so does the same person a year later, because
+the runs regenerate from one integer.
+
+The quiet control is the load-bearing part of this. Precision and recall say how well the system
+finds what is there; only the control says how often it finds what is not.
+
+### The non-deterministic half: there is no correct sentence
+
+The hypothesis layer takes a package of findings and produces an explanation in prose. That cannot be
+marked by comparison, and the reason is not that it is hard — it is that the target does not exist.
+Two good explanations of one evidence pack may share no wording; a wrong one can be word-perfect and
+fluent. So it is marked three times over, by three instruments of decreasing automation:
+
+| Gate | Who runs it | What a failure means |
+|---|---|---|
+| **Schema validation** | Machine | The output is not the required shape. Pass or fail, no judgement |
+| **Grounding check** | Machine | A claim in the explanation does not trace back to the evidence it was given. **How often this fires is itself a reported result, per generator** |
+| **Blind rubric scoring** | Two people, independently | Judgement, on five pre-registered dimensions, scored 1 / 3 / 5 |
+
+The five dimensions are evidence use, uncertainty, alternative explanations, recommended action and
+overall usefulness. Scoring is blind to which generator produced what, the order is shuffled, and the
+agreement between the two raters is reported alongside the scores rather than hidden — because a
+result from two raters who disagree wildly is a different kind of claim from one where they concur.
+
+### Why the comparison is possible at all
+
+The study compares a template generator — which fills a fixed form from the findings and can say
+nothing that is not in them — against a hosted language model under the same schema and the same
+grounding check. **Both arms see byte-identical evidence**, which is only achievable because the runs
+that produced it regenerate from one number. If the two arms saw even slightly different data, the
+study would be measuring scenario variation and reporting it as a difference between generators, and
+the difference would be invisible in the results.
+
+### Where the two halves meet: the ambiguous run
+
+On the four clear-cut scenario types the two instruments broadly agree, and a fluent generator looks
+strong. The ambiguous run is where they come apart. The evidence there genuinely supports two
+explanations — a faulty receiver, or real localised interference — and the correct output says so.
+The deterministic half cannot express that: its answer key records what was staged, and a detector
+either found it or did not. The rubric can, and two of its five dimensions exist for it.
+
+**This is the one case where a confident answer is the failure**, and it is why the type was defined
+as a single deviating receiver plus a co-located gap rather than as two unrelated events.
+
+### Worth recording as a threat to validity
+
+None of this has been run. No detection rule exists, no hypothesis has been generated, and no run has
+been marked. The shapes above were settled before the generator was built precisely because the
+shape of the measurement decides what the generator has to record — but they are a plan, and a plan
+that survives contact with real detector output unchanged would be unusual.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -3562,6 +3686,10 @@ list should be read as "tracks that might carry a natural gap", not "tracks that
 | **Salted hash** | Python's built-in `hash()`, whose result for a string varies per process. Stable within one run of a test suite and different the next morning — reproducible for exactly as long as it takes to be trusted. |
 | **Tick** | One interval of simulated time in a run; the layout fixes its length at 10 s. Position in the run, counted from zero — never a wall-clock reading. |
 | **Stream digest** | The SHA-256 over a run's canonical serialisation, with keys sorted and record order preserved. One definition of "the bytes", so byte-identity can be asserted, stored, or quoted without holding the stream. |
+| **Quiet run / normal baseline** | A run with real replayed traffic and an invented radio grid at its noise floor, and nothing staged. The reference the baseline engine learns from, the false-alarm control, and the substrate every other run adds to. See §50. |
+| **Staged incident** | What a run injects: a raised noise floor in a zone, a deviating receiver, suppressed aircraft reports, or a frozen position clock. Recorded in the run's answer key before the run is marked. |
+| **Answer key / ground truth** | What the generator staged, written at generation time and stored where the detector cannot read it. Recorded in two instalments: the plan with the run row, the aircraft actually touched at the end. |
+| **Grounding check** | The automatic test that every claim in a generated explanation traces back to the evidence supplied. Its catch rate is a reported result per generator, not a silent safety net. See §51. |
 | **Interior airborne gap** | A reporting gap whose bracketing rows both sit well inside the bounding box with the aircraft flying at both ends. The only kind that is evidence about coverage rather than about the box. Ten of them exist in the corpus, across seven tracks. See §49. |
 | **Exclusion list** | The committed set of tracks the coverage-gap scenario refuses as injection sites, identified by pseudonym. Without it a natural dropout and an injected one are indistinguishable and the false-positive rate for that scenario type means nothing. |
 | **Source record vs observation** | What the emitter produces and what the DAL produces. The first has no provenance, no data mode and no run identifier; the second has all three. `scn-001` emits the first only. |

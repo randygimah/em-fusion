@@ -1683,6 +1683,100 @@ about the contents of strings — the same move `db-006` made when it named `Ses
 looking at what a module imports is enforceable; a rule that requires reading what a module *says*
 is not.
 
+### The five scenario types span a confusion space rather than enumerate faults
+
+The obvious reading of "five scenario types" is a list of things that can go wrong, and under that
+reading the set looks arbitrary — why not six, why not congestion, why not a spoofed identity. The
+set is better understood as the smallest one that forces the system to *discriminate*, and the
+discriminations it must make are fixed by the three deterministic rules Phase 8 will carry: noise
+co-located with track trouble means interference; track trouble with a clean spectrum means a
+data-source problem; a single receiver deviating while its neighbours stay nominal means the
+receiver. Four of the five types land squarely on one of those, and the fifth is built to land
+between two.
+
+`normal-baseline` earns its place by staging nothing, which makes it the only run on which any
+finding at all is definitionally wrong, and therefore the only run from which a false-positive rate
+can be computed. `gnss-degradation` and `aircraft-coverage-gap` are a matched pair distinguished
+only by the spectrum: both produce aircraft trouble, and the presence or absence of a co-located
+raised floor is what separates interference from a receiving problem. `rf-sensor-fault` is the case
+where the environment is innocent.
+
+`ambiguous-mixed-evidence` is the one that required a decision, because the item named it without
+defining it. Three readings were considered. A track gap and an RF anomaly *separated in space*
+beyond the fusion distance was rejected: it is a negative test for the fusion rule, which that rule's
+own failure case already covers, and the evidence it produces reads as unrelated rather than
+ambiguous. Two overlapping unrelated injections was rejected because the ground truth would then
+describe two events, which complicates every per-scenario metric in the harness for no gain in what
+is being studied. The chosen reading is a **single deviating receiver with a co-located
+contemporaneous coverage gap** — which is `rf-sensor-fault` plus one addition, and that is the
+point. The sensor-fault rule reads the clean neighbours as evidence of a faulty receiver; the fusion
+rule reads the co-located gap as evidence of real interference. Both readings are available, neither
+is safe, and the correct output is that the two cannot be distinguished. It is the only run in the
+set where *confidence itself is the error*, which is what makes it the sharpest instrument in the
+generator comparison: a fluent arm that produces a crisp, well-written, confident answer is worse
+than one that declines, and two of the rubric's five dimensions — uncertainty, and alternative
+explanations — exist to catch exactly that.
+
+A related decision is recorded here rather than rediscovered later: **spectral extent is a parameter
+of two types, not a sixth type.** Narrowband and broadband interference differ in what the
+frequency-adjacency evidence says, not in what caused them, and modelling them as separate types
+would make a comparison between narrow and wide a comparison *between scenarios* — confounded with
+everything else that differs between two types — rather than a comparison within one.
+
+### One centre per run, and a defect that shipped because the spec was read too narrowly
+
+`scn-002` was built in passes: the RF grid first, the replayed tracks second. Each pass was green,
+mutation-tested and committed, and the second pass shipped a real defect anyway. Track targeting was
+keyed to the seed and the aircraft's own identity — order-independent, reproducible, everything the
+determinism work required — and applied to the **whole fleet**, with no reference to where the
+incident was. A navigation incident centred on Rotterdam would therefore have frozen the reported
+positions of aircraft over Cologne, 200 km away, while the answer key recorded the two as one event.
+
+The spec said "aircraft inside the affected area" from the moment it was amended. The defect was not
+a missing requirement but a partial reading of one, and the tests written for that pass encoded the
+same partial reading, so nothing failed. What surfaced it was writing the *next* pass, where
+co-location is the whole substance of the scenario and its absence became impossible to miss.
+
+The fix is structural rather than a check bolted on. There is now **one centre per run**, derived
+from the seed by the same function both halves call, so the radio anomaly and the track effect are
+co-located by construction rather than by a caller remembering to line them up. `anom-005` fuses on
+co-location in space as well as in time, so two independently placed halves would have made a
+scenario's own detectability a function of how far apart they happened to land — a confound that
+would have appeared in the results as detector behaviour. `aircraft-coverage-gap` is given a zone of
+its own despite having no radio incident, because its dropouts have to cluster somewhere or
+`anom-004` has nothing to group.
+
+The generalisable finding is about test authorship rather than about zones: **tests written from the
+same reading of the spec as the implementation cannot catch a misreading of the spec.** Both were
+mine, written in the same hour, and they agreed with each other perfectly. What caught it was a later
+piece of work whose correctness depended on the same property from a different direction.
+
+### Freezing a position without holding state, and what the shortcut costs
+
+The `gnss-degradation` signature is an aircraft that keeps transmitting while the position it reports
+stops advancing — fresh contact, stale position, the shape 4,553 rows of the real corpus already
+carry. The obvious implementation holds each aircraft's last position and re-emits it for the
+duration of the window.
+
+That was rejected, and the reason is `scn-001` rather than anything about aviation. Holding a last
+position is per-aircraft state, and the replay processes the corpus one window at a time; state
+would have to persist across those batches, which makes the output a function of how the replay was
+batched and in what order the batches ran. That is precisely the process-dependent-ordering leak the
+determinism work closed, reintroduced at a different layer.
+
+The implementation instead rewrites the *reported position staleness* to grow with elapsed time
+inside the window and leaves contact staleness untouched. It is stateless, order-independent, and it
+moves the field the canonical model documents as the discriminator and the field the Phase 8 rules
+will read.
+
+**The cost is real and is recorded as a limitation.** The coordinate itself continues to advance, so
+an aircraft under a staged navigation incident reports a position that is moving while claiming to be
+three hundred seconds old. A detector that recomputed staleness from successive coordinates, rather
+than reading the reported value, would not see the signature at all — and would be right to be
+suspicious. No rule in Phase 8 does this, so nothing in the planned system is affected; a rule added
+later that did so would silently fail on this scenario type. *(If such a rule is ever written, this
+trade has to be revisited rather than worked around.)*
+
 ## Implementation
 
 <!-- Notable technical decisions per phase (link to implementation.md phases), challenges and
@@ -2610,6 +2704,64 @@ and the second time the coverage report has been the thing that noticed. And two
 tests were wrong on first run: one assumed each aircraft carries at most one gap, which is what the
 corrected figure above disproves, and one used a fixture in which the second aircraft had a
 qualifying gap of its own while asserting that only one gap existed.
+
+### `scn-002` in four passes, and what each one found
+
+The item was too large to test in one batch — roughly sixty tests over two producers — so it was
+built in four passes, each a complete spec-test-code cycle with no code preceding its own tests: the
+RF grid, the replayed tracks, the ambiguous type together with the shared zone, and the answer key
+reaching the database. The structure is worth recording because the passes found different kinds of
+thing, and only the first was the kind the workflow is designed to find.
+
+**Pass 1** was uneventful and produced the item's strongest test.
+`test_every_untouched_cell_is_identical_to_the_quiet_run` compares an injected run against the same
+seed's baseline cell by cell: 5,040 readings in a fifteen-minute run, of which 60 change — two
+receivers, one slice, thirty ten-second steps, exactly what the answer key says. That test is only
+*passable* because of the keyed derivation chosen in `scn-001`; under sequential draws the extra
+per-cell draw would shift every reading after the first one it touched. A design decision made for
+one reason paid off in another, which is the kind of thing worth noticing in a write-up rather than
+presenting as foresight.
+
+**Pass 2** shipped the co-location defect described in System Design above, and produced a test
+defect of a family this project keeps meeting. An `api-009` check asserted that no key of a record
+contains the substring `"ground"` — and `on_ground`, a legitimate field recording whether the
+aircraft is airborne, matches it. The same assertion in pass 1 had passed only because RF payloads
+happen to carry no similarly-named field. Both now compare *structure*: a perturbation may change
+what a field says, and may never add a field. This is the fifth appearance of text-matching where
+parsing was needed.
+
+**Pass 3** required editing pass 2's committed tests, because the zone changed the signature they
+called and their fixture aircraft sat at Köln/Bonn, outside it. Editing tests to accommodate an
+implementation change is usually a smell; here it is the correct response to a misreading being
+corrected, and the change is annotated in the file so the reason survives.
+
+**Pass 4** raised a question the spec had not settled: *when* ground truth is recorded. The item says
+"at generation time, never inferred afterwards from detector output", which rules out the wrong
+answer without choosing between two right ones. What a run intends to stage is known before it
+starts; which aircraft it actually touched is known only once the corpus has streamed past, because
+whether a targeted aircraft appears inside the zone during the window is a property of the data
+rather than of the seed. Recording only the plan would mean an answer key naming aircraft that never
+appeared, scoring the detector as having missed things it was never shown. Recording only at the end
+would mean a run that died part-way left no record of what it was attempting. Both are therefore
+written: the plan with the run row, the completed key at the end of generation. Both are generation
+time, and neither consults a detector.
+
+Mutation results across the four passes, each applied from a committed baseline, asserted to have
+been substituted, and reverted:
+
+| Mutation | Red |
+|---|---|
+| A sixth scenario type added | 1 — the closed-set assertion, and nothing else |
+| Perturbation ignores the zone | 2 |
+| The two halves stop sharing a centre | 4 |
+| The answer key written as `{}` rather than null when absent | 2, including an existing replay test |
+
+The first row is the one the stub practice predicted. `test_there_are_exactly_five_scenario_types`
+passed against the stub, because the stub declared the enum — an absence assertion, which the
+practice established at `db-005` says to mutation-test rather than delete. Two further tests in pass
+3 passed against their stub for a different and legitimate reason: the ambiguous type inherits its
+single-receiver shape from pass 1, so those tests assert a composition that was already true. They
+are regression guards and cannot fail today, which is recorded rather than treated as a pass.
 
 ## Evaluation
 
