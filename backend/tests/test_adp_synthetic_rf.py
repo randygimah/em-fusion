@@ -25,7 +25,7 @@ against a fake that raised on the second call.
 from __future__ import annotations
 
 import ast
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -117,17 +117,33 @@ def _grid_size(layout: RfLayout, spec: RunSpec) -> int:
 
 
 def _digest(observations: Iterable[CanonicalObservation]) -> str:
-    """The stored stream in the same canonical form `scn-001` digests.
+    """The stored stream, digested by `scn-001`'s committed serialisation.
 
-    Reuses the committed serialisation rather than inventing a second one, so
-    "the same run stores the same stream" is the same claim as "the same run
-    emits the same stream", measured one layer further down.
+    Reuses that function rather than inventing a second one, so "the same run
+    stores the same stream" is the same claim as "the same run emits the same
+    stream", measured one layer further down.
     """
     return stream_digest(
         [
             {"timestamp": observation.timestamp, **observation.payload.model_dump()}
             for observation in observations
         ]
+    )
+
+
+def _emitted_digest(records: Iterable[Mapping[str, Any]]) -> str:
+    """The *emitted* stream, flattened into the shape `_digest` produces.
+
+    Both sides must be reduced to the same shape before they are comparable. A
+    stored observation carries provenance the emitter never produced, so
+    digesting the raw source records against digested payloads compares two
+    serialisations rather than two streams -- which makes an equality assertion
+    fail whatever the adapter does, and an inequality assertion pass whatever it
+    does. Both forms were written here first, and the second was passing for
+    that reason.
+    """
+    return stream_digest(
+        [{"timestamp": record["timestamp"], **record["payload"]} for record in records]
     )
 
 
@@ -356,7 +372,7 @@ def test_a_staged_run_is_stored_staged(
 
     emit_run(layout, spec, RUN_ID, repository, PSEUDONYMISER)
 
-    assert _digest(repository.observations) != stream_digest(
+    assert _digest(repository.observations) != _emitted_digest(
         emit_baseline(layout, spec)
     )
 
@@ -371,7 +387,7 @@ def test_a_baseline_run_is_stored_quiet(
 
     emit_run(layout, spec, RUN_ID, repository, PSEUDONYMISER)
 
-    assert _digest(repository.observations) == stream_digest(
+    assert _digest(repository.observations) == _emitted_digest(
         emit_baseline(layout, spec)
     )
 
@@ -430,7 +446,13 @@ def test_a_failed_write_stores_nothing(layout: RfLayout) -> None:
 def test_the_adapter_invents_no_numbers() -> None:
     """The stream is `scn-001`'s and stays there. An adapter that derived a
     reading of its own would be a second generator, outside everything
-    `scn-001` proves about determinism."""
+    `scn-001` proves about determinism.
+
+    Asserts an absence, so it could not fail before the module existed and
+    passed against the stub this file was proven red against. Mutation-tested
+    instead, 2026-09-11: an adapter that nudges `snr_db` by a derived unit
+    turns this red, along with two behavioural tests.
+    """
     # spec: adp-002, scn-001
     imported = _imports(synthetic_rf)
 
@@ -443,7 +465,14 @@ def test_the_adapter_invents_no_numbers() -> None:
 def test_the_adapter_holds_no_sql_and_no_run_lifecycle() -> None:
     """The fifth decision: it is handed a run id and writes observations under
     it. Creating the run, recording ground truth and marking completion belong
-    to the producer of the run (`scn-003`, `db-007`)."""
+    to the producer of the run (`scn-003`, `db-007`).
+
+    Asserts an absence, and passed against the stub for that reason.
+    Mutation-tested instead, 2026-09-11: an adapter defining its own
+    `create_scenario_run` turns this red, and it is the only test that moves --
+    which is the point of writing it, since nothing about the stored rows would
+    look wrong.
+    """
     # spec: adp-002, db-007
     tree = ast.parse(Path(synthetic_rf.__file__).read_text(encoding="utf-8"))
     imported = _imports(synthetic_rf)
