@@ -176,6 +176,7 @@ def create_scenario_run(
     scenario_type: str,
     parameters: Mapping[str, Any],
     seed: int,
+    ground_truth: Mapping[str, Any] | None = None,
 ) -> int:
     """Open a run and return its id. Spec: scn-001.
 
@@ -200,23 +201,71 @@ def create_scenario_run(
     `text()` statement carries no type information for psycopg to adapt
     against. Sorted keys so that two runs configured identically produce
     identical rows.
+
+    `ground_truth` is what the run intends to stage, written with the row so
+    that a run which dies part-way still says what it was attempting
+    (`scn-002`). It stays null when there is nothing staged to describe -- a
+    replay has no answer key, and null says so, whereas an empty object would
+    claim the run staged nothing, which only the quiet control is entitled to
+    say.
     """
     with session_factory.begin() as session:
         return int(
             session.execute(
                 text(
                     "INSERT INTO scenario_runs "
-                    "(scenario_type, parameters, seed, started_at) "
+                    "(scenario_type, parameters, seed, started_at, ground_truth) "
                     "VALUES (:scenario_type, CAST(:parameters AS jsonb), "
-                    ":seed, now()) RETURNING id"
+                    ":seed, now(), CAST(:ground_truth AS jsonb)) RETURNING id"
                 ),
                 {
                     "scenario_type": scenario_type,
                     "parameters": json.dumps(dict(parameters), sort_keys=True),
                     "seed": seed,
+                    "ground_truth": (
+                        None
+                        if ground_truth is None
+                        else json.dumps(dict(ground_truth), sort_keys=True)
+                    ),
                 },
             ).scalar_one()
         )
+
+
+def record_ground_truth(
+    session_factory: sessionmaker[Session], run_id: int, truth: Mapping[str, Any]
+) -> None:
+    """Write the finished answer key onto a run. Spec: scn-002.
+
+    The second instalment. What a run *planned* to stage is known before it
+    starts and is written with the row; which aircraft it actually touched is
+    known only once the corpus has streamed past, because whether a targeted
+    aircraft appears inside the zone during the window is a property of the
+    data rather than of the seed. An answer key naming aircraft that never
+    appeared would score the detector as missing things it was never shown.
+
+    Both instalments happen at generation time. Nothing here is ever derived
+    from detector output, which is the line that makes a measurement against
+    this record mean anything.
+
+    Raises `LookupError` on an unknown run, for the reason `db-007` gives: an
+    `UPDATE` matching nothing is a success by default, so a caller holding the
+    wrong id would write the answer key nowhere and be told it worked -- and
+    the run would then be scored against an absent ground truth.
+    """
+    with session_factory.begin() as session:
+        result = session.connection().execute(
+            text(
+                "UPDATE scenario_runs SET ground_truth = CAST(:truth AS jsonb) "
+                "WHERE id = :run_id"
+            ),
+            {"truth": json.dumps(dict(truth), sort_keys=True), "run_id": run_id},
+        )
+        if result.rowcount != 1:
+            raise LookupError(
+                f"scenario run {run_id} does not exist, so its ground truth "
+                f"cannot be recorded: {result.rowcount} rows updated."
+            )
 
 
 def complete_scenario_run(session_factory: sessionmaker[Session], run_id: int) -> None:
