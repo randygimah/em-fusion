@@ -3558,6 +3558,88 @@ been marked. The shapes above were settled before the generator was built precis
 shape of the measurement decides what the generator has to record — but they are a plan, and a plan
 that survives contact with real detector output unchanged would be unusual.
 
+## 52. Should `adp-002` land first before `scn-003`? Will that make a full run more viable?
+
+**Yes on both counts, and the second is the reason for the first.** `scn-003` is a loop, and a loop
+needs a body. Today nothing in `app/` composes a whole run: the generator produces streams and plans
+— `emit_rf`, `plan_incident`, `plan_track_perturbation`, `TrackPerturber` — and every one of them is
+called only from the test suite. `adp-002` is the item that turns an emitted stream into stored
+observations, so it is the body the batch executes.
+
+### What each item owns
+
+| Item | Owns | State |
+|---|---|---|
+| `scn-001` | The seeded emitter and the `RunSpec` — the stream, in memory | Passing |
+| `scn-002` | What a run stages, and the answer key describing it | Passing |
+| **`adp-002`** | **One run's stream driven through the DAL into the store** | **Not built** |
+| `scn-003` | N runs from one base seed, unattended, failures isolated | Not built |
+| `eval-001` | The same batch with detector output attached | Not built |
+
+The ordering is not a preference. `scn-003` names `scn-001` and `eval-001` in its references and not
+`adp-002`, which reads as independence and is not: `scn-001` explicitly deferred persistence
+("persistence through the DAL is `adp-002`'s"), so the gap was always going to be filled by whichever
+item first needed a run to exist in the database. That item is the batch runner.
+
+### The DAL half is already done, which is why this is cheap
+
+`RfPayload` and the emitter's reading agree field for field — nine fields, same names, same types:
+
+| `RfPayload` (`app/dal/models.py`) | `_reading` (`app/scenario/emitter.py`) |
+|---|---|
+| `sensor_id`, `channel_index`, `centre_frequency_mhz`, `band` | identical |
+| `power_dbm`, `snr_db`, `bandwidth_mhz` | identical |
+| `signal_type`, `baseline_delta_db` | identical |
+
+Validation is generic over `PAYLOAD_TYPES`, so an emitted record already validates. What is missing
+is only the driver — the synthetic-RF counterpart of `replay_window`: take the layout, a `RunSpec`
+and an incident, emit, and hand the stream to `ingest_batch` under an `IngestContext` carrying
+`data_mode=SYNTHETIC` and the run id. That is a small module, not a subsystem.
+
+### What a full run becomes once it exists
+
+```
+create_scenario_run(type, parameters, seed, planned truth)   # scn-001, scn-002
+emit + ingest the RF grid                                     # adp-002
+replay a corpus window through TrackPerturber                 # scn-002's seam
+record_ground_truth(run_id, finished truth)                   # scn-002, 2nd instalment
+complete_scenario_run(run_id)                                 # db-007
+```
+
+`scn-003` then adds exactly what it claims to add and nothing else: seeds derived from one base
+value, the loop over 20–30 of them, and the rule that one run raising does not take the batch with
+it.
+
+### What goes wrong if it is skipped
+
+Three things, and the third is the one that would not be noticed until much later.
+
+1. **The batch writes empty runs.** Twenty-five rows carrying parameters and an answer key over zero
+   observations. `make generate` would start working and produce nothing worth generating.
+2. **Phase 8 starves.** The first thing the baseline engine does is average over `normal-baseline`
+   runs, per sensor per channel. Those runs would exist as rows and contain no readings.
+3. **The failure case becomes untestable in any honest way.** `scn-003`'s spec turns on "a failing
+   run is recorded and skipped rather than aborting the batch". With no observations, nothing in the
+   loop can realistically fail, so the only way to see a failure is to inject a fake one — which
+   tests the test rather than the runner.
+
+### Worth recording as a limitation
+
+Two things `adp-002` does *not* settle, both still open when `scn-003` starts.
+
+**Whether a batch run replays the track half.** The answer key's `aircraft` list is populated by
+`TrackPerturber.affected`, which is collected rather than predicted — it only fills as the corpus
+streams past. A batch that emits RF alone therefore writes an empty aircraft list on every run,
+including `aircraft-coverage-gap`, whose entire signature is the aircraft it suppresses. Those runs
+would be unscorable, and the false-positive figure for that type meaningless. The cost of the
+alternative is a dependency on the OpenSky extract being on disk when the batch runs.
+
+**The run row cannot yet reproduce its own stream.** `RunSpec.as_parameters()` records the baseline
+and incident parameters and neither `start` nor `duration_seconds`. `scn-001`'s reproduction test
+gets the window from a module-level constant, not from the row — so the property holds in the test
+and not from the database. `scn-003` claims the whole batch is reproducible from one value, which
+that omission makes false in practice; the window has to go onto the row as part of this work.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
