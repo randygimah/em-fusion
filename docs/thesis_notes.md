@@ -2763,6 +2763,107 @@ practice established at `db-005` says to mutation-test rather than delete. Two f
 single-receiver shape from pass 1, so those tests assert a composition that was already true. They
 are regression guards and cannot fail today, which is recorded rather than treated as a pass.
 
+### The synthetic run commits whole, and the argument that chose windows for the replay reverses
+
+`adp-007` tiles a replay into five-minute windows and commits each one separately, which is a
+deliberate weakening of the all-or-nothing guarantee the Data Abstraction Layer makes: an
+interrupted replay leaves the windows it already wrote in place. `adp-002` does the opposite. One
+synthetic run is one transaction, and a run that fails part-way leaves nothing at all. The two
+decisions look inconsistent and are not, because the argument that produced the first reverses on
+the second side of the system.
+
+What decided the replay was the cost of losing committed work. The corpus is 133,634 rows and takes
+about ten seconds to drive through the DAL into PostGIS; it is also an artefact that cannot be
+redistributed under the OpenSky licence and is rebuilt from a manifest rather than stored, so work
+lost there is work that has to be reconstructed from outside the repository. A synthetic run has no
+equivalent cost. It regenerates byte-identically from its seed — an hour of the shipped layout
+emits in about a tenth of a second — so discarding a partial run and repeating it is close to free,
+and the thing that was expensive to lose is the thing the seed makes cheap to recreate. Size does
+not resist the choice either: one fifteen-minute run is 5,040 records against roughly 11,100 in each
+of the replay's twelve batches, so the large-transaction objection that shaped `adp-007` does not
+apply at this scale.
+
+The consumer decided the rest. `scn-003` executes batches of twenty to thirty runs and is required
+to record a failing run and carry on rather than abort, which means the store will contain rows
+belonging to runs the batch knows failed. If a failed run could leave half its grid behind, those
+rows would still be read as observations by everything downstream — a detector would see a run that
+simply stops mid-window, and would be right to call it a coverage gap. The scenario type that
+stages exactly that signature is one of the five. Committing whole means a skipped run contributes
+nothing rather than contributing a convincing artefact.
+
+Three smaller decisions in the same item were made for the same kind of reason — removing the
+opportunity for a caller to be wrong, rather than detecting it afterwards.
+
+The adapter **plans the incident itself** from the run specification rather than accepting one.
+Accepting an `Incident` would have been symmetrical with the emitter underneath it, which takes one,
+and it would allow a caller to emit a quiet grid under a run row whose answer key claims
+interference. Nothing downstream could detect that: the observations would be internally consistent,
+the ground truth would be internally consistent, and the run would score as a total detection
+failure. Since the planner is a pure function of the layout and the specification, the batch runner
+computing it again for the answer key gets the same result by construction rather than by
+agreement.
+
+The **data mode is not an argument**. A synthetic source has exactly one mode it may claim, and the
+analyst-facing badge reads that field off the data rather than off a constant in the interface, so a
+mislabelled row makes the interface misdescribe what the analyst is looking at. Building the ingest
+context inside the adapter removes the parameter that could carry the wrong value, and the
+corresponding test asserts the other enum member is never referenced in the module at all.
+
+The **pseudonymiser is carried and unused**. RF payloads have no identifier rules, so substitution is
+a no-op on them, and it would have been tidier to let this one source skip the argument. It is
+passed anyway, because the guarantee that provenance and pseudonymisation are properties of the
+architecture rather than of each adapter's diligence rests on there being one way in. A single
+entrypoint with an exemption for one source is not a single entrypoint, and the next source arrives
+to find two patterns and a choice to make.
+
+#### A test whose two sides were not comparable, and the one that hid behind it
+
+The implementation found a defect in the tests written the same day. Two tests compared a digest of
+the stored observations against a digest of the emitted stream: one asserting equality for the clean
+scenario type, the other inequality for a staged one. The stored side was flattened to a timestamp
+and a payload; the emitted side was digested as whole source records, which also carry a source
+identifier, a source type, an observation type and a location. The two sides were therefore never
+comparable, and neither test was measuring what it claimed. The equality assertion could not hold
+however correct the adapter was, and the inequality assertion could not fail however wrong it was.
+
+Only one of the pair announced itself. The equality test failed on the first run of the
+implementation and was investigated; the inequality test had been green since it was written and
+would have stayed green through any mutation, including the one that mattered — an adapter that
+never applies the incident at all. The false-passing test was invisible precisely because its twin
+failed loudly, which is the part worth recording: a broken assertion in a pair is easy to find, and
+its mirror image is not. Both sides now reduce to the same shape before they are digested, and the
+mutation table below confirms the inequality test is sensitive to the thing it exists to detect.
+
+This is a different family from the text-matching defects recorded earlier in this chapter. Nothing
+was being matched as text; the failure was comparing two *representations* of the same data and
+reading the difference between the representations as a difference in the data. The generalisation
+is that an assertion whose two sides come from different layers has to be reduced to one layer
+explicitly, and that a test which can only ever pass is as useless as one which can only ever fail —
+but far harder to notice, because the suite is green.
+
+#### Mutations, all applied from the committed baseline and reverted
+
+| Mutation | Red |
+|---|---|
+| The incident is never planned; the run emits quiet under a staged specification | 2 |
+| The run is marked as replayed rather than synthetic | 2 |
+| The adapter nudges a reading by a value it derives itself | 3 |
+| The adapter defines its own run-creation function | **1** |
+| One batch per tick instead of one per run | 1 |
+
+The fourth row is the one the practice established at `db-005` predicted: it is a structural
+assertion of an absence, so it passed against the stub and could not have failed before the module
+existed. It is also the only test that moves under that mutation, which is the argument for writing
+it — an adapter that opened its own run row would produce rows that look entirely correct, and
+nothing about the stored data would be wrong until two producers disagreed about what a run is.
+
+The item measures 11 statements at 100% coverage, inside a suite of 508 tests at 99.92%. The figure
+worth keeping is not the coverage but the ratio: nineteen tests and mutation evidence for a function
+that is one call to the ingest entrypoint. The expense is deliberate, because this function is the
+one the evaluation campaign runs twenty-five times per scenario type, and a defect in it is a defect
+in every measurement taken afterwards.
+
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;
