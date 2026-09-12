@@ -139,8 +139,76 @@ class RunSpec(_Frozen):
 
         The seed is not in here: it has a column of its own, and a value stored
         twice is a value that can disagree with itself.
+
+        The window is, as of `scn-003`. It was omitted at first because the
+        three inputs `scn-001` names are the type, the parameters and the seed
+        -- but the stream is emitted over `start` plus a whole number of
+        intervals, so a row without them cannot regenerate the readings stored
+        against it. The property held in the test suite, where the window is a
+        module constant, and not from the database, which is where a campaign
+        reads it from.
         """
-        return {**self.parameters.model_dump(), **self.incident.model_dump()}
+        return {
+            **self.parameters.model_dump(),
+            **self.incident.model_dump(),
+            "start": self.start.isoformat(),
+            "duration_seconds": self.duration_seconds,
+        }
+
+    @classmethod
+    def from_record(
+        cls, *, scenario_type: str, parameters: Mapping[str, Any], seed: int
+    ) -> RunSpec:
+        """Rebuild a run from what its row records, and nothing else.
+
+        The inverse of `as_parameters`, and the executable form of the claim
+        that a batch is reproducible from its stored rows. `scn-004` needs the
+        same thing for replaying a listed run at its recorded settings.
+
+        Refuses rather than guesses. A row missing the window, or carrying a
+        parameter this version of the generator does not know, cannot be
+        reproduced -- and reproducing *something* under its name would be worse
+        than saying so, because the result would be scored against an answer key
+        describing a different run.
+        """
+        remaining = dict(parameters)
+
+        for field in ("start", "duration_seconds"):
+            if field not in remaining:
+                raise ValueError(
+                    f"the recorded parameters carry no {field!r}, so this run "
+                    "cannot be reproduced: runs recorded before scn-003 stored "
+                    "no window, and a window guessed here would regenerate a "
+                    "different stream under the same row."
+                )
+
+        start = datetime.fromisoformat(str(remaining.pop("start")))
+        duration_seconds = int(remaining.pop("duration_seconds"))
+        baseline = {
+            name: remaining.pop(name)
+            for name in list(remaining)
+            if name in BaselineParameters.model_fields
+        }
+        incident = {
+            name: remaining.pop(name)
+            for name in list(remaining)
+            if name in IncidentParameters.model_fields
+        }
+        if remaining:
+            raise ValueError(
+                f"unrecognised recorded parameters: {sorted(remaining)}. The row "
+                "was written by a generator this one does not match, so what it "
+                "would emit is not what the row describes."
+            )
+
+        return cls(
+            scenario_type=ScenarioType(scenario_type),
+            parameters=BaselineParameters(**baseline),
+            incident=IncidentParameters(**incident),
+            seed=seed,
+            start=start,
+            duration_seconds=duration_seconds,
+        )
 
 
 def ticks(layout: RfLayout, spec: RunSpec) -> tuple[datetime, ...]:

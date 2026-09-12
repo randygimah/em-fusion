@@ -25,12 +25,21 @@ written:
 
 from __future__ import annotations
 
+import ast
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import pytest
 
 from app.adapters.opensky import Window
-from app.pipeline import MAX_RUNS, MIN_RUNS, derive_seeds, derive_window
+from app.pipeline import (
+    MAX_RUNS,
+    MIN_RUNS,
+    _distinct,
+    derive_seeds,
+    derive_window,
+    derive_windows,
+)
 from app.scenario.emitter import (
     BaselineParameters,
     RunSpec,
@@ -51,6 +60,11 @@ CORPUS = Window(
 
 RUN_SECONDS = 900
 BATCH = 25
+
+#: `scn-001`'s rule, applied to the module that sits outside its package.
+#: `random` is unseeded by default and order-dependent when it is not, `time`
+#: is the wall clock, `uuid` is both.
+FORBIDDEN_IMPORTS = frozenset({"random", "time", "uuid"})
 
 
 @pytest.fixture()
@@ -157,18 +171,27 @@ def test_the_window_is_determined_by_the_seed() -> None:
     )
 
 
-def test_the_runs_in_a_batch_do_not_all_share_one_window() -> None:
+def test_the_runs_in_a_batch_never_share_a_window() -> None:
     """The failure case this decision exists for. Seven receivers and
     twenty-five runs means several runs stage at the same centre; sharing a
     window as well would make those runs near-duplicates on the track side,
-    differing only in the invented noise."""
-    # spec: scn-003
-    windows = {
-        derive_window(CORPUS, seed, RUN_SECONDS)
-        for seed in derive_seeds(BASE_SEED, BATCH)
-    }
+    differing only in the invented noise.
 
-    assert len(windows) == BATCH
+    Asserted over four base seeds rather than one, and the batch derivation is
+    asked for the whole set rather than each window separately. Measured
+    2026-09-12, before implementing: deriving an offset per seed in whole
+    seconds gives 25 distinct windows for base 20220627 and 24 for base 1 --
+    forty-five minutes of latitude is only 2,701 places to stand, and
+    twenty-five draws collide about one time in eight. A test written against
+    the fixture's own base would have passed and said nothing, which is why the
+    batch guarantees distinctness rather than relying on the space being large.
+    """
+    # spec: scn-003
+    for base in (BASE_SEED, 1, 42, 999983):
+        windows = derive_windows(CORPUS, derive_seeds(base, BATCH), RUN_SECONDS)
+
+        assert len(windows) == BATCH
+        assert len(set(windows)) == BATCH
 
 
 def test_a_corpus_shorter_than_the_run_is_refused() -> None:
@@ -252,3 +275,80 @@ def test_a_row_with_no_window_cannot_rebuild_its_run(layout: RfLayout) -> None:
             parameters=parameters,
             seed=BASE_SEED,
         )
+
+
+def test_a_row_carrying_an_unknown_parameter_is_refused() -> None:
+    """Written after the implementation, to cover a refusal the first pass of
+    tests missed -- the coverage gate was satisfied and the branch was not
+    exercised at all. Recorded as a deviation rather than quietly repaired.
+
+    A row holding a setting this generator does not know was written by a
+    different generator. Dropping the unknown key and emitting anyway would
+    produce a stream that is not what the row describes, under the row's own
+    answer key.
+    """
+    # spec: scn-003
+    parameters = _spec().as_parameters()
+    parameters["antenna_gain_db"] = 3.0
+
+    with pytest.raises(ValueError, match="unrecognised"):
+        RunSpec.from_record(
+            scenario_type=ScenarioType.GNSS_DEGRADATION.value,
+            parameters=parameters,
+            seed=BASE_SEED,
+        )
+
+
+def test_a_derivation_that_ignores_its_retry_key_fails_loudly() -> None:
+    """Found by mutation rather than by design, and added afterwards.
+
+    Replacing the window offset with a constant turned the batch's
+    distinctness loop into an infinite one: every retry returned the same
+    value, so the loop never left. A campaign that hangs is worse than one that
+    fails, and the hang would arrive in the middle of a batch rather than at
+    its first run. Reaches for the private helper deliberately -- a degenerate
+    derivation cannot be injected through the public surface, which is the
+    point of the guard.
+    """
+    # spec: scn-003
+    with pytest.raises(RuntimeError, match="retry"):
+        _distinct(lambda index, attempt: 1, MIN_RUNS)
+
+
+def test_the_batch_module_reads_no_clock_and_no_unseeded_randomness() -> None:
+    """`scn-001` asserts this over `app/scenario/` and the batch module is not
+    in that package, so the rule did not reach it.
+
+    Found by mutation, and the mutation is the argument for the test: replacing
+    the keyed derivation with `random.Random(base_seed)` left all eighteen
+    tests green. Both give the same prefix property -- a sequence seeded once
+    produces the same first twenty draws whether you ask for twenty or thirty
+    -- so no behavioural test here can separate them. What separates them is
+    that a sequence cannot compute run seventeen without computing the sixteen
+    before it, and shifts every later value if one more quantity is ever drawn
+    per run. That is a constraint rather than an output, so it is asserted as
+    one.
+    """
+    # spec: scn-003, scn-001
+    tree = ast.parse(
+        (Path(__file__).resolve().parents[1] / "app" / "pipeline.py").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    offences: list[str] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            offences += [
+                f"import {alias.name}"
+                for alias in node.names
+                if alias.name.split(".")[0] in FORBIDDEN_IMPORTS
+            ]
+        elif isinstance(node, ast.ImportFrom):
+            if (node.module or "").split(".")[0] in FORBIDDEN_IMPORTS:
+                offences.append(f"from {node.module} import ...")
+        elif isinstance(node, ast.Call):
+            if isinstance(node.func, ast.Name) and node.func.id == "hash":
+                offences.append("hash()")
+
+    assert offences == []
