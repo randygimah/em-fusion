@@ -2904,6 +2904,41 @@ one the evaluation campaign runs twenty-five times per scenario type, and a defe
 in every measurement taken afterwards.
 
 
+### Two defects the batch runner had that only running it could find
+
+`adp-007` recorded that its command shipped two faults reachable only by invoking it, both of the
+shape "the place the software runs is not the place the tests describe". The batch runner produced
+two more, and neither is of that shape — which is the more interesting result, because it means the
+category is wider than the earlier entry suggested.
+
+**The first was a stale image, and the target had no build prerequisite.** Every containerised target
+in the root Makefile depends on its image being current, for a reason the file states in a comment:
+Compose bind-mounts the source but not the installed packages, so a cached image runs today's code
+against yesterday's dependencies. `generate` was the single target with no such dependency, because
+it had never worked and so had never needed one. The first invocation died importing SQLAlchemy — a
+dependency added weeks after the pipeline image was last built. The fix is a `build-pipeline` target,
+and the finding worth keeping is that the pipeline service builds its own image from the same
+directory rather than sharing the backend service's, so refreshing one does not refresh the other.
+Nothing in the test suite could see this: the tests run inside a freshly built backend image.
+
+**The second was a batch that reported twenty successes and produced twenty mislabelled controls.**
+Invoked with a two-minute run duration and the default incident offset of two minutes, every run
+staged its incident after its own end. Nothing was suppressed and no cell was raised, so all twenty
+runs were byte-identical to quiet controls — while their rows claimed `aircraft-coverage-gap` and
+their answer keys named nothing. The command printed `ok` twenty times.
+
+This is the exact inverse of a failure case the specification already had. `scn-002` says a
+`normal-baseline` run that injects any deviation fails the spec, because the false-positive rate
+depends on the control being genuinely clean. The mirror — an injected type that injects nothing —
+was not written down, and it is the more dangerous of the two: a contaminated control inflates the
+false-positive rate, which is visible in the results, whereas an empty incident inflates the
+*miss* rate against an event that never happened, which looks exactly like a detector that is not
+working. The configuration is now refused before any run opens, and the message says why.
+
+The general lesson is one this project keeps meeting from new directions. A test asserts what
+somebody thought to assert; running the thing asserts what the thing does. Both defects were in code
+covered at one hundred per cent by tests that passed.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;
@@ -2954,6 +2989,16 @@ recall broken down by that number alongside the aggregate. A floor on the affect
 a bare fraction of whatever traffic is present, is worth considering when the detectors exist and the
 sensitivity of the clustering rule to the number of dropouts is known; it is noted here rather than
 decided, because deciding it now would be tuning the generator against a detector nobody has written.
+
+**Measured on the first real batch, 2026-09-12.** Twenty `aircraft-coverage-gap` runs over ten
+simulated minutes each, from base seed 20220627, staged between **zero and eleven** aircraft — a mean
+near four, and **one run that staged nothing at all**. That run is data-identical to a quiet control
+while its row claims a scenario type, so it cannot contribute to recall, and counting it as a miss
+would score the detector for an incident it was never shown. The batch report therefore carries the
+count per run and a campaign-level line saying how many runs staged nothing, because a zero in row
+four of thirty is not something anyone notices. The spread is the predicted fourfold variation
+appearing in practice at the first opportunity, which is worth stating plainly: the threat was
+written down in the morning and observed the same afternoon.
 
 A second and independent limitation is recorded alongside it. The corpus is one recorded hour, and a
 batch of thirty fifteen-minute runs draws thirty windows from inside it, so the windows overlap

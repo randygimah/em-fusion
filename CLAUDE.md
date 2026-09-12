@@ -55,7 +55,7 @@ A contents page for the repo. Use it to find the right file before searching; it
 | Path | What's in it |
 |---|---|
 | `backend/app/main.py` | FastAPI app, `/api/v1/health` only, CORS for the Vite dev server. Its lifespan builds the one Engine per process and disposes it. |
-| `backend/app/pipeline.py` | The batch entrypoint (`scn-003`, in progress). Per-run seeds and corpus windows derived from one base seed, then a run executed end to end. `python -m app.pipeline` is the module the Compose `pipeline` service and `make generate` already name. |
+| `backend/app/pipeline.py` | The batch entrypoint (`scn-003`). Per-run seeds and corpus windows derived from one base seed; `execute_run` drives one run's two halves — the synthetic RF grid and a corpus window through the perturber — under one run id; `run_batch` records and skips a run that fails. `python -m app.pipeline`, which the Compose `pipeline` service and `make generate` name. |
 | `backend/app/__init__.py` | Package marker. |
 | `backend/app/api/v1/` | Route modules, one per resource, assembled by `api_router` which declares the `/api/v1` prefix once. Handlers stay prefix-free. |
 | `backend/app/dal/` | The Data Abstraction Layer. `models.py` is the canonical observation; `validation.py` accepts or rejects; `ingest.py` is the single entrypoint every adapter goes through; `pseudonymise.py` replaces source aircraft identifiers; `repository.py` is the **persistence port** — an interface, deliberately importing no storage engine. |

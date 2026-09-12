@@ -44,6 +44,11 @@ REQUIRED_TARGETS = {
     # own text makes this set the enforcement of "this item enumerates its
     # targets", so a new target lands here and not only in the Makefile.
     "replay",
+    # spec: scn-003 -- added 2026-09-12 with the batch runner. `generate` is
+    # the one target that had no build prerequisite, and the pipeline service
+    # builds its own image rather than sharing the backend's, so a stale image
+    # ran yesterday's dependencies against today's code.
+    "build-pipeline",
     "test",
     "test-backend",
     "test-frontend",
