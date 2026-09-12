@@ -1777,6 +1777,46 @@ suspicious. No rule in Phase 8 does this, so nothing in the planned system is af
 later that did so would silently fail on this scenario type. *(If such a rule is ever written, this
 trade has to be revisited rather than worked around.)*
 
+### Every run carries both halves, including the two that stage nothing on the tracks
+
+A run could reasonably have been defined as whichever streams its scenario type needs. Three of the
+five types edit replayed aircraft reports — suppressing them for a coverage gap, freezing the
+reported position for navigation degradation, suppressing them again for the ambiguous case — and the
+other two touch the track side not at all. Generating only what a type stages would halve the work
+for those two and remove a dependency on the archived corpus being present when a batch runs.
+
+That definition was rejected, and the reason is about non-detection rather than about detection. Two
+of the deterministic rules are defined across both sources: one fires on a raised noise floor
+co-located with track trouble and calls it possible interference, the other on track trouble with a
+clean spectrum and calls it a data-source problem. In a run containing no track observations at all,
+"no track trouble" is true by construction. Both rules stay silent, both look correct, and neither
+has been tested — the silence is a property of what the run omitted rather than of what the rules
+concluded. The quiet control is the sharper case of the same thing: it exists to measure how often
+the system reports something when nothing was staged, and a control carrying only the synthetic radio
+grid measures that for one source while the write-up would quote it for the system.
+
+So a run is two streams always, and the type decides only what is staged on them. The cost is modest:
+the radio grid was measured at 0.45 seconds per fifteen-minute run into PostGIS, and a fifteen-minute
+window of the corpus is roughly a quarter of an hour that the replay stores at about ten seconds, so
+near three seconds per run and around a minute and a half for a batch of thirty, leaving in the
+region of 1.1 million rows behind. The real cost is a dependency: a batch cannot run without the
+OpenSky extract on disk, and the extract is not in the repository because the licence forbids
+redistributing it. The batch therefore has to fail before it writes anything when the corpus is
+absent, in the way the replay entrypoint already does, rather than quietly producing runs with no
+traffic in them — which would be indistinguishable, after the fact, from runs whose traffic was
+suppressed.
+
+A second decision follows from the first and would not have arisen without it. The incident's zone
+centre is derived from the run's seed and there are seven receivers, so a batch of twenty to thirty
+runs stages at the same place several times over — measured across thirty derived seeds, every
+receiver is used, between two and six times each. If those runs also replayed the same stretch of the
+recorded hour, runs sharing a centre would be near-duplicates: the same aircraft, in the same place,
+differing only in the invented noise. Each run's window is therefore derived from its own seed as
+well. The limitation that remains belongs to the data rather than the design, and is recorded under
+Evaluation: thirty fifteen-minute windows inside one recorded hour overlap heavily, so track-side
+independence across a batch is bounded by the corpus.
+
+
 ## Implementation
 
 <!-- Notable technical decisions per phase (link to implementation.md phases), challenges and
@@ -2875,3 +2915,52 @@ local-arm fallback frequency; campaign cost and wall-time per arm; limitations e
 including the absence of any analyst-utility measurement following the withdrawal of the task-based
 user study, and the absence of a capability-versus-architecture split following the withdrawal of
 the local arm from scoring. -->
+
+### Detectability varies fourfold with where the seed puts the zone, and the variation sits inside the batch
+
+*Recorded 2026-09-12, before any detection rule exists and before any run has been scored. It is
+written now because a threat identified after the analysis reads as an excuse, and because the
+measurement that establishes it is available today.*
+
+Deciding that every run replays a window of the corpus made the traffic inside a staged zone a
+property of the evaluation rather than an implementation detail. Measured over the default
+five-minute incident window (12:02:00–12:07:00 on 27 June 2022), which holds 10,759 rows and 410
+distinct aircraft across the whole bounding box, the seven candidate zone centres carry markedly
+different amounts of traffic within the default 60 km radius:
+
+| Zone centre | Aircraft within 60 km | Staged at the default 8% |
+|---|---|---|
+| Schiphol | 75 | 6.0 |
+| Lelystad | 74 | 5.9 |
+| Rotterdam | 71 | 5.7 |
+| Köln/Bonn | 28 | 2.2 |
+| Düsseldorf | 28 | 2.2 |
+| Weeze | 25 | 2.0 |
+| Eindhoven | 18 | 1.4 |
+
+Every centre carries enough traffic for a staging to be possible, which was the first question. The
+second is the threat. A coverage-gap run centred on Eindhoven stages one or two aircraft; the same
+run centred on Schiphol stages six. The spatial-clustering rule groups dropouts that occur close
+together, so those two runs are not equally findable, and the difference is a property of where the
+seed happened to place the zone rather than of the detector. Because the centre is seed-derived, the
+variation sits *inside* a batch: aggregate recall over thirty runs would average a nearly
+undetectable run together with an easy one and report one number for both.
+
+Three responses were considered. Rejecting low-traffic seeds was rejected in turn, because it
+complicates the claim that a batch reproduces from a single value in exchange for concealing
+something that can simply be reported. The two taken are to record the number of aircraft actually
+staged on each run's answer key — which the record already does, since it names them — and to report
+recall broken down by that number alongside the aggregate. A floor on the affected count, rather than
+a bare fraction of whatever traffic is present, is worth considering when the detectors exist and the
+sensitivity of the clustering rule to the number of dropouts is known; it is noted here rather than
+decided, because deciding it now would be tuning the generator against a detector nobody has written.
+
+A second and independent limitation is recorded alongside it. The corpus is one recorded hour, and a
+batch of thirty fifteen-minute runs draws thirty windows from inside it, so the windows overlap
+heavily and the traffic across a batch is not thirty independent samples. Detection metrics aggregated
+over a batch therefore carry less independent evidence than the run count suggests. This is a
+consequence of the data — one hour was chosen deliberately, for licence and size reasons recorded
+under Methodology — rather than of the generator, and no change to the generator would remove it.
+Acquiring a second, non-adjacent hour would, and is the obvious mitigation if the result turns out to
+be sensitive to it.
+
