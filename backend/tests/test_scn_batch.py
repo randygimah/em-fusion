@@ -66,6 +66,15 @@ BATCH = 25
 #: is the wall clock, `uuid` is both.
 FORBIDDEN_IMPORTS = frozenset({"random", "time", "uuid"})
 
+#: The one name from `time` the batch module may hold. Narrowed during pass 2,
+#: when the rule as first written rejected the implementation: `perf_counter`
+#: measures how long the batch took and has an undefined epoch, so it cannot
+#: date anything and cannot reach a generated value. What the rule is actually
+#: about is a *clock reading* influencing data, which is `time.time()` and
+#: friends -- so a plain `import time` stays forbidden, since it puts those one
+#: attribute away.
+ALLOWED_TIME_NAMES = frozenset({"perf_counter"})
+
 
 @pytest.fixture()
 def layout() -> RfLayout:
@@ -345,7 +354,14 @@ def test_the_batch_module_reads_no_clock_and_no_unseeded_randomness() -> None:
                 if alias.name.split(".")[0] in FORBIDDEN_IMPORTS
             ]
         elif isinstance(node, ast.ImportFrom):
-            if (node.module or "").split(".")[0] in FORBIDDEN_IMPORTS:
+            root = (node.module or "").split(".")[0]
+            if root == "time":
+                offences += [
+                    f"from time import {alias.name}"
+                    for alias in node.names
+                    if alias.name not in ALLOWED_TIME_NAMES
+                ]
+            elif root in FORBIDDEN_IMPORTS:
                 offences.append(f"from {node.module} import ...")
         elif isinstance(node, ast.Call):
             if isinstance(node.func, ast.Name) and node.func.id == "hash":

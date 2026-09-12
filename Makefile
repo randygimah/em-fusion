@@ -5,11 +5,19 @@
 .DEFAULT_GOAL := help
 .PHONY: help build build-backend build-frontend-test up demo down restart \
         logs ps shell db-shell db-reset migrate db-test-create \
-        generate ensure-artifacts replay \
+        generate build-pipeline ensure-artifacts replay \
         test test-backend test-frontend lint format type-check check smoke clean
 
 COMPOSE ?= docker compose
 DATA_DIR ?= data
+
+# What `make generate` runs when nobody says otherwise (scn-003). A default is
+# required rather than optional: a batch target that generated nothing usable
+# on a fresh machine would satisfy AC-12 and leave the demo with an empty
+# database. The base seed is a value, not a secret -- it is what makes the
+# batch reproducible, and it is printed in the report either way. Override the
+# whole set for a real campaign: `make generate PIPELINE_ARGS="..."`.
+PIPELINE_ARGS ?= --scenario-type gnss-degradation --base-seed 20220627 --runs 20
 
 # Kept deliberately in step with backend/Makefile's `test` target. The two run
 # the same suite in different environments, and a coverage gate that applies in
@@ -47,6 +55,16 @@ build-backend: ## Refresh the backend dev image before running anything in it
 
 build-frontend-test: ## Refresh the frontend test image
 	@$(COMPOSE) --profile test build frontend-test
+
+# The pipeline service builds its own image from ./backend rather than sharing
+# the backend service's, so refreshing one does not refresh the other. Found by
+# running `make generate` for the first time: the cached pipeline image
+# predated SQLAlchemy becoming a dependency, and the batch died on an import
+# before it reached anything of its own. This is the same stale-image failure
+# the note above `test-backend` describes, in the one target that had no build
+# prerequisite.
+build-pipeline: ## Refresh the pipeline image before running a batch in it
+	@$(COMPOSE) --profile pipeline build pipeline
 
 up: ## Start backend + frontend in the background
 	$(COMPOSE) up --build -d
@@ -111,9 +129,9 @@ db-test-create: ## Create the disposable test database with PostGIS
 
 # Deliberately the `backend` service, not `pipeline`. The pipeline service's
 # command names `app.pipeline`, a module that does not exist until `scn-003`,
-# so `generate` is broken today; pointing `replay` at that service would make
-# this target work by changing what the service means and leave `generate`
-# broken behind a name that now looks used. Mirrors `migrate` instead.
+# so `replay` does not use it: pointing `replay` at that service would change
+# what the service means. Mirrors `migrate` instead. (`generate` itself now
+# works -- `app.pipeline` landed with scn-003.)
 # DATA_DIR is mounted and --data-dir passed explicitly, rather than relying on
 # the module default: inside the container the repository root above ./backend
 # does not exist, so that default resolves to /data/opensky only by accident of
@@ -123,10 +141,16 @@ replay: ## Replay the archived corpus into the running database
 		-v "$(abspath $(DATA_DIR)):/data" \
 		backend python -m app.replay --data-dir /data/opensky $(REPLAY_ARGS)
 
-generate: ## Run the pipeline once, writing into DATA_DIR (default data/)
+# The command is spelled out rather than left to the service, because
+# `compose run` replaces a service's command rather than appending to it, so
+# PIPELINE_ARGS has nowhere to go otherwise. Same mount and --data-dir pattern
+# as `replay`, and for the same reason: inside the container the repository
+# root above ./backend does not exist.
+generate: build-pipeline ## Run a scenario batch in a container, into the running database
 	mkdir -p "$(DATA_DIR)"
 	$(COMPOSE) --profile pipeline run --rm \
-		-v "$(abspath $(DATA_DIR)):/data" pipeline
+		-v "$(abspath $(DATA_DIR)):/data" pipeline \
+		python -m app.pipeline --data-dir /data/opensky $(PIPELINE_ARGS)
 
 ensure-artifacts: ## Generate the demo dataset only if artefacts are missing
 	@if [ -z "$(strip $(ARTIFACTS))" ]; then \
