@@ -3640,6 +3640,92 @@ gets the window from a module-level constant, not from the row — so the proper
 and not from the database. `scn-003` claims the whole batch is reproducible from one value, which
 that omission makes false in practice; the window has to go onto the row as part of this work.
 
+## 53. Should the track half be included in each run? Without it we can't inject or judge anomalies like the aircraft coverage gap, which is coupled to that half of the data
+
+**Yes — and for two more scenario types than the coupling in the question.** The reasoning given is
+correct for the three types that edit replayed records: without a track stream there is nothing to
+suppress or freeze, so the incident cannot be staged and the answer key would describe something that
+never happened. The part worth adding is that the two types which stage *nothing* on the track side
+need it present as well, for a different reason — a correct non-detection is only evidence if the
+thing that could have fired was actually shown the data it fires on.
+
+### What each type needs, and why
+
+| Type | Stages on tracks | Why the track half is still required |
+|---|---|---|
+| `aircraft-coverage-gap` | Suppresses rows | The incident *is* the missing rows |
+| `gnss-degradation` | Freezes reported position | Half the signature lives here; the other half is the RF floor |
+| `ambiguous-mixed-evidence` | Suppresses rows | Composes a single-receiver RF deviation with a co-located gap |
+| `rf-sensor-fault` | Nothing | The fusion rule fires on RF deviation **plus** co-located track trouble. In a run with no tracks, "no track trouble" is true by construction, so the rule's silence is vacuous rather than correct |
+| `normal-baseline` | Nothing | It is the false-positive control. A control with no tracks measures the false-positive rate of the RF half alone, and leaves the data-source rule and the dropout-clustering rule with nothing to not-fire on |
+
+So the rule is: **every run replays a window of the corpus; three of the five put a perturber in front
+of it.** A run is two streams always, which is what the note on the anatomy of a quiet run already
+says — this is that statement applied to generation rather than to description.
+
+### The measurement that answers a question nobody had asked
+
+Saying yes makes the traffic inside a staged zone a property of the evaluation rather than a detail.
+Measured on the real corpus, over the default five-minute incident window (12:02–12:07 on
+2022-06-27), which holds 10,759 rows and 410 distinct aircraft across the whole box:
+
+| Zone centre | Aircraft within 60 km | Staged at the default 8% |
+|---|---|---|
+| Schiphol | 75 | 6.0 |
+| Lelystad | 74 | 5.9 |
+| Rotterdam | 71 | 5.7 |
+| Köln/Bonn | 28 | 2.2 |
+| Düsseldorf | 28 | 2.2 |
+| Weeze | 25 | 2.0 |
+| Eindhoven | 18 | 1.4 |
+
+Every centre carries enough traffic for a staging to be possible, which was the first thing to check.
+The second thing is less comfortable.
+
+### Worth recording as a threat to validity
+
+**Detectability varies more than four-fold with where the seed put the zone.** A coverage-gap run
+centred on Eindhoven stages one or two aircraft; the same run centred on Schiphol stages six. The
+spatial-clustering rule needs several dropouts to group, so those two runs are not equally findable —
+and because the centre is derived from the seed, the variation sits *inside* a batch rather than
+between batches. Aggregate recall over thirty runs would average a nearly undetectable run together
+with an easy one and report a single number.
+
+Three responses, of which the first two are worth taking:
+
+1. **Report recall broken down by the number of aircraft actually staged.** The answer key already
+   names them, so this costs nothing but the reporting.
+2. **Consider a floor on the affected count** rather than a bare fraction of whatever traffic happens
+   to be there.
+3. **Reject low-traffic seeds.** Avoid: it complicates the claim that a batch reproduces from one
+   number, for a problem the first two describe honestly.
+
+### Two consequences for how a batch is built
+
+**Each run's window has to be derived from its own seed.** Thirty derived seeds land on all seven
+receivers, two to six runs each — so several runs in a batch share a zone centre. If they also shared
+a corpus window they would be near-duplicates on the track side: the same aircraft, in the same place,
+differing only in the invented noise. Deriving the window start per run costs nothing and removes it.
+
+The limit that remains is the corpus: thirty fifteen-minute windows inside a single recorded hour
+overlap heavily, so track-side independence across a batch is bounded by the data rather than by the
+design. **That is a limitation of the evaluation, not of the generator**, and it belongs in the
+write-up rather than in a fix.
+
+**Cost is not an objection.** The RF half was measured at 0.45 s per fifteen-minute run into PostGIS.
+A fifteen-minute track window is roughly a quarter of the hour, which the replay stores at about 10 s
+for the full hour — so near 2.4 s, and about 3 s per run in total. A batch of thirty is therefore
+around a minute and a half and leaves roughly 1.1 million rows behind.
+
+### One claim this corrects
+
+The progress note says that changing the starting number moves the zone "to a different receiver —
+which is how thirty runs in a batch end up staging thirty different incidents rather than thirty
+copies of one". With seven possible centres that is loose. Thirty runs produce thirty different
+*combinations* of place, window, traffic and noise, but at most seven different places, each repeating
+two to six times. See §47 on what one seed decides, and §51 on how the deterministic half is
+marked.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
