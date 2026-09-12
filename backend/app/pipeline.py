@@ -154,3 +154,26 @@ def derive_windows(
         ),
         len(ordered),
     )
+
+
+# --------------------------------------------------------------------- stub
+# Spec: scn-003 (pass 2 of 2) — tests written, implementation not yet. Present
+# so the suite collects and each test fails on its own assertion.
+
+
+class RunOutcome:  # pragma: no cover -- stub
+    def __init__(self, **fields: object) -> None:
+        raise NotImplementedError("scn-003 pass 2 is not implemented yet")
+
+
+def execute_run(*args: object, **kwargs: object) -> RunOutcome:
+    """Stub: repository and the rest arrive in pass 2."""
+    raise NotImplementedError("scn-003 pass 2 is not implemented yet")
+
+
+def run_batch(*args: object, **kwargs: object) -> object:
+    raise NotImplementedError("scn-003 pass 2 is not implemented yet")
+
+
+def main(*args: object, **kwargs: object) -> int:
+    raise NotImplementedError("scn-003 pass 2 is not implemented yet")
