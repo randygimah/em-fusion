@@ -30,7 +30,6 @@ data absent, so absence is a state the contract is expected to carry.
 
 from __future__ import annotations
 
-import re
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -69,14 +68,11 @@ from app.db.migrations import alembic_config
 from app.db.repository import PostgisObservationRepository
 from app.main import app
 from tests.conftest import live_database_url, requires_database
+from tests.contracts import contract_paths
+from tests.contracts import interfaces as _interfaces
+from tests.contracts import read_contract as _read
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-
-#: Native checkout, then the read-only mount used inside the container.
-CONTRACT_PATHS = (
-    REPO_ROOT / "frontend" / "src" / "types" / "operationalPicture.ts",
-    Path("/repo/frontend/src/types/operationalPicture.ts"),
-)
+CONTRACT_PATHS = contract_paths("operationalPicture.ts")
 
 #: Interface name in the contract to the model that must mirror it. Names are
 #: identical on both sides on purpose: a mapping table here would be a place for
@@ -112,40 +108,6 @@ RUN_ID = 1
 
 
 # ------------------------------------------------------------------- helpers
-
-
-def _read(candidates: Sequence[Path]) -> str:
-    for path in candidates:
-        if path.is_file():
-            return path.read_text(encoding="utf-8")
-    raise AssertionError(
-        f"not found at any of {[str(p) for p in candidates]}. Skipping is "
-        "deliberately not an option here: see the module docstring."
-    )
-
-
-def _interfaces(source: str) -> dict[str, dict[str, str]]:
-    """Every `export interface` in the contract, as name to field to type.
-
-    A parser rather than a search. The alternative — looking for a field name
-    anywhere in the file — is satisfied by a comment mentioning it, which is
-    the defect recorded in `docs/qa.md` section 38 and hit again in `adp-007`.
-    """
-    found: dict[str, dict[str, str]] = {}
-    for match in re.finditer(
-        r"export\s+interface\s+(\w+)\s*\{(.*?)\n\}", source, re.DOTALL
-    ):
-        name, body = match.group(1), match.group(2)
-        fields: dict[str, str] = {}
-        for line in body.splitlines():
-            line = line.strip()
-            if not line or line.startswith("//"):
-                continue
-            field = re.match(r"(\w+)\??\s*:\s*(.+?);\s*$", line)
-            if field:
-                fields[field.group(1)] = field.group(2).strip()
-        found[name] = fields
-    return found
 
 
 def _model_fields(model: Any) -> set[str]:
