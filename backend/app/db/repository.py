@@ -48,6 +48,7 @@ from app.dal.models import (
     Location,
     ObservationType,
     Provenance,
+    ScenarioRunDetail,
     ScenarioRunSummary,
 )
 from app.dal.repository import QuarantineRecord
@@ -333,6 +334,37 @@ def latest_run(session_factory: sessionmaker[Session]) -> ScenarioRunSummary | N
             .first()
         )
         return None if row is None else ScenarioRunSummary(**row)
+
+
+def list_runs(
+    session_factory: sessionmaker[Session], limit: int = 50
+) -> list[ScenarioRunDetail]:
+    """Recent runs, newest first, for the Scenario Control screen. Spec: api-006.
+
+    Ordered by start time rather than by completion, because this table is a
+    record of what was asked for -- a run that died is still a run somebody
+    started, and `db-007` makes its null completion stamp the thing that says
+    so. `latest_run` orders differently on purpose: it is choosing one run to
+    serve and prefers a finished one.
+
+    **`ground_truth` is not selected.** `api-009` requires the answer key never
+    to leave the run record, and `ScenarioRunDetail` has no field to put it in,
+    so the column is absent from both the query and the shape.
+    """
+    with session_factory.begin() as session:
+        rows = (
+            session.execute(
+                text(
+                    "SELECT id, scenario_type, seed, started_at, completed_at, "
+                    "parameters FROM scenario_runs "
+                    "ORDER BY started_at DESC, id DESC LIMIT :limit"
+                ),
+                {"limit": limit},
+            )
+            .mappings()
+            .all()
+        )
+        return [ScenarioRunDetail(**row) for row in rows]
 
 
 def latest_positions(

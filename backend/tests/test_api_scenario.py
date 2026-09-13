@@ -14,7 +14,9 @@ the database tier.
 
 from __future__ import annotations
 
+import ast
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -24,14 +26,29 @@ from sqlalchemy.pool import NullPool
 
 from alembic import command
 from app.api.v1.scenario import get_batch_launcher
+from app.api.v1.schemas.scenario import BatchRequest
 from app.dal.models import ScenarioRunSummary
 from app.db.migrations import alembic_config
 from app.main import app
 from app.pipeline import MAX_RUNS, MIN_RUNS
+from app.replay import MANIFEST_NAME
+from app.scenario import batch
+from app.scenario.incident import IncidentParameters, ScenarioType
 from app.scenario.seeding import SEED_MAX
 from tests.conftest import live_database_url, requires_database
 
 HOUR_START = datetime(2022, 6, 27, 12, 0, tzinfo=UTC)
+
+
+def _batch_request() -> BatchRequest:
+    return BatchRequest(
+        scenario_type=ScenarioType.GNSS_DEGRADATION,
+        base_seed=20220627,
+        runs=MIN_RUNS,
+        duration_seconds=900,
+        incident=IncidentParameters(),
+    )
+
 
 CONFIGURATION: dict[str, Any] = {
     "scenarioType": "gnss-degradation",
@@ -349,3 +366,118 @@ def test_a_listed_run_never_carries_the_answer_key(
     assert "ground_truth" not in row
     assert "RF-01" not in str(row)
     assert "AC-0001" not in str(row)
+
+
+# ------------------------------------------------------------- the launcher
+#
+# Written after the implementation, which is a deviation from the order this
+# project works in. The backend coverage gate is what named them: every other
+# module in the tree sat at 100% and `app/scenario/batch.py` at 65%, with the
+# uncovered lines being the whole of what the launcher actually does. Both
+# assert claims the docstrings make and nothing else held.
+
+
+class _InlineThread:
+    """A Thread that runs its target on the calling thread.
+
+    Lets the failure path be asserted without joining or sleeping. What it
+    gives up is any claim about concurrency, so the construction arguments are
+    asserted separately below.
+    """
+
+    def __init__(self, *, target: Any, name: str, daemon: bool) -> None:
+        self.target = target
+        self.name = name
+        self.daemon = daemon
+        _InlineThread.last = self
+
+    def start(self) -> None:
+        self.target()
+
+
+def test_a_failing_batch_is_logged_rather_than_raised(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """There is nobody left to raise to. Spec: api-006 (second decision).
+
+    The response went out before this thread was scheduled, so an exception
+    here has no caller. The rows already written are the record of what
+    happened -- the same posture `run_batch` takes toward one run that fails
+    inside a batch.
+    """
+
+    # spec: api-006, scn-003
+    def explode(request: Any) -> None:
+        raise RuntimeError("no corpus on disk")
+
+    monkeypatch.setattr(batch, "Thread", _InlineThread)
+    monkeypatch.setattr(batch, "run_batch_now", explode)
+
+    with caplog.at_level("ERROR"):
+        batch.launch_batch(_batch_request())
+
+    assert "scenario batch failed" in caplog.text
+    assert "no corpus on disk" in caplog.text
+    assert _InlineThread.last.daemon is True
+
+
+def test_the_batch_borrows_the_applications_engine_rather_than_building_one(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """`db-003`: one Engine per process. Spec: api-006.
+
+    A batch that called `init_engine` would build a second one and dispose the
+    first out from under every in-flight request. The docstring claims this;
+    this is what holds it.
+    """
+    # spec: api-006, db-003
+    (tmp_path / MANIFEST_NAME).write_text("{}")
+    seen: dict[str, Any] = {}
+
+    def fake_run_batch(layout: Any, **kwargs: Any) -> None:
+        seen.update(kwargs)
+
+    monkeypatch.setattr(batch, "run_batch", fake_run_batch)
+    monkeypatch.setattr(batch, "available_window", lambda manifest: "window")
+    monkeypatch.setattr(batch, "load_layout", lambda: "layout")
+    monkeypatch.setattr(batch, "load_exclusions", lambda path: frozenset())
+    monkeypatch.setattr(
+        batch.Pseudonymiser, "from_environment", classmethod(lambda cls: "pseudo")
+    )
+    monkeypatch.setattr(batch, "PostgisObservationRepository", lambda sessions: "repo")
+    monkeypatch.setattr(batch, "get_sessionmaker", lambda: "sessions")
+
+    batch.run_batch_now(_batch_request(), data_dir=tmp_path)
+
+    assert seen["base_seed"] == 20220627
+    assert seen["count"] == MIN_RUNS
+    assert seen["duration_seconds"] == 900
+    assert seen["incident"].start_offset_s == 120
+    assert seen["session_factory"] == "sessions"
+
+
+def test_the_launcher_never_builds_its_own_engine() -> None:
+    """Asserted against the parsed code, not against the text.
+
+    A plain search for the forbidden name matches the docstring that
+    *explains* why it is forbidden, so a text check would fail this module and
+    the rational fix would be to delete the explanation -- leaving the rule
+    enforced and unexplained. `api-003` hit exactly this and settled it by
+    reading the code as a structure; the same answer applies here.
+    """
+    # spec: api-006, db-003, api-003
+    tree = ast.parse(Path(batch.__file__).read_text(encoding="utf-8"))
+    referenced = {node.id for node in ast.walk(tree) if isinstance(node, ast.Name)} | {
+        node.attr for node in ast.walk(tree) if isinstance(node, ast.Attribute)
+    }
+    imported = {
+        alias.name
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom)
+        for alias in node.names
+    }
+
+    assert "init_engine" not in referenced | imported
+    assert "dispose_engine" not in referenced | imported
+    # and the explanation that a text check would have forced out is still here
+    assert "init_engine" in (batch.run_batch_now.__doc__ or "")

@@ -27,6 +27,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -196,3 +197,25 @@ class ScenarioRunSummary(BaseModel):
     seed: int
     started_at: datetime
     completed_at: datetime | None
+
+
+class ScenarioRunDetail(ScenarioRunSummary):
+    """A run as the Scenario Control screen lists it. Spec: api-006.
+
+    The summary's fields plus the parameters a replay cannot do without.
+
+    **A subclass rather than two more fields on `ScenarioRunSummary`**, because
+    `api-002` serves the summary as well. The recorded parameters carry the
+    incident's radius, elevation, offset and duration, and putting those on the
+    operational picture would describe the staged incident to the analyst whose
+    detectors are being measured against it.
+
+    Still no field for ground truth, for `api-009`'s reason: a shape that
+    cannot hold the answer key cannot leak it.
+    """
+
+    #: Served exactly as the run row holds them, snake_case included. The
+    #: generator rebuilds a run from these names and refuses a set carrying one
+    #: it does not know, so a re-keying here would turn a replayable run into
+    #: an unreplayable one at the point furthest from the mistake.
+    parameters: dict[str, Any]
