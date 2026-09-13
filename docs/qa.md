@@ -3925,6 +3925,46 @@ with site data blocked — the read is guarded and falls back to expanded. Both 
 preference and would be disqualifying for a route, which is one more way of saying they are different
 kinds of thing.
 
+## 58. If example data is dishonest, why does the operational picture still fall back to it while the runs table now shows nothing?
+
+*(Not asked directly: this is the inconsistency `api-010` creates on the face of
+it, recorded because the two screens now behave differently on purpose and the
+reason is not visible from either one alone.)*
+
+**Because the justification for a fallback is what the screen cannot do without
+it — and that differs between the two.** Both screens follow the same rule; they
+reach opposite conclusions because the rule is applied to different situations.
+
+| | Operational Picture | Scenario Control runs |
+|---|---|---|
+| Before the first answer | Shows the example payload | Shows **nothing** |
+| Warning carried | `DEGRADED — NOT LIVE`, from the first paint | "the run list has not been read" |
+| If it showed nothing instead | An empty map — nothing to develop or demo against | An empty table, which reads fine |
+| If it showed examples instead | — | Rows nobody could tell from real ones |
+| After a failed poll | Keeps the last real answer | Keeps the last real answer |
+
+The last row is the part that does **not** differ, and it matters: neither screen
+ever reverts to example data once real data has arrived. Stale truth beats fresh
+nothing on both.
+
+**What makes the runs the sharper case.** The fixture's rows carried real seeds,
+real windows and real parameters from a batch that genuinely ran. Invented rows
+would announce themselves — nobody mistakes `seed: 123` for a measurement. Rows
+lifted from a real batch are indistinguishable from the database's own, which is
+exactly why `nav-001` had to put a sentence on screen about them, and exactly why
+they could not survive the endpoint existing.
+
+**The screen distinguishes two silences.** "The run list has not been read" and
+"no runs recorded yet" are different facts — one is about the system, the other
+about the database. A blank table would conflate them, which is the same species
+of error as a completion stamp that guesses (see [[db-007]] and §40).
+
+**Worth recording as a limitation.** This asymmetry is a judgement, not a
+derivation. If the picture ever becomes legible while empty — once detections
+and RF sensors exist, most of it will have something honest to say — the
+argument for its fallback weakens, and it should be revisited rather than
+inherited.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |

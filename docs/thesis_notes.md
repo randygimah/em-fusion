@@ -1897,6 +1897,54 @@ preference does not follow an analyst to another machine, and it is unavailable 
 window with site data blocked. Both are acceptable for a preference and would not be for a route,
 which is a further way of saying the two are different kinds of thing.
 
+### The fixture had two halves, and only one of them was pretending
+
+Retiring the Scenario Control screen's fixture turned out not to be a deletion.
+The mock carried two things: a list of recent runs, and a library of the five
+scenario types with the copy describing each. Only the first was a problem.
+
+Those runs were the sharp case of the honesty rule this project keeps
+restating. They held real seeds, real windows and real parameters from a batch
+that genuinely ran, which is precisely what made them dangerous — rows invented
+from nothing announce themselves, and rows lifted from a real batch are
+indistinguishable from the database's own to anyone reading them. The library is
+not data about the system's state at all. It is the closed set of five types the
+generator can produce, already parity-checked against the backend enum, with
+presentation text attached, and no endpoint serves it or ever will.
+
+So the library moved out into a module of its own and became what the
+application imports, the mock imports it in turn and keeps its shape for the
+tests that already use it, and the runs half simply went. Deleting the fixture
+wholesale would have taken with it the one half nothing else provides, and
+almost certainly have been followed by quietly reintroducing it somewhere less
+honest. The general form is worth stating: **a fixture is usually a mixture, and
+the question is not whether it is example data but whether anything downstream
+would mistake it for the system's own.**
+
+### Emptiness rather than fiction, and a deliberate divergence from the picture
+
+The screen's behaviour before its first answer is the item's one real departure
+from the pattern the picture feed established, and the reason is worth keeping
+because the two look inconsistent until the distinction is named.
+
+The operational picture falls back to its example payload before any response
+has arrived, and carries a degraded indicator from the first paint to say so.
+That is defensible there: a map with nothing on it cannot be developed against,
+most of the screen's machinery has nothing to show yet in any case, and the
+warning is unmissable and permanent until real data lands.
+
+A runs table is not like that. An empty table is perfectly legible — it says
+"nothing here yet" without any help — so the argument that justified the
+fallback does not apply, while the argument against it is at its strongest,
+because these particular rows are the ones a reader cannot tell from real ones.
+So the state before the first answer is *no rows*, and the screen says which of
+the two silences it is in: whether the list has not been read, or has been read
+and is empty. Those are different facts and a blank table would conflate them.
+
+Stated generally: **the fallback to example data is justified by what the screen
+cannot do without it, not by what looks finished.** Where an empty state is
+legible on its own, the example data has no defence.
+
 
 ## Implementation
 
@@ -3207,6 +3255,61 @@ because every assertion it makes is about semantics and the failure was entirely
 defect is invisible in exactly the way the caption defect was: the mutation that should have caught it
 is the one the specification had already flagged as uncatchable. **A blind spot named in advance is
 still a blind spot**; naming it buys the knowledge of where to look by hand, not immunity.
+
+### Two tests that could not fail, and the fixture that satisfied them
+
+Wiring the screen to its endpoints produced the clearest instance yet of a
+defect this project has now recorded four times, and the red run caught it at
+exactly the moment it is supposed to.
+
+Two of the tests were written to prove that the runs on screen come from the
+database rather than from the fixture. Both passed **before a single line of the
+implementation existed**. The cause was mine: building the fake API response, I
+had reused seed values taken from the fixture itself — they were the numbers to
+hand, because they were the ones visible on the screen at the time. So a test
+asserting that the table shows API rows was satisfied by the table showing
+fixture rows carrying the same numbers. The test could not fail, and its subject
+was precisely the thing it could not detect.
+
+The fix was to pick seeds appearing nowhere in the fixture, and then to assert
+both halves rather than one: that the API's rows are present *and* that every
+one of the fixture's is absent. The second assertion is the load-bearing one,
+and it is the one the original framing had no way to express.
+
+The lesson is narrower than "watch the tests fail" and worth stating on its own:
+**a test that distinguishes A from B must be built from values that occur in
+only one of them.** Drawing the fixture for the new behaviour from the old
+behaviour's data guarantees the two are indistinguishable to the assertion, and
+no amount of care in the test's wording recovers that. Four instances now sit on
+the record — the four in the layout work, the tooltip satisfying the rail's
+label test, and these two — and the only thing that has ever found one is
+running the test against something that ought to break it.
+
+### A structural check that punished writing the rule down, for the third time
+
+The same item produced a fourth recurrence of a defect this repository has
+documented three times before, which is enough repetition to be worth naming as
+a pattern rather than as an incident.
+
+A test was added asserting that the application imports the retired fixture
+nowhere. It failed immediately, on the module that had just been created to
+*replace* the fixture — because that module's opening comment explains where it
+came from, and names the fixture in doing so. A check scanning raw source cannot
+tell a rule broken from a rule described, and the path of least resistance is
+always to delete the explanation.
+
+The established answer here is a scrubber, and the interesting part is that it
+had to be applied differently. The transport check strips comments **and string
+literals**, because it looks for `fetch(`, which a string can name innocently.
+This check looks for an *import*, and an import path is a string literal — so
+scrubbing strings would have made it match nothing at all and pass forever,
+which is the same failure wearing the opposite mask. Comments are stripped and
+strings are kept, and a further test asserts both halves: that a real import is
+caught and a described one is not.
+
+**The general rule is that the scrubber has to be cut to the thing being
+searched for.** A single shared helper applied uniformly would have been wrong
+in one direction here and wrong in the other there, and in both cases silently.
 
 ## Evaluation
 
