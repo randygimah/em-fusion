@@ -23,6 +23,7 @@ tests were written, and the item carries six decisions rather than the one the o
 | | |
 |---|---|
 | Frontend suite | **55 passed**, 6 files (`pnpm exec vitest run`), `tsc -b` and `biome lint` clean |
+| Browser pass | All three entries, the deep link, and the unrecognised-hash fallback checked in Chrome; no console errors |
 | Backend suite | **564 passed, 99.93%** — unchanged, and **not re-run this session**; nothing touched it |
 | Spec items passing | **26 of 84** — `scn` 5/5, `adp` 7/8, `db` 5/7, `api` 3/9, `nav` 1/1 |
 | New dependencies | None. No router library — see below |
@@ -105,6 +106,14 @@ misunderstanding. The file is not padded to look busy.
   actually reaches that screen. The gap was found by tallying tests against mutations, not by the
   pass itself; an eighth mutation was written for it. Worth remembering that the tally is the step
   that finds this, and that a coverage report would have found it mechanically.
+- **`scn-004` shipped a caption that rendered in the wrong place, and the browser pass found it.**
+  The recent-runs caption reused `LABEL`, which begins with `block`; `display: block` on a
+  `<caption>` takes it out of the table's caption box, so it rendered *below* the column headers.
+  **Fixed with no test, which is a deviation** — the suite finds that table by the accessible name
+  the caption supplies, and that name was correct throughout, so the tests passed for the right
+  reason on the exact element that was wrong. jsdom does no layout, and the project's convention
+  forbids asserting on CSS classes, so no admissible test can catch a box-model defect. Only looking
+  at the running interface does.
 - **The repo map in `CLAUDE.md` had already gone stale before this session.** `api-003`'s
   `src/lib/api.ts` and `src/hooks/useOperationalPicture.ts` were never listed, two test files were
   missing from the `src/test/` row, and `App.tsx` was still described as wiring the mock into the

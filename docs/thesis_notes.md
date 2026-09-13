@@ -3123,6 +3123,30 @@ A coverage report would have found the same gap mechanically, and the argument f
 is unchanged.
 
 
+### A caption the tests could read but not see, and a third kind of blind spot
+
+The browser pass that closed the navigation item found a defect in the screen the item had just made
+reachable. The recent-runs table's caption was rendering *below* the column headers rather than above
+them, and the cause was one word: the caption reused the constant that styles field labels, and that
+constant begins with `block`. Setting `display: block` on a `<caption>` takes it out of the table's
+caption box, so the browser stops hoisting it above the table and lays it out in normal flow instead.
+
+What makes it worth recording is why nothing caught it. The suite finds that table *by its accessible
+name*, which the caption supplies, and the name is correct however the caption is displayed; the DOM
+order never changed either. So the tests were not merely silent, they were **passing for the right
+reason on the exact element that was wrong** — and the project's own testing convention, which
+forbids asserting on CSS classes in favour of analyst-visible behaviour, is what closes off the only
+assertion that would have caught it. jsdom does not do layout, so no test written under that
+convention can see a box-model defect at all.
+
+That is a third distinct blind spot, alongside the two already recorded. Coverage tooling finds
+behaviours with no assertion. Mutation finds assertions that are not load-bearing. Neither finds a
+behaviour that is asserted correctly and *rendered* wrongly, and only looking at the running
+interface does. The fix therefore landed with no accompanying test, which is a deviation from the
+order this project works in and is recorded as one; writing a class-name assertion to satisfy the
+form of the workflow would have contradicted the testing convention while still proving nothing about
+the rendering.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;

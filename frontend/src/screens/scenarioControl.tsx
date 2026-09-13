@@ -94,6 +94,12 @@ const validate = (form: Form): Validated => {
 };
 
 const LABEL = "block font-mono text-[10px] font-bold uppercase tracking-[0.05em] text-[#8c909f]";
+// The same type as a field label, at the display a <caption> needs. `block`
+// takes a caption out of the table's caption box, and the browser then stops
+// hoisting it above the table: it lands in normal flow, under the column
+// headers. Invisible to the tests, which read the accessible name the caption
+// gives the table and never its box.
+const CAPTION = LABEL.replace("block", "table-caption");
 const INPUT =
   "mt-1 w-full rounded border border-[#424754] bg-[#0b0e15] px-2 py-1.5 font-mono text-[13px] text-[#e1e2ec] focus:border-[#4d8eff] focus:outline-none";
 
@@ -307,7 +313,7 @@ const ScenarioControlScreen = ({ control, onStart, onReset, onReplay }: Props) =
 
           <section className="border border-[#424754] bg-[#1d2027] p-3">
             <table className="w-full border-collapse text-left text-[13px]">
-              <caption className={`${LABEL} mb-2 text-left`}>Recent runs</caption>
+              <caption className={`${CAPTION} mb-2 text-left`}>Recent runs</caption>
               <thead>
                 <tr className="border-b border-[#424754] text-[#8c909f]">
                   <th className="py-1 font-mono text-[10px] font-bold uppercase tracking-[0.05em]">Scenario type</th>
