@@ -122,18 +122,13 @@ describe("the navigation shell", () => {
     expect(await screen.findByText(/not built yet/i)).toBeInTheDocument();
   });
 
-  it("says the listed runs are a fixture rather than the database", async () => {
-    // spec: nav-001 (third decision), api-003, scn-004 — api-006 does not
-    // exist, so those rows are the mock. Example data presented as though it
-    // were the system's own is the failure this project argues against, and
-    // the rows look exactly like real ones because they came from a real
-    // batch.
-    render(<App />);
-
-    goTo(/scenario control/i);
-
-    expect(await screen.findByRole("note")).toHaveTextContent(/fixture/i);
-  });
+  // Removed 2026-09-13, superseded by api-010 rather than deleted for being
+  // inconvenient. nav-001's third decision put a sentence on screen saying the
+  // listed runs were a fixture, which was true while api-006 did not exist.
+  // The runs now come from the database, so the sentence would be false and
+  // the note is gone. The principle it expressed is asserted in the other
+  // direction in scenarioAccess.test.tsx: the word "fixture" must be absent
+  // once the rows are real.
 
   it("stops polling the picture when the analyst leaves it", async () => {
     // spec: nav-001 (fourth decision), api-003 — the hook belongs to the
@@ -147,14 +142,21 @@ describe("the navigation shell", () => {
     vi.stubGlobal("fetch", fetchMock);
     vi.useFakeTimers();
 
+    // Counted by path rather than in total. Since api-010 the Scenario Control
+    // screen polls an endpoint of its own, so a bare call count keeps rising
+    // after the analyst leaves the picture and would fail this test for the
+    // opposite of the reason it exists.
+    const pictureCalls = () =>
+      fetchMock.mock.calls.filter(([path]) => String(path).includes("operational-picture")).length;
+
     render(<App />);
     await vi.advanceTimersByTimeAsync(DEFAULT_POLL_INTERVAL_MS * 2);
-    const polled = fetchMock.mock.calls.length;
+    const polled = pictureCalls();
 
     goTo(/scenario control/i);
     await vi.advanceTimersByTimeAsync(DEFAULT_POLL_INTERVAL_MS * 3);
 
     expect(polled).toBeGreaterThan(0);
-    expect(fetchMock.mock.calls).toHaveLength(polled);
+    expect(pictureCalls()).toBe(polled);
   });
 });

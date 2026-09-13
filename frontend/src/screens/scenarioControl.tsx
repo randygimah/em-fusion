@@ -28,6 +28,14 @@ interface Props {
   // everything a row holds — the baseline values and the derived window are
   // not dials — so replaying through it would quietly drop them.
   onReplay?: (run: ScenarioRunRecord) => void;
+  // True while the run list is not known to be current — before the first
+  // answer arrives, and again whenever a poll fails (spec: api-010). The rows
+  // stay; only this changes, because stale truth beats fresh nothing.
+  degraded?: boolean;
+  // What the backend accepted, once a batch has been asked for. A start
+  // answers 202 and the first row can be ten seconds behind it, so a control
+  // that changed nothing visible would read as a dead button.
+  accepted?: { baseSeed: number; runs: number } | null;
 }
 
 // The form holds strings, not numbers: an empty seed field has to stay empty
@@ -125,7 +133,7 @@ const NumberField = ({ label, value, onChange, hint }: { label: string; value: s
   );
 };
 
-const ScenarioControlScreen = ({ control, onStart, onReset, onReplay }: Props) => {
+const ScenarioControlScreen = ({ control, onStart, onReset, onReplay, degraded = false, accepted = null }: Props) => {
   const [form, setForm] = useState<Form>(() => asForm(DEFAULT_CONFIGURATION));
   const [error, setError] = useState<string | null>(null);
   const libraryHeading = useId();
@@ -290,14 +298,23 @@ const ScenarioControlScreen = ({ control, onStart, onReset, onReplay }: Props) =
               </EmButton>
             </div>
 
+            {accepted !== null && (
+              <p
+                className="mt-3 border-l-2 border-[#6fd3a5] bg-[#191b23] px-3 py-2 text-[12px] text-[#6fd3a5]"
+                role="status"
+              >
+                Batch accepted — {accepted.runs} runs from base seed <span className="font-mono">{accepted.baseSeed}</span>. Runs appear
+                below as each finishes. Keep that number: it is what reproduces this batch exactly.
+              </p>
+            )}
+
             {onStart === undefined && (
               <p
                 className="mt-3 border-l-2 border-[#df7412] bg-[#191b23] px-3 py-2 text-[12px] text-[#ffb786]"
                 role="note"
               >
-                Nothing is wired to these controls yet: the scenario endpoints are not built, and the runs listed below are a fixture from a
-                recorded batch rather than the database. A batch runs from the command line today —
-                <span className="font-mono"> make generate</span> — and this screen is what will drive it.
+                Nothing is wired to these controls yet, and the runs listed below are a recorded example rather than the database. A batch
+                runs from the command line today — <span className="font-mono">make generate</span> — and this screen is what will drive it.
               </p>
             )}
 
@@ -346,7 +363,16 @@ const ScenarioControlScreen = ({ control, onStart, onReset, onReplay }: Props) =
                 ))}
               </tbody>
             </table>
-            {control.runs.length === 0 && <p className="mt-2 text-[12px] text-[#8c909f]">No runs recorded yet.</p>}
+            {control.runs.length === 0 && (
+              <p className="mt-2 text-[12px] text-[#8c909f]">
+                {degraded ? "No runs yet — the run list has not been read." : "No runs recorded yet."}
+              </p>
+            )}
+            {degraded && control.runs.length > 0 && (
+              <p className="mt-2 text-[12px] text-[#ffb786]">
+                Not live — this list is the last one read and may be out of date.
+              </p>
+            )}
           </section>
         </div>
       </div>

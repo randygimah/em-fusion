@@ -41,29 +41,56 @@ export const fetchOperationalPicture = async (
 
 // ---------------------------------------------------------------- scenario
 //
-// STUB, written at the test stage. spec: api-010. Replaced at the code stage;
-// present only so `scenarioAccess.test.tsx` collects and each test fails on its
-// own assertion rather than the file failing to load.
+// The scenario control calls. spec: api-010, api-006.
+//
+// They live here rather than in a module of their own because `api-003` made
+// this the only place in the frontend that reaches the network, and
+// `src/test/transport.test.ts` scans every other module's scrubbed source to
+// keep it that way. A second caller is how changing an endpoint stops being a
+// one-file change.
 
 export const SCENARIO_RUNS_PATH = "/api/v1/scenario/runs";
 export const SCENARIO_START_PATH = "/api/v1/scenario/start";
 
+/** What the backend answers a start request with, before any run exists. */
 export interface BatchAcceptance {
+  /** The seed actually used — drawn by the backend when none was given. */
   baseSeed: number;
   runs: number;
   seeds: number[];
 }
 
+/** The runs the database holds, newest first, or throw. */
 export const fetchScenarioRuns = async (
-  _baseUrl = "",
-  _signal?: AbortSignal,
+  baseUrl = "",
+  signal?: AbortSignal,
 ): Promise<ScenarioRunRecord[]> => {
-  throw new Error("fetchScenarioRuns: not implemented (api-010)");
+  const response = await fetch(`${baseUrl}${SCENARIO_RUNS_PATH}`, { signal });
+  if (!response.ok) {
+    throw new Error(`${SCENARIO_RUNS_PATH} responded ${response.status}`);
+  }
+  return (await response.json()) as ScenarioRunRecord[];
 };
 
+/**
+ * Ask for a batch, and get back what was accepted rather than what was run.
+ *
+ * The backend answers 202 and runs the batch behind the response, so this
+ * resolves in milliseconds while the runs themselves appear over the following
+ * minute. A refusal — an unknown type, a batch outside the run bounds, an
+ * incident beginning after its run ends — is a 422 and throws here.
+ */
 export const startScenarioBatch = async (
-  _configuration: ScenarioConfiguration,
-  _baseUrl = "",
+  configuration: ScenarioConfiguration,
+  baseUrl = "",
 ): Promise<BatchAcceptance> => {
-  throw new Error("startScenarioBatch: not implemented (api-010)");
+  const response = await fetch(`${baseUrl}${SCENARIO_START_PATH}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(configuration),
+  });
+  if (!response.ok) {
+    throw new Error(`${SCENARIO_START_PATH} responded ${response.status}`);
+  }
+  return (await response.json()) as BatchAcceptance;
 };

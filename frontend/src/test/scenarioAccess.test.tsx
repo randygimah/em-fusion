@@ -134,7 +134,10 @@ describe("the Scenario Control screen against the backend", () => {
 
     const fixtureSeed = String(scenarioControlMock.runs[0].seed);
     expect(screen.queryByText(fixtureSeed)).not.toBeInTheDocument();
-    expect(await screen.findByText(/no runs/i)).toBeInTheDocument();
+    // The exact claim, not just "no runs": the screen has to say the list has
+    // not been read, which is a statement about the system rather than about
+    // the database. "No runs recorded yet" would assert the second.
+    expect(await screen.findByText(/the run list has not been read/i)).toBeInTheDocument();
   });
 
   it("no longer says the listed runs are a fixture", async () => {
@@ -230,8 +233,21 @@ describe("where the screen's data comes from", () => {
     eager: true,
   }) as Record<string, string>;
 
+  // Comments stripped, string literals kept. transport.test.ts scrubs both,
+  // and must: it looks for `fetch(`, which a comment can name innocently. This
+  // check looks for an *import*, and an import path IS a string literal — so
+  // scrubbing strings here would make it match nothing at all, green forever.
+  // The trap is the same one either way: a rule described must not read as a
+  // rule broken. `scenarioLibrary.ts` explains in prose where it came from,
+  // and that sentence is why this scrubber exists.
+  const stripComments = (source: string): string =>
+    source.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/\/\/[^\n]*/g, " ");
+
   const appModules = Object.entries(modules).filter(
-    ([path]) => !path.startsWith("../test/") && !path.startsWith("../mocks/"),
+    ([path]) =>
+      !path.startsWith("../test/") &&
+      !path.startsWith("./") &&
+      !path.startsWith("../mocks/"),
   );
 
   it("checks the files it claims to check", () => {
@@ -240,11 +256,20 @@ describe("where the screen's data comes from", () => {
     expect(appModules.map(([path]) => path)).toContain("../App.tsx");
   });
 
+  it("still catches a real import", () => {
+    // Without this, the scrubber above proves only that nothing is checked.
+    const real = stripComments('import mock from "../mocks/scenarioControlMock";');
+    const described = stripComments("// never import mocks/scenarioControlMock here");
+
+    expect(real.includes("mocks/scenarioControlMock")).toBe(true);
+    expect(described.includes("mocks/scenarioControlMock")).toBe(false);
+  });
+
   it("imports the scenario fixture nowhere in the app", () => {
     // spec: api-010 (second decision) — the library moved out of the mock, so
     // nothing outside the tests needs it any more
     const offenders = appModules
-      .filter(([, source]) => source.includes("mocks/scenarioControlMock"))
+      .filter(([, source]) => stripComments(source).includes("mocks/scenarioControlMock"))
       .map(([path]) => path);
 
     expect(offenders).toEqual([]);

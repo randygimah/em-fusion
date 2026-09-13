@@ -1,3 +1,4 @@
+import { SCENARIO_LIBRARY } from "../lib/scenarioLibrary";
 import type { ScenarioControl } from "../types/scenarioControl";
 
 // Mock for the Scenario Control screen (spec: scn-004).
@@ -15,33 +16,7 @@ import type { ScenarioControl } from "../types/scenarioControl";
 // (1253435964, 12:32:16). `parameters` is the flat record the run row holds,
 // key for key.
 const scenarioControlMock: ScenarioControl = {
-  library: [
-    {
-      id: "normal-baseline",
-      name: "Normal baseline",
-      description: "Real replayed traffic and a quiet radio grid. Nothing staged; the false-positive control.",
-    },
-    {
-      id: "gnss-degradation",
-      name: "GNSS signal degradation",
-      description: "A raised noise floor over a zone, with the aircraft inside it holding their last position.",
-    },
-    {
-      id: "rf-sensor-fault",
-      name: "RF sensor fault",
-      description: "One receiver deviating while its neighbours stay nominal. The tracks are untouched.",
-    },
-    {
-      id: "aircraft-coverage-gap",
-      name: "Data-source coverage gap",
-      description: "Aircraft inside a zone stop reporting, with no radio signature to explain it.",
-    },
-    {
-      id: "ambiguous-mixed-evidence",
-      name: "Ambiguous mixed evidence",
-      description: "Both signatures at once, so the evidence supports more than one explanation.",
-    },
-  ],
+  library: SCENARIO_LIBRARY,
   runs: [
     {
       id: 48,
