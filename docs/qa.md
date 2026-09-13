@@ -3965,6 +3965,111 @@ and RF sensors exist, most of it will have something honest to say — the
 argument for its fallback weakens, and it should be revisited rather than
 inherited.
 
+## 59. How does the Scenario Control screen actually work — and why does pressing Start Batch appear to do nothing?
+
+**Four things were asked at once. Taking them in order, and one premise needs correcting first.**
+
+### The correction: a base seed belongs to a batch, not to a run
+
+The understanding offered was "each run has its own base seed". **Not quite, and the difference is
+the whole point of the design.** There is **one** base seed for the batch. Each run's seed is
+*derived* from it:
+
+```
+base seed 20220627
+    ├── run 0  → seed 1412224799 → its zone, its aircraft, its noise
+    ├── run 1  → seed  177252997 → ...
+    └── ... 20 runs
+```
+
+One integer therefore reproduces twenty runs exactly, and each run also records its own derived
+number so a single run can be rebuilt without repeating the other nineteen.
+
+A second conflation: "calculated from its own address" belongs one level further down. It describes
+how each individual **reading** inside a run is computed — from the seed plus *this receiver, this
+slice, this ten-second step* — which is what lets an incident be added without disturbing any reading
+outside it. It is not how the per-run seed is derived.
+
+A third: "a distance of ~55.7 to 85.7 km has been chosen between each receiver". That band is not a
+spacing. It is the range of **threshold values** for which both layout rules hold — below 55.7 km one
+receiver has no neighbour at all, at 85.7 km and above the layout collapses toward
+everything-sees-everything. The configured neighbour threshold is **70 km**, chosen near the middle
+of that band; the incident zone radius is a separate setting defaulting to **60 km**. The receivers
+sit at real airfields at whatever distances those happen to be.
+
+Otherwise the understanding was right: the recorded hour has nothing staged in it, four of the five
+types inject something and the first is the false-alarm control, two act on the aircraft reports, one
+acts on a single receiver, and 20–30 runs per type is what makes a rate worth quoting.
+
+*(One caveat on "the corpus has no interference": it has ten genuine reporting gaps across seven
+aircraft. That is why the generator keeps an exclusion list and never stages a gap on a track that
+already has one — see §  on the coverage-gap confound.)*
+
+### 1. Why Start Batch appeared to do nothing
+
+**It was a real bug, now fixed.** The batch was dying instantly and the screen was reporting success.
+
+The request is answered *before* the work begins — a batch takes about a minute, which is longer than
+an HTTP request can reasonably be held open — so the screen shows "accepted" and waits for rows to
+appear. The batch itself was failing on a missing pseudonymisation seed: Compose passes that value
+from the host, an unset host variable arrives inside the container as an **empty string** rather than
+as absent, and the code that falls back to reading the configuration file treats present-but-empty as
+present. Both command-line entrypoints already handled this; the launcher behind the button did not.
+
+Verified after the fix: twenty runs written and completed, no failures in the log.
+
+**The library selection was working the whole time.** The failure log named
+`type=rf-sensor-fault`, so the chosen type was reaching the backend correctly — there was simply
+never a run to show for it.
+
+**What is still not fixed**, and is recorded as owed: nothing carries a *later* failure back to the
+screen. A batch that dies still looks like one still running.
+
+### 2. Is Replay future work?
+
+**Yes, and for a different reason than Reset.**
+
+| Control | Why it is disabled |
+|---|---|
+| **Reset** | Nothing to reset. A run is a permanent row, nothing is ever deleted, and until a batch can be interrupted there is no state to clear. |
+| **Replay** | The endpoint cannot express it. Starting a batch means starting **at least 20 runs**, so "run this one row again" is not a request the system can currently make. It needs its own endpoint or a relaxed lower bound. |
+
+### 3. What the other configuration fields do — and which ones do nothing
+
+| Setting | What it changes |
+|---|---|
+| **Runs in batch** | How many runs. Must be 20–30. |
+| **Run duration (s)** | Simulated seconds each run covers. |
+| **Incident offset (s)** | How far into the run the staged event begins. |
+| **Incident duration (s)** | How long it lasts. |
+| **Zone radius (km)** | How far the incident reaches from the receiver at its centre. |
+| **Noise elevation (dB)** | How far the noise floor rises inside the zone. |
+| **Spectral extent** | One slice of the band, or all eight. |
+
+**Several are inert for some types, and the screen does not say so.** This is a defect in the screen,
+not the generator:
+
+| Setting | Quiet control | Navigation interference | Faulty receiver | Coverage gap | Ambiguous |
+|---|---|---|---|---|---|
+| Incident offset & duration | — | yes | yes | yes | yes |
+| Zone radius | — | yes | **no effect** | yes | yes |
+| Noise elevation | — | yes | yes | **no effect** | yes |
+| Spectral extent | — | yes | yes | **no effect** | yes |
+
+The reasons are the design rather than an oversight. A faulty receiver is *one* receiver, so there is
+no zone for a radius to describe. A coverage gap deliberately has a **clean spectrum** — giving it a
+radio signature would destroy the rule that identifies it, which fires on aircraft trouble with *no*
+co-located radio anomaly. The quiet control stages nothing, so every incident setting is inert.
+
+### 4. Why mostly coverage gap and GNSS degradation
+
+**Because those are the batches that had been run.** The list is every run the database holds,
+newest first, capped at 50. Earlier batches were those two types; after an RF-sensor-fault batch, its
+twenty runs sit at the top.
+
+**Worth recording as a limitation.** The table shows the 50 most recent runs with no filter and no
+paging, which is fine at 80 runs and will not be at 150 — the evaluation campaign's size.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |

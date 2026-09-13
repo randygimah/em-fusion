@@ -3311,6 +3311,41 @@ caught and a described one is not.
 searched for.** A single shared helper applied uniformly would have been wrong
 in one direction here and wrong in the other there, and in both cases silently.
 
+### A remedy copied twice, and the third caller that did not know about it
+
+The batch button, the first time it was pressed against the running system, reported success over a
+failure. The screen said *Batch accepted — 20 runs from base seed 1817692939*, no runs ever appeared,
+and the reason sat in a container log: the pseudonymisation seed was not set.
+
+The immediate cause is a defect this project had already recorded twice. Compose passes that seed
+through from the host, so a host variable that is **unset arrives inside the container as an empty
+string rather than as absent**, and the library that reads the configuration file treats
+present-but-empty as present — so nothing shadowed a perfectly good file sitting right there. Both
+command-line entrypoints handle it. Each carries its own four-line block, and each carries its own
+comment explaining the trap, because the defect was found twice and fixed twice in the place it was
+found.
+
+That is the part worth keeping. **A remedy that has been copied is a remedy the next caller will not
+know about.** The batch launcher was a third site with the same need, written months later and by a
+different route into the system — an HTTP request rather than a command — and there was nothing in
+the code to tell its author that two other places had already solved this. Two copies of a fix look
+like diligence; they are better read as a warning that the thing is easy to get wrong and has no
+single home. The fix therefore extracts one function that all three call, beside the object it
+protects, rather than adding a third copy.
+
+The testing lesson is sharper and less comfortable. The launcher had tests, and they could not have
+caught this: they substitute the thing that reads the seed, precisely so the tests need no seed. The
+substitution that made them runnable is the substitution that made them blind. This is the second
+recurrence of the more general rule — **the place the code runs is not the place the tests describe**
+— and, as with the two faults recorded under Phase 5 and the caption defect, what found it was a
+person pressing the button.
+
+A limitation remains, and is more interesting than the bug. The request is answered before the work
+starts, so nothing carries a later failure back to the caller. A batch that dies is, from the
+screen's point of view, indistinguishable from one still running. That is the same shape of
+dishonesty the project argues against everywhere else, it is not fixed, and it is recorded as owed
+work rather than folded into a claim that the feature is complete.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;
