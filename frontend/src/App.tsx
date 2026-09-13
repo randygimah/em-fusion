@@ -1,13 +1,46 @@
+import { EmNavRail } from "./components/em/EmNavRail";
+import { useCurrentScreen } from "./hooks/useCurrentScreen";
 import { useOperationalPicture } from "./hooks/useOperationalPicture";
+import scenarioControlMock from "./mocks/scenarioControlMock";
+import { SCREENS } from "./routes";
+import HypothesesScreen from "./screens/hypotheses";
 import OperationalPictureScreen from "./screens/operationalPicture";
+import ScenarioControlScreen from "./screens/scenarioControl";
 
-// The seam. This is the only place that knows the picture is fetched rather
-// than passed in, which is what the contract-first structure was for: the
-// screen still takes a typed value and no component changed when the mock
-// stopped being the source (spec: api-003).
-const App = () => {
+// The seam, and the only place that knows where a screen's data comes from
+// (spec: api-003). The picture is fetched; the scenario control fixture is
+// imported, because api-006 does not exist. No screen imports a mock itself.
+//
+// The hook lives in here rather than in App so that it mounts and unmounts
+// with the screen that needs it: left above the switch it would poll every
+// five seconds while the analyst is looking at something else (nav-001).
+const OperationalPictureRoute = () => {
   const { picture, degraded } = useOperationalPicture();
 
-  return <OperationalPictureScreen operationalPicture={picture} degraded={degraded} />;
+  return (
+    <OperationalPictureScreen
+      operationalPicture={picture}
+      degraded={degraded}
+    />
+  );
 };
+
+const App = () => {
+  const current = useCurrentScreen();
+
+  return (
+    <div className="flex min-h-screen bg-[#0b0e15]">
+      <EmNavRail
+        currentId={current.id}
+        screens={SCREENS}
+      />
+      <div className="min-w-0 flex-1">
+        {current.id === "operational-picture" && <OperationalPictureRoute />}
+        {current.id === "hypotheses" && <HypothesesScreen />}
+        {current.id === "scenario-control" && <ScenarioControlScreen control={scenarioControlMock} />}
+      </div>
+    </div>
+  );
+};
+
 export default App;

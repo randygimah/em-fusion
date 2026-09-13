@@ -289,7 +289,8 @@ const ScenarioControlScreen = ({ control, onStart, onReset, onReplay }: Props) =
                 className="mt-3 border-l-2 border-[#df7412] bg-[#191b23] px-3 py-2 text-[12px] text-[#ffb786]"
                 role="note"
               >
-                Nothing is wired to these controls yet: the scenario endpoints are not built. A batch runs from the command line today —
+                Nothing is wired to these controls yet: the scenario endpoints are not built, and the runs listed below are a fixture from a
+                recorded batch rather than the database. A batch runs from the command line today —
                 <span className="font-mono"> make generate</span> — and this screen is what will drive it.
               </p>
             )}
