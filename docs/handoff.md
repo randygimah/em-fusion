@@ -16,7 +16,8 @@ decision-making.
 
 This session took the Scenario Control screen from unreachable to live: **`nav-001`** (the three-entry
 rail), **`nav-003`** (that rail collapsing), **`api-006`** (the scenario endpoints) and **`api-010`**
-(the screen reading them), plus a caption defect `scn-004` had shipped.
+(the screen reading them) — plus two defects found only by running it: a caption `scn-004` had
+shipped, and a launcher that reported success over failure until the user pressed the button.
 
 ## Current state
 
@@ -26,14 +27,15 @@ rail), **`nav-003`** (that rail collapsing), **`api-006`** (the scenario endpoin
 | Backend suite | **584 passed, 99.88%** via `make test-backend`, database tier live, ~146 s |
 | Spec items passing | **29 of 86** — `scn` 5/5, `adp` 7/8, `api` 5/10, `nav` 2/3, `db` 5/7 |
 | New dependencies | None. No router library, no icon library, no task queue |
-| Stack | **Up.** `START BATCH` verified end to end: 20 `rf-sensor-fault` runs written and completed, 0 failures logged. The database holds 80 runs. |
+| Stack | **Up** (`postgis`, `backend` :8000, `frontend` :8080). The `frontend` container reports **unhealthy** — a healthcheck defect, diagnosed in the owed list; it serves correctly. |
+| Runs in the database | **100**, the newest `ambiguous-mixed-evidence`. The screen lists the 50 most recent. |
 
 ### What exists now
 
-**The screen is live.** `#/scenario-control` lists the runs the database holds — 60 of them at the
-time of writing — on the same five-second poll, and `START BATCH` posts a configuration and reports
-the base seed the server used. The fixture is gone, and so is the sentence `nav-001` put on screen
-describing it.
+**The screen is live and has been used.** `#/scenario-control` lists the runs the database holds —
+the 50 most recent of 100 — on a five-second poll, and `START BATCH` posts a configuration and
+reports the base seed the server used. Batches of at least three types have now been produced through
+it. The fixture is gone, and so is the sentence `nav-001` put on screen describing it.
 
 **`api-006` — the endpoints.** `POST /scenario/start` answers **202** and runs the batch on a daemon
 thread; `GET /scenario/runs` lists them newest first with the recorded parameters a replay needs.
@@ -62,6 +64,7 @@ Not reachable from any test, so done by hand through nginx:
 | Ground truth in the payload | Absent, against runs that have it recorded |
 | Backend stopped underneath it | Rows stayed; "Not live — this list is the last one read" appeared |
 | Backend restarted | The warning cleared on the next successful poll |
+| `START BATCH`, after the fix | 202, then 20 `rf-sensor-fault` runs written and completed inside 10 s, nothing in the failure log |
 
 **`START BATCH` has now been fired against the real stack**, after the user pressed it and reported
 nothing happening. It failed — see Failed attempts — and after the fix wrote twenty `rf-sensor-fault`
@@ -82,16 +85,19 @@ Nothing half-built; the tree is clean.
 
 ## Changed
 
-Fourteen commits, `f3adcd4` through `98ccf30`: four items through spec → test → code, the caption
-fix, the progress note, and three docs passes.
+Twenty-two commits, `f3adcd4` through `db088cc`, plus this handoff update: four items through
+spec → test → code, two defect fixes found by running the thing, two progress-note publishes, and
+four docs passes.
 
 Added, frontend: `EmNavRail.tsx`, `useCurrentScreen.ts`, `useRailCollapsed.ts`,
 `useScenarioControl.ts`, `lib/scenarioLibrary.ts`, `screens/hypotheses.tsx`, and four test files.
 Added, backend: `app/api/v1/scenario.py`, `app/api/v1/schemas/scenario.py`, `app/scenario/batch.py`,
 `tests/test_api_scenario.py`. Modified: `routes.ts`, `App.tsx`, `scenarioControl.tsx`, `lib/api.ts`,
 `scenarioControlMock.ts`, `navigation.test.tsx`, `app/dal/models.py`, `app/db/repository.py`,
-`app/api/v1/__init__.py`, `docs/spec.jsonl`, `docs/thesis_notes.md`, `docs/qa.md` (§57, §58),
-`docs/implementation.md`, `CLAUDE.md`, `DESIGN.md`.
+`app/api/v1/__init__.py`, `docs/spec.jsonl`, `docs/thesis_notes.md`, `docs/qa.md` (§57, §58, §59),
+`docs/implementation.md`, `CLAUDE.md`, `DESIGN.md`. The launcher fix also touched
+`app/dal/pseudonymise.py` (the new shared helper), `app/replay.py` and `app/pipeline.py` (each losing
+its own copy of it), and `app/scenario/batch.py`.
 
 **The progress note is at version 17**, carrying a screenshot of the Scenario Control screen with a
 control-by-control walkthrough, the per-type table of which dials are inert, and the batch-failure
@@ -139,10 +145,11 @@ limitation. It is now a multi-file artifact — the screenshot sits beside the p
 - **`scn-004` shipped a caption rendering below its column headers** (`display: block` on a
   `<caption>`), found by the browser pass and fixed in `c4f8d66`. **No test**: the suite finds that
   table by the accessible name the caption supplies, and that name was right throughout.
-- **Every item this session was flipped to `passes: true` with no frontend coverage measurement.**
-  The gate is 90%; the frontend still measures nothing and mutation stood in. A deviation, not an
-  equivalent. The backend gate did its job on `api-006` — `app/scenario/batch.py` sat at 65% while
-  every other module was at 100%, and the two tests closing it were written after the implementation.
+- **The three frontend items were flipped to `passes: true` with no coverage measurement.** The gate
+  is 90%; the frontend still measures nothing, so mutation stood in. A deviation, not an equivalent.
+  The backend has real coverage and it did its job on `api-006` — `app/scenario/batch.py` sat at 65%
+  while every other module was at 100%, and the two tests closing it were written after the
+  implementation, which is its own deviation.
 
 ## Next step
 
@@ -159,9 +166,18 @@ Owed, with an owner but no date:
 - **The configuration form offers dials that are inert for the selected type**, with nothing saying
   so: zone radius does nothing for `rf-sensor-fault`, and noise elevation and spectral extent do
   nothing for `aircraft-coverage-gap`. The reasons are the design; the silence is not.
-- **The runs table shows the 50 most recent, unfiltered and unpaged.** Fine at 80 runs, not at the
-  campaign's 150.
-
+- **The runs table shows the 50 most recent, unfiltered and unpaged.** Already hiding half the 100
+  rows in the database, and the campaign is 150.
+- **`docs/qa.md` has two entries numbered 47** — "When you say 5 dimensions…" (line 3154) and "The
+  next implementation is `scn-001`…" (line 3245). Pre-existing, and **not** to be fixed by
+  renumbering, which the project's own rule forbids; the fix is a note on the second saying which is
+  which.
+- **The `frontend` container is permanently unhealthy, and the healthcheck is wrong rather than the
+  service.** nginx has `listen 8080;` (IPv4 only), `localhost` inside the container resolves to `::1`
+  first, and the check is `wget --spider http://localhost:8080/`. Confirmed inside the container:
+  `127.0.0.1` succeeds, `[::1]` and `localhost` are refused. One-line fix either way — probe
+  `127.0.0.1` in `compose.yaml`, or add `listen [::]:8080;` to the nginx config. Worth doing because a
+  service that is always unhealthy cannot report becoming unhealthy.
 - **Decide whether the five batches share one base seed.** Recommended and measured; belongs to
   `eval-001` with whether the incident dials vary within a batch. Both must be settled before the
   scoring campaign is generated.
