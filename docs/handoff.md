@@ -80,17 +80,24 @@ Nothing half-built; the tree is clean.
 
 ## Changed
 
-Three commits this session:
+Five commits this session:
 
 - `f3adcd4` — `spec: amend nav-001` (six decisions, two new failure cases)
 - `878012a` — `test: add tests for nav-001` (ten tests, all proved red before implementation)
 - `fe5b5c6` — `feat(nav-001): the three-entry rail, with the hash as the route - tests pass`
+- `32ee70b` — `docs: nav-001 write-up`
+- `c4f8d66` — `fix(scn-004): the recent-runs caption sits above the table again`
 
 Added: `frontend/src/components/em/EmNavRail.tsx`, `frontend/src/hooks/useCurrentScreen.ts`,
 `frontend/src/screens/hypotheses.tsx`, `frontend/src/test/navigation.test.tsx`. Modified:
 `frontend/src/routes.ts`, `frontend/src/App.tsx`, `frontend/src/screens/scenarioControl.tsx`,
 `docs/spec.jsonl` (`nav-001` amended and flipped), `docs/thesis_notes.md` (two System Design
-subsections, one Implementation subsection), `docs/implementation.md`, `CLAUDE.md`.
+subsections, two Implementation subsections), `docs/implementation.md`, `CLAUDE.md`.
+
+**The progress note was republished** (version 16, same URL) for `scn-004` and `nav-001` together —
+it had not been touched since 12 September. New section on the scenario screen and the three
+entries, the spine's analyst stage moved to two-of-three, counts corrected to 26/84 and 564 tests,
+and a new passage on the three ways a test here can be blind.
 
 No `docs/qa.md` entry: the user asked no question this session and no clarification corrected a
 misunderstanding. The file is not padded to look busy.
@@ -133,8 +140,8 @@ misunderstanding. The file is not padded to look busy.
    row the frontend polls. Landing it also retires the fixture sentence added this session.
 2. **Phase 8** — baseline engine, then the deterministic detectors. The first thing that will ever
    read an answer key.
-3. **The progress note** (`EM Fusion in Plain English`) has not been updated for `scn-004` or
-   `nav-001`. Three reachable screens is a visible change to the story it tells.
+3. **Frontend coverage tooling** is now argued for by three separate findings rather than two.
+   Still a new dependency, still unowned.
 
 Owed, with an owner but no date:
 
