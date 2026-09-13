@@ -27,8 +27,8 @@ shipped, and a launcher that reported success over failure until the user presse
 | Backend suite | **584 passed, 99.88%** via `make test-backend`, database tier live, ~146 s |
 | Spec items passing | **29 of 86** — `scn` 5/5, `adp` 7/8, `api` 5/10, `nav` 2/3, `db` 5/7 |
 | New dependencies | None. No router library, no icon library, no task queue |
-| Stack | **Up** (`postgis`, `backend` :8000, `frontend` :8080). The `frontend` container reports **unhealthy** — a healthcheck defect, diagnosed in the owed list; it serves correctly. |
-| Runs in the database | **100**, the newest `ambiguous-mixed-evidence`. The screen lists the 50 most recent. |
+| Stack | **Up**, and **all three report healthy** since the healthcheck fix (`ops-001`). |
+| Runs in the database | **120**, the newest `normal-baseline`. The screen lists the 50 most recent. |
 
 ### What exists now
 
@@ -172,12 +172,19 @@ Owed, with an owner but no date:
   next implementation is `scn-001`…" (line 3245). Pre-existing, and **not** to be fixed by
   renumbering, which the project's own rule forbids; the fix is a note on the second saying which is
   which.
-- **The `frontend` container is permanently unhealthy, and the healthcheck is wrong rather than the
-  service.** nginx has `listen 8080;` (IPv4 only), `localhost` inside the container resolves to `::1`
-  first, and the check is `wget --spider http://localhost:8080/`. Confirmed inside the container:
-  `127.0.0.1` succeeds, `[::1]` and `localhost` are refused. One-line fix either way — probe
-  `127.0.0.1` in `compose.yaml`, or add `listen [::]:8080;` to the nginx config. Worth doing because a
-  service that is always unhealthy cannot report becoming unhealthy.
+- **A batch can exhaust the database connection pool and take the API down with it.** Observed, not
+  theorised: the backend was found hung on
+  `QueuePool limit of size 5 overflow 10 reached, connection timed out`, serving nothing, after
+  several batches had been started from the screen. **Measured afterwards: one batch is harmless** —
+  it adds a single connection and `/health` stays 200 throughout — so the trigger is *concurrent*
+  batches, and nothing limits them: every `POST /scenario/start` spawns another unbounded daemon
+  thread, and they share the API's one pool with request serving. The exact number of concurrent
+  batches needed was **not** determined, and saying so matters more than guessing it. Nothing sets
+  `pool_size` or `max_overflow`, so the ceiling is SQLAlchemy's default 15. Three candidate fixes,
+  needing a decision rather than a default: refuse a second batch while one is in flight (which would
+  also give a future reset something to cancel); give batches their own small engine so they cannot
+  starve the API; or raise the pool, which only moves the cliff. The first two are complementary and
+  are what I would recommend.
 - **Decide whether the five batches share one base seed.** Recommended and measured; belongs to
   `eval-001` with whether the incident dials vary within a batch. Both must be settled before the
   scoring campaign is generated.
