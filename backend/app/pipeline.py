@@ -37,7 +37,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 from collections.abc import Callable, Sequence
 from datetime import datetime, timedelta
@@ -45,14 +44,13 @@ from pathlib import Path
 from time import perf_counter
 from typing import TextIO, TypeVar
 
-from dotenv import load_dotenv
 from pydantic import BaseModel, ConfigDict, ValidationError
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.adapters.opensky import Window, available_window, replay_window
 from app.adapters.synthetic_rf import emit_run
 from app.dal.models import DataMode
-from app.dal.pseudonymise import SEED_ENV_VAR, Pseudonymiser
+from app.dal.pseudonymise import Pseudonymiser, load_seed_environment
 from app.dal.repository import ObservationRepository
 from app.dal.validation import IngestContext
 from app.db.repository import (
@@ -577,11 +575,7 @@ def main(
         return 2
 
     # Compose passes an unset host variable through as an empty string, and
-    # `load_dotenv` treats present-but-empty as present (`adp-007`).
-    if not os.environ.get(SEED_ENV_VAR, "").strip():
-        os.environ.pop(SEED_ENV_VAR, None)
-    if env_file is not None and Path(env_file).is_file():
-        load_dotenv(env_file, override=False)
+    load_seed_environment(env_file)
 
     try:
         pseudonymiser = Pseudonymiser.from_environment()

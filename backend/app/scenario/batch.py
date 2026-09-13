@@ -30,18 +30,23 @@ from threading import Thread
 
 from app.adapters.opensky import available_window
 from app.api.v1.schemas.scenario import BatchRequest
-from app.dal.pseudonymise import Pseudonymiser
+from app.dal.pseudonymise import Pseudonymiser, load_seed_environment
 from app.db.repository import PostgisObservationRepository
 from app.db.session import get_sessionmaker
 from app.pipeline import EXCLUSIONS_NAME, run_batch
-from app.replay import DEFAULT_DATA_DIR, EXTRACT_NAME, MANIFEST_NAME
+from app.replay import DEFAULT_DATA_DIR, DEFAULT_ENV_FILE, EXTRACT_NAME, MANIFEST_NAME
 from app.scenario.layout import load_layout
 from app.scenario.tracks import load_exclusions
 
 logger = logging.getLogger(__name__)
 
 
-def run_batch_now(request: BatchRequest, *, data_dir: Path = DEFAULT_DATA_DIR) -> None:
+def run_batch_now(
+    request: BatchRequest,
+    *,
+    data_dir: Path = DEFAULT_DATA_DIR,
+    env_file: Path | None = DEFAULT_ENV_FILE,
+) -> None:
     """Run one batch to completion, on whatever thread calls this.
 
     It borrows the API's own engine through `get_sessionmaker` rather than
@@ -49,6 +54,11 @@ def run_batch_now(request: BatchRequest, *, data_dir: Path = DEFAULT_DATA_DIR) -
     the application's lifespan, and a batch that built a second one would
     dispose the first out from under every in-flight request.
     """
+    # Before anything else. The seed arrives from compose present-but-empty
+    # when the host has not exported it, and every batch started from the
+    # screen died on that until this call existed.
+    load_seed_environment(env_file)
+
     manifest = json.loads((data_dir / MANIFEST_NAME).read_text())
     sessions = get_sessionmaker()
     run_batch(

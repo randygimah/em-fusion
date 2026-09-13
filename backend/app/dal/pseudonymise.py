@@ -34,8 +34,10 @@ import hmac
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
+from dotenv import load_dotenv
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.dal.models import ObservationType
@@ -179,3 +181,29 @@ def substitute(
         canonical[rule.canonical_field] = pseudonym
 
     return canonical
+
+
+def load_seed_environment(env_file: Path | None) -> None:
+    """Make the seed readable, whether it comes from the environment or a file.
+
+    Compose passes the seed through from the host, so an **unset host variable
+    arrives inside a container as an empty string rather than as absent** — and
+    `load_dotenv(override=False)` treats present-but-empty as present, which
+    would let nothing shadow a perfectly good `.env`. An empty seed is not a
+    seed, which `Pseudonymiser.from_environment` already says one layer down,
+    so it is cleared before the file is read.
+
+    A seed genuinely set in the environment still wins: `override=False` leaves
+    it alone, and only an empty one is cleared.
+
+    **This exists as one function because it had become three sites.** Both
+    command-line entrypoints carried their own copy with their own comment, and
+    the batch launcher — added later, by a route rather than a command — did
+    not, so every batch started from the screen died on a missing seed while
+    the screen reported it accepted. A remedy copied twice is a remedy the
+    third caller will not know about.
+    """
+    if not os.environ.get(SEED_ENV_VAR, "").strip():
+        os.environ.pop(SEED_ENV_VAR, None)
+    if env_file is not None and Path(env_file).is_file():
+        load_dotenv(env_file, override=False)

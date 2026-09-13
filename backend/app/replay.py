@@ -34,7 +34,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 from collections.abc import Sequence
 from datetime import datetime, timedelta
@@ -42,12 +41,11 @@ from pathlib import Path
 from time import perf_counter
 from typing import TextIO
 
-from dotenv import load_dotenv
 from pydantic import BaseModel, ConfigDict, model_validator
 
 from app.adapters.opensky import Window, available_window, replay_window
 from app.dal.models import DataMode
-from app.dal.pseudonymise import SEED_ENV_VAR, Pseudonymiser
+from app.dal.pseudonymise import Pseudonymiser, load_seed_environment
 from app.dal.repository import ObservationRepository
 from app.dal.validation import IngestContext
 from app.db.repository import (
@@ -260,17 +258,7 @@ def main(
     out = stdout if stdout is not None else sys.stdout
     args = build_parser().parse_args(argv)
 
-    # Compose passes the seed through from the host, so an *unset* host
-    # variable arrives inside the container as an empty string rather than as
-    # absent -- and `load_dotenv(override=False)` treats present-but-empty as
-    # present, which would let nothing shadow a perfectly good `.env`. An empty
-    # seed is not a seed, which `Pseudonymiser.from_environment` already says
-    # one layer down, so it is cleared before the file is read.
-    if not os.environ.get(SEED_ENV_VAR, "").strip():
-        os.environ.pop(SEED_ENV_VAR, None)
-
-    if env_file is not None and Path(env_file).is_file():
-        load_dotenv(env_file, override=False)
+    load_seed_environment(env_file)
 
     data_dir = Path(args.data_dir)
 

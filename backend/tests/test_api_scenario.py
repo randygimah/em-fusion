@@ -15,6 +15,7 @@ the database tier.
 from __future__ import annotations
 
 import ast
+import os
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -481,3 +482,59 @@ def test_the_launcher_never_builds_its_own_engine() -> None:
     assert "dispose_engine" not in referenced | imported
     # and the explanation that a text check would have forced out is still here
     assert "init_engine" in (batch.run_batch_now.__doc__ or "")
+
+
+def test_the_launcher_reads_the_seed_from_the_env_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The container's exact condition, reproduced. Spec: api-006.
+
+    Compose passes the pseudonymisation seed through from the host, so an
+    *unset* host variable arrives inside the container as an empty string
+    rather than as absent. `load_dotenv(override=False)` treats present-but-
+    empty as present, so nothing would shadow a perfectly good `.env`.
+
+    This is the third recurrence of that defect here, and the first two are why
+    both command-line entrypoints already clear the variable before reading the
+    file. The launcher did not, so every batch started from the screen died on
+    a missing seed while the screen reported it accepted.
+
+    Nothing substitutes the pseudonymiser in this test, deliberately: the
+    launcher's other tests do, which is exactly why they could not catch this.
+    """
+    # spec: api-006, adp-007, dal-004
+    monkeypatch.setenv("PSEUDONYM_SEED", "")
+    (tmp_path / MANIFEST_NAME).write_text("{}")
+    env_file = tmp_path / ".env"
+    env_file.write_text("PSEUDONYM_SEED=a-seed-from-the-file\n")
+    seen: dict[str, Any] = {}
+
+    monkeypatch.setattr(batch, "run_batch", lambda layout, **kw: seen.update(kw))
+    monkeypatch.setattr(batch, "available_window", lambda manifest: "window")
+    monkeypatch.setattr(batch, "load_layout", lambda: "layout")
+    monkeypatch.setattr(batch, "load_exclusions", lambda path: frozenset())
+    monkeypatch.setattr(batch, "PostgisObservationRepository", lambda sessions: "repo")
+    monkeypatch.setattr(batch, "get_sessionmaker", lambda: "sessions")
+
+    batch.run_batch_now(_batch_request(), data_dir=tmp_path, env_file=env_file)
+
+    assert seen["pseudonymiser"] is not None
+
+
+def test_a_real_seed_in_the_environment_is_not_shadowed_by_the_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The other half: a seed genuinely set must win. Spec: api-006.
+
+    Without this, clearing the variable could be implemented as clearing it
+    always, which would make the file authoritative and silently ignore a seed
+    an operator set on purpose.
+    """
+    # spec: api-006, dal-004
+    monkeypatch.setenv("PSEUDONYM_SEED", "the-real-one")
+    env_file = tmp_path / ".env"
+    env_file.write_text("PSEUDONYM_SEED=the-file-one\n")
+
+    batch.load_seed_environment(env_file)
+
+    assert os.environ["PSEUDONYM_SEED"] == "the-real-one"
