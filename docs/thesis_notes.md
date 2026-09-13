@@ -3009,3 +3009,73 @@ under Methodology — rather than of the generator, and no change to the generat
 Acquiring a second, non-adjacent hour would, and is the obvious mitigation if the result turns out to
 be sensitive to it.
 
+### What separates two runs of a batch is where the zone sits, not when the window opens
+
+*Measured 2026-09-13 by reproducing base seed 20220627 offline — deriving the twenty seeds, windows
+and zone centres, and counting the corpus directly — without touching the database. The derivation
+reproduced the batch's own report row for row, including the staged-aircraft count of every run,
+which is itself the first useful result: the answer key is a pure function of the base seed, so a
+campaign can be audited from one number without being re-executed.*
+
+The batch report shows each run's window, and reading it, the obvious conclusion is that time is what
+makes twenty runs twenty different things. The measurement says otherwise. Across the twenty runs the
+number of distinct aircraft present **in the fifteen-minute window** varies only between 514 and 550,
+a spread of about seven per cent: the recorded hour is uniformly busy, and moving the window moves
+which aircraft are present without much changing how many. The number present **inside the staged
+zone** varies between 13 and 91, a spread of sevenfold, and tracks the seed-derived zone centre almost
+exactly — the three Randstad receivers average 85 aircraft within the default 60 km radius, the four
+southern and eastern ones between 19 and 33. Since the affected fraction is a flat 8%, the centre is
+what decides whether a run stages eleven aircraft or none, and the window is close to irrelevant to
+it.
+
+The seed decides four things, and they are separable: the window, the zone centre, which aircraft in
+that zone are staged on, and every one of the 5,040 radio readings. The third is easy to overlook and
+is what keeps runs from duplicating each other when the first two collide. This batch contains the
+demonstration by coincidence. Runs 16 and 17 open **two seconds apart**, share a zone centre, and
+their zones contain **the same ninety aircraft** — identical sets, not merely equal counts. They stage
+two aircraft and five aircraft respectively, **with no aircraft in common**; run 8 shares their centre
+with a 97% window overlap, stages nine, and is disjoint from both. Three runs over the same traffic in
+the same place at the same time are still three different incidents, because the target draw is keyed
+on the run's own seed.
+
+That result cuts both ways, and the second edge is a limitation. The batch's guarantee is that no two
+runs share a window, and runs 16 and 17 satisfy it by two seconds: **distinct is not independent**.
+Ten of the 190 pairs in this batch overlap by more than 90% of their duration and the mean pairwise
+overlap is 30%, so the three near-duplicate runs are not an unlucky outlier but the expected
+consequence of drawing twenty fifteen-minute windows from one recorded hour. The per-run window was
+introduced to prevent exactly the same-centre-same-window case (`docs/qa.md` §53) and it does not
+fully prevent it. The generator cannot: the windows do not fit. What the measurement changes is that
+the limitation is now quantified rather than asserted — the earlier note said the windows "overlap
+heavily", and the number is 30% mean overlap with three runs of twenty forming a correlated cluster.
+Aggregated recall over such a batch carries less independent evidence than twenty suggests, and the
+mitigation remains a second, non-adjacent hour of corpus rather than a change to the code.
+
+### The five batches can share one base seed, and that makes every control a counterfactual
+
+A campaign is five batches, one per scenario type, because the metrics are reported per type
+(`eval-001`, FR-205). Whether those five share a base seed looked like an arbitrary choice and is not.
+
+Per-run seeds are a function of the base seed and the run index alone, so five batches from one base
+receive the same twenty seeds, and therefore the same twenty windows and the same twenty zone centres.
+Every invented number is derived under a key that includes the cell it values — sensor, channel, tick
+— and the injection is derived under a *separate* key, which is what lets an incident be added without
+moving any reading it does not touch. The consequence is that a `normal-baseline` run and a scenario
+run at the same seed are the same run apart from the injection.
+
+**Measured 2026-09-13**: run 0 of base seed 20220627, emitted once as `normal-baseline` and once as
+`gnss-degradation` at the same seed and window, differs in **60 of 5,040 cells — 1.2%** — which is
+exactly the incident's footprint of two receivers by one channel by thirty ticks. The remaining 4,980
+readings are identical values, and the replayed track rows are the same rows.
+
+This makes the control arm a *matched* control rather than an independent sample of quiet: a false
+alarm on the paired quiet run can be attributed to the background the scenario run also contained,
+because it is the same background. The alternative — a different base seed per type — buys independent
+placements across types at the cost of that attribution, and independence across types is not
+something any planned metric needs, since no result compares one type's traffic with another's.
+
+The decision is recorded here as a recommendation and left to `eval-001`, along with the open question
+of whether the incident dials vary within a batch. Both have to be settled before the scoring campaign
+is generated, because changing either afterwards invalidates every run already scored — and a seeded
+campaign makes that cost visible rather than hiding it, which is the point of recording the reasoning
+now.
+

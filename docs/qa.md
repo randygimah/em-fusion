@@ -3726,6 +3726,168 @@ copies of one". With seven possible centres that is loose. Thirty runs produce t
 two to six times. See §47 on what one seed decides, and §51 on how the deterministic half is
 marked.
 
+## 54. Why is it only outputting runs for `gnss-degradation`?
+
+**Because a batch is one scenario type, and the default command asks for that one.** Nothing is
+broken and nothing is missing: `--scenario-type` is a required argument that takes a single value,
+the batch resolves it once, and every run in the loop gets it. The root `Makefile` carries
+
+```make
+PIPELINE_ARGS ?= --scenario-type gnss-degradation --base-seed 20220627 --runs 20
+```
+
+so `make generate` with no overrides runs twenty GNSS-degradation runs. The `?=` is the point: the
+variable is a *default*, and a full campaign overrides it five times.
+
+### Why one type per batch rather than a mixed batch
+
+The evaluation reports precision, recall and a false-positive rate **per scenario type**, not over
+scenarios in general — `eval-001` says "N completed runs per type", and `FR-205` puts N between
+twenty and thirty. That requirement is what decides the shape of a batch:
+
+| | One mixed batch of 20 | One batch per type |
+|---|---|---|
+| Runs of each type | ~4, and the exact number is a property of the draw | 20–30, and it is what was asked for |
+| A per-type rate | Computed over four runs; a single miss moves it by 25 points | Computed over twenty; a single miss moves it by 5 |
+| Reproducing one type | Requires re-running all five | Requires re-running that one |
+| The control | Diluted to four quiet runs | Twenty quiet runs, which is what a false-positive rate needs |
+
+The mixed batch also makes the run count per type depend on the seed, which means a campaign
+"of twenty runs" is not the same experiment twice.
+
+A full campaign is therefore five invocations, not one:
+
+```bash
+make generate PIPELINE_ARGS="--scenario-type normal-baseline        --base-seed 20220627 --runs 20"
+make generate PIPELINE_ARGS="--scenario-type gnss-degradation       --base-seed 20220627 --runs 20"
+make generate PIPELINE_ARGS="--scenario-type rf-sensor-fault        --base-seed 20220627 --runs 20"
+make generate PIPELINE_ARGS="--scenario-type aircraft-coverage-gap  --base-seed 20220627 --runs 20"
+make generate PIPELINE_ARGS="--scenario-type ambiguous-mixed-evidence --base-seed 20220627 --runs 20"
+```
+
+### Should the five batches share a base seed?
+
+**Recommended: yes, and it is worth more than it looks.** The per-run seeds are a function of the
+base seed and the run index alone, so five batches from one base get the *same* twenty seeds, which
+give the same twenty windows and the same twenty zone centres. Every invented number in a run is
+keyed on the seed together with the coordinates of the cell it values — sensor, channel, tick — and
+the injection is derived under a separate key, so adding an incident cannot move a reading the
+incident does not touch (§47).
+
+The consequence is a matched control. **Measured 2026-09-13:** run 0 of base 20220627, emitted once
+as `normal-baseline` and once as `gnss-degradation` at the same seed and window, differs in **60 of
+5,040 cells (1.2%)** — exactly the incident's footprint of two receivers × one channel × thirty
+ticks. The other 4,980 readings are identical values. The quiet run is therefore a counterfactual of
+its scenario run rather than an independent sample of quiet, and a detector's false alarm on that
+pair can be attributed to the injection rather than to the background.
+
+The same holds on the track half: at the same seed and window, the replayed rows are the same rows,
+and only the perturbation separates them.
+
+**This is a recommendation, not a decision.** It belongs to `eval-001` along with the open question
+of whether the incident dials should vary within a batch, and both should be settled together before
+the scoring campaign is generated, because changing either afterwards invalidates every run already
+scored. See §51 on what the evaluation measures and §53 on why both halves run every time.
+
+## 55. There is a base seed for the whole batch and a seed per run, but the runs use the same data — is time the thing that makes the runs differ?
+
+**No.** Time is the most visible difference and close to the least important one. The run's seed
+decides four independent things, and the window is only the first of them:
+
+| What the run's seed decides | Keyed on | What it changes |
+|---|---|---|
+| The corpus window | `(seed, "window")` | Which fifteen minutes of the recorded hour replay |
+| The zone centre | `(seed, "incident", "centre")` | Which of the seven receivers the incident sits on — and therefore which aircraft are anywhere near it |
+| Which aircraft are staged on | `(seed, "track-target", pseudonym)` | Which 8% of the aircraft in that zone are frozen or suppressed |
+| Every radio reading | `(seed, sensor, channel, tick, "noise")` | All 5,040 cells of the grid the detector must separate the incident from |
+
+What does **not** vary within a batch: the scenario type, the incident offset and duration, the
+radius, the elevation, the spectral extent, the affected fraction, and the size of the grid.
+
+### The measurement
+
+Reproduced offline from the base seed on 2026-09-13, without touching the database, and matching the
+batch's own report row for row:
+
+| Run | Centre | Aircraft in the window | Aircraft in the zone | Staged |
+|---|---|---|---|---|
+| 7 | RF-01 Schiphol | 529 | 90 | 12 |
+| 12 | RF-03 Lelystad | 537 | 82 | 11 |
+| 8 | RF-02 Rotterdam | 545 | 87 | 9 |
+| 19 | RF-07 Köln/Bonn | 533 | 38 | 4 |
+| 9 | RF-06 Düsseldorf | 539 | 26 | 5 |
+| 10 | RF-05 Weeze | 537 | 17 | 2 |
+| 4 | RF-04 Eindhoven | 524 | 13 | **0** |
+
+Across all twenty runs the number of aircraft **in the window** varies from 514 to 550 — about 7%,
+which is to say the recorded hour is uniformly busy and the choice of window barely moves how much
+traffic a run contains. The number **in the zone** varies from 13 to 91, sevenfold, and follows the
+centre almost perfectly: the three centres in the Randstad average 85 aircraft within 60 km, the four
+to the south and east average between 19 and 33. The staged count is 8% of that, so it is the centre,
+not the window, that decides whether a run stages eleven aircraft or none.
+
+### The two-second pair
+
+The sharpest evidence is a coincidence inside this batch. Runs 16 and 17 open **two seconds apart**
+(12:15:24 and 12:15:26), share a zone centre, and stage on **the same 90 aircraft** — their zone
+populations are identical sets. They stage 2 and 5 aircraft respectively, **with no aircraft in
+common**. Run 8 is a third member of the same cluster: same centre, 97% window overlap, 9 staged, and
+again disjoint from both.
+
+So two runs can be the same fifteen minutes of the same day, in the same place, over the same
+aircraft, and still be different scenarios — because the aircraft each one picks is derived from its
+own seed. The window is what stops runs being near-duplicates on the *background*; the target draw is
+what makes them different *incidents*.
+
+### What this exposes as a limitation
+
+The batch guarantees that no two runs share a window, and runs 16 and 17 satisfy that guarantee by two
+seconds. **Distinct is not the same as independent.** Ten of the 190 pairs in this batch overlap by
+more than 90% of their duration, and three runs — 8, 16 and 17 — share a centre *and* overlap by more
+than 97%, which is precisely the near-duplicate case the per-run window was introduced to prevent
+(§53). Mean pairwise overlap across the batch is 30%.
+
+The generator cannot fix this: thirty fifteen-minute windows do not fit inside one recorded hour
+without overlapping. It is recorded in `docs/thesis_notes.md` as a limitation of the evaluation, and
+the mitigation, if a result turns out to be sensitive to it, is a second non-adjacent hour of corpus
+rather than a change to the code.
+
+## 56. What is the difference between "track" and "aircraft" in this context?
+
+**They are different units of counting: a track observation is a sighting, and an aircraft is the
+thing sighted.** The batch report prints both because they answer different questions, and the gap
+between 33,548 and 6 is not an error.
+
+| Column | Counts | Typical value | Answers |
+|---|---|---|---|
+| `rf` | Synthetic radio readings accepted into the store | 5,040, always | Did the whole grid arrive? |
+| `track` | Replayed **track observations** accepted into the store | ~33,500 | How much real traffic did this run replay? |
+| `aircraft` | Distinct **aircraft** named in the run's answer key | 0–12 | How many aircraft did this run actually stage on? |
+
+Three senses of the word have to be kept apart, and the glossary now holds all three:
+
+- **Aircraft** — the physical thing, identified by its 24-bit `icao24` address, which the Data
+  Abstraction Layer replaces with a pseudonym before anything is stored (`dal-004`).
+- **Track** — the time-ordered sequence of that aircraft's reports: its trajectory through the hour.
+- **Track observation** — one row. One aircraft, one instant, one position, one staleness reading.
+  This is what `ObservationType.TRACK` means and what the DAL stores.
+
+**Verified against the extract, 2026-09-13.** Run 0's fifteen-minute window contains exactly 33,548
+rows covering 527 distinct aircraft — 63.7 reports per aircraft, or one about every fourteen seconds
+— and the batch reported `track` as 33,548. So on a `gnss-degradation` run the column is simply every
+row in the window: the freeze mode edits a position's staleness and drops nothing.
+
+On an `aircraft-coverage-gap` run the same column would come out *lower* than the number of rows in
+the window, because suppression removes rows before they reach the store. That difference is the
+scenario, and it is the only place the two columns interact.
+
+### Why the answer key counts aircraft and not observations
+
+Recall is per aircraft. The detector's job on a coverage gap is to say *which aircraft* stopped
+reporting, not how many reports went missing, so the answer key names the aircraft (by pseudonym) and
+the report counts them. Counting observations there would make a long-lived aircraft worth more than
+a short-lived one purely for being in the window longer.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -3861,3 +4023,7 @@ marked.
 | **Interior airborne gap** | A reporting gap whose bracketing rows both sit well inside the bounding box with the aircraft flying at both ends. The only kind that is evidence about coverage rather than about the box. Ten of them exist in the corpus, across seven tracks. See §49. |
 | **Exclusion list** | The committed set of tracks the coverage-gap scenario refuses as injection sites, identified by pseudonym. Without it a natural dropout and an injected one are indistinguishable and the false-positive rate for that scenario type means nothing. |
 | **Source record vs observation** | What the emitter produces and what the DAL produces. The first has no provenance, no data mode and no run identifier; the second has all three. `scn-001` emits the first only. |
+| **Track observation** | One replayed row: one aircraft, one instant, one position, one staleness reading. What `ObservationType.TRACK` means. Distinct from a *track*, which is the whole sequence, and from an *aircraft*, which is the thing observed. See §56. |
+| **Zone centre** | The receiver a run's incident is built around, chosen from the run's seed out of the seven in the layout. Shared by both halves of a run, which is what makes the radio anomaly and the track effect co-located by construction. See §55. |
+| **Target draw** | The per-aircraft decision of whether a run stages on it: a keyed derivation from the run's seed and the aircraft's pseudonym, accepted below the 8% affected fraction. Order-independent, and disjoint between runs sharing a zone. See §55. |
+| **Matched control** | A `normal-baseline` run generated at the same seed and window as a scenario run, so the two differ only in the cells the incident touches — 60 of 5,040 on the measured pair. A counterfactual of the scenario rather than an independent sample of quiet. See §54. |
