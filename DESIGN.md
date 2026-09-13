@@ -134,7 +134,7 @@ The typography system relies on a dual-font strategy: **Inter** for UI controls,
 This design system uses a **Fixed Grid** logic for primary dashboard layouts. The workspace is divided into a 12-column grid with a 16px gutter.
 
 - **Density:** We utilize a 4px baseline grid. Most components use 8px (2 units) or 12px (3 units) of internal padding to maintain a compact, "instrumentation-style" look.
-- **Panels:** Sidebars and utility drawers have fixed widths (e.g., 280px for the primary nav, 320px for the analysis inspector) to ensure the central map/graph area remains consistent.
+- **Panels:** Sidebars and utility drawers have fixed widths (e.g., 280px for the primary nav, 320px for the analysis inspector) to ensure the central map/graph area remains consistent. The primary nav is the one exception: it collapses to a 56px icon rail and back, at the analyst's choice, so the map can have the width when it is wanted. Both widths are fixed — it is two states, not a draggable panel — and the collapsed state keeps every entry and the active indicator, dropping only the labels.
 - **Mobile:** While primarily a desktop experience, the layout reflows to a single column for the inspector and a condensed header on tablet/mobile devices.
 
 ## Elevation & Depth

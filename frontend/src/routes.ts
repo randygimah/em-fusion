@@ -12,12 +12,39 @@ export interface ScreenRoute {
   id: string;
   label: string;
   hash: string;
+  // The entry's icon, as SVG path data rather than a component. spec: nav-003.
+  //
+  // It lives here, on the one declaration of the three screens, so that adding
+  // a fourth cannot land somewhere that has no icon — the single-list rule
+  // nav-001 settled. Path data rather than JSX keeps this file plain data, so
+  // it stays a `.ts` the tests can import without a renderer.
+  iconPath: string;
 }
 
 export const SCREENS: ScreenRoute[] = [
-  { id: "operational-picture", label: "Operational Picture", hash: "#/operational-picture" },
-  { id: "hypotheses", label: "Hypotheses", hash: "#/hypotheses" },
-  { id: "scenario-control", label: "Scenario Control", hash: "#/scenario-control" },
+  {
+    id: "operational-picture",
+    label: "Operational Picture",
+    hash: "#/operational-picture",
+    // A target: rings and a centre, for the picture being watched.
+    iconPath:
+      "M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18Z M12 8.5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7Z M12 2v3 M12 19v3 M2 12h3 M19 12h3",
+  },
+  {
+    id: "hypotheses",
+    label: "Hypotheses",
+    hash: "#/hypotheses",
+    // A lamp: a proposed explanation, not a settled one.
+    iconPath: "M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3Z M9.5 19h5 M10.5 21.5h3",
+  },
+  {
+    id: "scenario-control",
+    label: "Scenario Control",
+    hash: "#/scenario-control",
+    // Sliders: the dials a run is configured from.
+    iconPath:
+      "M4 7h16 M4 12h16 M4 17h16 M9 5a2 2 0 1 1 0 4 2 2 0 1 1 0-4Z M15 10a2 2 0 1 1 0 4 2 2 0 1 1 0-4Z M8 15a2 2 0 1 1 0 4 2 2 0 1 1 0-4Z",
+  },
 ];
 
 // The route the analyst lands on, and the one an unrecognised address resolves

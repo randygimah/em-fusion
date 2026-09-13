@@ -48,6 +48,14 @@ describe("collapsing the navigation rail", () => {
     for (const name of entryNames) {
       expect(rail().getByRole("link", { name })).toBeInTheDocument();
     }
+    // Assert the label text itself, not only the computed name. An entry also
+    // carries a tooltip while collapsed, and a tooltip supplies an accessible
+    // name when nothing else does — so the loop above passes unchanged with
+    // the label deleted outright. Found by mutation, after this test was
+    // written; recorded as a deviation.
+    for (const route of SCREENS) {
+      expect(rail().getByText(route.label)).toBeInTheDocument();
+    }
   });
 
   it("still offers a way out once collapsed", () => {

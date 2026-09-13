@@ -1,5 +1,6 @@
 import { EmNavRail } from "./components/em/EmNavRail";
 import { useCurrentScreen } from "./hooks/useCurrentScreen";
+import { useRailCollapsed } from "./hooks/useRailCollapsed";
 import { useOperationalPicture } from "./hooks/useOperationalPicture";
 import scenarioControlMock from "./mocks/scenarioControlMock";
 import { SCREENS } from "./routes";
@@ -27,11 +28,14 @@ const OperationalPictureRoute = () => {
 
 const App = () => {
   const current = useCurrentScreen();
+  const [railCollapsed, toggleRail] = useRailCollapsed();
 
   return (
     <div className="flex min-h-screen bg-[#0b0e15]">
       <EmNavRail
+        collapsed={railCollapsed}
         currentId={current.id}
+        onToggle={toggleRail}
         screens={SCREENS}
       />
       <div className="min-w-0 flex-1">
