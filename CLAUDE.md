@@ -41,10 +41,13 @@ A contents page for the repo. Use it to find the right file before searching; it
 | `frontend/src/index.css` | Tailwind v4 entry (no `tailwind.config.js`) plus design tokens. |
 | `frontend/src/types/operationalPicture.ts` | The `OperationalPicture` contract — scenario, hypotheses, detectionSummary, rfSensors, aircraftTracks, timelineEvents. Mirrors the future `/api/v1/operational-picture` response shape. |
 | `frontend/src/mocks/operationalPictureMock.ts` | Mock satisfying that contract. Currently the app's only data source. |
+| `frontend/src/types/scenarioControl.ts` | The Scenario Control contract (`scn-004`) — the five type ids, the configuration the form submits, the parameters a run row records verbatim, and a listed run. Mirrors the unbuilt `/api/v1/scenario/*` endpoints, and is parity-checked against the generator from the backend suite. |
+| `frontend/src/mocks/scenarioControlMock.ts` | Mock satisfying it, built from real seeds, windows and parameters of a `make generate` batch. |
 | `frontend/src/screens/operationalPicture.tsx` | The main screen. Takes `operationalPicture` as a prop; never imports the mock. |
+| `frontend/src/screens/scenarioControl.tsx` | The Scenario Control screen (`scn-004`): scenario library, the configuration form over exactly the dials the batch entrypoint accepts, run controls, status, and the recent-runs table. Controls are disabled and say why until a handler is supplied — `api-006` does not exist. **Not reachable in the browser yet**: nothing routes to it until `nav-001`. |
 | `frontend/src/components/em/` | Shared `Em*` UI primitives (`EmButton.tsx`) built with `cva` + `cn`. New styled components follow this pattern. |
 | `frontend/src/lib/utils.ts` | The `cn` helper (`clsx` + `tailwind-merge`). |
-| `frontend/src/test/` | Vitest home — `operationalPicture.test.tsx`, `setup.ts`. All frontend tests go here. |
+| `frontend/src/test/` | Vitest home — `operationalPicture.test.tsx`, `scenarioControl.test.tsx`, `setup.ts`. All frontend tests go here. **No coverage tooling**: the 90% gate has only ever been measured on the backend. |
 | `frontend/src/App.test.tsx` | Legacy colocated test — the one exception to `src/test/`. Don't add more. |
 | `frontend/src/assets/Design/OperationalPicture_v2/` | Generated design reference for screen 1: `DESIGN.md`, `code.html`, `screen.png`. |
 | `frontend/src/assets/Design/Hypothesis_analysis_v2/` | Same, for screen 2 (Hypothesis Detail / Analyst Workbench). |
@@ -64,7 +67,7 @@ A contents page for the repo. Use it to find the right file before searching; it
 | `backend/app/scenario/` | Scenario configuration and generation. `layout.py` is the RF sensor and channel layout (`scn-005`) — Pydantic models plus `load_layout`, which validates and fails loudly; `rf_layout.json` is the shipped default. `seeding.py` is the only source of invented numbers: keyed BLAKE2b derivation per cell, plus the bounded seed draw. `emitter.py` is `RunSpec` and the baseline emitter (`scn-001`), producing source records over the full grid, plus `stream_digest`. Detectors and the generator read the layout from here and hold no positions or frequencies of their own. |
 | `backend/app/corpus/` | Build-time tooling for the OpenSky extract — `fetch.py`, `extract.py`, and the `python -m app.corpus.build` entrypoint. Not part of the replay path. |
 | `backend/alembic/` | Migration environment and `versions/0001_core_schema.py`, which creates all seven tables. Revisions are hand-written; autogenerate is off because it does not understand PostGIS geometry columns. |
-| `backend/tests/` | Pytest home (`pyproject.toml` sets `testpaths = tests`). `fakes.py` holds the in-memory repository, kept alongside the PostGIS one so the unit tier needs no Docker. Tests marked `database` skip unless `TEST_DATABASE_URL` is set. |
+| `backend/tests/` | Pytest home (`pyproject.toml` sets `testpaths = tests`). `fakes.py` holds the in-memory repository, kept alongside the PostGIS one so the unit tier needs no Docker. `contracts.py` parses the frontend's TypeScript contracts so both parity suites read them with one parser. Tests marked `database` skip unless `TEST_DATABASE_URL` is set. |
 
 **`docs/`** — all project documentation. See the Documents table below.
 

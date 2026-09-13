@@ -2939,6 +2939,93 @@ The general lesson is one this project keeps meeting from new directions. A test
 somebody thought to assert; running the thing asserts what the thing does. Both defects were in code
 covered at one hundred per cent by tests that passed.
 
+### The second contract-first screen, and the five shapes that keep it honest
+
+The Operational Picture was built against a typed contract and a mock before `api-002` existed, and
+the seam held: when the endpoint arrived, four files changed and 118 lines, none of them in a
+component that consumes the data. Scenario Control is the same bet placed a second time. It is worth
+recording because "it worked last time" is not the reason, and because this project has a written
+rule that appears to forbid it.
+
+The phase order was amended once already to put Phase 5 in front of the Phase 3 view filter and the
+Phase 4 playback transport, on the grounds that both are *server-side by specification* — a
+client-side filter built against a mock is a filter that gets built twice and thrown away once. The
+question for `scn-004` is whether the Scenario Control screen is that kind of thing. It is not. Every
+obligation the item is judged on is client-side and provable today: the seed field is visible and
+editable, replay of a listed run reuses that run's recorded seed and parameters, the library offers
+exactly five types, and a run started with no seed shows the seed it was given. The one part that is
+irreducibly server-side — actually starting a batch — is the part the screen deliberately does not
+simulate.
+
+**The risk the bet carries is a contract that describes a generator nobody has**, and that is what
+the parity tests are for. Five shapes are declared twice, in two languages that no compiler checks
+against each other, and the backend suite parses the TypeScript and compares them in both
+directions: the configuration form against the batch entrypoint's own arguments, its defaults against
+that parser's defaults, the recorded parameters against what `as_parameters` writes onto a run row,
+a listed run against the run summary, and the five type identifiers against the scenario enum. A
+sixth shape is asserted as a closed set rather than a blacklist, because `api-009` is a rule about
+what must never appear and the only version of that rule a test can hold is one that fails on
+anything new.
+
+The parser those tests use was `api-002`'s, and it was lifted into `backend/tests/contracts.py` when
+the second suite needed it. Two copies of a parser is two places for the rule to drift while both
+suites stay green, which is the exact failure the parity tests exist to prevent one level down.
+
+**The design reference asked for three controls the generator does not have.** The generated mockup
+for this screen shows Noise Amplitude, Affected Sensor Count and Gap Duration, and renders the seed
+as `0xA4F2`. The generator accepts none of those three: its dials are the incident's offset,
+duration, radius, elevation and spectral extent, plus the run count and the per-run duration. Putting
+the mockup's controls on screen would have produced a form whose sliders change nothing, which is
+`scn-001`'s fourth failure case — a parameter that controls nothing is the same defect as a seed that
+controls nothing — arriving through the design rather than through the code. The rule adopted is that
+the form offers exactly what `python -m app.pipeline` accepts, minus `--data-dir`, which says where
+the corpus lives rather than what the run is; and the test that enforces it reads the parser rather
+than a list, so a dial added to either side alone fails. The seed is rendered as the decimal integer
+the run record stores, because its whole purpose is to be pasted back into a command or re-sent by a
+replay, and a second representation is one more conversion to get wrong.
+
+This is the first place in the project where the generated design and the built system diverge on
+substance rather than on styling, and the divergence runs in the direction worth noting: the mockup
+is a plausible-looking instrument panel for a generator that was never built.
+
+**A control that cannot act is rendered as a control that cannot act.** `api-006` does not exist, so
+start, reset and replay take handlers that are not supplied, and the screen renders them disabled
+with a note saying a batch runs from the command line today. Hiding them was the alternative and is
+worse: an unbuilt capability the screen conceals is exactly the degradation `NFR-204` requires to be
+visible, and a disabled control with a reason attached is also the most accurate statement of where
+the system is.
+
+**One requirement is met by refusing it.** `FR-714` lists start, pause, reset and replay; `FR-806`
+specifies start, reset and runs, and provides no pause endpoint. Generation has nothing to pause: a
+batch is a loop of whole runs, each committing atomically in about three seconds, so the only
+coherent reading of pause is "stop after the current run", which is a server-side lifecycle nothing
+in the specification describes. `FR-717`'s playback transport over a recorded run's simulated time is
+where a pause control has something to pause. The screen therefore renders no pause control, and the
+divergence from `FR-714` is recorded here and in the spec item rather than being quietly satisfied by
+a button that does nothing.
+
+### The frontend measures no coverage, and three tests were missing because of it
+
+The backend gate is 90% and it has repeatedly earned its place: `scn-003`'s refusal of an unknown
+recorded parameter was written only because coverage reported the branch had never been exercised,
+and that deviation is recorded under Implementation above. The frontend has no coverage tooling at
+all — `vitest --run` with no `@vitest/coverage-v8` — so nothing measures the same thing on that side
+of the repository.
+
+The consequence showed up immediately. After `scn-004`'s implementation passed all nineteen tests
+written at the test stage, three behaviours had no test at all: the reset control's handler, which no
+test ever clicked; the spectral-extent control, which no test ever changed, so nothing proved the
+value reached the start payload; and the fallback that names a run whose type the library does not
+list. All three were written afterwards and marked in their own comments as deviations from the
+order this project works in. On the backend, the gate would have named all three before the commit.
+
+The asymmetry is worth stating as a measurement rather than an impression: **nineteen tests written
+against a specification caught sixteen of nineteen behaviours; the three it missed were all
+behaviours with no assertion rather than wrong assertions**, which is the class of gap a coverage
+report finds mechanically and a careful reading of the spec does not. Adding the tooling is a new
+dependency and is left as a decision rather than taken mid-item, but the argument for it is now
+evidence rather than principle.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;

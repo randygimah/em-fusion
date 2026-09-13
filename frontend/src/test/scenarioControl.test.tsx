@@ -2,20 +2,25 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import scenarioControlMock from "../mocks/scenarioControlMock";
 import ScenarioControlScreen from "../screens/scenarioControl";
+import type { ScenarioConfiguration, ScenarioControl, ScenarioRunRecord } from "../types/scenarioControl";
 
 // The handlers are optional on purpose: `api-006` does not exist, so the screen
 // has to render honestly with nothing behind its controls (spec: scn-004,
 // second decision). Passing them explicitly is what a test does to say "assume
 // the endpoint is there".
 type Handlers = {
-  onStart?: (configuration: Record<string, unknown>) => void;
+  onStart?: (configuration: ScenarioConfiguration) => void;
   onReset?: () => void;
-  onReplay?: (run: Record<string, unknown>) => void;
+  onReplay?: (run: ScenarioRunRecord) => void;
 };
 
-const renderScreen = (
-  { control = scenarioControlMock, ...handlers }: { control?: typeof scenarioControlMock } & Handlers = {},
-) => render(<ScenarioControlScreen control={control} {...handlers} />);
+const renderScreen = ({ control = scenarioControlMock, ...handlers }: { control?: ScenarioControl } & Handlers = {}) =>
+  render(
+    <ScenarioControlScreen
+      control={control}
+      {...handlers}
+    />,
+  );
 
 const wired = () => {
   const onStart = vi.fn();
@@ -191,6 +196,47 @@ describe("ScenarioControlScreen", () => {
       elevationDb: 8,
       spectralExtent: "narrowband",
     });
+  });
+
+  it("resets through the handler it was given", () => {
+    // spec: scn-004, FR-714 — reset is one of the run controls, and the test
+    // stage wrote assertions for its disabled state and none for its use.
+    //
+    // **Written after the implementation.** A deviation from this project's
+    // order, recorded here rather than tidied away: the frontend measures no
+    // coverage, so nothing reported that this button's handler was never
+    // called by a test. See docs/handoff.md.
+    const { onReset } = wired();
+
+    fireEvent.click(screen.getByRole("button", { name: /^reset/i }));
+
+    expect(onReset).toHaveBeenCalledTimes(1);
+  });
+
+  it("carries the spectral extent it was told to use", () => {
+    // spec: scn-004, scn-002 — extent is a parameter of the interference
+    // types rather than a sixth type, which only means anything if a campaign
+    // can actually turn the dial.
+    //
+    // **Written after the implementation**, for the reason above: no test
+    // changed this control, so nothing proved the value reached the payload.
+    const { onStart } = wired();
+
+    fireEvent.change(field(/spectral extent/i), { target: { value: "broadband" } });
+    fireEvent.click(startButton());
+
+    expect(onStart).toHaveBeenCalledWith(expect.objectContaining({ spectralExtent: "broadband" }));
+  });
+
+  it("names a run whose type the library does not list", () => {
+    // spec: scn-004 — a run recorded by an older generator can carry a type
+    // this library no longer names, and a blank cell would hide the run
+    // rather than the gap.
+    //
+    // **Written after the implementation**, for the reason above.
+    renderScreen({ control: { library: [], runs: scenarioControlMock.runs } });
+
+    expect(table().getByText("gnss-degradation")).toBeInTheDocument();
   });
 
   it("offers no pause control", () => {

@@ -1,10 +1,12 @@
+import type { ScenarioControl } from "../types/scenarioControl";
+
 // Mock for the Scenario Control screen (spec: scn-004).
 //
-// Deliberately untyped for now: the contract file `types/scenarioControl.ts`
-// is what the parity tests in `backend/tests/test_scn_control_contract.py`
-// check, so writing it at the test stage would make those tests green before
-// any implementation existed. The mock is typed against the contract when the
-// contract lands.
+// It was written untyped at the test stage on purpose: the contract file is
+// what the parity tests in `backend/tests/test_scn_control_contract.py` check,
+// so declaring it then would have made those tests green before any
+// implementation existed. It is typed against the contract now that the
+// contract is the implementation.
 //
 // The values are real. Seeds, windows and parameters come from the batch
 // `make generate` produced on 2026-09-12 from base seed 20220627 over the
@@ -12,7 +14,7 @@
 // run 4 (939060571, 12:28:16), run 15 (993559346, 12:00:16) and run 19
 // (1253435964, 12:32:16). `parameters` is the flat record the run row holds,
 // key for key.
-const scenarioControlMock = {
+const scenarioControlMock: ScenarioControl = {
   library: [
     {
       id: "normal-baseline",
