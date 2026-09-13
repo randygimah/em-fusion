@@ -26,7 +26,7 @@ rail), **`nav-003`** (that rail collapsing), **`api-006`** (the scenario endpoin
 | Backend suite | **582 passed, 99.88%** via `make test-backend`, database tier live, 101 s |
 | Spec items passing | **29 of 86** — `scn` 5/5, `adp` 7/8, `api` 5/10, `nav` 2/3, `db` 5/7 |
 | New dependencies | None. No router library, no icon library, no task queue |
-| Stack | **Left running** (`make up`): postgis, backend on :8000, frontend on :8080 |
+| Stack | **Down.** It was up and verified during the session; the containers were removed afterwards (not by `make down`). `make up` restores it — the postgis volume should still hold the 60 runs, but that is unverified. |
 
 ### What exists now
 
@@ -65,7 +65,7 @@ Not reachable from any test, so done by hand through nginx:
 
 **`START BATCH` has not been fired against the real stack.** It would write twenty runs and roughly
 half a million rows, which is not reversible, so it was left for a deliberate decision rather than
-taken as part of a check.
+taken as part of a check. Doing so needs `make up` first.
 
 ### Mutation results
 
