@@ -14,65 +14,47 @@ deviations detected deterministically, evidence bundles turned into schema-valid
 grounding-checked AI hypotheses for analyst review. Decision support, not autonomous
 decision-making.
 
-This session landed **`nav-001`**, the three-entry navigation shell — the item that makes `scn-004`'s
-Scenario Control screen reachable in a browser for the first time. The amendment was agreed before
-tests were written, and the item carries six decisions rather than the one the original line implied.
+This session landed **`nav-001`** (the three-entry rail, which made `scn-004` reachable at all) and
+**`nav-003`** (that rail collapsing to a 56px icon rail), fixed a caption defect `scn-004` had
+shipped, and republished the progress note for all of it.
 
 ## Current state
 
 | | |
 |---|---|
-| Frontend suite | **55 passed**, 6 files (`pnpm exec vitest run`), `tsc -b` and `biome lint` clean |
-| Browser pass | All three entries, the deep link, and the unrecognised-hash fallback checked in Chrome; no console errors |
+| Frontend suite | **67 passed**, 7 files, `tsc -b` and `biome lint` clean |
 | Backend suite | **564 passed, 99.93%** — unchanged, and **not re-run this session**; nothing touched it |
-| Spec items passing | **26 of 84** — `scn` 5/5, `adp` 7/8, `db` 5/7, `api` 3/9, `nav` 1/1 |
-| New dependencies | None. No router library — see below |
+| Spec items passing | **27 of 85** — `scn` 5/5, `adp` 7/8, `db` 5/7, `api` 3/9, `nav` 2/3 |
+| New dependencies | None. No router library, no icon library |
+| Browser-verified | Both nav items driven by hand in Chrome; see Failed attempts for what that found |
 
 ### What exists now
 
-`make up` gives all three rail entries, with two of them leading to a real screen.
+`make up` gives three rail entries, two of which lead to a screen, and the rail now collapses.
 
-The route is the **URL hash**. `frontend/src/routes.ts` declares the three screens once — id, label,
-hash — and `screenFromHash` resolves an unrecognised or empty hash to the Operational Picture rather
-than to nothing. `useCurrentScreen` reads it and listens for `hashchange`. `EmNavRail` is dumb: it
-renders the list it is handed, as **anchors**, so `aria-current="page"` sits on a link where
-assistive technology expects it. A router library was rejected as a dependency taken on for three
-destinations with no nesting and no parameters; component state was rejected because it makes the
-address bar lie — a reload would drop the analyst on a screen they did not choose, and no screen
-could be linked to or named in a bug report.
+**Route (`nav-001`).** The URL hash. `routes.ts` declares the three screens once — id, label, hash,
+and now the icon — and `screenFromHash` resolves an unrecognised or empty hash to the Operational
+Picture. `EmNavRail` renders the list it is handed as **anchors**, so `aria-current="page"` sits on a
+link. A router library was rejected as a dependency for three destinations with no nesting and no
+parameters; component state was rejected because it makes the address bar lie.
 
-All three destinations render. `screens/hypotheses.tsx` is the **destination, not the screen**: it
-names what is missing, because FR-701 fixes the rail at three entries and a blank page reads as a
-fault rather than as a gap. Replace it wholesale when `hyp-*` starts.
+**Collapse (`nav-003`).** Two widths: 280px with labels, 56px with icons. The toggle is a **button**
+with `aria-expanded` — the exact inverse of why the entries are links. Collapsing hides labels, never
+entries: all three keep their accessible names, so the rail reads identically to assistive technology
+at either width. The preference lives in guarded `localStorage`, **not** the hash; the reasoning is
+`docs/qa.md` §57 and it is the distinction to reach for if this is ever revisited. Expanded is the
+default, including whenever storage is absent, corrupt or unreadable.
 
-`scenarioControl.tsx`'s existing note gained one sentence: the listed runs are **a fixture from a
-recorded batch rather than the database**. Those rows carry real seeds, real windows and real
-parameters, which is exactly what makes them dangerous — rows from nowhere announce themselves, rows
-from a real batch do not. Same rule as `api-003`'s degraded-from-first-paint indicator.
+Icons are hand-authored SVG path data **carried on the route declaration**, which keeps `nav-001`'s
+single-list rule intact — a fourth screen cannot be added somewhere that has no icon.
 
-The picture poll moved out of `App` and into the Operational Picture's own route component, so it
-mounts and unmounts with the screen that needs it instead of polling every five seconds against an
-endpoint nobody is looking at. `api-003`'s seam is where it was: `App.tsx` is still the only module
-that knows where a screen's data comes from.
+### Mutation results
 
-### Mutation results, all from `fe5b5c6`, Node 24.18.0, Vitest 4.1.9
+`nav-001`, eight mutations from `fe5b5c6`: all caught, each on the test written for it. Table in
+`thesis_notes.md`.
 
-Each applied singly and reverted from a copy taken beforehand — **not** with `git checkout`, which on
-an earlier item deleted the untracked implementation it was testing.
-
-| Mutation | Red |
-|---|---|
-| A fourth entry joins the rail | 2 |
-| An unrecognised address renders no screen | 1 |
-| The route lives in state, so the address is ignored | 1 |
-| Every entry marked as the current page | 2 |
-| Fixture rows presented with nothing saying so | 1 |
-| The poll runs above the switch, for every screen | 1 |
-| The Hypotheses destination renders a blank page | 1 |
-| The Scenario Control entry leads nowhere | 4 |
-
-Every mutation was caught, and each failed on the test written for it rather than on a distant
-assertion.
+`nav-003`, eleven mutations from the tree at `a2f508b`, Node 24.18.0, Vitest 4.1.9. Nine caught
+cleanly. **Two survived**, both recorded below.
 
 ## Files in flight
 
@@ -80,56 +62,59 @@ Nothing half-built; the tree is clean.
 
 ## Changed
 
-Five commits this session:
-
-- `f3adcd4` — `spec: amend nav-001` (six decisions, two new failure cases)
-- `878012a` — `test: add tests for nav-001` (ten tests, all proved red before implementation)
-- `fe5b5c6` — `feat(nav-001): the three-entry rail, with the hash as the route - tests pass`
-- `32ee70b` — `docs: nav-001 write-up`
-- `c4f8d66` — `fix(scn-004): the recent-runs caption sits above the table again`
+Eight commits: `f3adcd4` `878012a` `fe5b5c6` `32ee70b` (nav-001 spec, tests, code, docs);
+`c4f8d66` (the caption fix); `e196270` (progress note); `5f698a0` `d95d5c6` `a2f508b` (nav-003 spec,
+tests, code).
 
 Added: `frontend/src/components/em/EmNavRail.tsx`, `frontend/src/hooks/useCurrentScreen.ts`,
-`frontend/src/screens/hypotheses.tsx`, `frontend/src/test/navigation.test.tsx`. Modified:
+`frontend/src/hooks/useRailCollapsed.ts`, `frontend/src/screens/hypotheses.tsx`,
+`frontend/src/test/navigation.test.tsx`, `frontend/src/test/navCollapse.test.tsx`. Modified:
 `frontend/src/routes.ts`, `frontend/src/App.tsx`, `frontend/src/screens/scenarioControl.tsx`,
-`docs/spec.jsonl` (`nav-001` amended and flipped), `docs/thesis_notes.md` (two System Design
-subsections, two Implementation subsections), `docs/implementation.md`, `CLAUDE.md`.
+`docs/spec.jsonl`, `docs/thesis_notes.md`, `docs/qa.md` (§57 and two glossary terms),
+`docs/implementation.md`, `CLAUDE.md`, `DESIGN.md`.
 
-**The progress note was republished** (version 16, same URL) for `scn-004` and `nav-001` together —
-it had not been touched since 12 September. New section on the scenario screen and the three
-entries, the spine's analyst stage moved to two-of-three, counts corrected to 26/84 and 564 tests,
-and a new passage on the three ways a test here can be blind.
+**The progress note was republished** (version 16, same URL) for `scn-004` and `nav-001`. **It does
+not yet cover `nav-003`.**
 
-No `docs/qa.md` entry: the user asked no question this session and no clarification corrected a
-misunderstanding. The file is not padded to look busy.
+**`DESIGN.md` was amended**: its Panels section said sidebars have fixed widths. The expanded width is
+unchanged but "fixed" stopped being true, so the two states are recorded there. Root file only — the
+per-screen copies under `frontend/src/assets/Design` are generated references.
 
 ## Failed attempts
 
-- **`nav-001` was flipped to `passes: true` with no coverage measurement.** The workflow's gate is
-  90% and the frontend still measures nothing, so the eight-mutation pass stood in for it. That is a
-  **deviation from the stated gate**, not an equivalent — recorded here rather than glossed.
-- **The first seven mutations left one of the ten tests unexercised.** They were derived from the
-  specification's six decisions and two failure cases, and that set is structurally blind to the
-  wiring a decision *presumes*: nothing broke the claim that choosing the Scenario Control entry
-  actually reaches that screen. The gap was found by tallying tests against mutations, not by the
-  pass itself; an eighth mutation was written for it. Worth remembering that the tally is the step
-  that finds this, and that a coverage report would have found it mechanically.
-- **`scn-004` shipped a caption that rendered in the wrong place, and the browser pass found it.**
-  The recent-runs caption reused `LABEL`, which begins with `block`; `display: block` on a
-  `<caption>` takes it out of the table's caption box, so it rendered *below* the column headers.
-  **Fixed with no test, which is a deviation** — the suite finds that table by the accessible name
-  the caption supplies, and that name was correct throughout, so the tests passed for the right
-  reason on the exact element that was wrong. jsdom does no layout, and the project's convention
-  forbids asserting on CSS classes, so no admissible test can catch a box-model defect. Only looking
-  at the running interface does.
-- **The repo map in `CLAUDE.md` had already gone stale before this session.** `api-003`'s
-  `src/lib/api.ts` and `src/hooks/useOperationalPicture.ts` were never listed, two test files were
-  missing from the `src/test/` row, and `App.tsx` was still described as wiring the mock into the
-  screen. Corrected as part of this item. The rule exists; it slipped one item earlier than anyone
-  noticed.
-- **A doc-editing script inserted one of two prepared blocks** because the second was written into
-  the same script and never applied, and the replacement expression for the first was convoluted
-  enough to hide it. Caught by grepping the headings afterwards rather than by reading the script.
-  Verify inserts by looking at the file, not at the exit code.
+- **A width transition, added for polish, broke the feature it decorated.** Collapsing flipped
+  `aria-expanded`, wrote the preference, kept all three entries and the current-page marker, left the
+  address alone — **and the rail stayed 280px wide.** Mounting the page *already* collapsed rendered
+  56px correctly. The transition left the element at its old used width when the class changed. It
+  was removed rather than debugged, because `nav-003` had already scoped the animation out as
+  cosmetic. **The suite was green before and after**; only driving it in a browser showed it.
+- **One of my `nav-003` tests could not fail.** "Keeps all three entries, with their names, when
+  collapsed" passed unchanged with the label deleted outright, because a collapsed entry also carries
+  a tooltip and a tooltip supplies an accessible name when nothing else does. It was measuring the
+  tooltip. Strengthened to assert the label text as well, and the mutation now turns it red. Found by
+  mutation, **after** the test was written — a deviation from the order this project works in.
+- **The other surviving mutation is the width itself, and it stays surviving.** No test in this stack
+  can see it: jsdom does no layout, and the convention forbids asserting on CSS classes. `nav-003`
+  predicted this in writing before any code, and it produced a real defect within the hour. A blind
+  spot named in advance is still a blind spot.
+- **I drafted the whole spec item as `nav-002` before checking the id was free.** It was not —
+  `nav-002` is the system-health strip (FR-702), which is precisely the item the new one had to
+  constrain. Renumbered to `nav-003`, and the collision improved it: decision six now names `nav-002`
+  instead of gesturing at an unbuilt strip. **Check the id before writing the item.**
+- **Two browser clicks at coordinates derived from a screenshot missed the toggle.** The page runs at
+  devicePixelRatio 1.8, so the screenshot frame is not CSS pixels. Read the element's rect from the
+  page and convert, or click via script — do not scale by eye.
+- **A long diagnostic session against the live DOM produced readings I then had to throw away.**
+  Repeated script clicks plus inline style edits left the component in a state where width readings
+  raced the transition, and a `navigate` to the same URL+hash does not reload. Reload properly and
+  measure once.
+- **`scn-004` shipped a caption that rendered in the wrong place**, found by the same browser pass and
+  fixed in `c4f8d66`. `display: block` on a `<caption>` takes it out of the table's caption box.
+  **Fixed with no test**, which is a deviation: the suite finds that table by the accessible name the
+  caption supplies, and that name was correct throughout.
+- **`nav-001` and `nav-003` were both flipped to `passes: true` with no coverage measurement.** The
+  gate is 90% and the frontend still measures nothing; mutation stood in. A deviation, not an
+  equivalent.
 
 ## Next step
 
@@ -137,11 +122,11 @@ misunderstanding. The file is not padded to look busy.
    exist, and the contract naming them is already parity-checked against the generator. One open
    design question: a batch takes about 70 s and writes ~510k rows, and the project has no task queue
    by scope, so `POST /scenario/start` must choose between blocking, a background task, and a queued
-   row the frontend polls. Landing it also retires the fixture sentence added this session.
+   row the frontend polls. Landing it retires the fixture sentence on the Scenario Control note.
 2. **Phase 8** — baseline engine, then the deterministic detectors. The first thing that will ever
    read an answer key.
-3. **Frontend coverage tooling** is now argued for by three separate findings rather than two.
-   Still a new dependency, still unowned.
+3. **The progress note does not cover `nav-003`.** Small change to the story; fold it in next time the
+   note is touched rather than republishing for it alone.
 
 Owed, with an owner but no date:
 
@@ -149,20 +134,24 @@ Owed, with an owner but no date:
   control a counterfactual of its scenario run rather than an independent sample of quiet. Belongs to
   `eval-001` with the question of whether the incident dials vary within a batch. Both must be
   settled before the scoring campaign is generated.
-- **Decide on frontend coverage tooling** (`@vitest/coverage-v8`). Now argued for twice by evidence
-  rather than principle — three missing tests in `scn-004`, one unexercised test in `nav-001`.
+- **Decide on frontend coverage tooling** (`@vitest/coverage-v8`). Argued for by four findings now:
+  three missing tests in `scn-004`, one unexercised test in `nav-001`, one test that could not fail in
+  `nav-003`, and the caption defect none of them could see.
+- **`nav-002`, the system-health strip, inherits a question from `nav-003`**: what it shows at 56px.
+  It must not be answered by letting a collapse hide health — the posture `op-001` takes for the
+  data-mode badge.
 - **Run `pnpm format` across the frontend** as its own `style:` commit, or drop the formatter config
   that nothing enforces.
 - **The form does not refuse an incident that starts after its run ends.** The batch does, with the
   message that produced twenty mislabelled controls. Needs a spec line before a test.
 - **Pause diverges from `FR-714`** — not built, recorded in the spec item and `thesis_notes.md`.
-  Revisit if `api-006` gains a lifecycle.
 - **A run row cannot distinguish a run still going from one that died.** Absence of `completed_at`
-  covers both, so the screen says "incomplete" and no more. A status column or `api-006` fixes it.
+  covers both, so the screen says "incomplete" and no more.
 - **`op-001`'s badge must key off the run, not off an observation's data mode.**
+- **`nav-001` cites FR-709 for the health strip where the requirement is FR-702.** `nav-002` cites it
+  correctly and is the authority; the stale ref is in `nav-001`'s amended text.
 - **A floor on the affected-aircraft count** rather than a bare 8%, once the detectors exist.
-- **Record the measured false-positive rate on the coverage-gap type** with and without the
-  exclusion — the gap left in `thesis_notes.md` when `adp-008` landed.
+- **Record the measured false-positive rate on the coverage-gap type** with and without the exclusion.
 - **Confirm the digest survives an x86-64 run.** The first CI job produces this for free.
 - **Detector radii for `anom-005` and `anom-007`** from the measured band [55.7, 85.7) km.
 - **The frozen-position shortcut is a limitation, not a bug.**

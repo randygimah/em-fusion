@@ -1872,6 +1872,31 @@ situational awareness that quietly showed invented rows as observations would un
 argument more thoroughly than any weakness in its detectors, and the discipline is easier to defend
 in a write-up if the places it was applied are enumerated rather than asserted.
 
+### Two kinds of state that both survive a reload, and only one belongs in the address
+
+The collapsible rail forced a distinction that the routing decision had left implicit. Both the
+current route and the rail's collapsed state are interface state that ought to survive a reload, and
+that shared property is what makes them look like one problem. They are not, and the discriminator
+is not persistence but *ownership*.
+
+The route answers where the analyst is. It is a property of the thing being looked at, so it has to
+be shareable: a link into the application must land the recipient on the same screen, and a screen
+named in a fault report must be reachable from that name. The rail's width answers how one person
+likes their chrome. It is a property of the reader, not of the thing read.
+
+Putting the preference in the address would break both halves of what the address is for. One screen
+would acquire two addresses, differing only in a decoration nobody navigating cares about, and every
+shared link would carry one analyst's layout into someone else's session. The mirror error is the one
+the routing decision already rejected — holding the route in component state, where it survives
+nothing and can be linked to by nobody. So the two live in different places for the same underlying
+reason, and stating the reason as *ownership* rather than as *persistence* is what makes the pair
+consistent rather than arbitrary.
+
+The limitation is worth recording alongside it. Browser storage is per-browser and per-origin, so the
+preference does not follow an analyst to another machine, and it is unavailable outright in a private
+window with site data blocked. Both are acceptable for a preference and would not be for a route,
+which is a further way of saying the two are different kinds of thing.
+
 
 ## Implementation
 
@@ -3146,6 +3171,42 @@ interface does. The fix therefore landed with no accompanying test, which is a d
 order this project works in and is recorded as one; writing a class-name assertion to satisfy the
 form of the workflow would have contradicted the testing convention while still proving nothing about
 the rendering.
+
+### A cosmetic transition broke the feature it was decorating, and only the browser said so
+
+The rail item's specification carried a known limit, written down before any code: that a collapsed
+rail's *width* is not assertable from this project's test stack, because jsdom performs no layout and
+the testing convention forbids reaching for the CSS class instead. It was recorded as the third blind
+spot in a row. It then produced a real defect within the hour, which is a sharper demonstration than
+the prediction deserved.
+
+Eleven mutations were run against the finished rail. Ten behaved: each went red on the test written
+for it. Two survived, and they are the interesting pair.
+
+The first survivor was **a test of mine that could not fail**. A test asserting that all three entries
+keep their accessible names while collapsed passed unchanged when the label was deleted outright,
+because the collapsed entry also carries a tooltip and a tooltip supplies an accessible name when
+nothing else does. The requirement held — by a mechanism other than the one under test — so the test
+was measuring the tooltip. It now asserts the label text itself as well, and the mutation duly turns
+it red. This is the same class as the four found in the layout work, and it was found the same way:
+by breaking the thing on purpose rather than by reading the test.
+
+The second survivor was the width, exactly as predicted — and behind it sat the defect. Driving the
+finished rail in a real browser showed the collapse doing everything except the one thing it was for:
+`aria-expanded` flipped, the preference was written, all three entries and the current-page marker
+survived, the address was untouched — and the rail stayed 280 pixels wide. Mounting the page
+*already* collapsed rendered at 56 pixels correctly. The difference between the two was a width
+transition, added for polish, which left the element at its old used width when the class changed
+rather than animating to the new one. Removing it fixed the feature outright.
+
+Three things are worth drawing out. The specification had already declared the transition out of
+scope as cosmetic, so the decoration that broke the feature was not even part of the deliverable —
+deleting it was cheaper than debugging it, and the decision to delete followed directly from having
+written down what the item was actually for. The test suite was green throughout, before and after,
+because every assertion it makes is about semantics and the failure was entirely in layout. And the
+defect is invisible in exactly the way the caption defect was: the mutation that should have caught it
+is the one the specification had already flagged as uncatchable. **A blind spot named in advance is
+still a blind spot**; naming it buys the knowledge of where to look by hand, not immunity.
 
 ## Evaluation
 

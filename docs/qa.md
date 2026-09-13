@@ -3888,10 +3888,49 @@ reporting, not how many reports went missing, so the answer key names the aircra
 the report counts them. Counting observations there would make a long-lived aircraft worth more than
 a short-lived one purely for being in the window longer.
 
+## 57. The route lives in the URL but the collapsed rail does not — both survive a reload, so what actually separates them?
+
+*(Not asked directly: this is the distinction `nav-003` had to settle, recorded here because the two
+look like one thing and the reasoning is not obvious from either spec item on its own.)*
+
+**Persistence is not the discriminator — ownership is.** Both pieces of state survive a reload, so
+"it should be remembered" cannot tell you where either belongs.
+
+| | The route | The rail's collapsed state |
+|---|---|---|
+| Answers | *Where is the analyst?* | *How does this person like their chrome?* |
+| Belongs to | The thing being looked at | The reader looking at it |
+| Must be shareable | **Yes** — a link has to land someone on the same screen | **No** — nobody wants your sidebar width |
+| Lives in | The URL hash | `localStorage`, per browser |
+| Survives a reload | Yes | Yes |
+
+The last row is why the two get confused, and it settles nothing.
+
+**What breaks if you put the preference in the address.** One screen acquires two addresses —
+`#/scenario-control` and some `#/scenario-control?rail=collapsed` — differing by a decoration nobody
+navigating cares about. Worse, every link anyone shares then carries their layout into the recipient's
+session. The address stops being a name for a screen and becomes a name for a screen *as one person
+happened to have it arranged*.
+
+**What breaks if you put the route in storage** is the mirror image, and `nav-001` had already
+rejected it: the route survives nothing, a reload drops the analyst on whatever screen the program
+starts at, and no screen can be linked to or named in a fault report.
+
+So the rule is: **if a stranger opening your link should see it, it goes in the address; if it is
+about you, it goes in storage.**
+
+**Worth recording as a limitation.** Browser storage is per-browser and per-origin, so the preference
+does not follow an analyst to a second machine, and it is unavailable outright in a private window
+with site data blocked — the read is guarded and falls back to expanded. Both are fine for a
+preference and would be disqualifying for a route, which is one more way of saying they are different
+kinds of thing.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
 |---|---|
+| **URL hash** | The part of an address after `#`. Changing it does not ask the server for a new page, which is why it can carry a route in a static bundle. |
+| **`localStorage`** | Per-browser, per-origin key-value storage that survives a reload. Never shared between people or machines, and can be unavailable outright. |
 | **State vector** | One tracked object's complete state (position, velocity, attributes) at one instant; one row. |
 | **Track** | The time-ordered sequence of state vectors sharing an `icao24` — an aircraft's trajectory. |
 | **`icao24`** | Unique 24-bit transponder address identifying an aircraft; the track identity key. |
