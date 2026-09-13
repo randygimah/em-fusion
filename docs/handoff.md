@@ -3,8 +3,8 @@
 Written at the end of a working session so the next one starts with context rather than
 archaeology. Overwritten each session — this is the current state, not a log. History lives in git.
 
-**Session date:** 2026-09-11 to 2026-09-12
-**Branch:** `main`, clean. Sixteen commits. No worktrees, no branches.
+**Session date:** 2026-09-13
+**Branch:** `main`, clean. Five commits. No worktrees, no branches.
 
 ## Goal
 
@@ -14,49 +14,66 @@ deviations detected deterministically, evidence bundles turned into schema-valid
 grounding-checked AI hypotheses for analyst review. Decision support, not autonomous
 decision-making.
 
-This session landed **`adp-002`** (the synthetic RF adapter) and **`scn-003`** (batch execution, in
-two passes). `adp-002` was not on the plan — `scn-003` was, and `adp-002` turned out to be the body
-its loop executes, so it went first (`docs/qa.md` §52). **Phase 7 now has one item left: the
-Scenario Control screen.**
+This session answered three questions about the first real batch (`docs/qa.md` §54–56) and landed
+**`scn-004`**, the Scenario Control screen. **The `scn` area is now 5 of 5** — the scenario
+generator is finished. Nothing in the screen is wired to a backend, deliberately.
 
 ## Current state
 
 | | |
 |---|---|
-| Backend suite | **554 passed, 99.93%** via `make test-backend`, database tier live |
-| Frontend suite | **Not run this session.** Last known green at 23 passed |
-| Spec items passing | **24 of 84** — `adp` 7/8, `scn` 4/5 |
-| `app/pipeline.py` · `app/adapters/synthetic_rf.py` | 193 and 11 statements, both 100% |
-| `make generate` | **Works for the first time.** 20 runs, 52.5 s, ~510k rows |
+| Backend suite | **564 passed, 99.93%** via `make test-backend`, database tier live, 132 s |
+| Frontend suite | **45 passed** (`pnpm exec vitest run`). **No coverage tooling** — see Failed attempts |
+| Spec items passing | **25 of 84** — `scn` **5/5**, `adp` 7/8, `db` 5/7, `api` 3/9 |
 | New dependencies | None |
 
-### What exists now, end to end
+### What exists now
 
-`make generate` runs a batch unattended: per-run seeds and corpus windows derived from one base
-seed, each run opening its own row, emitting the RF grid, replaying a corpus window through the
-perturber, recording the finished answer key and marking completion. A failing run is recorded and
-stepped over. `python -m app.pipeline` takes the scenario type, base seed, run count, duration and
-all five incident dials; `PIPELINE_ARGS` carries them through Compose.
+`frontend/src/screens/scenarioControl.tsx` renders the scenario library, a configuration form over
+exactly the dials `python -m app.pipeline` accepts, the run controls, a status indicator and the
+recent-runs table. It takes `control` plus optional `onStart` / `onReset` / `onReplay`. With no
+handlers the controls render **disabled with the reason on screen** rather than hidden, because
+`api-006` does not exist.
+
+`frontend/src/types/scenarioControl.ts` is the contract, and `backend/tests/test_scn_control_contract.py`
+is what keeps it honest — it parses the TypeScript and compares five shapes against the generator in
+both directions, plus one closed-set assertion for `api-009`. The parser was lifted out of
+`api-002`'s test into `backend/tests/contracts.py` so one implementation serves both suites.
+
+**The screen is not reachable in a browser.** Nothing routes to it; `App.tsx` still renders the
+Operational Picture directly. `nav-001` is what changes that.
 
 ### Measurements taken this session
 
-- **Storing one run:** 5,040 readings in 0.45 / 0.44 / 0.43 s into PostGIS, all 5,040 cells distinct.
-- **One batch:** 20 coverage-gap runs of ten simulated minutes, 52.5 s, ~510k rows, **0–11 aircraft
-  staged per run — one run staged none.**
-- **Zone traffic**, over the default five-minute window (10,759 rows, 410 aircraft in the box):
-  Schiphol 75, Lelystad 74, Rotterdam 71, Köln/Bonn 28, Düsseldorf 28, Weeze 25, **Eindhoven 18**.
-- **Thirty derived seeds** from base 20220627 are all distinct and land on all seven receivers, two
-  to six runs each.
-- **Window collisions:** whole-second offsets for 25 runs in a one-hour corpus give 25 distinct
-  windows for base 20220627 and **24 for base 1** — collisions about one time in eight.
+- **What separates two runs of a batch** (base 20220627, twenty runs, reproduced offline and
+  matching the batch's report row for row): aircraft **in the window** 514–550, a 7% spread;
+  aircraft **in the zone** 13–91, sevenfold, following the seed-derived centre. Randstad centres
+  average 85 within 60 km; the southern and eastern four average 19–33.
+- **Runs 16 and 17 open two seconds apart**, share a centre, and stage on **the same 90 aircraft** —
+  identical sets. They stage 2 and 5, **with no aircraft in common**. Run 8 is a third member of the
+  cluster: same centre, 97% overlap, 9 staged, disjoint from both.
+- **Window overlap:** 114 of 190 pairs overlap at all, 10 by more than 90%, mean 30%.
+- **A matched control costs nothing:** run 0 emitted as `normal-baseline` and as `gnss-degradation`
+  at the same seed and window differs in **60 of 5,040 cells (1.2%)** — exactly the incident's
+  footprint. The other 4,980 readings are identical values.
+- **Test counts:** 556 backend tests before this session's test commit, 564 after. The previous
+  handoff said 554, which was two short of the tree it described.
 
-### Mutation results, all from committed baselines
+### Mutation results, all from the committed baseline
 
-| Item | Mutation | Red |
-|---|---|---|
-| `adp-002` | incident never planned · replayed mode · derives its own value · own run row · batch per tick | 2 · 2 · 3 · 1 · 1 |
-| `scn-003` pass 1 | seeds from a sequence · base ignored · no re-derivation · one window · row drops window · unknown parameter dropped | 1 · 1 · 2 · 2 · 5 · 1 |
-| `scn-003` pass 2 | track half never replayed · tracks marked synthetic · failing run aborts · stage-nothing accepted · completion before answer key | 10 · 1 · 2 · 2 · 1 |
+| Mutation | Red |
+|---|---|
+| Contract drops a dial the batch accepts | 1 |
+| A recorded parameter renamed to camelCase | 1 |
+| A sixth scenario type | 1 |
+| A listed run carries the answer key | 2 |
+| The form defaults to ten runs | 1 |
+| The form offers the mockup's noise amplitude | 1 |
+| A pause control appears | 1 |
+| Replay starts the form's seed under the row's name | 1 |
+| A blank seed is invented rather than requested | 1 |
+| The controls are live with nothing behind them | 1 |
+| An unfinished run reads as complete | 1 |
 
 ## Files in flight
 
@@ -64,75 +81,71 @@ Nothing half-built; the tree is clean.
 
 ## Changed
 
-Sixteen commits, `8d9bc1c` through `a9fa759`. In order: `adp-002` (spec amendment, qa 52, tests,
-implementation, flip, thesis note); `scn-003` (qa 53, spec amendment with `ops-003`, pass 1 tests,
-pass 1 implementation, pass 2 tests, pass 2 implementation and flip, write-up); plus the repo map,
-phase checklist and handoff.
+Five commits, `4b9e08e` through `e4091e6`: the three Q&A entries with their two evaluation notes;
+the `scn-004` spec amendment; the tests; the implementation; the docs pass.
 
-Added: `app/adapters/synthetic_rf.py`, `app/pipeline.py`, `tests/test_adp_synthetic_rf.py`,
-`tests/test_scn_batch.py`, `tests/test_scn_pipeline.py`. Modified: `app/scenario/emitter.py`
-(`as_parameters` carries the window, `RunSpec.from_record` added), root `Makefile` (`generate`
-rewritten, `build-pipeline` added, `PIPELINE_ARGS`), `tests/test_ops_command_surface.py`,
-`docs/spec.jsonl` (`adp-002`, `scn-003`, `ops-003`), `docs/qa.md` (§52–53), `docs/thesis_notes.md`,
+Added: `frontend/src/types/scenarioControl.ts`, `frontend/src/mocks/scenarioControlMock.ts`,
+`frontend/src/screens/scenarioControl.tsx`, `frontend/src/test/scenarioControl.test.tsx`,
+`backend/tests/contracts.py`, `backend/tests/test_scn_control_contract.py`. Modified:
+`backend/tests/test_api_operational_picture.py` (uses the shared parser), `docs/spec.jsonl`
+(`scn-004` amended and flipped), `docs/qa.md` (§54–56 and four glossary terms),
+`docs/thesis_notes.md` (two Evaluation subsections, two Implementation subsections),
 `docs/implementation.md`, `CLAUDE.md`.
-
-**Outside the repo:** the progress note was republished twice to the same URL —
-<https://claude.ai/code/artifact/7f3060f9-29d5-46de-b12b-eddd3824cccc>. It now carries the synthetic
-half reaching the store and a whole section on the batch, with a figure drawn from the twenty
-windows the real run chose.
 
 ## Failed attempts
 
-- **A pair of tests compared two things that were not comparable.** Stored observations reduced to
-  timestamp-plus-payload against emitted records digested whole. The equality test could not pass
-  however correct the code was; **its inequality twin could not fail however wrong it was**, and had
-  been green since written. Only the first announced itself.
-- **The window-distinctness test would have passed on the fixture's own seed and failed on the next
-  one.** Measured before implementing: 25/25 distinct for base 20220627, 24/25 for base 1. The batch
-  now guarantees distinctness by re-deriving rather than trusting the space.
-- **A mutation hung the suite instead of failing it**, and stranded a mutated file when it was
-  killed. The retry loop had no bound, so a derivation that stops keying on its retry counter spins
-  forever. Now bounded and named; the mutation harness runs each case under a timeout.
-- **The structural no-randomness rule did not reach the new module.** Replacing keyed derivation
-  with a seeded sequence left all 18 tests green: both give the same prefix property, so no
-  behavioural test can separate them. `scn-001` asserts the constraint only over `app/scenario/`.
-- **The ordering mutation took two attempts to catch.** Swapping "record the answer key" and "mark
-  complete" left 26 tests green. The first fix refused the second database transaction — still
-  green, because under the swap that *is* the completion call, so both orders fail identically.
-  Refusing the third is what separates them.
-- **A Makefile assertion passed against a comment.** `"app.pipeline" in makefile` matched the
-  comment saying the pipeline service named a module that did not exist. Sixth appearance of
-  text-matching where parsing was needed.
-- **`make generate` died on a missing library**: the pipeline service builds its own image and had
-  no build prerequisite, so a cached image predating SQLAlchemy ran. Fixed with `build-pipeline`.
-- **The first working batch reported twenty successes and produced twenty mislabelled controls.** A
-  two-minute run with the default two-minute incident offset staged every incident after its own run
-  ended. Every line of that code was covered by passing tests.
-- **A test was written after its implementation** (the unknown-parameter refusal), because the
-  coverage gate passed at 99.85% while that branch was never exercised. The guard test likewise came
-  from mutation rather than the test stage. Both recorded in their own docstrings.
-- **I reached for a clarifying question where a recommendation was wanted.** Two scoping questions
-  were put up and declined; both were answerable from the code and the specs.
+- **Three tests were written after the implementation**: reset's handler, which no test clicked; the
+  spectral-extent control, which no test changed, so nothing proved the value reached the payload;
+  and the fallback naming a run whose type the library does not list. All three are behaviours with
+  **no assertion** rather than wrong assertions — the class of gap a coverage report finds
+  mechanically. **The frontend measures no coverage at all**, so nothing reported them. The backend
+  gate caught exactly this kind of gap in `scn-003`. Marked as deviations in their own comments.
+- **`pnpm` will not run under the shell's default Node.** Node 20.19.4 against a pnpm that needs
+  ≥22.13 fails with `No such built-in module: node:sqlite`, which reads like a broken install.
+  `. ~/.nvm/nvm.sh && nvm use` in `frontend/` first; `.nvmrc` pins 24.
+- **`biome check --write` reformatted six files this item never touched** — pre-existing drift from
+  a config (`attributePosition: multiline`, `lineWidth: 150`) that was never applied. Reverted so
+  the commit stayed on subject. The drift is still there and is listed below.
+- **A mutation patch did not apply** because biome had collapsed the five-member union onto one
+  line after it was written. Mutation patches are written against the *formatted* file, not against
+  what was typed.
+- **The test file's handler types had to be rewritten** once the contract existed. They were
+  `Record<string, unknown>` at the test stage, deliberately, so the parity tests would be red; a
+  real `ScenarioConfiguration` is not assignable to it, so `tsc -b` failed at the retyping step and
+  not before.
 
 ## Next step
 
-1. **`scn-004` — the Scenario Control screen.** The last item in Phase 7. The seed field must be
-   visible and editable; replay of a listed run reuses its exact recorded seed and parameters, which
-   `RunSpec.from_record` now makes possible.
-2. **Phase 8** — baseline engine, then the deterministic detectors. The first thing that will ever
+1. **`nav-001` — the three-entry nav rail.** Small, and it is what makes `scn-004` reachable:
+   `App.tsx` renders one screen today. Local state rather than a router — no new dependency — and
+   Hypotheses is an explicitly empty destination until `hyp-*` exists.
+2. **`api-006` — the scenario endpoints.** The screen's controls are disabled until these exist, and
+   the contract that names them is already parity-checked against the generator. It carries one open
+   design question: a batch takes about 70 s and writes ~510k rows, and the project has no task
+   queue by scope, so `POST /scenario/start` has to decide between blocking, a background task, and
+   a queued row the frontend polls.
+3. **Phase 8** — baseline engine, then the deterministic detectors. The first thing that will ever
    read an answer key.
 
 Owed, with an owner but no date:
 
-- **Decide whether parameters vary within a batch.** `scn-003`'s input says "a parameter
-  distribution"; today every run in a batch is configured identically and only the seed, place,
-  traffic and noise differ. Varying difficulty per run interacts directly with the 0–11 staging
-  spread, so it is a deliberate decision — left for `eval-001`.
-- **`op-001`'s badge must key off the run, not off an observation's data mode.** A run's track half
-  is stored as `replayed`, because a perturbed row is a real recorded observation a scenario edited.
-  The `DataMode` docstring's claim that the badge reads the data is now imprecise for that half.
-- **A floor on the affected-aircraft count** rather than a bare 8% — decide when the detectors exist
-  and the clustering rule's sensitivity to dropout count is known.
+- **Decide whether the five batches share one base seed.** Recommended, and measured: it makes each
+  control a counterfactual of its scenario run rather than an independent sample of quiet. Belongs
+  to `eval-001` with the question of whether the incident dials vary within a batch. Both must be
+  settled before the scoring campaign is generated.
+- **Decide on frontend coverage tooling** (`@vitest/coverage-v8`). A new dependency, so not taken
+  mid-item; the argument for it is now evidence rather than principle.
+- **Run `pnpm format` across the frontend** as its own `style:` commit, or drop the formatter config
+  that nothing enforces.
+- **The form does not refuse an incident that starts after its run ends.** The batch does, with the
+  message that produced twenty mislabelled controls. Catching it in the form would be better than
+  catching it in a batch report, and it needs a spec line before a test.
+- **Pause diverges from `FR-714`** — not built, recorded in the spec item and `thesis_notes.md`.
+  Revisit if `api-006` gains a lifecycle.
+- **A run row cannot distinguish a run still going from one that died.** Absence of `completed_at`
+  covers both, so the screen says "incomplete" and no more. A status column or `api-006` fixes it.
+- **`op-001`'s badge must key off the run, not off an observation's data mode.**
+- **A floor on the affected-aircraft count** rather than a bare 8%, once the detectors exist.
 - **Record the measured false-positive rate on the coverage-gap type with and without the
   exclusion** — the gap left in `thesis_notes.md` when `adp-008` landed.
 - **Confirm the digest survives an x86-64 run.** The first CI job produces this for free.
@@ -141,12 +154,11 @@ Owed, with an owner but no date:
 - **Adopt TanStack Query at the Phase 3 view filter, not before.**
 - **`scenario.health` renders as a bare `unknown`**; left for `op-001`.
 - **The parity test compares field names, not types.**
-- **The frontend's structural checks scrub rather than parse.**
 - **`app/corpus/build.py` resolves `.env` from the repository root.**
 
 Open and unowned:
 
-- **Root `make check` has still not been run in full**; the frontend suite has not run this session.
+- **Root `make check` has still not been run in full.**
 - **mypy does not check `tests/`.**
 - **CI still does not exist** (`ops-002`).
 - Track 0: the data-egress question (employer) and the licence-version divergence remain open.
