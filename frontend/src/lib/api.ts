@@ -1,4 +1,5 @@
 import type { OperationalPicture } from "../types/operationalPicture";
+import type { ScenarioConfiguration, ScenarioRunRecord } from "../types/scenarioControl";
 
 /**
  * The only module in the frontend that reaches the network. spec: api-003.
@@ -36,4 +37,33 @@ export const fetchOperationalPicture = async (
     throw new Error(`${OPERATIONAL_PICTURE_PATH} responded ${response.status}`);
   }
   return (await response.json()) as OperationalPicture;
+};
+
+// ---------------------------------------------------------------- scenario
+//
+// STUB, written at the test stage. spec: api-010. Replaced at the code stage;
+// present only so `scenarioAccess.test.tsx` collects and each test fails on its
+// own assertion rather than the file failing to load.
+
+export const SCENARIO_RUNS_PATH = "/api/v1/scenario/runs";
+export const SCENARIO_START_PATH = "/api/v1/scenario/start";
+
+export interface BatchAcceptance {
+  baseSeed: number;
+  runs: number;
+  seeds: number[];
+}
+
+export const fetchScenarioRuns = async (
+  _baseUrl = "",
+  _signal?: AbortSignal,
+): Promise<ScenarioRunRecord[]> => {
+  throw new Error("fetchScenarioRuns: not implemented (api-010)");
+};
+
+export const startScenarioBatch = async (
+  _configuration: ScenarioConfiguration,
+  _baseUrl = "",
+): Promise<BatchAcceptance> => {
+  throw new Error("startScenarioBatch: not implemented (api-010)");
 };
