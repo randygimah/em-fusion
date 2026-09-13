@@ -189,6 +189,7 @@ test-backend: build-backend db-test-create ## Pytest inside the backend containe
 		-e TEST_DATABASE_URL="$(TEST_DATABASE_URL)" \
 		-v "$(abspath Makefile):/repo/Makefile:ro" \
 		-v "$(abspath compose.yaml):/repo/compose.yaml:ro" \
+		-v "$(abspath frontend/nginx.conf):/repo/frontend/nginx.conf:ro" \
 		-v "$(abspath frontend/src/types):/repo/frontend/src/types:ro" \
 		backend pytest $(PYTEST_ARGS)
 

@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from urllib.parse import urlparse
 
 import pytest
 
@@ -194,3 +195,88 @@ def test_no_target_needs_a_host_toolchain_beyond_docker() -> None:
     ]
 
     assert offenders == []
+
+
+# ------------------------------------------- the frontend healthcheck, ops-001
+#
+# These read two files together, because each is individually correct and the
+# defect lives only in the relationship between them: nginx binds an address,
+# the healthcheck names one, and nothing before this asserted they agree.
+
+COMPOSE_PATHS = (
+    Path(__file__).resolve().parents[2] / "compose.yaml",
+    Path("/repo/compose.yaml"),
+)
+NGINX_PATHS = (
+    Path(__file__).resolve().parents[2] / "frontend" / "nginx.conf",
+    Path("/repo/frontend/nginx.conf"),
+)
+
+
+def _read_first(candidates: tuple[Path, ...]) -> str:
+    """Read whichever of these exists. Never skip.
+
+    The repository root is not the backend's build context, so `make
+    test-backend` mounts each file this reads at `/repo`. A missing mount must
+    fail loudly rather than quietly skip — a skipped structural test is a test
+    that passes for the wrong reason, which this file's docstring already
+    argues at length.
+    """
+    for path in candidates:
+        if path.is_file():
+            return path.read_text(encoding="utf-8")
+    raise AssertionError(  # pragma: no cover -- a broken checkout or mount
+        f"not found at any of {[str(p) for p in candidates]}. Skipping is "
+        "deliberately not an option: see the module docstring."
+    )
+
+
+def _nginx_listens() -> list[str]:
+    """The `listen` directives nginx actually declares, comments removed."""
+    source = "\n".join(
+        line
+        for line in _read_first(NGINX_PATHS).splitlines()
+        if not line.strip().startswith("#")
+    )
+    return [m.strip() for m in re.findall(r"\blisten\s+([^;]+);", source)]
+
+
+def _frontend_healthcheck_url() -> str:
+    """The URL the frontend service's healthcheck probes."""
+    compose = _read_first(COMPOSE_PATHS)
+    frontend = compose[compose.index("\n  frontend:") :]
+    match = re.search(r"healthcheck:.*?(https?://[^\"'\s\]]+)", frontend, re.S)
+    assert match is not None, "the frontend service declares no healthcheck URL"
+    return match.group(1)
+
+
+def test_the_frontend_healthcheck_names_a_port_nginx_listens_on() -> None:
+    """A check on the wrong port reports a healthy service as broken."""
+    # spec: ops-001
+    url = urlparse(_frontend_healthcheck_url())
+    ports = {listen.split()[-1].rsplit(":", 1)[-1] for listen in _nginx_listens()}
+
+    assert str(url.port) in ports
+
+
+def test_the_frontend_healthcheck_names_an_address_nginx_binds() -> None:
+    """The defect that left the container permanently unhealthy. Spec: ops-001.
+
+    `listen 8080;` binds IPv4 only. Inside the image `localhost` resolves to
+    `::1` first, so the probe was refused while the service answered every real
+    request correctly. Verified in the running container: `127.0.0.1` succeeded,
+    `[::1]` and `localhost` were both refused.
+
+    A hostname is only safe here once nginx binds IPv6 too, so the assertion is
+    conditional on what nginx declares rather than a flat ban — otherwise it
+    would forbid the very fix that would make a hostname correct.
+    """
+    # spec: ops-001
+    host = urlparse(_frontend_healthcheck_url()).hostname
+    binds_ipv6 = any("[::]" in listen for listen in _nginx_listens())
+
+    if not binds_ipv6:
+        assert host == "127.0.0.1", (
+            f"nginx binds IPv4 only, so the healthcheck must name 127.0.0.1, "
+            f"not {host!r}: a name resolving to ::1 is refused."
+        )

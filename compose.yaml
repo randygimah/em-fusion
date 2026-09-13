@@ -103,7 +103,12 @@ services:
     ports:
       - "8080:8080"
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/"]
+      # 127.0.0.1, not localhost. nginx declares `listen 8080;`, which binds
+      # IPv4 only, and `localhost` inside this image resolves to ::1 first --
+      # so the probe was refused while every real request was served, leaving
+      # the container permanently unhealthy. A service that is always
+      # unhealthy can never report *becoming* unhealthy (ops-001).
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8080/"]
       interval: 30s
       timeout: 10s
       retries: 5
