@@ -1817,6 +1817,62 @@ Evaluation: thirty fifteen-minute windows inside one recorded hour overlap heavi
 independence across a batch is bounded by the corpus.
 
 
+### Routing: the URL hash rather than a router library or component state
+
+Three screens had to become reachable, and the second of them had been built, tested and merged with
+no way to open it in a browser. The choice was between a routing library, component state in the
+application shell, and the URL fragment.
+
+A library was rejected on proportion. React Router and its peers exist for nested routes, route
+parameters, loaders and navigation guards, and this interface has three destinations, no nesting and
+no parameters; the dependency would have been taken on for a switch statement. Component state was
+rejected for a stronger reason than proportion: it makes the address bar lie. A reload returns the
+analyst to whichever screen the shell initialises to rather than the one they were on, no screen can
+be linked to, and no screen can be named in a bug report — which matters more here than in an
+ordinary application, because the evaluation campaign depends on a second scorer being able to reach
+a specific view and on defects being reported precisely enough to reproduce.
+
+The fragment was chosen, and one consequence of it is an accessibility property rather than a
+convenience. A destination with an address is a link, so the rail is built from anchors and
+`aria-current="page"` sits on an anchor, which is where assistive technology expects to find the
+current page. Component state would have produced buttons styled as links, and `aria-current` on a
+button is a weaker claim about a thing that is not navigation. The fragment rather than the path also
+avoids a deployment concern: the frontend is served as a static bundle behind nginx, and a path-based
+route needs the server to rewrite unknown paths onto `index.html` — configuration taken on, again,
+for three destinations.
+
+An unrecognised fragment resolves to the Operational Picture rather than rendering nothing. The
+alternative, an empty workspace beneath a working navigation rail, reads to a user as a broken
+application rather than as a bad link, and the distinction matters for a prototype that will be put
+in front of people who did not build it.
+
+### An entry that leads nowhere, and a table that says it is a fixture
+
+Two presentation decisions in the navigation item follow the same rule, and the rule is the one the
+project exists to argue for rather than a matter of taste.
+
+The first: the specification fixes the rail at three entries, and the third screen has no
+implementation. The entry could have been hidden until it was built, or left to render a blank
+workspace. It instead states that the screen is not built and names what it will hold. Hiding it
+would have made the interface disagree with its own specification; a blank page would have said
+nothing at all, and a user cannot distinguish a blank page from a failure.
+
+The second is the load-bearing one. The Scenario Control screen lists recent runs, and with no
+scenario endpoint that table is reading a fixture — real seeds, real windows and real parameters
+lifted from a batch that genuinely ran, which is precisely what makes it dangerous. Rows that came
+from nowhere would announce themselves; rows that came from a real batch look exactly like rows from
+the database. This is the same failure the picture feed already guards against by reporting itself
+degraded from the first paint, before any response has arrived, and the two are now one rule applied
+twice: **example data is never presented as though it were the system's own**. The screen already
+carried a note explaining that its controls were inert, so the statement went there rather than
+becoming a second banner.
+
+Recording this as a design position rather than a detail is deliberate. A prototype for explainable
+situational awareness that quietly showed invented rows as observations would undermine its own
+argument more thoroughly than any weakness in its detectors, and the discipline is easier to defend
+in a write-up if the places it was applied are enumerated rather than asserted.
+
+
 ## Implementation
 
 <!-- Notable technical decisions per phase (link to implementation.md phases), challenges and
@@ -3025,6 +3081,47 @@ behaviours with no assertion rather than wrong assertions**, which is the class 
 report finds mechanically and a careful reading of the spec does not. Adding the tooling is a new
 dependency and is left as a decision rather than taken mid-item, but the argument for it is now
 evidence rather than principle.
+
+### Eight mutations in place of a coverage report, and the one test they left unproved
+
+The navigation item was the first to land after the gap recorded above — that the frontend measures
+no coverage, and that three of `scn-004`'s behaviours consequently had no test. No tooling was added
+for it, since that remains an open decision rather than something to take mid-item, so the tests were
+instead checked by mutation: each decision in the specification was broken in the implementation, one
+at a time, and the suite was run to see whether anything went red.
+
+Eight mutations were applied to the tree committed at `fe5b5c6`, under Node 24.18.0 and Vitest 4.1.9,
+against a suite of 55 tests of which 10 belong to this item. Each was applied singly and reverted
+from a copy taken before the pass — not with `git checkout`, which on an earlier item deleted the
+untracked implementation it was meant to be testing, a mistake recorded above and avoided here by
+construction rather than by care.
+
+| Mutation | Red |
+|---|---|
+| A fourth entry joins the rail | 2 |
+| An unrecognised address renders no screen | 1 |
+| The route lives in state, so the address is ignored | 1 |
+| Every entry marked as the current page | 2 |
+| Fixture rows presented with nothing saying so | 1 |
+| The poll runs above the switch, for every screen | 1 |
+| The Hypotheses destination renders a blank page | 1 |
+| The Scenario Control entry leads nowhere | 4 |
+
+Every mutation was caught, and each failed on the test written to catch it rather than on some
+distant assertion — which is the property worth having, because a suite where one broken thing turns
+twenty tests red localises nothing.
+
+The more useful result came from tallying which tests the mutations had exercised rather than from
+the mutations themselves. The first seven were derived from the specification's six decisions and its
+two failure cases, and they moved nine of the ten tests; the tenth, which asserts that choosing the
+Scenario Control entry actually reaches that screen, was untouched, because no mutation of a
+*decision* breaks the wiring that the decision presumes. The eighth mutation was written for it
+specifically. This is a limit of specification-derived mutation worth stating plainly: it tests the
+claims a specification makes and is blind to the assumptions the specification does not think to
+state, so the tally of tests against mutations is the step that finds the gap, not the pass itself.
+A coverage report would have found the same gap mechanically, and the argument for adding the tooling
+is unchanged.
+
 
 ## Evaluation
 

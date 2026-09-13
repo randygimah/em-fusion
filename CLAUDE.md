@@ -36,7 +36,11 @@ A contents page for the repo. Use it to find the right file before searching; it
 
 | Path | What's in it |
 |---|---|
-| `frontend/src/App.tsx` | Wires the mock into the screen. **The seam** where a real API call replaces the mock import. |
+| `frontend/src/App.tsx` | The shell: the nav rail beside a workspace that switches on the current route (`nav-001`), and **the seam** — the only module that knows where a screen's data comes from. The picture is fetched inside the Operational Picture's route so the poll mounts and unmounts with it; the Scenario Control fixture is imported, because `api-006` does not exist. |
+| `frontend/src/routes.ts` | The three screens declared **once** (`nav-001`) — id, label, hash — plus the default and `screenFromHash`. Exactly-three is assertable here as well as in the DOM. An unrecognised hash resolves to the Operational Picture. |
+| `frontend/src/hooks/useCurrentScreen.ts` | The route, read from the URL hash and kept current on `hashchange` (`nav-001`). No router library: three destinations, no nesting, no parameters. |
+| `frontend/src/lib/api.ts` | **The only module in the frontend that reaches the network** (`api-003`) — the endpoint path, the 5 s poll interval, and `fetchOperationalPicture`. A test scans the source for a second caller. |
+| `frontend/src/hooks/useOperationalPicture.ts` | The polling feed (`api-003`): the picture to show plus whether it is `degraded`. Reports degraded from the first paint, and a failed poll keeps what is on screen rather than reverting to the mock. |
 | `frontend/src/main.tsx` | React entry point. |
 | `frontend/src/index.css` | Tailwind v4 entry (no `tailwind.config.js`) plus design tokens. |
 | `frontend/src/types/operationalPicture.ts` | The `OperationalPicture` contract — scenario, hypotheses, detectionSummary, rfSensors, aircraftTracks, timelineEvents. Mirrors the future `/api/v1/operational-picture` response shape. |
@@ -44,10 +48,11 @@ A contents page for the repo. Use it to find the right file before searching; it
 | `frontend/src/types/scenarioControl.ts` | The Scenario Control contract (`scn-004`) — the five type ids, the configuration the form submits, the parameters a run row records verbatim, and a listed run. Mirrors the unbuilt `/api/v1/scenario/*` endpoints, and is parity-checked against the generator from the backend suite. |
 | `frontend/src/mocks/scenarioControlMock.ts` | Mock satisfying it, built from real seeds, windows and parameters of a `make generate` batch. |
 | `frontend/src/screens/operationalPicture.tsx` | The main screen. Takes `operationalPicture` as a prop; never imports the mock. |
-| `frontend/src/screens/scenarioControl.tsx` | The Scenario Control screen (`scn-004`): scenario library, the configuration form over exactly the dials the batch entrypoint accepts, run controls, status, and the recent-runs table. Controls are disabled and say why until a handler is supplied — `api-006` does not exist. **Not reachable in the browser yet**: nothing routes to it until `nav-001`. |
-| `frontend/src/components/em/` | Shared `Em*` UI primitives (`EmButton.tsx`) built with `cva` + `cn`. New styled components follow this pattern. |
+| `frontend/src/screens/scenarioControl.tsx` | The Scenario Control screen (`scn-004`): scenario library, the configuration form over exactly the dials the batch entrypoint accepts, run controls, status, and the recent-runs table. Controls are disabled and say why until a handler is supplied — `api-006` does not exist, and the same note says the listed runs are **a fixture rather than the database** (`nav-001`). Reachable at `#/scenario-control`. |
+| `frontend/src/screens/hypotheses.tsx` | The Hypotheses **destination**, not the screen (`nav-001`). `hyp-*` is unbuilt, so it names what is missing; FR-701 fixes the rail at three entries and a blank page reads as a fault rather than a gap. Replace it wholesale when `hyp-*` starts. |
+| `frontend/src/components/em/` | Shared `Em*` UI primitives (`EmButton.tsx`, `EmNavRail.tsx`) built with `cva` + `cn`. New styled components follow this pattern. `EmNavRail` is dumb: it renders the list it is given, as anchors, so `aria-current` sits on a link. |
 | `frontend/src/lib/utils.ts` | The `cn` helper (`clsx` + `tailwind-merge`). |
-| `frontend/src/test/` | Vitest home — `operationalPicture.test.tsx`, `scenarioControl.test.tsx`, `setup.ts`. All frontend tests go here. **No coverage tooling**: the 90% gate has only ever been measured on the backend. |
+| `frontend/src/test/` | Vitest home — `operationalPicture.test.tsx`, `scenarioControl.test.tsx`, `navigation.test.tsx`, `dataAccess.test.tsx`, `transport.test.ts`, `setup.ts`. All frontend tests go here. **No coverage tooling**: the 90% gate has only ever been measured on the backend, so frontend items are proved load-bearing by a mutation pass instead. |
 | `frontend/src/App.test.tsx` | Legacy colocated test — the one exception to `src/test/`. Don't add more. |
 | `frontend/src/assets/Design/OperationalPicture_v2/` | Generated design reference for screen 1: `DESIGN.md`, `code.html`, `screen.png`. |
 | `frontend/src/assets/Design/Hypothesis_analysis_v2/` | Same, for screen 2 (Hypothesis Detail / Analyst Workbench). |

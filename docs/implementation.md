@@ -97,7 +97,7 @@ is built once, against a real fetch.
 
 *Layout items below run first. The view filter subsection waits for Phase 5.*
 
-- [ ] Add a left navigation shell with only three sections: Operational Picture, Hypotheses, Scenario Control.
+- [x] Add a left navigation shell with only three sections: Operational Picture, Hypotheses, Scenario Control. **Landed 2026-09-13** (`nav-001`). The route is the **URL hash**, not a router library and not component state, so each entry is a real link that survives a reload and carries `aria-current="page"` on an anchor; an unrecognised hash resolves to the Operational Picture. All three destinations render: Hypotheses names itself unbuilt until `hyp-*`, and Scenario Control is now reachable. The picture poll moved into the Operational Picture's route so it stops when the analyst leaves it. Ten tests, and an eight-mutation pass in place of the coverage the frontend does not measure.
 - [ ] Improve the top status bar using the design tokens from `DESIGN.md`; include data-mode badge, scenario badge, and a compact system-health strip (not a screen).
 - [ ] Create a map placeholder component with aircraft, RF sensor, and anomaly-zone labels.
 - [ ] Add RF observations and aircraft tracks as panels/tabs inside the Operational Picture — not separate screens.
@@ -255,7 +255,7 @@ None of this blocks the **template generator**, which is the first thing built i
 - [ ] Add analyst actions: confirm, reject, needs more evidence, false positive.
 - [ ] Add a note field only after the action flow works.
 - [ ] Persist feedback in the database; submitting feedback changes hypothesis status (test this end to end).
-- [ ] Build the Scenario Control screen: start, pause, reset, replay; select scenario type and parameters. **The screen landed 2026-09-13** (`scn-004`): scenario library, the configuration form, the run controls, the status indicator and the recent-runs table, with 22 screen tests and 8 contract-parity tests. What is left here is the wiring, and it is `api-006`'s: the controls render **disabled, with the reason on screen**, because no endpoint starts a run. **Pause is not built** — `FR-806` provides no endpoint for it and a batch of whole runs has nothing to pause; it belongs to `FR-717`'s playback transport (`op-008`), and the divergence from `FR-714` is recorded in the spec item. The screen is also **not reachable in the browser** until `nav-001` routes to it.
+- [ ] Build the Scenario Control screen: start, pause, reset, replay; select scenario type and parameters. **The screen landed 2026-09-13** (`scn-004`): scenario library, the configuration form, the run controls, the status indicator and the recent-runs table, with 22 screen tests and 8 contract-parity tests. What is left here is the wiring, and it is `api-006`'s: the controls render **disabled, with the reason on screen**, because no endpoint starts a run. **Pause is not built** — `FR-806` provides no endpoint for it and a batch of whole runs has nothing to pause; it belongs to `FR-717`'s playback transport (`op-008`), and the divergence from `FR-714` is recorded in the spec item. The screen became **reachable in the browser** on 2026-09-13 at `#/scenario-control` (`nav-001`), which also added one sentence to its note: the listed runs are **a fixture from a recorded batch rather than the database**, because `api-006` does not exist.
 - [ ] Explain in README that this is decision support, not autonomous decision-making.
 
 ## Phase 11: Evaluation Harness (build before October, not during)
