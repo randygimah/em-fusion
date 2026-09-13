@@ -23,10 +23,10 @@ rail), **`nav-003`** (that rail collapsing), **`api-006`** (the scenario endpoin
 | | |
 |---|---|
 | Frontend suite | **81 passed**, 8 files, `tsc -b` and `biome lint` clean |
-| Backend suite | **582 passed, 99.88%** via `make test-backend`, database tier live, 101 s |
+| Backend suite | **584 passed, 99.88%** via `make test-backend`, database tier live, ~146 s |
 | Spec items passing | **29 of 86** — `scn` 5/5, `adp` 7/8, `api` 5/10, `nav` 2/3, `db` 5/7 |
 | New dependencies | None. No router library, no icon library, no task queue |
-| Stack | **Down.** It was up and verified during the session; the containers were removed afterwards (not by `make down`). `make up` restores it — the postgis volume should still hold the 60 runs, but that is unverified. |
+| Stack | **Up.** `START BATCH` verified end to end: 20 `rf-sensor-fault` runs written and completed, 0 failures logged. The database holds 80 runs. |
 
 ### What exists now
 
@@ -63,9 +63,9 @@ Not reachable from any test, so done by hand through nginx:
 | Backend stopped underneath it | Rows stayed; "Not live — this list is the last one read" appeared |
 | Backend restarted | The warning cleared on the next successful poll |
 
-**`START BATCH` has not been fired against the real stack.** It would write twenty runs and roughly
-half a million rows, which is not reversible, so it was left for a deliberate decision rather than
-taken as part of a check. Doing so needs `make up` first.
+**`START BATCH` has now been fired against the real stack**, after the user pressed it and reported
+nothing happening. It failed — see Failed attempts — and after the fix wrote twenty `rf-sensor-fault`
+runs, all complete, with nothing in the failure log.
 
 ### Mutation results
 
@@ -93,10 +93,22 @@ Added, backend: `app/api/v1/scenario.py`, `app/api/v1/schemas/scenario.py`, `app
 `app/api/v1/__init__.py`, `docs/spec.jsonl`, `docs/thesis_notes.md`, `docs/qa.md` (§57, §58),
 `docs/implementation.md`, `CLAUDE.md`, `DESIGN.md`.
 
-**The progress note** was republished at version 16 for `scn-004` and `nav-001`. It does **not** cover
-`nav-003`, `api-006` or `api-010`.
+**The progress note is at version 17**, carrying a screenshot of the Scenario Control screen with a
+control-by-control walkthrough, the per-type table of which dials are inert, and the batch-failure
+limitation. It is now a multi-file artifact — the screenshot sits beside the page.
 
 ## Failed attempts
+
+- **The batch button reported success over a failure, and only pressing it found that.** Every batch
+  started from the screen died instantly on `PSEUDONYM_SEED is not set` while the screen said
+  *Batch accepted*. Compose passes that seed from the host, so an unset host variable arrives in the
+  container as an **empty string** rather than absent, and `load_dotenv(override=False)` treats
+  present-but-empty as present — so nothing shadowed a perfectly good `/app/.env`. **Both
+  command-line entrypoints already handled this**, each with its own copy of the remedy and its own
+  comment; the launcher was a third site that needed it and had no way to know. Fixed by extracting
+  one function all three call. **The launcher's own tests could not have caught it**: they substitute
+  the pseudonymiser precisely so the tests need no seed, and that substitution is what made them
+  blind.
 
 - **Two `api-010` tests could not fail, and the cause was mine.** Both were written to prove the runs
   on screen come from the database rather than the fixture, and both passed before any implementation
@@ -134,13 +146,21 @@ Added, backend: `app/api/v1/scenario.py`, `app/api/v1/schemas/scenario.py`, `app
 
 ## Next step
 
-1. **Fire `START BATCH` against the real stack once**, deliberately, and watch rows appear over the
-   following minute. It is the last unproven link in the chain and it writes ~510k rows.
-2. **Phase 8** — the baseline engine, then the deterministic detectors. The first thing that will
+1. **Phase 8** — the baseline engine, then the deterministic detectors. The first thing that will
    ever read an answer key, and the first content for the panel showing two dashes.
-3. **The progress note** is three items behind.
+2. **A batch that fails after acceptance is invisible** — the first owed item below. Small, and it is
+   honesty rather than capability.
 
 Owed, with an owner but no date:
+
+- **A failed batch cannot reach the screen.** The response is sent before the work starts, so a batch
+  that dies looks exactly like one still running. Needs a spec item; the open question is where the
+  failure lives — a run row, a status endpoint, or in-memory state.
+- **The configuration form offers dials that are inert for the selected type**, with nothing saying
+  so: zone radius does nothing for `rf-sensor-fault`, and noise elevation and spectral extent do
+  nothing for `aircraft-coverage-gap`. The reasons are the design; the silence is not.
+- **The runs table shows the 50 most recent, unfiltered and unpaged.** Fine at 80 runs, not at the
+  campaign's 150.
 
 - **Decide whether the five batches share one base seed.** Recommended and measured; belongs to
   `eval-001` with whether the incident dials vary within a batch. Both must be settled before the
