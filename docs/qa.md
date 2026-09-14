@@ -4153,6 +4153,106 @@ untestable against the data the system normally produces.** The quiet corpus is 
 construction, so it cannot separate implementations that differ only in how they handle
 non-uniformity.
 
+## 62. So the conclusion is track staleness cannot separate staged runs from real data because the staged data has been placed in the busiest part of the data distribution?
+
+**Essentially yes — but the framing is worth sharpening, because "placed in the busiest part" sounds
+like a mistake and it is not one.** The staged gaps were made *realistic*, and realism is precisely
+what makes them indistinguishable when looked at one aircraft at a time.
+
+The coverage-gap and GNSS-degradation scenarios stage disruptions lasting roughly 100 to 300 seconds,
+because that is what a plausible real coverage failure looks like. It is also what a real coverage
+failure *is*: the archived corpus is full of them. Measured across the twenty runs of each type in the
+development database:
+
+| Per run | `normal-baseline` | `gnss-degradation` |
+|---|---|---|
+| Aircraft seen | 530.2 | 535.8 |
+| Peak position staleness > 100 s | **137.7** | 141.1 |
+| > 300 s | 19.3 | 20.7 |
+| > 600 s | **1.0** | 0.6 |
+| Fresh contact *and* stale position > 100 s | 24.6 | 28.0 |
+
+Three things to read out of that. The staged runs are higher at 100 s, so **the staging does work** —
+those extra aircraft really did have their positions frozen. The margin is about 3.4 aircraft against
+a background of 137.7, roughly one in forty. And at 600 s and above the *quiet* runs are higher than
+the staged ones, so there is no threshold anywhere that separates the two.
+
+### The distinction that matters: detection versus attribution
+
+The rule detects staleness perfectly well. What it cannot do is attribute it.
+
+> "This aircraft's position is stale" — the rule answers this correctly, 138 times per quiet run.
+> "…and that is because of the injected incident" — the rule cannot answer this at all.
+
+An everyday form: noticing one extra lit window in a city at night. The light really is on. You still
+cannot pick it out from the thousands already lit. Nothing is wrong with your eyes.
+
+### Why this is the project's subject rather than a defect
+
+This is the problem EM Fusion exists to address, appearing in its own data. An aircraft's position
+going stale is compatible with interference, with a data-source failure, and with the ordinary
+patchiness of real coverage — and one measurement cannot tell them apart. That is the first paragraph
+of the project's own framing, met as an engineering fact.
+
+What separates them is information a single-aircraft measurement does not contain: **where** the stale
+aircraft are relative to each other, and **what the radio was doing** in the same place at the same
+time. The background gaps are scattered across 309,000 km². The staged ones sit inside a zone about
+20 km across with a raised noise floor over it. Spatial clustering and cross-modal agreement are the
+discriminators, and they are already the specified design — the fusion rules exist for exactly this.
+
+Worth recording as a limitation with a number attached: **the GNSS-degradation scenario is not
+detectable from the track stream alone.** Any reported detection of it depends on the RF side
+agreeing, and the evaluation should say so rather than presenting a combined figure as though the
+track rule contributed independently.
+
+## 63. What does producing an intermediate finding mean instead of reportable anomalies?
+
+**It is only about who sees it.** Nothing is detected less carefully; nothing is hidden.
+
+| | |
+|---|---|
+| **Reportable anomaly** | The system shows this to an analyst and says *something is wrong here*. |
+| **Intermediate finding** | The system works this out for its own use, on the way to a conclusion. Nobody ever sees it. |
+
+A blood test is the closest everyday version. A single out-of-range value on a panel is not a
+diagnosis — plenty of healthy people have one. The doctor combines several values with symptoms and
+history before saying anything. The individual number is real, and necessary, and not the finding.
+
+In this system:
+
+| | |
+|---|---|
+| **Intermediate** | "Aircraft A7 had no fresh position for four minutes." About 138 per quiet run. True, and unremarkable. |
+| **Reportable** | "Nine aircraft inside the same 20 km area lost position within the same five minutes, and the receivers covering that area show a raised noise floor." |
+
+The second is built *from* the first, so all 138 still have to be computed. They are simply not
+announced.
+
+### Why the distinction has to be made explicitly
+
+FR-308 requires a `normal-baseline` run to raise **zero anomalies**, and the false-positive rate
+reported in the evaluation is computed from that.
+
+- If a track-staleness finding counts as an anomaly, the requirement is **impossible to satisfy**.
+  Real replayed data genuinely contains around 138 of them per run, and a detector reporting zero
+  would be a broken detector rather than a quiet one.
+- If "anomaly" means *what reaches the analyst*, zero is achievable and is the right target.
+
+So the amendment is to **what the word means in that one control**, not to how much is detected. The
+bar stays where it was: nothing reaches the analyst on a clean run.
+
+### What it changes in practice
+
+Very little. The rule keeps its arithmetic, its threshold, and its filters. Its output type is named
+as an input to clustering rather than as an anomaly, and one sentence of `anom-008` is scoped to the
+fused rules that an analyst actually sees — `FUSION-SPATIAL`, `SOURCE-GAP` and `SENSOR-FAULT`.
+
+One risk stays open and is deliberately not pre-solved. `SOURCE-GAP` raises on *clusters* of dropouts
+with no radio explanation, and with 138 scattered gaps in a quiet run some may fall close enough
+together to cluster by chance, near a busy airport for instance. Whether that happens is measurable
+once the clustering rule exists, and guessing at it now would mean tuning a radius against an
+imagined problem.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -4167,6 +4267,9 @@ non-uniformity.
 | **GNSS L1** | The 1575.42 MHz band carrying civil GPS/Galileo signals; the band the interference scenario targets. |
 | **SNR** | Signal-to-noise ratio — signal strength relative to background noise. Falls when noise rises. |
 | **Baseline cell** | The unit a baseline is computed over: one sensor on one channel. Fifty-six of them on the shipped layout. Never pooled per sensor. |
+| **Reportable anomaly** | A finding the analyst is shown. Subject to the zero-on-a-clean-run control; produced only by the fusion rules. |
+| **Intermediate finding** | A finding computed for the system's own use, feeding a later rule. Never shown, and not counted by the control. |
+| **Attribution** | Saying *why* a measurement moved, as distinct from detecting that it did. The track rule detects staleness and cannot attribute it. |
 | **Equivalent mutant** | A deliberate code change that cannot alter behaviour, so no test can catch it. Counting one as a surviving mutant understates test quality. |
 | **Rolling average** | An average over a trailing window rather than over everything, so the expectation tracks slow drift instead of being fixed at the start. |
 | **Noise floor** | Background RF power with no signal present; the reference that "elevated noise" is elevated above. |
