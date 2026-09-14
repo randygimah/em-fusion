@@ -253,9 +253,28 @@ def test_a_refused_batch_returns_nothing_at_all() -> None:
 
 
 def test_an_empty_set_of_baseline_runs_is_refused() -> None:
-    """Naming no quiet runs cannot mean 'accept anything'."""
+    """Naming no quiet runs cannot mean 'accept anything'.
+
+    Asserted with **no observations at all**, and on the message. Found by
+    mutation: with observations supplied, deleting this guard still raises,
+    because every observation then belongs to no listed run and the check
+    below refuses it. The test passed for the wrong reason -- a shape this
+    project has hit before. Nothing but this guard can refuse an empty call.
+    """
     # spec: anom-002
-    with pytest.raises(BaselineError):
+    with pytest.raises(BaselineError, match="no baseline runs named"):
+        compute_rf_baselines(
+            [],
+            RfMetric.POWER_DBM,
+            baseline_run_ids=set(),
+            window=timedelta(hours=1),
+        )
+
+
+def test_an_empty_set_is_refused_even_with_observations_to_measure() -> None:
+    """The same guard, reached the way a caller would actually reach it."""
+    # spec: anom-002
+    with pytest.raises(BaselineError, match="no baseline runs named"):
         compute_rf_baselines(
             list(series()),
             RfMetric.POWER_DBM,
@@ -399,6 +418,27 @@ def test_a_window_containing_nothing_yields_an_empty_table() -> None:
         list(series()), window=timedelta(minutes=1), ending_at=START - timedelta(days=1)
     )
 
+    assert table.baselines == {}
+    assert table.insufficient == {}
+
+
+def test_a_non_positive_window_is_refused() -> None:
+    """A zero-length window admits only observations at exactly one instant,
+    and a negative one admits nothing. Both are configuration errors that
+    would read downstream as a quiet sensor."""
+    # spec: anom-002
+    for window in (timedelta(0), timedelta(minutes=-5)):
+        with pytest.raises(BaselineError, match="positive"):
+            compute(list(series()), window=window)
+
+
+def test_no_observations_at_all_yields_an_empty_table() -> None:
+    """With nothing supplied and no end given there is no window to
+    evaluate, and the table says so rather than inventing one."""
+    # spec: anom-002
+    table = compute([])
+
+    assert table.ending_at is None
     assert table.baselines == {}
     assert table.insufficient == {}
 
