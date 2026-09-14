@@ -3625,6 +3625,43 @@ and of aircraft being switched off, exactly the two corrections the bounding-box
 August. **A detector that omitted them would report four-fifths false positives**, and would look
 like a detector problem rather than a framing one.
 
+### Seventeen mutations, and what the four survivors were each a different kind of
+
+`anom-010` was checked with a seventeen-mutation pass on top of 100% line coverage. Thirteen died on
+the first run. The four that lived were four distinct things, and separating them is more useful than
+the score.
+
+**Two were boundary cases I had already written once and did not carry across.** Both thresholds
+compared with a strict inequality, and no test placed a value exactly on the boundary — 99 s and
+150 s bracket it without touching it. `anom-001` has precisely this test, written the day before,
+because that item's own failure case names the boundary explicitly. `anom-010`'s did not, so it was
+not written. **A test that exists in one rule does not propagate to the next by being a good idea**;
+it propagates by being in the spec item, which is an argument for the failure cases in `spec.jsonl`
+being specific rather than general.
+
+**One was a test passing for the wrong reason, and the second instance of one exact shape.** Deleting
+the guard that refuses a non-positive threshold left every test green, because the policy's *other*
+guard — that the contact window must be shorter than the threshold — then raises instead: any
+positive contact window is longer than a zero threshold. The test saw its exception and passed. This
+is the same defect as the baseline engine's empty-run-set test, two items earlier, and the same fix:
+assert on the message, not the type. The general form is worth stating, because it will recur:
+**a guard that can only be reached through the guard beside it is not under test**, and validation
+guards cluster, so they are where this happens.
+
+**One was not a defect in the tests at all: I built the mutation wrongly.** Intending to test that no
+trailing gap is extrapolated past an aircraft's last report, I mutated the pairwise iteration to
+`zip(reports, reports[1:] or reports)`. That differs from the original only when an aircraft has a
+single report, where it pairs the report with itself and yields a zero-length interval — no gap
+either way. It was an equivalent mutant, and reported as a survivor. Rebuilt as a mutation that
+genuinely appends a trailing finding, it killed 23 of 28 tests immediately.
+
+The lesson generalises past this item. **Mutation testing has its own failure mode: a mutation that
+does not change behaviour reports as a surviving mutant and looks exactly like a gap in the tests.**
+Both of this project's equivalent mutants so far were mine rather than inherent — one relied on
+CPython's compensated summation, one on a short-circuit that could not fire — and both would have
+been recorded as test weaknesses if they had not been read carefully. A mutation score is only as
+good as the mutations, and the mutations need reviewing with the same suspicion as the tests.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;
