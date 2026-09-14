@@ -114,11 +114,12 @@ def track(
     )
 
 
-def nominal(count: int, *, aircraft_id: str = AIRCRAFT, start: datetime = START) -> list[CanonicalObservation]:
+def nominal(
+    count: int, *, aircraft_id: str = AIRCRAFT, start: datetime = START
+) -> list[CanonicalObservation]:
     """A healthy stream: reporting every tick, both clocks fresh."""
     return [
-        track(aircraft_id=aircraft_id, timestamp=start + i * TICK)
-        for i in range(count)
+        track(aircraft_id=aircraft_id, timestamp=start + i * TICK) for i in range(count)
     ]
 
 
@@ -129,7 +130,10 @@ def nominal(count: int, *, aircraft_id: str = AIRCRAFT, start: datetime = START)
 
 def test_a_stale_position_with_fresh_contact_is_a_frozen_position_finding() -> None:
     # spec: anom-010, FR-304
-    stream = [*nominal(3), track(timestamp=START + 3 * TICK, position_staleness_s=150.0)]
+    stream = [
+        *nominal(3),
+        track(timestamp=START + 3 * TICK, position_staleness_s=150.0),
+    ]
 
     (finding,) = detect_track_gaps(stream, POLICY)
 
@@ -146,7 +150,11 @@ def test_a_stale_position_with_equally_stale_contact_is_not_frozen() -> None:
     # spec: anom-010, dal-001
     stream = [
         *nominal(3),
-        track(timestamp=START + 3 * TICK, position_staleness_s=150.0, contact_staleness_s=150.0),
+        track(
+            timestamp=START + 3 * TICK,
+            position_staleness_s=150.0,
+            contact_staleness_s=150.0,
+        ),
     ]
 
     assert detect_track_gaps(stream, POLICY) == ()
@@ -155,6 +163,19 @@ def test_a_stale_position_with_equally_stale_contact_is_not_frozen() -> None:
 def test_a_position_staleness_below_the_threshold_raises_nothing() -> None:
     # spec: anom-010
     stream = [*nominal(3), track(timestamp=START + 3 * TICK, position_staleness_s=99.0)]
+
+    assert detect_track_gaps(stream, POLICY) == ()
+
+
+def test_a_position_staleness_exactly_at_the_threshold_raises_nothing() -> None:
+    """Strictly greater than, as `anom-001` has it: the threshold is the
+    limit of acceptable, so sitting on it is not passing it. Found by
+    mutation -- 99 s and 150 s bracket the boundary without testing it."""
+    # spec: anom-010, anom-001
+    stream = [
+        *nominal(3),
+        track(timestamp=START + 3 * TICK, position_staleness_s=100.0),
+    ]
 
     assert detect_track_gaps(stream, POLICY) == ()
 
@@ -198,6 +219,30 @@ def test_an_aircraft_on_the_ground_is_never_frozen() -> None:
     assert detect_track_gaps(stream, POLICY) == ()
 
 
+def test_a_recovered_position_splits_the_frozen_episode() -> None:
+    """The frozen-position twin of `anom-001`'s episode split, and it was
+    missing until the coverage report asked for it. An aircraft whose fix
+    comes back and is lost again has had two events, and merging them
+    would claim one lasting through the interval when it was healthy.
+    """
+    # spec: anom-010, anom-001
+    stream = [
+        track(timestamp=START),
+        track(timestamp=START + 1 * TICK, position_staleness_s=150.0),
+        track(timestamp=START + 2 * TICK, position_staleness_s=160.0),
+        track(timestamp=START + 3 * TICK),
+        track(timestamp=START + 4 * TICK, position_staleness_s=150.0),
+    ]
+
+    findings = detect_track_gaps(stream, POLICY)
+
+    assert [f.shape for f in findings] == [
+        GapShape.FROZEN_POSITION,
+        GapShape.FROZEN_POSITION,
+    ]
+    assert findings[0].ended_at == START + 2 * TICK
+
+
 # ------------------------------------------------- not heard, mechanism B
 #
 # The aircraft-coverage-gap shape: the rows stop arriving, so there is no
@@ -218,6 +263,15 @@ def test_an_interval_past_the_threshold_is_a_not_heard_finding() -> None:
 def test_an_interval_below_the_threshold_raises_nothing() -> None:
     # spec: anom-010
     stream = [*nominal(3), track(timestamp=START + 2 * TICK + timedelta(seconds=99))]
+
+    assert detect_track_gaps(stream, POLICY) == ()
+
+
+def test_an_interval_exactly_at_the_threshold_raises_nothing() -> None:
+    """The same boundary on the other mechanism, and missing for the same
+    reason. Both were found by mutation rather than by writing them."""
+    # spec: anom-010
+    stream = [*nominal(3), track(timestamp=START + 2 * TICK + timedelta(seconds=100))]
 
     assert detect_track_gaps(stream, POLICY) == ()
 
@@ -303,11 +357,15 @@ def test_each_aircraft_is_considered_separately() -> None:
     """Two aircraft reporting alternately must not have one's interval
     measured against the other's report."""
     # spec: anom-010
+    # Chosen so the two answers differ: kept apart, AIRCRAFT has a 200 s gap
+    # and OTHER has none. Merged into one sequence the intervals become
+    # 90, 20 and 90 and there is no gap at all, so a rule ignoring identity
+    # reports nothing rather than reporting too much.
     stream = [
         track(aircraft_id=AIRCRAFT, timestamp=START),
-        track(aircraft_id=OTHER, timestamp=START + timedelta(seconds=100)),
+        track(aircraft_id=OTHER, timestamp=START + timedelta(seconds=90)),
+        track(aircraft_id=OTHER, timestamp=START + timedelta(seconds=110)),
         track(aircraft_id=AIRCRAFT, timestamp=START + timedelta(seconds=200)),
-        track(aircraft_id=OTHER, timestamp=START + timedelta(seconds=210)),
     ]
 
     findings = detect_track_gaps(stream, POLICY)
@@ -421,7 +479,12 @@ def test_a_non_positive_threshold_is_refused() -> None:
     """A zero threshold makes every interval a gap."""
     # spec: anom-010
     for bad in (timedelta(0), timedelta(seconds=-10)):
-        with pytest.raises(RuleError):
+        # Matched on the message: with this guard deleted the contact-window
+        # guard raises instead, because any positive contact window is longer
+        # than a zero threshold. Found by mutation, and the same shape as the
+        # baseline engine's empty-run-set test -- a guard reachable only
+        # through the guard beside it is not under test.
+        with pytest.raises(RuleError, match="must be positive"):
             GapPolicy(threshold=bad, contact_fresh_within=timedelta(seconds=30))
 
 
@@ -431,7 +494,8 @@ def test_a_contact_window_at_or_above_the_threshold_is_refused() -> None:
     # spec: anom-010
     with pytest.raises(RuleError):
         GapPolicy(
-            threshold=timedelta(seconds=100), contact_fresh_within=timedelta(seconds=100)
+            threshold=timedelta(seconds=100),
+            contact_fresh_within=timedelta(seconds=100),
         )
 
 
