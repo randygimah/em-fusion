@@ -170,7 +170,7 @@ Added after the original checklist was written — a static snapshot cannot show
 - [x] Add a repository layer: the PostGIS implementation of the DAL's port. *(**`db-003` passes 2026-09-02** — 20 tests, `app/db/repository.py` at 100% in the container, 252 passed. The port signature survived unchanged; the prediction is scored in `thesis_notes.md`. The schema is reflected rather than redeclared, which is what GeoAlchemy2 earns its place doing, and the `geometry` warning filter came out in the same change.)* *(`db-003`. The command surface is ready: `ops-003` passes 2026-08-30, so `make test` now starts PostGIS, provisions `test_em_fusion` and runs the database tier — 232 tests in the container. **Split 2026-09-02:** the "and keep SQL out of route handlers" half is now `db-006` and moves to Phase 5, because it cannot be proved before a data-serving route exists.)*
 - [x] A committed way to replay the corpus end to end. *(**`adp-007` passes 2026-09-04** — `python -m app.replay` plus `make replay`. Full corpus into PostGIS: 133,634 read, 133,134 accepted, 500 quarantined, 12 batches, **14.25 s** when first measured and about 9.8 s over three runs against a warm stack on 2026-09-04 — the figure is condition-dependent, see `thesis_notes.md`. `ops-003` green again with the target added.)*
 - [x] Mark a scenario run complete, so a partial run is distinguishable from a finished one. *(**`db-007` passes 2026-09-04** — revision `0002_scenario_run_completion`, a `complete_scenario_run` function in the storage layer, and `app.replay` marking its run after the final batch commits. 10 tests across three files, four mutations recorded, 288 passed at 99.87%. Verified on the development database: the run that predates the column stayed null, the new one recorded `completed_at - started_at` of 9.765 s against a self-reported 9.75 s. Null means not known to have finished, which falls out of `adp-007`'s per-batch unit of work — an interrupted replay keeps its committed batches, and re-running starts a new run rather than resuming, so partial runs accumulate looking exactly like complete ones.)*
-- [ ] Implement at least one real spatial query (track discontinuities within N km of an RF anomaly zone) — this is the PostGIS justification.
+- [ ] Implement at least one real spatial query (track discontinuities within N km of an RF anomaly zone) — this is the PostGIS justification. *(`db-004`. **Built in Phase 8**, where it is first needed: `anom-004`, `anom-005` and `anom-007` all name it, and there are no discontinuities to query for until `anom-010` produces them. Left unticked here until it lands.)*
 - [x] Add a migration approach and document it. *(Alembic, revisions hand-written, autogenerate off. Documented in `README.md`; rationale and the rejected alternatives in `thesis_notes.md`.)*
 - [x] Backend tests run against a disposable test database. *(A `database` marker plus `TEST_DATABASE_URL`; the fixture drops and recreates `public` per test so every migration test starts from genuinely empty. Skips when the variable is unset, so the unit tier still needs no Docker.)*
 
@@ -201,8 +201,47 @@ seeded emitter that actually has something to be deterministic about. See `docs/
 
 ## Phase 8: Baseline, Anomaly Detection, and Evidence Bundles
 
+**Order within this phase, settled 2026-09-14: `anom-002` first, then `anom-001`, then the new
+`anom-010`, then `db-004` — and only then the fusion rules.** The identifiers mislead here in the
+same way they did in Phase 7, and for the same reason: `anom-001` names the baseline from `anom-002`
+as one of its inputs, so the item numbered first consumes the item numbered second. A threshold rule
+with nothing to be a threshold against is not a smaller version of the rule; it is a different one.
+
+Three corrections were made to the backlog on picking the phase up, each recorded in `docs/spec.jsonl`:
+
+- **FR-304 had no spec item.** Nine `anom-*` items covered eight of the nine detection requirements.
+  `anom-004` clusters track-continuity anomalies and `anom-006` consumes track dropout clusters, and
+  nothing in the backlog produced one — the rule the whole fusion pair rests on was the one rule
+  nobody had written down. Now `anom-010`, and it inherits the corpus-dropout problem below.
+- **`db-004` is a Phase 6 leftover that Phase 8 depends on.** It is the last unticked item of that
+  phase — the real spatial query that justifies the spatial database — and `anom-004`, `anom-005`
+  and `anom-007` all name it. It is built here, in this chain, rather than left behind a phase
+  boundary that no longer reflects what depends on it.
+- **`anom-002`'s per-channel claim cannot be proved on quiet data.** Measured against the twenty
+  normal-baseline runs: 56 sensor-channel cells, 1,800 samples each, cell means spanning 0.177 dB.
+  A pooled baseline is indistinguishable from a per-cell one there, so the test proving the
+  granularity has to be built from staged runs, not from the baseline corpus.
+
+Two items do not sit in the sequence at all. **`anom-008` accumulates rather than lands**: its own
+text requires correct non-detection to be asserted for every detector, not once in aggregate, so a
+case is added as each detector arrives and the item closes when the last one does. And **`anom-009`
+is gated on Track 0**, which still owes a precise definition of detection latency *before* any
+measurement code exists — the entire value of that item is that it is settled first.
+
+**The corpus-dropout conflict is the one thing to settle before writing tests.** `normal-baseline`
+replays real corpus traffic, and the coverage check of 2026-08-19 found 10 of 948 tracks carrying a
+genuine interior airborne dropout, seven of them in the same 100–300 s band scenario type 4 injects
+into. So `anom-010` will fire on a run `anom-008` requires to be silent. The resolution is the
+exclusion already owed by Track 0 — the generator refuses those ten tracks as corpus-window content
+— extended from injection sites, where it was owed, to baseline windows, where it is equally needed
+and had not been noticed. Raising the threshold past 300 s would buy a clean false-positive rate by
+blinding the detector to the injected band; relaxing `anom-008` would mean a false-positive control
+that permits known firings.
+
 - [ ] Implement the baseline engine (rolling averages over normal-scenario runs), **per sensor per channel** for RF metrics. Pooling channels into one per-sensor baseline hides single-channel deviations inside the spread of the others.
 - [ ] Implement deterministic detectors only: threshold rules, z-score deviation, spatial clustering. No Isolation Forest in v1.
+- [ ] Implement the track-continuity rule, `TRACK-GAP` (`anom-010`, FR-304) — position staleness beyond a configured threshold. Nothing else produces the discontinuities `anom-004` clusters and `anom-006` discriminates on. Excludes the ten corpus tracks carrying genuine dropouts; see above.
+- [ ] Implement the PostGIS spatial query (`db-004`) — track discontinuities within N km of an RF anomaly zone in a window, distance computed on geography by the database rather than in Python. Carried over from Phase 6, where it is the last unticked item, because this is where it is first needed.
 - [ ] Add a simple rule that explains why the GNSS hypothesis exists (RF deviation + clustered track gaps, same window and area).
 - [ ] Test each detector with both degraded and normal scenarios — a correct non-detection is a first-class test.
 - [ ] Add the frequency-adjacency test to the sensor-fault rule (`anom-007`), recorded as evidence distinct from the spatial-neighbour test. A single anomalous channel with clean neighbours on the same sensor points at the sensor; a deviation across all eight points at the environment.
