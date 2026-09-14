@@ -117,7 +117,9 @@ def rf(
     )
 
 
-def run_of(powers: list[float], *, channel_index: int = 0) -> list[CanonicalObservation]:
+def run_of(
+    powers: list[float], *, channel_index: int = 0
+) -> list[CanonicalObservation]:
     """One reading per interval in one cell, in the order given."""
     return [
         rf(power_dbm=power, channel_index=channel_index, timestamp=START + i * INTERVAL)
@@ -275,7 +277,9 @@ def test_the_anomaly_names_every_reading_that_triggered_it() -> None:
 
     (anomaly,) = detect_rf_noise(run_of(powers), baseline_of(CELL), POLICY).anomalies
 
-    assert [(ref.sensor_id, ref.channel_index, ref.timestamp) for ref in anomaly.triggering] == [
+    assert [
+        (ref.sensor_id, ref.channel_index, ref.timestamp) for ref in anomaly.triggering
+    ] == [
         (SENSOR, 0, START + 1 * INTERVAL),
         (SENSOR, 0, START + 2 * INTERVAL),
     ]
@@ -421,7 +425,9 @@ def test_the_anomaly_carries_the_type_and_rule_the_spec_names() -> None:
     """The rule ID travels with the anomaly into the bundle, and is what
     makes an explanation checkable."""
     # spec: anom-001, FR-402
-    (anomaly,) = detect_rf_noise(run_of([JUST_OVER]), baseline_of(CELL), POLICY).anomalies
+    (anomaly,) = detect_rf_noise(
+        run_of([JUST_OVER]), baseline_of(CELL), POLICY
+    ).anomalies
 
     assert (anomaly.anomaly_type, anomaly.rule_id) == (ANOMALY_TYPE, RULE_ID)
     assert (ANOMALY_TYPE, RULE_ID) == ("rf_noise_deviation", "RF-NOISE")
@@ -481,12 +487,23 @@ def test_the_order_readings_arrive_in_is_not_an_input() -> None:
     reproducible from a seed."""
     # spec: anom-001, FR-301, NFR-601
     powers = [QUIET_DBM, JUST_OVER, HIGH_POWER, QUIET_DBM, MEDIUM_POWER]
-    readings = run_of(powers)
+    other = RfCell(SENSOR, 3)
+    # Two cells, because with one there is no cell ordering to get wrong --
+    # found by mutation: emitting cells in arrival order passed a
+    # single-cell version of this test.
+    readings = [*run_of(powers), *run_of(powers, channel_index=3)]
+    baselines = baseline_of(CELL, other)
 
-    forward = detect_rf_noise(readings, baseline_of(CELL), POLICY)
-    backward = detect_rf_noise(list(reversed(readings)), baseline_of(CELL), POLICY)
+    forward = detect_rf_noise(readings, baselines, POLICY)
+    backward = detect_rf_noise(list(reversed(readings)), baselines, POLICY)
 
     assert forward == backward
+    assert [anomaly.cell for anomaly in forward.anomalies] == [
+        CELL,
+        CELL,
+        other,
+        other,
+    ]
 
 
 def test_a_quiet_run_against_its_own_baseline_raises_nothing() -> None:
@@ -515,7 +532,9 @@ def test_an_anomaly_is_immutable() -> None:
     """A finding that passed a rule must not be editable past it, which is
     dal-001's argument applied one layer along."""
     # spec: anom-001
-    (anomaly,) = detect_rf_noise(run_of([JUST_OVER]), baseline_of(CELL), POLICY).anomalies
+    (anomaly,) = detect_rf_noise(
+        run_of([JUST_OVER]), baseline_of(CELL), POLICY
+    ).anomalies
 
     assert isinstance(anomaly, RfNoiseAnomaly)
     with pytest.raises(Exception):
