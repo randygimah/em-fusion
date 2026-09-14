@@ -25,16 +25,17 @@ and a second write that replaces rather than doubles.
 
 from __future__ import annotations
 
+from dataclasses import fields
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 import pytest
-from alembic import command
 from sqlalchemy import Engine, text
 from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.orm import sessionmaker
 
+from alembic import command
 from app.dal.models import Location
 from app.db.findings import findings_for_run, save_findings
 from app.db.migrations import alembic_config
@@ -278,7 +279,20 @@ def test_the_two_rules_produce_the_same_shape() -> None:
     )
 
     assert type(rf) is type(gap) is DetectionFinding
-    assert vars(rf).keys() == vars(gap).keys()
+    # Named explicitly, so a rule-specific column added at the top level --
+    # a severity for the RF rule, say -- fails here rather than quietly
+    # putting a branch per rule into the storage layer.
+    assert [f.name for f in fields(DetectionFinding)] == [
+        "scenario_run_id",
+        "rule_id",
+        "finding_type",
+        "subject",
+        "started_at",
+        "ended_at",
+        "location",
+        "evidence_refs",
+        "details",
+    ]
 
 
 def test_evidence_refs_are_already_json_ready() -> None:
@@ -315,7 +329,9 @@ def test_a_finding_round_trips(factory: sessionmaker) -> None:
     # spec: db-008
     written = finding()
 
-    save_findings(factory, scenario_run_id=RUN_ID, rule_id="TRACK-GAP", findings=[written])
+    save_findings(
+        factory, scenario_run_id=RUN_ID, rule_id="TRACK-GAP", findings=[written]
+    )
 
     assert findings_for_run(factory, RUN_ID) == [written]
 
@@ -329,11 +345,16 @@ def test_the_location_is_stored_at_the_coordinates_it_was_given(
     how people say them, and a reliable way to put every finding in the
     wrong place while nothing complains."""
     # spec: db-008, db-003
-    save_findings(factory, scenario_run_id=RUN_ID, rule_id="TRACK-GAP", findings=[finding()])
+    save_findings(
+        factory, scenario_run_id=RUN_ID, rule_id="TRACK-GAP", findings=[finding()]
+    )
 
     with migrated_database.connect() as connection:
         row = connection.execute(
-            text("SELECT ST_X(location) AS lon, ST_Y(location) AS lat FROM detection_findings")
+            text(
+                "SELECT ST_X(location) AS lon, ST_Y(location) AS lat "
+                "FROM detection_findings"
+            )
         ).one()
 
     assert (row.lat, row.lon) == (LAT, LON)
@@ -412,7 +433,10 @@ def test_replacing_one_rule_leaves_another_rules_findings_alone(
     delete what the RF rule found on the same run."""
     # spec: db-008
     save_findings(
-        factory, scenario_run_id=RUN_ID, rule_id="RF-NOISE", findings=[finding(rule_id="RF-NOISE")]
+        factory,
+        scenario_run_id=RUN_ID,
+        rule_id="RF-NOISE",
+        findings=[finding(rule_id="RF-NOISE")],
     )
     save_findings(
         factory, scenario_run_id=RUN_ID, rule_id="TRACK-GAP", findings=[finding()]
@@ -431,7 +455,9 @@ def test_findings_can_be_read_back_for_one_rule(factory: sessionmaker) -> None:
     # spec: db-008
     rf = finding(rule_id="RF-NOISE", subject="RF-01:0")
     save_findings(factory, scenario_run_id=RUN_ID, rule_id="RF-NOISE", findings=[rf])
-    save_findings(factory, scenario_run_id=RUN_ID, rule_id="TRACK-GAP", findings=[finding()])
+    save_findings(
+        factory, scenario_run_id=RUN_ID, rule_id="TRACK-GAP", findings=[finding()]
+    )
 
     assert findings_for_run(factory, RUN_ID, rule_id="RF-NOISE") == [rf]
 
@@ -444,7 +470,9 @@ def test_writing_no_findings_clears_what_was_there(
     """A rule that found nothing this time must not leave last time's
     findings standing. It is the same argument as replacing, at zero."""
     # spec: db-008
-    save_findings(factory, scenario_run_id=RUN_ID, rule_id="TRACK-GAP", findings=[finding()])
+    save_findings(
+        factory, scenario_run_id=RUN_ID, rule_id="TRACK-GAP", findings=[finding()]
+    )
     save_findings(factory, scenario_run_id=RUN_ID, rule_id="TRACK-GAP", findings=[])
 
     assert _count(migrated_database) == 0
@@ -465,6 +493,8 @@ def test_findings_of_one_run_are_not_returned_for_another(
             )
         )
         connection.commit()
-    save_findings(factory, scenario_run_id=RUN_ID, rule_id="TRACK-GAP", findings=[finding()])
+    save_findings(
+        factory, scenario_run_id=RUN_ID, rule_id="TRACK-GAP", findings=[finding()]
+    )
 
     assert findings_for_run(factory, 2) == []
