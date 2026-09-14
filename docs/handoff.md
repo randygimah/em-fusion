@@ -16,18 +16,21 @@ decision-making.
 
 This session answered a prioritisation question — **not `api-011` next, but Phase 8** — then opened
 Phase 8: three corrections to the backlog, a reasoning document for the whole phase, and the first
-two items built. **`anom-002`, the baseline engine, and `anom-001`, the `RF-NOISE` threshold rule,
-both pass.** Between them they are the first code in the project that says what *normal* is and the
-first that raises a finding when something is not.
+three items built. **`anom-002` (baseline), `anom-001` (`RF-NOISE`) and `anom-010` (`TRACK-GAP`)
+all pass.** Between them they are the first code in the project that says what *normal* is, and a
+rule for each side of the picture. The most important result of the session is not a rule but a
+measurement: **the staged track signature is statistically indistinguishable from the corpus's own
+background**, which forced `anom-010`'s output to be an intermediate finding and `anom-008` to be
+rescoped.
 
 ## Current state
 
 | | |
 |---|---|
-| Backend suite | **641 passed, 99.89%** via `make test-backend`, database tier live, ~101 s |
-| Backend, local | 554 passed, 87 skipped, 95.71% (`make check` in `backend/`) |
+| Backend suite | **669 passed, 99.89%** via `make test-backend`, database tier live, ~145 s |
+| Backend, local | 582 passed, 87 skipped, 95.94% (`make check` in `backend/`) |
 | Frontend suite | **81 passed but the run exits non-zero** — see Failed attempts. Not green. |
-| Spec items passing | **31 of 88** — `scn` 5/5, `adp` 7/8, `api` 5/11, `nav` 2/3, `db` 5/7, **`anom` 2/10** |
+| Spec items passing | **32 of 88** — `scn` 5/5, `adp` 7/8, `api` 5/11, `nav` 2/3, `db` 5/7, **`anom` 3/10** |
 | New dependencies | None |
 | Stack | **Up**, all three containers healthy |
 | Runs in the database | **120** — 40 `aircraft-coverage-gap`, 20 each of the other four types, all completed |
@@ -74,6 +77,27 @@ anomaly per reading, since a run emits 5,040 readings. Four decisions carry forw
   table's `affected_area` is a **NOT NULL polygon**. The detector does not persist, so nothing is
   broken today, but whichever item first persists an anomaly inherits the question. An area needs
   corroboration from more than one sensor, which is `anom-004` and `anom-005`.
+
+**`anom-010` — the `TRACK-GAP` continuity rule.** `backend/app/detection/track_gap.py`, 28 tests,
+100% on the module, **seventeen mutations all caught**. The item as specced that morning was wrong,
+and measuring before writing is what caught it — see Measurements below. What it became:
+
+- **Two mechanisms**, because the two scenario types stage differently. `gnss-degradation` rewrites
+  the reported position staleness and the rows keep arriving (`frozen_position`);
+  `aircraft-coverage-gap` suppresses the rows, so the gap is the absence itself (`not_heard`). A rule
+  with one mechanism is blind to one type. The shape travels on the finding because telling them
+  apart is `anom-005`/`anom-006`'s whole job.
+- **Frozen position requires fresh contact**, decided on measurement: it cuts the quiet-run
+  background from 137.7 aircraft per run to 24.6 while leaving the staged margin at 3.4 — signal
+  against background from about 1:40 to 1:7, at no cost.
+- **Airborne and interior-to-box filters.** Without them four fifths of the findings are aircraft
+  switched off on a stand or flying out of the box and back.
+- **The `adp-008` exclusion list is deliberately not duplicated here.** Keeping known-bad tracks out
+  of a run is the generator's job; a second copy is the trap this project already recorded once.
+- **Output is an intermediate finding, not a reportable anomaly**, and `anom-008` was amended
+  alongside to count only the fused reportable types. It also gained two obligations rather than
+  losing any: the intermediate-finding rate on quiet runs is recorded, and a detector reporting
+  *zero* intermediate findings on a quiet run now fails, because the corpus is known to contain them.
 
 **Three backlog corrections**, all committed before any code:
 
@@ -157,13 +181,18 @@ Modified: `docs/spec.jsonl` (`anom-010` added; `anom-002` amended twice then set
 the Phase 6 `db-004` cross-reference), `docs/thesis_notes.md` (three subsections),
 `docs/qa.md` (entries 60 and 61, three glossary terms), `CLAUDE.md` (repo map).
 
-**The progress note is at version 18**, republished at the end of the session. Baseline turned
+**The progress note is at version 19**, republished twice this session. Baseline turned
 solid and Anomaly detection went to *First rule*; the missing-middle framing was rewritten; the
 headline figures were corrected (584 → 641 tests, 99.93% → 99.89%, 29/86 → 31/88 capabilities); and a
 new section was added — *What normal looks like, and noticing when it is not* — carrying the
 fifty-six-cell measurement, the finding that quiet data cannot prove the requirement it was measured
 for, a hand-authored figure of the episode rule, and the wrong-implementation panel. Two claims that
 had become false were fixed: *nothing is detected*, and the reason nothing has ever been marked.
+Version 19 then added the aircraft-side rule and the detection-versus-attribution finding, with the
+staged-versus-quiet table, a scatter figure contrasting scattered background gaps against a staged
+cluster, the four-fifths filter table, and the independent validation of the August exclusion list.
+It also corrected two sentences version 18 had published that morning and that `anom-010` made false
+within hours — both claiming the aircraft side had no rule.
 
 ## Failed attempts
 
@@ -181,6 +210,27 @@ had become false were fixed: *nothing is detected*, and the reason nothing has e
   returning an error page, or a contract change, actually looks like. The screen crashes rather than
   degrading. The error surfaces after the assertion, so the test still passes and the count still
   reads 81; **reading the count rather than the exit status is what hid it.**
+- **Four mutation survivors on `anom-010`, of four different kinds, and only two were test gaps.**
+  Two were boundary cases — both thresholds compare strictly and nothing sat exactly on the boundary,
+  99 s and 150 s bracketing it without touching it. `anom-001` has that test because its spec item
+  names the boundary; `anom-010`'s did not, so it was not written. **A test propagates between rules
+  by being in the spec item, not by being a good idea.** One was a test passing for the wrong reason
+  and the **second instance of one exact shape**: deleting the non-positive-threshold guard left
+  everything green because the *other* policy guard raised instead, any positive contact window being
+  longer than a zero threshold. Same as `anom-002`'s empty-run-set test; same fix, assert on the
+  message. General form: **a guard reachable only through the guard beside it is not under test**, and
+  validation guards cluster. The fourth was **not a test gap at all — I built the mutation wrongly**:
+  `zip(reports, reports[1:] or reports)` differs from the original only for a single-report aircraft,
+  where it pairs a report with itself and yields a zero interval. An equivalent mutant reported as a
+  survivor. Rebuilt properly it killed 23 of 28 tests. **Mutation testing has its own failure mode**,
+  and both equivalent mutants this project has seen were mine rather than inherent.
+- **A coverage line found a behaviour I had not thought of.** Nothing tested an aircraft whose
+  position *recovers* and is lost again — the frozen-position twin of `anom-001`'s episode split,
+  which I had written for RF and not carried across. Two events, not one.
+- **A docs commit claimed more than it contained.** A patch script hit a failed assertion partway
+  through, having already written two of three files, and the commit ran anyway. `0bae703` overstates
+  itself; the checklist tick is in the follow-up commit. **Check the exit status of a multi-step edit
+  before committing it.**
 - **A determinism test with one cell could not catch an ordering bug across cells.** `anom-001`'s
   fourteen-of-fifteen mutation was the one replacing sorted iteration over cells with arrival order.
   The test asserting that traversal order is not an input did not catch it, because it was written
@@ -207,14 +257,17 @@ had become false were fixed: *nothing is detected*, and the reason nothing has e
 
 ## Next step
 
-1. **`anom-003`** — the z-score deviation detector, or **`anom-010`** — the `TRACK-GAP` rule. Both
-   are open; `anom-010` is the higher-value one, because the aircraft side of the picture has no rule
-   at all and every rule that tells one *cause* from another needs both sides. `anom-003` is the
-   smaller and shares `anom-001`'s shape. **`anom-010` carries the corpus-dropout decision** already
-   settled in its spec, and the exclusion it depends on is owed to the generator.
-2. **The frontend suite exiting non-zero** is the first owed item below and is now the oldest lie in
+1. **`db-004`** — the PostGIS spatial query, now that `anom-010` produces discontinuities to query
+   over. It is the last unticked Phase 6 item and `anom-004`, `anom-005` and `anom-007` all name it.
+2. **`anom-004`** — spatial clustering, immediately after. **This is where the session's central
+   finding gets tested**: the discriminating information is spatial, so clustering is what has to
+   turn 138 scattered findings per quiet run into nothing reportable. The open risk is whether those
+   138 ever cluster by chance near a busy airport, which `anom-006` would then fire on. Measure it
+   rather than pre-tune a radius against an imagined problem.
+3. **The frontend suite exiting non-zero** is the first owed item below and is now the oldest lie in
    the handoff. Small.
-3. **`db-004`**, the PostGIS spatial query, once `anom-010` produces discontinuities to query over.
+4. **`anom-003`** — the z-score detector, which shares `anom-001`'s shape and is the smallest of the
+   remaining detectors.
 
 Owed, with an owner but no date:
 
@@ -232,10 +285,17 @@ Owed, with an owner but no date:
   nothing for `aircraft-coverage-gap`.
 - **The runs table shows the 50 most recent, unfiltered and unpaged**, against 120 rows and a
   campaign of 150.
-- **The ten corpus tracks carrying genuine dropouts must be excluded from baseline windows**, not
-  only from injection sites. Settled inside `anom-010` and owed to the generator before `anom-008`
-  can hold. The measured false-positive rate with *and without* the exclusion is owed to the
-  evaluation, because the exclusion removes real data to make the rate measurable.
+- **The `adp-008` exclusion list is not applied to baseline windows**, and this is now measured
+  rather than suspected: 23 interior airborne gaps across the 20 quiet runs, from 4 aircraft, all 4
+  on the list. `load_exclusions` already exists in `app/scenario/tracks.py`; the generator does not
+  pass it for baseline windows. Owed to the generator, not to the detector.
+- **The GNSS-degradation scenario is not detectable from the track stream alone.** Measured, and
+  recorded as a limitation: any reported detection of it depends on the RF side agreeing, and
+  `eval-002` should say so rather than presenting a combined figure as though the track rule
+  contributed independently.
+- **`anom-008` now has a threat to validity to report**, written on the item: scoping the
+  false-positive rate to the fused layer means a reader could mistake it for a statement about
+  detection as a whole. Both numbers get reported.
 - **Track-metric baselines have no item.** `anom-002` was narrowed to RF; the track half needs a
   region definition and a consumer before it is worth writing.
 - **Detection latency still has no precise definition**, and the Track 0 item says to fix it
