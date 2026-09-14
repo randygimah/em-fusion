@@ -16,17 +16,18 @@ decision-making.
 
 This session answered a prioritisation question — **not `api-011` next, but Phase 8** — then opened
 Phase 8: three corrections to the backlog, a reasoning document for the whole phase, and the first
-item built. **`anom-002`, the rolling-average baseline engine, passes.** It is the first code in the
-project that says what *normal* is.
+two items built. **`anom-002`, the baseline engine, and `anom-001`, the `RF-NOISE` threshold rule,
+both pass.** Between them they are the first code in the project that says what *normal* is and the
+first that raises a finding when something is not.
 
 ## Current state
 
 | | |
 |---|---|
-| Backend suite | **613 passed, 99.88%** via `make test-backend`, database tier live, ~141 s |
-| Backend, local | 526 passed, 87 skipped, 95.41% (`make check` in `backend/`) |
+| Backend suite | **641 passed, 99.89%** via `make test-backend`, database tier live, ~101 s |
+| Backend, local | 554 passed, 87 skipped, 95.71% (`make check` in `backend/`) |
 | Frontend suite | **81 passed but the run exits non-zero** — see Failed attempts. Not green. |
-| Spec items passing | **30 of 88** — `scn` 5/5, `adp` 7/8, `api` 5/11, `nav` 2/3, `db` 5/7, **`anom` 1/10** |
+| Spec items passing | **31 of 88** — `scn` 5/5, `adp` 7/8, `api` 5/11, `nav` 2/3, `db` 5/7, **`anom` 2/10** |
 | New dependencies | None |
 | Stack | **Up**, all three containers healthy |
 | Runs in the database | **120** — 40 `aircraft-coverage-gap`, 20 each of the other four types, all completed |
@@ -53,6 +54,26 @@ Three design points that will matter to `anom-001` and after:
   region; no region concept exists anywhere in the project and nothing consumes a track baseline.
   The engine is written per *cell*, so the track half is a second extractor plus a region decision
   rather than a rewrite. It needs its own spec item when something wants it.
+
+**`anom-001` — the `RF-NOISE` threshold rule.** `backend/app/detection/rf_noise.py`, 28 tests, 100%
+on the module, **fifteen mutations all caught**. Episodes of deviation per cell rather than one
+anomaly per reading, since a run emits 5,040 readings. Four decisions carry forward:
+
+- **The comparison has a direction per metric** — power upwards, SNR downwards. An absolute deviation
+  reports a channel *quieter* than baseline as noise, which is a different fault and probably a dead
+  receiver. **No run in the corpus would ever have exposed this**: staged interference only pushes
+  the metric one way, so the wrong implementation and the right one agree on every run the generator
+  can produce, and would have agreed throughout the scoring campaign.
+- **Triggering readings are named by natural key** — sensor, channel, timestamp — not by a database
+  id. `CanonicalObservation` has none by `dal-001`'s design, `scn-005`'s dense grid makes the three
+  values unique, and the natural key is the form an analyst can actually check.
+- **A cell with no usable baseline is reported unjudged, not skipped.** Otherwise `anom-008`'s
+  zero-anomalies control is satisfiable by not having looked, and a detector with no baseline
+  anywhere would post a perfect false-positive rate.
+- **The affected area is a point**, and this is a gap recorded rather than solved: the `anomalies`
+  table's `affected_area` is a **NOT NULL polygon**. The detector does not persist, so nothing is
+  broken today, but whichever item first persists an anomaly inherits the question. An area needs
+  corroboration from more than one sensor, which is `anom-004` and `anom-005`.
 
 **Three backlog corrections**, all committed before any code:
 
@@ -136,8 +157,13 @@ Modified: `docs/spec.jsonl` (`anom-010` added; `anom-002` amended twice then set
 the Phase 6 `db-004` cross-reference), `docs/thesis_notes.md` (three subsections),
 `docs/qa.md` (entries 60 and 61, three glossary terms), `CLAUDE.md` (repo map).
 
-The progress note was **not** republished this session. It is still at version 17 and its pipeline
-figure still shows Baseline as *Not started* — see Next step.
+**The progress note is at version 18**, republished at the end of the session. Baseline turned
+solid and Anomaly detection went to *First rule*; the missing-middle framing was rewritten; the
+headline figures were corrected (584 → 641 tests, 99.93% → 99.89%, 29/86 → 31/88 capabilities); and a
+new section was added — *What normal looks like, and noticing when it is not* — carrying the
+fifty-six-cell measurement, the finding that quiet data cannot prove the requirement it was measured
+for, a hand-authored figure of the episode rule, and the wrong-implementation panel. Two claims that
+had become false were fixed: *nothing is detected*, and the reason nothing has ever been marked.
 
 ## Failed attempts
 
@@ -155,6 +181,15 @@ figure still shows Baseline as *Not started* — see Next step.
   returning an error page, or a contract change, actually looks like. The screen crashes rather than
   degrading. The error surfaces after the assertion, so the test still passes and the count still
   reads 81; **reading the count rather than the exit status is what hid it.**
+- **A determinism test with one cell could not catch an ordering bug across cells.** `anom-001`'s
+  fourteen-of-fifteen mutation was the one replacing sorted iteration over cells with arrival order.
+  The test asserting that traversal order is not an input did not catch it, because it was written
+  with a single cell — and with one cell there is no cell ordering to get wrong. Fixed with two cells
+  and an explicit assertion on the emitted order. **Third instance of one shape**, now stated as a
+  rule in `thesis_notes.md`: a test that distinguishes two behaviours must contain the structure
+  along which they differ. Common values cannot separate them (`api-010`), one sample cannot exercise
+  an ordering (`anom-001`), uniform data cannot demonstrate a requirement about non-uniformity
+  (`anom-002`).
 - **A test passed for the wrong reason, and mutation found it.** Deleting the guard that refuses an
   empty set of baseline runs left every test green: with observations supplied, an empty allowed-set
   means every observation belongs to no listed run, so the *next* guard raises and the test still
@@ -172,15 +207,14 @@ figure still shows Baseline as *Not started* — see Next step.
 
 ## Next step
 
-1. **`anom-001`** — the RF threshold rule, `RF-NOISE`. The first thing to consume a baseline, and
-   the first rule that will ever raise an anomaly. Threshold is configuration, not a literal.
-2. **Decide on the progress note.** Its pipeline figure shows *Baseline — Not started*, which is now
-   wrong, and its caption says 84 capabilities with 29 finished against an actual 88 and 30. The
-   note's own trigger — a stage turning from grey to solid — is met. The argument for waiting is
-   that the baseline alone is half a story to a lay reader: "here is what normal is" invites "and
-   what does it detect?", which `anom-001` answers. Recommended: publish once, after `anom-001`.
-3. **The frontend suite exiting non-zero** is the first owed item below and is now the oldest lie in
+1. **`anom-003`** — the z-score deviation detector, or **`anom-010`** — the `TRACK-GAP` rule. Both
+   are open; `anom-010` is the higher-value one, because the aircraft side of the picture has no rule
+   at all and every rule that tells one *cause* from another needs both sides. `anom-003` is the
+   smaller and shares `anom-001`'s shape. **`anom-010` carries the corpus-dropout decision** already
+   settled in its spec, and the exclusion it depends on is owed to the generator.
+2. **The frontend suite exiting non-zero** is the first owed item below and is now the oldest lie in
    the handoff. Small.
+3. **`db-004`**, the PostGIS spatial query, once `anom-010` produces discontinuities to query over.
 
 Owed, with an owner but no date:
 
