@@ -4070,6 +4070,89 @@ twenty runs sit at the top.
 **Worth recording as a limitation.** The table shows the 50 most recent runs with no filter and no
 paging, which is fine at 80 runs and will not be at 150 — the evaluation campaign's size.
 
+## 60. Is the next implementation this `api-011` then?
+
+**No — Phase 8, and the deciding fact is that `make generate` never goes through the API.**
+
+`api-011` guards against a real defect: several batches started from the Scenario Control screen
+exhausted the database connection pool and left the backend serving nothing. It was observed, not
+theorised. But the defect only reaches a surface whose workaround is "do not press the button
+repeatedly", and the campaign that actually needs runs generated is produced from the command line,
+which cannot hit it at all.
+
+Against that, the timeline:
+
+| | |
+|---|---|
+| Date the question was asked | 14 September 2026 |
+| Plan's own marker | Evaluation harness built **before** October, dry-run in early October |
+| Unbuilt items on the critical path | **33** — 9 detectors, 2 evidence bundles, 10 AI layer, 6 hypothesis and feedback, 6 evaluation |
+
+Detection is the long pole and everything downstream queues behind it. Nothing has yet been marked
+against an answer key, and every scenario run in the database already carries one.
+
+Two things would reverse this. A demo of the screen to a supervisor in the near term — hanging the
+API in front of someone is a bad thirty seconds, and the fix is a guard, a `finally`, a 409 and a
+sentence. Or a decision to finish the screen while it is fresh, since `api-011`, the invisible
+post-acceptance batch failure, and the inert per-type dials are one coherent "make this screen
+trustworthy" pass, and three separate re-entries cost more than one.
+
+The spec work is not wasted either way: `api-011` is written, reasoned and committed, so picking it
+up later is cheap.
+
+## 61. I believe Phase 8 is next up
+
+**Yes — but not in the order the identifiers suggest, and the backlog had a hole in it.**
+
+Three corrections came out of reading the items rather than the phase heading.
+
+**The numbering is backwards.** `anom-001` is the RF threshold rule and `anom-002` is the baseline
+engine, but `anom-001`'s own description names *"the baseline for the band from `anom-002`"* as one
+of its inputs. A threshold rule with nothing to be a threshold against is not a smaller version of
+the rule, it is a different one. This is the second time this has happened — Phase 7 hit it with
+`scn-001` and `scn-005`, and that phase carries a written ordering note because of it. Phase 8 now
+has one too.
+
+**FR-304 had no spec item at all.** Nine `anom-*` items covered eight of the nine detection
+requirements:
+
+| Requirement | Item |
+|---|---|
+| FR-301 / FR-303, RF deviation | `anom-001`, `anom-003` |
+| FR-302, baseline | `anom-002` |
+| **FR-304, `TRACK-GAP`** | **nothing** |
+| FR-305, `FUSION-SPATIAL` | `anom-005` |
+| FR-306, `SOURCE-GAP` | `anom-006` |
+| FR-307, `SENSOR-FAULT` | `anom-007` |
+| FR-308, correct non-detection | `anom-008` |
+| FR-309, latency | `anom-009` |
+
+`anom-004` clusters "track-continuity anomalies" and `anom-006` consumes "track dropout clusters",
+and nothing in the backlog produced one. The rule the entire fusion pair rests on was the one rule
+nobody had written down. It is now `anom-010`. The single grep hit for `FR-304` turned out to be
+`NFR-304` in an unrelated item, which is worth remembering as a search trap: requirement prefixes
+that differ by one letter will match each other.
+
+**`db-004` is a Phase 6 leftover that Phase 8 depends on.** It is the last unticked item of that
+phase — the real PostGIS spatial query — and `anom-004`, `anom-005` and `anom-007` all name it. It
+is built in Phase 8, where it is first needed, and Phase 6 now says so rather than leaving it
+looking forgotten.
+
+One further thing surfaced that is not an ordering problem but a testing one, and it is recorded
+here because the same trap will recur. **The requirement that RF baselines be computed per sensor
+per channel cannot be demonstrated against the project's own quiet data.** Measured over the twenty
+`normal-baseline` runs: 56 sensor-channel cells, 1,800 samples each, cell means spanning 0.177 dB
+and cell standard deviations from 1.437 to 1.551. The cells are statistically indistinguishable, so
+a pooled per-sensor baseline would reproduce the per-cell numbers almost exactly and any test built
+from quiet runs would pass regardless of the implementation. The granularity matters — it is what
+makes the sensor-fault discrimination possible once something is injected — but it has to be proved
+against staged data or a constructed series, never against the baseline corpus.
+
+Worth recording as a general limitation: **a requirement can be correct, important, and still
+untestable against the data the system normally produces.** The quiet corpus is uniform by
+construction, so it cannot separate implementations that differ only in how they handle
+non-uniformity.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -4083,6 +4166,9 @@ paging, which is fine at 80 runs and will not be at 150 — the evaluation campa
 | **GNSS** | Global Navigation Satellite System — the general term (GPS, Galileo, GLONASS, BeiDou). |
 | **GNSS L1** | The 1575.42 MHz band carrying civil GPS/Galileo signals; the band the interference scenario targets. |
 | **SNR** | Signal-to-noise ratio — signal strength relative to background noise. Falls when noise rises. |
+| **Baseline cell** | The unit a baseline is computed over: one sensor on one channel. Fifty-six of them on the shipped layout. Never pooled per sensor. |
+| **Equivalent mutant** | A deliberate code change that cannot alter behaviour, so no test can catch it. Counting one as a surviving mutant understates test quality. |
+| **Rolling average** | An average over a trailing window rather than over everything, so the expectation tracks slow drift instead of being fixed at the start. |
 | **Noise floor** | Background RF power with no signal present; the reference that "elevated noise" is elevated above. |
 | **Human-participant research** | Research in which a person is recruited into a designed procedure and what they produce is used as evidence — independent of whether personal data is collected. |
 | **Module-level ethics approval** | A blanket departmental approval covering low-risk student projects; a short form plus supervisor sign-off, rather than a full committee application. |

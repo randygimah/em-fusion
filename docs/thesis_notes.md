@@ -3346,6 +3346,107 @@ screen's point of view, indistinguishable from one still running. That is the sa
 dishonesty the project argues against everywhere else, it is not fixed, and it is recorded as owed
 work rather than folded into a claim that the feature is complete.
 
+### The requirement that could not be proved against its own data
+
+`anom-002` requires the RF baseline to be computed per sensor *per channel*, and states pooling as a
+named failure case: averaging a sensor's eight channels into one number hides a deviation confined
+to one of them inside the spread of the other seven. The requirement is sound, and the argument for
+it is `anom-007`'s — the sensor-fault rule discriminates a single loud channel with clean neighbours
+from a deviation across all eight, and a pooled baseline removes that distinction before the rule
+can make it.
+
+Before writing the tests, the baseline data was measured rather than assumed. Across the twenty
+completed `normal-baseline` runs held in the development database: 100,800 RF readings, 56
+sensor-channel cells, 1,800 samples per cell, a pooled mean of −95.00 dBm and pooled standard
+deviation of 1.50 dB. The discriminating figures are the per-cell ones. **Cell means span 0.177 dB,
+from −95.081 to −94.904, and per-cell standard deviations run from 1.437 to 1.551.**
+
+The fifty-six cells are, on quiet data, statistically indistinguishable. That is not a defect in the
+emitter; it follows directly from `scn-001`, which gives every cell the same nominal power and the
+same noise spread by construction. But it has a consequence for how the requirement can be
+established: **a pooled implementation would reproduce the per-cell numbers almost exactly, so any
+test of the granularity built from quiet runs alone would pass whatever the implementation did.**
+
+This is the same failure shape recorded twice already in this project — a test that cannot fail
+because it was built from values common to both of the things it was meant to separate. The
+difference is that here it was found by measuring before writing rather than by a mutation pass
+afterwards, which is the first time that ordering has held.
+
+Two things follow, and both are recorded on the spec item rather than left in the code. The
+granularity is justified **structurally rather than empirically on clean data**: it is what makes
+the sensor-fault discrimination possible once something is injected, not something the quiet corpus
+demonstrates. And the tests that prove it are built from a constructed series in which one channel
+is genuinely loud — fifteen dB above its neighbours, far outside the 1.5 dB natural spread — with an
+assertion that no cell's baseline equals the per-sensor pool. A pooled implementation puts a number
+in all eight cells; the assertion is that the number is wrong in all eight, which is the only form
+of the claim that a pooled implementation cannot satisfy.
+
+The wider methodological point is worth stating for the write-up: *a requirement can be correct, and
+important, and still be untestable against the data the system normally produces.* Noticing that
+before writing the test is the difference between a test that documents a decision and a test that
+enforces it.
+
+### An engine that cannot recognise the data it must refuse
+
+`anom-002` requires the baseline to derive from normal-scenario data only — a baseline built over
+injected data is an expectation that already contains the deviation it exists to measure. Writing it
+exposed that the engine has no way to honour that requirement by itself.
+
+An observation carries no scenario type. That is deliberate and load-bearing: `api-009` forbids
+ground truth from leaving the run record, and `dal-001` gives the canonical model nowhere to put one
+precisely so that no observation can leak the answer key. The consequence at this layer is that the
+baseline engine, handed a set of observations, genuinely cannot tell a quiet reading from a staged
+one.
+
+Three options existed. The engine could query the run table itself, which would put persistence
+inside a pure arithmetic component and break the seam that lets it be tested without Docker. It
+could trust the caller, which makes the requirement a convention that no test can hold. Or the
+caller could name the runs the baseline may draw from, and the engine refuse anything else.
+
+The third was taken, and it converts the item's first failure case from prose into an enforced
+precondition. The refusal is also all-or-nothing: a batch carrying one observation from an unlisted
+run yields no table at all, rather than a table computed from the remainder. A baseline computed
+from most of a batch is not a smaller correct answer; it is a wrong one that looks exactly like a
+right one, and there is no later point at which the difference becomes visible.
+
+This is a small instance of a pattern worth naming in the write-up: **a privacy or integrity
+constraint enforced at one layer removes information that a later layer needed, and the cost is paid
+as an explicit parameter rather than as a leak.** The parameter is the visible price of `api-009`.
+
+### Ten mutations, and one that could not have been caught because it changes nothing
+
+The frontend still measures no coverage and the backend measures a great deal, so `anom-002` was
+checked both ways: 100% line coverage on the module, and an eleven-mutation pass to test whether the
+tests were load-bearing rather than merely present.
+
+Nine were caught on the first run. Two survived, and they were different in kind.
+
+The first was a genuine gap. Deleting the guard that refuses an empty set of baseline runs left every
+test green — because with observations supplied, an empty allowed-set means every observation belongs
+to no listed run, so the *next* guard refuses the call and the test still sees its exception. The test
+passed for the wrong reason. It was rewritten to call with no observations at all, where nothing but
+the deleted guard can raise, and to assert on the message text rather than the exception type. A
+second test now covers the path a caller would actually take.
+
+The second survivor was not a gap at all. Replacing `statistics.mean(values)` with
+`sum(values) / len(values)` changed no result, and the test asserting that traversal order is not an
+input stayed green. The reason is a property of the interpreter rather than of the tests:
+**CPython's built-in `sum` has used Neumaier compensated summation for floats since 3.12**, so it is
+order-independent for realistic magnitudes. This was checked rather than assumed — a search over
+300,000 randomly generated 30-sample sets of plausible dBm readings found no set whose float sum
+differs when reversed, and `sum([0.1] * 10)` returns exactly `1.0` on the interpreters in use (3.14
+locally, 3.13 in the container).
+
+So it is an **equivalent mutant**: a change that cannot alter behaviour, and therefore cannot be
+caught by any test. `statistics.mean` is kept anyway, because it is exact by specification rather
+than by an implementation detail of one interpreter version, and because the order-independence of
+a baseline is a reproducibility requirement (NFR-601) rather than a convenience.
+
+Recording the distinction matters for how mutation scores are reported. A raw score of 10 of 11
+understates the result; the honest statement is ten of ten killable mutants caught, with one
+equivalent mutant identified and explained. **A mutation score reported without separating
+equivalent mutants is not a measurement of test quality**, and this is a concrete instance to cite.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;
