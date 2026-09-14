@@ -3442,6 +3442,15 @@ caught by any test. `statistics.mean` is kept anyway, because it is exact by spe
 than by an implementation detail of one interpreter version, and because the order-independence of
 a baseline is a reproducibility requirement (NFR-601) rather than a convenience.
 
+Two of the twenty-seven tests were written *after* the implementation rather than before it, and
+that is a deviation from the project's own workflow rather than a variation on it. Both came from
+the coverage report: a guard refusing a non-positive window and the path where nothing at all is
+supplied were each unreachable from the tests written first. They are legitimate behaviours and the
+tests are sound, but the sequence is the wrong way round, and the honest observation is that the
+coverage report found two gaps the test-first pass had missed — which is an argument for the gate
+rather than against it. The same thing happened on `api-006`, where the batch launcher sat at 65%
+while every other module was at 100%.
+
 Recording the distinction matters for how mutation scores are reported. A raw score of 10 of 11
 understates the result; the honest statement is ten of ten killable mutants caught, with one
 equivalent mutant identified and explained. **A mutation score reported without separating
