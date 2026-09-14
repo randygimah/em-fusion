@@ -3545,6 +3545,86 @@ structure along which they differ.** Values common to both cannot separate them 
 sample cannot exercise an ordering (`anom-001`); a uniform data set cannot demonstrate a requirement
 about non-uniformity (`anom-002`). All three passed for the right reason on the wrong structure.
 
+### The staged track signature sits inside the corpus's own background, and no threshold separates them
+
+Measured 2026-09-14, against the 120 runs in the development database, before writing a line of
+`anom-010`. The item was specced that morning from reasoning about the corpus; measuring it first
+corrected the reasoning by roughly two orders of magnitude.
+
+**What the rule was expected to face.** The coverage acceptance check of 2026-08-19 found 10 of 948
+tracks (1.05%) carrying a genuine interior airborne dropout, seven of them in the 100–300 s band the
+coverage-gap scenario injects into. `anom-010` was written on the assumption that those ten tracks
+were the whole of the false-positive problem, and that excluding them would let `anom-008`'s
+zero-anomalies control hold.
+
+**What it actually faces.** Position staleness is reported by the corpus, not inferred, and the
+background rate is far higher than ten tracks:
+
+| Per run, averaged over 20 runs of each type | `normal-baseline` | `gnss-degradation` |
+|---|---|---|
+| Aircraft seen | 530.2 | 535.8 |
+| Peak position staleness > 100 s | **137.7** | 141.1 |
+| > 300 s | 19.3 | 20.7 |
+| > 600 s | **1.0** | 0.6 |
+| > 900 s | **0.5** | 0.2 |
+| Fresh contact *and* position > 100 s | 24.6 | 28.0 |
+| Both clocks stale > 100 s | 126.6 | 127.3 |
+
+**There is no threshold that separates the two.** At 100 s the staged runs exceed the quiet ones by
+3.4 aircraft against a background of 137.7 — a ratio of about 1:40. At 600 s and above the quiet runs
+are *higher* than the staged ones. The two-clock discriminator, which exists precisely to tell a
+frozen position from an unheard aircraft, narrows the background from 137.7 to 24.6 and still leaves
+the staged signature at 3.4 aircraft inside it.
+
+The cause is structural rather than a tuning error. The generator stages GNSS degradation by adding
+elapsed time to the reported position-staleness field, and the incident affects a handful of aircraft
+inside a roughly 20 km zone — 0 to 11 per run. The corpus background, meanwhile, occupies exactly the
+same range, because the 100–300 s band the injection was designed to sit in is also where real
+receiver coverage fails. **The injected signature was designed into the busiest part of the
+distribution it has to be distinguished from.**
+
+**What this does not mean.** It is not evidence that the scenario type is undetectable. A per-aircraft
+threshold is the wrong instrument for it, and the architecture already says so: `anom-004` clusters
+discontinuities spatially, and `anom-005` requires co-located RF noise in the same window. The
+background gaps are scattered across 309,000 km²; the staged ones are concentrated in a 20 km zone
+with a raised noise floor over it. The discriminating information is *spatial and cross-modal*, and a
+rule looking at one aircraft's clock at a time cannot see it.
+
+**What it does mean** is that `anom-010`'s output cannot be a reportable anomaly in the sense
+`anom-008` uses the word. A run with nothing staged in it will contain of the order of 138 track
+discontinuities that are real properties of real data, and a control requiring zero of them is a
+control requiring the detector to be wrong.
+
+### A measured validation of the exclusion list, from a different code path
+
+The same measurement produced an unexpected check on `adp-008`. Taking the quiet runs' stored
+observations and looking for intervals between consecutive reports of one aircraft — a different
+quantity from reported staleness, and a different code path from the corpus tooling that built the
+exclusion list:
+
+| Filter applied | Gaps remaining |
+|---|---|
+| Interval > 100 s | 164 |
+| …and airborne at both ends | 32 |
+| …and both ends interior to the bounding box by 0.25° | **23** |
+| …and not on the `adp-008` exclusion list | **0** |
+
+The 23 survivors belong to **4 distinct aircraft, and all four are on the list**, with none unlisted.
+`adp-008` was built at corpus-build time from raw archive rows with pandas; this check ran against
+pseudonymised observations in PostGIS after a full replay and perturbation pass. **Two independent
+routes to the same set of tracks** is stronger evidence for that artefact than its own unit tests
+provide, and it is worth citing as such.
+
+It also confirms, with a number, the gap recorded on `anom-010` the same morning from reasoning
+alone: the exclusion list exists and is correct, and **it is not being applied to baseline windows**.
+23 avoidable gaps across 20 quiet runs are sitting in the database now.
+
+The two filters matter in their own right as well. Of the 164 raw gaps, 132 are explained by the
+aircraft being on the ground or crossing the bounding-box boundary — artefacts of having drawn a box
+and of aircraft being switched off, exactly the two corrections the bounding-box sweep needed in
+August. **A detector that omitted them would report four-fifths false positives**, and would look
+like a detector problem rather than a framing one.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;
