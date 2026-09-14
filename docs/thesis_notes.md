@@ -3456,6 +3456,95 @@ understates the result; the honest statement is ten of ten killable mutants caug
 equivalent mutant identified and explained. **A mutation score reported without separating
 equivalent mutants is not a measurement of test quality**, and this is a concrete instance to cite.
 
+### The most plausible wrong implementation of a threshold rule
+
+`anom-001` compares an RF reading against the baseline for its cell and raises a finding when the
+reading is far enough from normal. Written the obvious way — the absolute difference from the
+baseline mean, past a configured threshold — the rule is wrong, and wrong in a way that would have
+survived the entire evaluation campaign without ever looking wrong.
+
+Raised power is the interference signature. But an absolute deviation also fires when a channel goes
+*quieter* than its baseline, and a channel reporting well below its normal power is not interference
+at all: it is most likely a receiver that has stopped hearing properly. Reporting it as
+`rf_noise_deviation` would hand the AI layer evidence labelled as the opposite of what it is.
+
+The reason it would have survived testing is the part worth recording. **Staged interference only
+ever pushes the metric one way.** Every scenario type the generator can produce raises the noise
+floor; none of them lowers it. So the absolute-deviation implementation and the correct one agree on
+every run in the corpus, and would agree on every run of the scoring campaign. The defect is only
+reachable by data the project does not generate — which is exactly the data a real deployment would
+eventually see.
+
+The rule therefore carries an explicit direction per metric: power is measured upwards, SNR
+downwards. Those are the same physical event seen from two sides, since noise rising is what drives
+signal-to-noise down, and a rule that did not know which way each metric moves would report an
+*improving* signal as a deviation.
+
+The general observation for the write-up: **a synthetic corpus tests the implementation against the
+scenarios it was built to contain, and is silent about the ones it was not.** A test suite derived
+entirely from generated data inherits that silence. Here the defect was caught by reasoning about
+the rule before writing it; there is no guarantee the next one will be.
+
+### Naming a finding so that a person can check it
+
+`anom-001` is specified to carry "the observation IDs that triggered it", and the canonical
+observation model has no id. That is deliberate: `dal-001` keeps storage identity off the model, so
+nothing above the persistence layer learns what a database row is.
+
+Three options. Add an id to the model, and lose the property `dal-001` exists to protect. Have the
+detector query the store for ids, which puts persistence inside a pure function and breaks the seam
+that lets detection be tested without Docker. Or identify a reading by its **natural key** — sensor,
+channel, timestamp — which `scn-005`'s dense grid makes unique, because every sensor reports every
+channel at every interval and those three values therefore name exactly one reading.
+
+The third was taken, and the argument that decided it is not really about layering. This phase exists
+to make findings *checkable*. `RF-03, channel 4, at 12:07:30` is a reference an analyst can carry
+back to the data and verify; `observation 84412` is a reference only the database can resolve. When
+the evidence bundle reaches a human reviewer — or an examiner — the natural key is the form that
+still means something. `evb-002` can resolve it against the store as readily as a surrogate id, so
+nothing downstream is given up.
+
+This is a small case of a recurring tension in the project: **the identifier that is most convenient
+for the machine and the identifier that is most useful for the explanation are not the same one**,
+and an explainability system should prefer the second wherever it can afford to.
+
+### A detector that skips what it cannot measure makes its own control meaningless
+
+`anom-002` can return an insufficient-data result for a cell, and a cell may be missing from the
+baseline table entirely. `anom-001` has to do something with those, and the obvious thing — carry on
+past them — is quietly disastrous.
+
+`anom-008` requires a `normal-baseline` run to raise zero anomalies, and the false-positive rate
+reported in the evaluation is computed from exactly that. If the detector silently passes over cells
+it cannot assess, then "zero anomalies" becomes satisfiable by *not having looked*, and the
+distinction between a clean run and an unexamined one disappears at the point where it matters most.
+A detector with no usable baseline anywhere would post a perfect false-positive rate.
+
+So an unjudged cell is a reported outcome with a reason attached, and the rule returns findings in
+two parts: what it concluded, and what it could not conclude. The second part is not an error
+channel. It is a result.
+
+The general form is worth stating because it recurs wherever a negative result is being measured:
+**a correct non-detection and an absent detection are different claims, and any system reporting the
+first has to be able to prove it is not reporting the second.**
+
+### A determinism test with one cell cannot catch an ordering bug across cells
+
+Fifteen mutations were applied to `anom-001`; fourteen were caught on the first run. The survivor
+replaced the sorted iteration over cells with iteration in arrival order, which makes the sequence of
+emitted anomalies depend on the order the readings happened to arrive in.
+
+The test that should have caught it was the one asserting that traversal order is not an input — and
+it did not, because it was written with a single cell. With one cell there is no cell ordering to get
+wrong, so the assertion was true for both implementations. The fix was to give the test two cells and
+assert the emitted order explicitly.
+
+This is the third instance in this project of the same defect shape, and by now it is worth stating
+as a rule rather than as an anecdote: **a test that distinguishes two behaviours must contain the
+structure along which they differ.** Values common to both cannot separate them (`api-010`); a single
+sample cannot exercise an ordering (`anom-001`); a uniform data set cannot demonstrate a requirement
+about non-uniformity (`anom-002`). All three passed for the right reason on the wrong structure.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;
