@@ -4099,6 +4099,49 @@ clustering radius, with one staleness policy. The direction of the result is rob
 the ratio of signal to background, which the parameter sweep showed to be stable — but the specific
 percentages are not yet a property of the system.)*
 
+### Scoring a prediction that was recorded before it could be checked
+
+`db-008` made a claim in writing and staked the RQ1 extensibility argument on it at a second seam:
+one canonical shape that every detection rule becomes, so that adding a rule needs no change to the
+storage layer at all. The prediction recorded alongside it was that `anom-003`, the z-score detector,
+should require no edit to `app/db/findings.py`. `anom-004` arrived first and turned out to be a
+harder test than the one the prediction named, because a cluster is structurally unlike the two rules
+the shape was derived from: an RF episode is about one sensor-channel cell and a track gap about one
+aircraft, while a cluster is about several aircraft at once.
+
+**The storage half of the prediction holds cleanly.** `app/db/findings.py` was not touched — verified
+against the commit rather than asserted — and the new rule's findings write and read back through the
+same two functions, with a test that stores a cluster and reads it out again.
+
+**One field's meaning had to widen, and that is recorded as a partial rather than a clean score.**
+`subject` was documented as "the thing observed", and a cluster has no single one; it now carries the
+members joined. Nothing broke — the column is unbounded text, and the migration's own comment had
+already anticipated that "a third detector's subject is neither of those" — but the honest reading is
+that the shape absorbed a case it was not designed for by stretching a field rather than by fitting
+it. Both halves are worth reporting: a claim scored only where it succeeds is not evidence.
+
+`anom-003` remains the prediction's fair test, since a z-score finding is about one cell again, and
+it should now be scored against a shape that has already been stretched once.
+
+### An equivalent mutant that the query's own contract creates
+
+The mutation pass over `anom-004` killed eleven of twelve. The survivor was replacing
+`min(member.started_at for member in cluster.members)` with `cluster.members[0].started_at`, and it
+survives because it is equivalent: `db-009` returns members ordered by start time, then subject, then
+row, so the first member's start time *is* the minimum, always. No test can separate the two without
+constructing an input the query's ordering forbids.
+
+What makes it worth recording rather than dismissing is that its twin died. The identical mutation on
+`ended_at` — taking the first member's end time instead of the maximum — was caught immediately,
+because members are not ordered by when they finish. The pair is a precise illustration of the
+difference between a weak assertion and an equivalent mutation, sitting two lines apart in the same
+expression, and it is the sort of case that makes an unexamined mutation score misleading in both
+directions.
+
+The defensive form was kept in the code. `min()` does not depend on `db-009`'s ordering contract
+holding, and a later change to that ordering — which is a property of a different module, tested
+elsewhere — would silently break the indexed form while leaving every test in this file green.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;

@@ -23,11 +23,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from app.dal.models import Location
 from app.detection.rf_noise import RfNoiseAnomaly
 from app.detection.track_gap import TrackGapFinding
+
+if TYPE_CHECKING:
+    # Under TYPE_CHECKING only: `app.detection.clustering` reaches the
+    # database through `app.db.findings`, which imports this module, so a
+    # runtime import here would close the loop.
+    from app.detection.clustering import TrackGapCluster
 
 
 @dataclass(frozen=True, slots=True)
@@ -128,4 +134,43 @@ def from_track_gap(gap: TrackGapFinding, *, scenario_run_id: int) -> DetectionFi
             {"aircraft_id": gap.aircraft_id, "at": gap.ended_at.isoformat()},
         ),
         details={"shape": gap.shape.value, "duration_s": gap.duration.total_seconds()},
+    )
+
+
+def from_track_cluster(
+    cluster: TrackGapCluster, *, scenario_run_id: int
+) -> DetectionFinding:
+    """An `anom-004` cluster as a storable finding.
+
+    This is the first case that tests `db-008`'s claim properly. The shape
+    was built from two rules whose finding is *about* one thing -- a
+    sensor-channel cell, an aircraft -- and a cluster is about several. The
+    claim was that a third detector needs no change to `app/db/findings.py`,
+    and it holds: nothing in the storage layer knows this type exists.
+
+    Where it strains is `subject`, which was described as "the thing
+    observed" and here has to carry the things, plural, joined. Recording
+    that as a partial rather than a clean score: the storage layer needed no
+    edit, and one field's meaning had to widen to manage it. `anom-003` is
+    still the prediction's fair test, since a z-score finding is about one
+    cell again.
+
+    No severity travels here, in `details` or anywhere else. A cluster is
+    not reportable on its own -- measured -- and a severity written at this
+    layer would be available to be read at the next.
+    """
+    return DetectionFinding(
+        scenario_run_id=scenario_run_id,
+        rule_id=cluster.rule_id,
+        finding_type=cluster.finding_type,
+        subject=",".join(cluster.members),
+        started_at=cluster.started_at,
+        ended_at=cluster.ended_at,
+        location=cluster.centroid,
+        evidence_refs=tuple({"aircraft_id": aircraft} for aircraft in cluster.members),
+        details={
+            "size": cluster.size,
+            "members": list(cluster.members),
+            "hull_wkt": cluster.hull_wkt,
+        },
     )

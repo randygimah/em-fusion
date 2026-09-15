@@ -25,10 +25,10 @@ import dataclasses
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from alembic import command
 from sqlalchemy import Engine, text
 from sqlalchemy.orm import sessionmaker
 
+from alembic import command
 from app.dal.models import Location
 from app.db.findings import findings_for_run, save_findings
 from app.db.migrations import alembic_config
@@ -403,9 +403,7 @@ def test_a_cluster_stores_through_the_unchanged_finding_shape(
     (found,) = clusters(factory)
 
     finding = from_track_cluster(found, scenario_run_id=RUN_ID)
-    save_findings(
-        factory, scenario_run_id=RUN_ID, rule_id=RULE_ID, findings=[finding]
-    )
+    save_findings(factory, scenario_run_id=RUN_ID, rule_id=RULE_ID, findings=[finding])
 
     (stored,) = findings_for_run(factory, RUN_ID, rule_id=RULE_ID)
 
