@@ -3662,6 +3662,78 @@ CPython's compensated summation, one on a short-circuit that could not fire — 
 been recorded as test weaknesses if they had not been read carefully. A mutation score is only as
 good as the mutations, and the mutations need reviewing with the same suspicion as the tests.
 
+### A second canonical shape, and a prediction worth scoring
+
+`dal-001` established the project's central structural claim: every adapter's output becomes one
+canonical observation, so a new source changes the adapter and nothing else. That is the evidence for
+RQ1, and it has been scored once — the second adapter landed with the canonical model untouched.
+
+`db-008` is the same argument at a second seam, and it was not planned as one. It arose because
+`db-004` was picked up and found to have nothing to query: the `anomalies` table had existed since
+the first migration, nothing had ever written to it or read it, and no spec item covered doing so.
+Building the storage for detection findings raised the same question the DAL had answered — an RF
+episode carries a sensor-channel cell, a severity and a peak deviation; a track discontinuity carries
+an aircraft and one of two shapes — and the same answer was taken: one shape every rule becomes, with
+whatever is rule-specific carried in a `details` payload.
+
+**The prediction is explicit and falsifiable: `anom-003` should require no change to
+`app/db/findings.py` at all.** It is recorded here before that item is written so that scoring it
+later means something. A test names the nine top-level fields explicitly, so a rule-specific column
+added at the top level fails rather than quietly reintroducing a branch per rule.
+
+A second decision on that item is worth recording because it cuts against a rule established
+elsewhere in the project. `db-007` made the case that nothing is ever deleted: a run is a fact about
+what happened, and an absent completion stamp is informative. Detection findings are not like that.
+They are derived, regenerable from the run's seed, and re-derived whenever a rule changes — so the
+write replaces rather than appends, per run per rule, including when the new set is empty. Appending
+would be the worse failure by a distance: after a rule changed, the old findings would sit beside the
+new and every metric in the evaluation would count both, with nothing on screen or in a log to say
+so. **The never-delete rule is about facts, not about derivations**, and stating the boundary is more
+useful than stating the rule.
+
+### The same helper twice, and the reason it could not be shared
+
+`app/db/repository.py` builds a PostGIS point with GeoAlchemy2's `WKTElement`. The obvious move when
+writing the findings module was to reuse it. It does not work, and the reason is a seam rather than
+an oversight: the repository builds its statements from a reflected table whose column carries the
+geometry *type*, and it is that type which adapts the element for the driver. The findings module's
+statements are textual, so the driver sees a bare Python object and refuses it —
+`cannot adapt type 'WKTElement'`.
+
+The fix was to pass EWKT as text and let `ST_GeomFromEWKT` parse it, which is better than the thing
+it replaced: the SRID travels attached to the value rather than being assumed by the column. But the
+finding worth keeping is about duplication policy. This project has a recorded scar from the opposite
+mistake — a remedy that existed in two places, and a third caller that did not know about it — and
+the instinct after that is to extract every shared-looking helper. **Two functions that look
+identical are not duplication when the machinery around them differs**; here one takes coordinates
+loose and produces a typed element for a reflected column, the other takes a model and produces text
+for a textual statement. Merging them would have coupled two layers to make one line shorter.
+
+### A scripted multi-file edit that failed halfway, twice, and a partial fix built on a guess
+
+Recorded because it is a working-practice failure rather than a design one, and because it happened
+twice in two days in an identical shape.
+
+Documentation for these items is applied by a short script that makes several exact-string
+replacements across `CLAUDE.md`, `docs/implementation.md` and `docs/thesis_notes.md`, each guarded by
+an assertion that the target text occurs exactly once. When a later assertion fails, the earlier
+files have already been written and the process exits non-zero — but the commit command that follows
+it in the same shell invocation still runs. The result is a commit whose message describes three
+files and whose content is one.
+
+It happened first on `anom-001` and was noticed. It happened again on `anom-010`, and the second time
+the repair was worse than the fault: seeing the traceback point at a line number, I inferred which
+edit had failed, fixed that one, and did not check the others. The inference was wrong. The
+checklist was repaired and the repository map silently kept a stale entry for a day, describing a
+detection package that had gained a module it did not mention.
+
+Two things generalise. **A partial application is worse than a failure**, because the failure is
+visible and the partial state is not — and a commit message asserting what a script intended is
+evidence of intent rather than of content. And **a diagnosis inferred from an error's line number is
+a hypothesis, not an observation**; the file was one `grep` away throughout. The corrected practice
+is to apply every edit, verify each independently against the file, and only then commit — which is
+the same discipline the project already applies to tests, arriving a layer up.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;
