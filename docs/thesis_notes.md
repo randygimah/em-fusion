@@ -3931,6 +3931,114 @@ that goes quiet *by itself*, with no neighbours and no radio explanation, is evi
 infrastructure problem rather than of an incident. The isolated case is not the residue left after
 clustering; it is one of the two answers clustering is asked for.
 
+### The measurement clustering was supposed to settle, and the answer it gave
+
+When `anom-010` was rescoped from a reportable anomaly to an intermediate finding, one risk was
+recorded and deliberately not pre-solved: a quiet run contains a large background of genuine track
+discontinuities, and whether any of them fall close enough together to cluster into something a
+reportable rule would fire on was declared measurable once `db-009` and `anom-004` existed. With
+`db-009` built, the measurement could be taken before `anom-004` was written. It was, and it
+falsifies the premise the item was written on.
+
+**The control had to be chosen before anything could be measured.** The obvious control is a
+`normal-baseline` run, and it is the wrong one here: in the batch of 120 runs stored, no
+`normal-baseline` run shares a seed with any staged run, so it replays a different stretch of the
+corpus entirely. Comparing against it would confound the injection with the traffic. The batch does
+contain a better control, free: `rf-sensor-fault` shares seeds with the staged types, and only
+`aircraft-coverage-gap`, `gnss-degradation` and `ambiguous-mixed-evidence` perturb tracks at all. An
+`rf-sensor-fault` run is therefore the same corpus window, the same aircraft, and nothing staged on
+the track side — its track findings *are* that window's background. Its ground truth confirms it:
+zero aircraft staged, against 2 to 11 in each matched staged run.
+
+**Clustering does not separate staged runs from their matched controls.** Over eight seed-matched
+triples, comparing the largest group each run produces:
+
+| Radius | `gnss-degradation` − control | `aircraft-coverage-gap` − control |
+|---|---|---|
+| 5 km | +0.00 (0 of 8 triples differ) | −0.38 (0 of 8) |
+| 10 km | +0.00 (0 of 8) | −0.38 (0 of 8) |
+| 20 km | +0.00 (0 of 8) | −0.38 (0 of 8) |
+| 30 km | +0.12 (1 of 8) | −0.38 (0 of 8) |
+| 45 km | +0.25 (2 of 8) | −0.38 (0 of 8) |
+| 60 km | +0.25 (2 of 8) | −1.00 (0 of 8) |
+
+At every radius up to 20 km the largest cluster in a staged run is *identical* to the largest cluster
+in its own control, in all eight triples. The coverage-gap runs are consistently worse than their
+controls, which is the more interesting half and is addressed below. Total findings per run tell the
+same story: 15.9 on staged runs against 16.0 on controls — staging changes the count by nothing.
+
+**A cluster threshold would fire on every clean run.** The control runs carry a mean largest group of
+3.75 and between 1.0 and 1.9 groups of three or more members, depending on radius. Any rule of the
+form "a cluster of N track gaps is reportable" therefore fires on every quiet run in the batch for
+any N a staged run could also reach. This is the quantitative form of the risk `anom-008` was
+amended to describe, and it is now a number rather than a worry.
+
+### Twenty-one per cent, and what it is not caused by
+
+The clustering result has an upstream cause, found by scoring `TRACK-GAP` against the answer key
+rather than against a control. Across the matched runs, **119 aircraft were actually staged on and 25
+produced a finding: 21 per cent recall** — 19 per cent for `aircraft-coverage-gap`, 25 per cent for
+`gnss-degradation`. The shapes are correctly assigned in every case, `frozen_position` for the
+degradation runs and `not_heard` for the coverage gaps, so the two-mechanism design is wired
+correctly. It is a sensitivity result, not a wiring one.
+
+The immediate suspicion was that this measured the policy parameters rather than the system, since
+the staleness threshold and the contact-freshness window were both chosen for the measurement rather
+than derived. Sweeping them says otherwise:
+
+| Threshold | Contact freshness | Coverage-gap recall | Degradation recall |
+|---|---|---|---|
+| 60 s | 10 s / 30 s / disabled | 19% | 26% |
+| 100 s | 10 s / 30 s / 60 s / 90 s / disabled | 19% | 23% |
+| 150 s | 10 s / 30 s / 60 s / 90 s / disabled | 12% | 23% |
+| 200 s | 10 s / 30 s / 60 s / 90 s / disabled | 12% | 23% |
+
+Recall is flat across a threefold range of threshold and the entire range of the freshness
+discriminator including switching it off. It is not a tuning artefact. **Why** it is 21 per cent is
+not established by this measurement and is deliberately not guessed at here; the injection is a 300 s
+disruption beginning 120 s into the window, which is comfortably above any threshold tried, so the
+loss is somewhere between the perturber deciding which records to touch and the detector's airborne
+and interior-to-box filters. That is `anom-010`'s question, and it is now an owed piece of work with
+a number attached.
+
+**Why the coverage-gap runs come out below their own controls** is worth stating, because it looks
+like an error and is a consequence of a deliberate decision. That scenario stages by *suppressing*
+rows. `anom-010` detects an absence by looking at consecutive surviving reports, and refuses to
+extrapolate a gap from a track's final report, since every aircraft still in flight is stale when the
+window closes. Suppressing a run of rows can therefore remove the very reports that would have
+bracketed a *natural* gap, so the injection destroys evidence as well as creating it. The refusal to
+extrapolate is right and should stay; the interaction was not anticipated.
+
+### What this does to `anom-004`, and why the item is rescoped rather than abandoned
+
+The item was written on the assumption that clustering discriminates — that grouping discontinuities
+by place is what turns a scatter of background events into something worth reporting. Measured, it
+does not, for the input it actually has. Three responses were available.
+
+Tuning the radius until the two separate was rejected outright. The measurement covers 5 to 60 km and
+the separation is zero to 0.25 clusters across all of it; a radius that appeared to work would be
+fitted to eight triples of one batch, and the project has already recorded what it thinks of numbers
+chosen to make a control go green.
+
+Abandoning the item was rejected because the capability is still needed. `anom-005` fuses an RF
+deviation with *clustered* track gaps, and `anom-006` reads clusters to decide that a dropout
+happened with no radio explanation. Both need grouping to exist whatever its discriminating power in
+isolation.
+
+What remains is the same move `anom-010` made when its own premise failed, and for the same reason:
+the output is scoped to an **intermediate finding**, and the discrimination is left to the rules that
+add the other half of the picture. The finding that forces it is stronger than a design preference —
+clustering track gaps alone provably cannot tell a staged run from its own matched control, so a rule
+that reported on cluster size would be reporting noise. Recording that the discriminating information
+is cross-modal rather than spatial-alone is a result of this project, not a limitation of it: it is
+the same conclusion `anom-010` reached from the time axis, now reached independently from the space
+axis.
+
+*(Threat to validity, to be carried into the evaluation chapter: every number above comes from one
+batch of 120 runs generated from one base seed, and the eight matched triples share the corpus hour.
+The recall figure in particular should be re-measured against a second batch before it is reported as
+a property of the detector rather than of this batch.)*
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;
