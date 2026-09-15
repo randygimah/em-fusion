@@ -4253,6 +4253,63 @@ together to cluster by chance, near a busy airport for instance. Whether that ha
 once the clustering rule exists, and guessing at it now would mean tuning a radius against an
 imagined problem.
 
+## 64. I believe db-009 is next. Can you briefly explain in simple terms what this is trying to achieve?
+
+**It is the grouping step.** The proximity query that landed just before it answers *"I have one
+spot, what is near it?"*. This one answers a different question: *"I have a pile of findings, which
+of them belong together?"*
+
+### Why grouping is the point rather than a convenience
+
+A single track gap means nothing. A quiet run genuinely contains about 138 of them — aircraft
+dropping in and out of receiver coverage all day. That is exactly why the continuity rule emits
+intermediate findings rather than anomalies (§63): one of them is not worth an analyst's attention.
+
+Twelve gaps inside five kilometres of each other, in the same few minutes, is not coincidence.
+Clustering is the step that turns scattered background into a single object with a place and a size —
+the difference between "lots of small events" and "something is happening *there*".
+
+It is also, literally, where a reportable anomaly becomes possible. The anomalies table requires a
+severity and a **polygon** for the affected area. A track gap has a point and nothing else. The
+polygon is produced by grouping the points; there is no other source for it in the system.
+
+### How the grouping works, and the trap in it
+
+The chosen function groups by **transitive closure** at one distance. If A is within the radius of B,
+and B is within the radius of C, all three are one group — even when A and C are far further apart
+than the radius:
+
+```
+A ──4 km── B ──4 km── C          radius = 5 km
+└───────── one group ─────────┘   (A to C is 8 km)
+```
+
+That is the correct behaviour for interference spreading outwards from a source, and the wrong
+behaviour for a line of aircraft strung along a single airway — which matters here, because airways
+are what this corpus is mostly made of. It is recorded in the spec item as a stated limitation up
+front rather than left to be found later as a defect.
+
+The alternative, DBSCAN, was not available: scope v2 excludes it, and it needs a minimum-points
+parameter the project has no principled basis for choosing. One radius, one rule, explainable to an
+analyst in a sentence, which is what this phase is for.
+
+### Two decisions worth knowing
+
+| Decision | Why |
+|---|---|
+| A lone finding is still a group, of one | It is tempting to discard isolated findings as noise, but the data-source rule needs to know a dropout happened **alone** — a single receiver going quiet is an infrastructure problem, not an incident. Dropping singletons would delete that signal. |
+| The database measures the distance, not Python | At 52° north a degree of longitude is about 69 km and a degree of latitude about 111 km, so arithmetic in degrees is wrong by a different factor in each direction. Same reason as the proximity query. |
+
+### What it unlocks
+
+The clustering rule sits directly on top of it, then the fusion rule that pairs a radio deviation
+with co-located track gaps, then the data-source rule for isolated dropouts.
+
+It also makes the open question from the continuity rule measurable at last: do those ~138 background
+gaps in a quiet run ever chain into a group large enough to raise something? If they do, the
+zero-anomalies control fails and the radius has to be reconsidered. That measurement is owed as soon
+as this item and the clustering rule both exist — and deliberately was not guessed at in advance.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -4398,5 +4455,7 @@ imagined problem.
 | **Source record vs observation** | What the emitter produces and what the DAL produces. The first has no provenance, no data mode and no run identifier; the second has all three. `scn-001` emits the first only. |
 | **Track observation** | One replayed row: one aircraft, one instant, one position, one staleness reading. What `ObservationType.TRACK` means. Distinct from a *track*, which is the whole sequence, and from an *aircraft*, which is the thing observed. See §56. |
 | **Zone centre** | The receiver a run's incident is built around, chosen from the run's seed out of the seven in the layout. Shared by both halves of a run, which is what makes the radio anomaly and the track effect co-located by construction. See §55. |
+| **Transitive closure grouping** | Grouping where membership chains: if A is near B and B is near C, all three are one group even when A and C are far apart. What the clustering query does, and the reason a cluster can span much more than the radius that produced it. See §64. |
+| **Group of one** | An isolated finding returned as its own cluster rather than discarded. Kept deliberately, because a dropout that happened alone is evidence of a data-source problem rather than of an incident. See §64. |
 | **Target draw** | The per-aircraft decision of whether a run stages on it: a keyed derivation from the run's seed and the aircraft's pseudonym, accepted below the 8% affected fraction. Order-independent, and disjoint between runs sharing a zone. See §55. |
 | **Matched control** | A `normal-baseline` run generated at the same seed and window as a scenario run, so the two differ only in the cells the incident touches — 60 of 5,040 on the measured pair. A counterfactual of the scenario rather than an independent sample of quiet. See §54. |

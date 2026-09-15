@@ -12,6 +12,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Keep the repo map current.** Update the folder map and documents table whenever you add, remove, or rename a file that belongs there.
 
+**Explain the item before building it.** Before starting work on any spec item — writing it or implementing it — give a short plain-English explanation in the chat: what the capability is for, what problem it solves, and how it connects to the rest of the app. Written for someone who does not know the codebase: no spec IDs carrying the meaning, no file paths, no function names. This is **output, not a document** — it goes in the reply, never into a file. It exists so the user understands what is about to be built while there is still time to redirect it, and the phrasing that survives usually becomes the `qa.md` entry and the progress-note paragraph later.
+
 **Capture thesis material as you go.** See Thesis Notes below — findings, rationale, and references go into `docs/thesis_notes.md` while they are fresh, not at write-up time.
 
 **Capture questions and clarifications as you go.** Every question the user asks, and every clarification you give that corrects something they had misunderstood, gets appended to `docs/qa.md` as a numbered entry. Write the answer as it was actually needed — including the wrong assumption it corrected, because the correction is the useful part. Do this in the same turn as the explanation, not later. See the Concepts Q&A section below.
@@ -128,7 +130,11 @@ A contents page for the repo. Use it to find the right file before searching; it
 
 ## Spec-Driven Development — mandatory
 
-Every new capability follows **spec → test → code**, no matter how small. No implementation lands without a spec item and failing tests preceding it. If a change feels too small to spec, it still gets a spec item.
+Every new capability follows **explain → spec → test → code**, no matter how small. No implementation lands without a spec item and failing tests preceding it. If a change feels too small to spec, it still gets a spec item.
+
+### 0. Explain
+
+Say in plain terms what the item is for and how it links to what already exists, per the agent instruction above. No file is written at this stage.
 
 ### 1. Spec
 
