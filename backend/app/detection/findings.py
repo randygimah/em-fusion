@@ -46,6 +46,38 @@ class DetectionFinding:
     details: dict[str, Any] = field(default_factory=dict)
 
 
+@dataclass(frozen=True, slots=True)
+class FindingCluster:
+    """A group of findings that lie near one another. Spec: db-009.
+
+    What turns a pile of intermediate findings into one object with a place
+    and a size. A single track gap is not evidence -- a quiet run holds
+    about 138 of them -- and a dozen inside a few kilometres of each other
+    is; nothing in the system can say the second sentence without this.
+
+    `hull_wkt` is the smallest convex shape covering the members, in the
+    same WGS 84 the findings were stored in. It is a **point** for a group
+    of one and a **line** for a group of two, not a polygon, and that is
+    deliberate: a lone finding was observed at a point and has no extent,
+    so inventing an area would claim ground nothing was seen across.
+    Promoting a cluster to a reportable anomaly, whose affected area must
+    be a polygon, is `anom-004`'s decision rather than this value's.
+    """
+
+    centroid: Location
+    hull_wkt: str
+    members: tuple[DetectionFinding, ...]
+
+    @property
+    def size(self) -> int:
+        """How many findings chained together.
+
+        One is the case `anom-006` cares about: a dropout that happened
+        alone is a data-source problem rather than an incident.
+        """
+        return len(self.members)
+
+
 def from_rf_noise(anomaly: RfNoiseAnomaly, *, scenario_run_id: int) -> DetectionFinding:
     """An `anom-001` episode as a storable finding.
 

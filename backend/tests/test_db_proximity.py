@@ -26,10 +26,10 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from alembic import command
 from sqlalchemy import Engine, text
 from sqlalchemy.orm import sessionmaker
 
+from alembic import command
 from app.dal.models import Location
 from app.db.findings import findings_near, save_findings
 from app.db.migrations import alembic_config
@@ -87,7 +87,10 @@ def migrated_database(empty_database: Engine) -> Engine:
     command.upgrade(config, "head")
 
     with empty_database.connect() as connection:
-        for run_id, scenario in ((RUN_ID, "gnss-degradation"), (OTHER_RUN_ID, "normal-baseline")):
+        for run_id, scenario in (
+            (RUN_ID, "gnss-degradation"),
+            (OTHER_RUN_ID, "normal-baseline"),
+        ):
             connection.execute(
                 text(
                     "INSERT INTO scenario_runs "

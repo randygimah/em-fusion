@@ -3794,6 +3794,143 @@ test to write and it is the only kind that could have caught this, because every
 returned rows passes either way. **A performance guarantee needs a test that can see the plan**, and
 this project now has one.
 
+### A constraint that named a function the database does not have
+
+The clustering item, `db-009`, was written the same day it was built, and it specified that grouping
+be "performed by PostGIS on geography rather than by application-side arithmetic" while also naming
+`ST_ClusterWithin` as the function to do it with. Both halves were written in the same sentence and
+they contradict each other. `ST_ClusterWithin` has no geography overload: PostGIS 3.5 exposes exactly
+two signatures, `(geometry[], double precision)` and `(geometry, double precision)`, and the distance
+argument is interpreted in the units of the geometry's own spatial reference system — degrees, for
+the WGS 84 this project stores everything in. The constraint as written could not be satisfied by the
+function it was written about.
+
+This is the second time in two days that an item asserted something about PostGIS that PostGIS did
+not do: `db-004` claimed `ST_DWithin` was inclusive at its boundary, from the documentation, and
+measurement showed it was not. The pattern is specific enough to name. Claims about *this system's
+own code* have been reliable, because they were derived from reading it. Claims about the
+*dependency's* behaviour have been wrong roughly as often as they have been right, because they were
+derived from recalling documentation. The methodological correction is not "be more careful" but
+"query the catalogue" — a single `SELECT proname, pg_get_function_arguments(oid) FROM pg_proc`
+settled in one second a question that had been written into a specification as a constraint.
+
+The resolution keeps the substance and changes the mechanism. The findings are projected to EPSG:3035
+— ETRS89-extended Lambert Azimuthal Equal-Area Europe, a metre-based projection covering the whole
+corpus box — clustered there, and the radius therefore means metres. The approximation this accepts
+was measured rather than assumed. At the corners and centre of the corpus bounding box, a 5 km
+separation in EPSG:3035 differs from the geodesic distance computed on geography by at most 2.57 m,
+which is 0.055 per cent, worst at 54°N 3°E:
+
+| Position | Geodesic | EPSG:3035 | Error |
+|---|---|---|---|
+| 49°N 3°E | 5224.47 m | 5222.50 m | −1.96 m |
+| 52°N 5°E | 4903.61 m | 4901.84 m | −1.77 m |
+| 54°N 3°E | 4682.11 m | 4679.54 m | −2.57 m |
+| 54°N 11°E | 4682.11 m | 4682.92 m | +0.81 m |
+
+What makes this defensible rather than convenient is the comparison with what the constraint was
+written to forbid. A radius applied to raw degrees is wrong by about 62 per cent between the two axes
+at 52°N, because a degree of longitude there is roughly 69 km and a degree of latitude roughly 111.
+Three orders of magnitude separate the approximation accepted from the one refused, and the spec item
+records both numbers so the judgement can be checked rather than taken on trust.
+
+The alternative that would have satisfied the constraint literally — a recursive transitive closure
+over `ST_DWithin` on geography — was considered and rejected. It is exact, and it buys 2.57 m of
+accuracy on a radius that nothing in the project has a basis for choosing to within a kilometre, at
+the cost of the one property `ST_ClusterWithin` was selected for: being explainable to an analyst in
+a single sentence. Paying a large explainability cost for an accuracy gain three orders of magnitude
+below the uncertainty in the parameter itself would be the wrong trade for a system whose thesis is
+explainability.
+
+### Determinism that held everywhere except the fifteenth decimal place
+
+`NFR-601` requires a run to be reproducible from its seed, and `db-009` restates it as a constraint:
+the same findings and radius must always give the same groups, in the same order. The test written
+for it stores three findings, reads the clusters, stores the same three in reverse order, reads
+again, and asserts the two results are equal. Membership was identical. Ordering was identical. The
+objects were not equal.
+
+The difference was in the centroid, at the fifteenth significant figure:
+
+```
+forward   POINT(5.060000171976006 52.00001017169536)
+reverse   POINT(5.060000171975998 52.00001017169536)
+```
+
+Eight parts in 10^15 of a degree — roughly 0.9 nanometres on the ground. The cause is that
+`ST_Centroid` sums coordinates in whatever order `ST_Collect` assembled them, floating-point addition
+is not associative, and an unordered window partition takes its order from however the rows came back
+off the heap. Re-inserting the same rows changed that order, and so changed the last bit of the sum.
+
+The interesting question is what to do about a defect that is physically meaningless. Loosening the
+assertion to a tolerance was the obvious move and the wrong one: the requirement is not that the
+centroid be accurate to a nanometre, it is that a run *reproduce*, and a result that varies with
+storage layout does not reproduce however small the variation. Rounding the output would have hidden
+the cause behind a number chosen to make a test pass. The fix taken instead makes the summation order
+a property of the query — an explicit window frame, `ORDER BY started_at, subject, id ROWS BETWEEN
+UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING`, over the same content-derived key the final `ORDER BY`
+already uses. The frame has to be spelled out because a window `ORDER BY` alone defaults to a running
+aggregate, which would give every row the centroid of its own prefix rather than of its group.
+
+Two things are worth carrying into the write-up. The first is that this is the same principle the
+item already applied one level up, arriving from a different direction: the groups are ordered by
+their content rather than by the cluster identifiers PostGIS hands out, because those are numbered in
+an internal order over rows that have none imposed. Determinism at this seam is not one decision but
+a rule — nothing in the output may depend on the order rows arrive in — and the centroid was the
+place the rule had been applied incompletely. The second is that the test is a genuine detector
+rather than a lucky one: reverting the frame and running the single test three times caught it three
+times out of three, and the fixed version passed three out of three.
+
+### The two spaces a clustering query works in, and why the answer is both
+
+`db-009` computes its centroid in metres and its covering geometry in degrees, which looks like an
+inconsistency and is the same rule applied twice: each value is computed in the space where that
+value is right.
+
+A centroid taken on raw coordinates is the arithmetic mean of longitudes and latitudes, and that
+underweights longitude wherever a degree of it is shorter than a degree of latitude. For four
+findings spread across about 25 km at 52°N, the mean of the coordinates is `POINT(5.1175 52.0125)`
+and the true areal centre is `POINT(5.117447601845757 52.012561112115044)` — 7.69 m apart. That is
+small enough to ignore and free to get right, and it is the point an analyst would be shown as the
+centre of a disruption, so it is computed in the equal-area projection and transformed back.
+
+The covering geometry goes the other way, for a reason that only appeared on measuring the round
+trip. A convex hull's vertices are findings that are already stored exactly, and projecting to
+EPSG:3035 and back does not return them unchanged: longitude 5.0 comes back as 4.999999999999997 and
+latitude 52.0 as 52.000000000000014. Sending the shape through the projection would introduce drift
+into coordinates that arrived exact, in exchange for nothing — the hull is an enclosure of points,
+not a measurement of distance, so there is no accuracy to gain. (`db-004` measured the opposite
+result for its own round trip through kilometres and metres, which came back bit-identical; the
+difference is that a unit conversion is a multiplication and a reprojection is a trigonometric
+transform.)
+
+The same query therefore holds a single rule in two places, and the rule generalises past this item:
+project when the number you want is a distance, and leave the data alone when the number you want is
+a coordinate you already had.
+
+### A group of one, and the temptation to call it noise
+
+The covering geometry of a cluster is a convex hull, which means a group of one member is a `POINT`
+and a group of two is a `LINESTRING`. Only three non-collinear members produce a `POLYGON`. Since the
+`anomalies` table requires a `Polygon` for its affected area, there is an obvious pressure to make
+`db-009` always return one — by buffering the hull, or by returning a bounding box with some minimum
+size.
+
+Both were rejected, and the reason is the same one that runs through the whole detection layer. A
+group of one was observed at a single point and has no measured extent; a buffer radius chosen to
+make it into a polygon would be a number with no evidence behind it, presented to an analyst as the
+area a disruption covered. The system's claim to explainability rests on every displayed quantity
+tracing back to something measured, and an invented area is exactly the kind of quantity that
+survives into a screenshot and then into a conclusion. Promoting a cluster to a reportable anomaly is
+`anom-004`'s decision, and if it needs a polygon it must choose and justify the buffer itself, in the
+item where that choice is visible.
+
+The related temptation is to drop singletons altogether, on the grounds that a lone finding among 138
+background discontinuities is noise. That would delete the signal `anom-006` exists to read: a source
+that goes quiet *by itself*, with no neighbours and no radio explanation, is evidence of an
+infrastructure problem rather than of an incident. The isolated case is not the residue left after
+clustering; it is one of the two answers clustering is asked for.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;

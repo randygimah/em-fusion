@@ -27,10 +27,10 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from alembic import command
 from sqlalchemy import Engine, text
 from sqlalchemy.orm import sessionmaker
 
+from alembic import command
 from app.dal.models import Location
 from app.db.findings import cluster_findings, save_findings
 from app.db.migrations import alembic_config
@@ -94,7 +94,10 @@ def migrated_database(empty_database: Engine) -> Engine:
     command.upgrade(config, "head")
 
     with empty_database.connect() as connection:
-        for run_id, scenario in ((RUN_ID, "gnss-degradation"), (OTHER_RUN_ID, "normal-baseline")):
+        for run_id, scenario in (
+            (RUN_ID, "gnss-degradation"),
+            (OTHER_RUN_ID, "normal-baseline"),
+        ):
             connection.execute(
                 text(
                     "INSERT INTO scenario_runs "
@@ -155,7 +158,11 @@ def test_findings_further_apart_than_the_radius_form_separate_groups(
     """The item's first named failure case. A and LONE are 68.677 km apart
     with nothing between them, at a radius of 5 km."""
     # spec: db-009
-    store(factory, finding(subject="a", location=A), finding(subject="lone", location=LONE))
+    store(
+        factory,
+        finding(subject="a", location=A),
+        finding(subject="lone", location=LONE),
+    )
 
     assert subjects(clusters(factory)) == [["a"], ["lone"]]
 
@@ -230,7 +237,9 @@ def test_every_finding_belongs_to_exactly_one_group(factory: sessionmaker) -> No
 @requires_database
 def test_the_radius_is_a_parameter_and_not_a_constant(factory: sessionmaker) -> None:
     """The same three points, three answers. At 3 km nothing reaches its
-    neighbour; at 5 km the chain closes; at 45 km LONE joins it too."""
+    neighbour, because A to B is 4.121 km. At 5 km A and B close and LONE
+    stays out at 64.557 km from B. At 70 km the chain reaches LONE as well.
+    """
     # spec: db-009
     store(
         factory,
@@ -241,7 +250,7 @@ def test_the_radius_is_a_parameter_and_not_a_constant(factory: sessionmaker) -> 
 
     assert subjects(clusters(factory, radius_km=3.0)) == [["a"], ["b"], ["lone"]]
     assert subjects(clusters(factory, radius_km=5.0)) == [["a", "b"], ["lone"]]
-    assert subjects(clusters(factory, radius_km=WIDE_RADIUS_KM)) == [["a", "b", "lone"]]
+    assert subjects(clusters(factory, radius_km=70.0)) == [["a", "b", "lone"]]
 
 
 # ------------------------------------------------------------------- metres
