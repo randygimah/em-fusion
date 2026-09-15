@@ -171,13 +171,23 @@ def test_distance_is_measured_in_metres_and_not_in_degrees(
 
 @pytest.mark.database
 @requires_database
-def test_a_finding_exactly_at_the_radius_is_inside_it(
+def test_the_radius_is_honoured_to_within_a_metre(
     factory: sessionmaker, migrated_database: Engine
 ) -> None:
-    """`ST_DWithin` is inclusive, and the item's original failure case fixed
-    only the far side of the boundary. The exact distance is asked of
-    PostGIS rather than computed here, so the test cannot disagree with the
-    query about what the distance is."""
+    """The boundary, bracketed rather than pinned.
+
+    This test first asserted that a finding exactly N km away is inside,
+    because `ST_DWithin` is documented as inclusive. Measured against
+    PostGIS 3.5, it is not: `ST_Distance` between these two points returns
+    34338.94037894 m and `ST_DWithin` at exactly that value returns false,
+    with no floating-point drift in the round trip through kilometres. The
+    operator excludes the boundary on geography, and the item was corrected
+    to say so.
+
+    What is worth asserting is the requirement rather than the dependency's
+    edge case: the radius is honoured to metre precision. Exact equality is
+    a state no measured distance occupies.
+    """
     # spec: db-004
     with migrated_database.connect() as connection:
         metres = connection.execute(
@@ -189,9 +199,11 @@ def test_a_finding_exactly_at_the_radius_is_inside_it(
         ).scalar_one()
     store(factory, finding(subject="on-the-line", location=EAST))
 
-    assert [f.subject for f in near(factory, radius_km=metres / 1000.0)] == [
-        "on-the-line"
-    ]
+    inside = near(factory, radius_km=(metres + 1.0) / 1000.0)
+    outside = near(factory, radius_km=(metres - 1.0) / 1000.0)
+
+    assert [f.subject for f in inside] == ["on-the-line"]
+    assert outside == []
 
 
 @pytest.mark.database
@@ -238,6 +250,18 @@ def test_the_query_can_use_the_spatial_index(
 
     assert "Index Scan" in plan or "Bitmap Index Scan" in plan, plan
     assert "location" in plan, plan
+
+
+@pytest.mark.database
+@requires_database
+def test_a_radius_of_zero_or_less_is_refused(factory: sessionmaker) -> None:
+    """Not answered with an empty list. An empty answer means nothing was
+    nearby, and a caller who passed a nonsensical radius would read that as
+    the same thing."""
+    # spec: db-004
+    for bad in (0.0, -5.0):
+        with pytest.raises(ValueError, match="positive"):
+            near(factory, radius_km=bad)
 
 
 # ------------------------------------------------------------------- window

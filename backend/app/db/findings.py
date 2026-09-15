@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable, Sequence
+from datetime import datetime
 
 from sqlalchemy import RowMapping, text
 from sqlalchemy.orm import Session, sessionmaker
@@ -154,3 +155,87 @@ def _finding(row: RowMapping) -> DetectionFinding:
         evidence_refs=tuple(refs),
         details=row["details"],
     )
+
+
+def findings_near(
+    session_factory: sessionmaker[Session],
+    *,
+    scenario_run_id: int,
+    centre: Location,
+    radius_km: float,
+    window: tuple[datetime, datetime],
+    rule_id: str | None = None,
+) -> list[DetectionFinding]:
+    """Findings within `radius_km` of a point, overlapping a window. Spec: db-004.
+
+    FR-905's one real spatial query, and the justification for running a
+    spatial database rather than storing two float columns.
+
+    **Distance is measured on geography, in metres.** The stored geometry is
+    in degrees (SRID 4326), and a degree is not a distance: at 52 degrees
+    north a degree of longitude is about 69 km while a degree of latitude is
+    about 111, so a radius applied to raw coordinates is wrong by a different
+    factor in each direction and wrong by a different amount at each latitude.
+    The cast is what makes the number mean kilometres.
+
+    **The window test is overlap, not containment.** A finding is itself an
+    interval, and `anom-005` fuses an RF deviation with a track gap occurring
+    in the same window -- a gap that began before the window opened is still
+    happening during it. Requiring containment would drop exactly the long
+    disruptions the fusion rule exists to find. `OVERLAPS` is PostgreSQL's
+    own operator for this rather than four hand-written comparisons.
+
+    **The bounding-box prefilter is what lets the index help.** `&&` tests
+    the geometry index; `ST_DWithin` on geography then measures exactly. The
+    expansion is generous on purpose -- a degree of longitude is shortest at
+    the highest latitude the corpus box reaches, so dividing by the cosine
+    there over-covers everywhere else, and an over-wide prefilter costs a few
+    extra exact comparisons while an under-wide one silently loses rows.
+    """
+    if radius_km <= 0:
+        raise ValueError(f"radius_km={radius_km} must be positive")
+
+    clause = "" if rule_id is None else " AND rule_id = :rule_id"
+    with session_factory.begin() as session:
+        rows = (
+            session.execute(
+                text(
+                    "SELECT scenario_run_id, rule_id, finding_type, subject, "
+                    "  started_at, ended_at, evidence_refs, details, "
+                    "  ST_Y(location) AS lat, ST_X(location) AS lon "
+                    "FROM detection_findings "
+                    "WHERE scenario_run_id = :run_id"
+                    f"{clause} "
+                    "  AND (started_at, ended_at) OVERLAPS (:window_start, :window_end) "
+                    "  AND location && ST_Expand("
+                    "        ST_GeomFromEWKT(:centre), :expand_deg) "
+                    "  AND ST_DWithin(location::geography, "
+                    "        ST_GeomFromEWKT(:centre)::geography, :metres)"
+                    "ORDER BY started_at, subject, id"
+                ),
+                {
+                    "run_id": scenario_run_id,
+                    "rule_id": rule_id,
+                    "window_start": window[0],
+                    "window_end": window[1],
+                    "centre": _ewkt(centre),
+                    "expand_deg": _expansion_degrees(radius_km),
+                    "metres": radius_km * 1000.0,
+                },
+            )
+            .mappings()
+            .all()
+        )
+    return [_finding(row) for row in rows]
+
+
+#: The corpus box reaches 54 degrees north, where a degree of longitude is at
+#: its shortest across the box. Expanding by the radius divided by that
+#: length over-covers at every lower latitude, which is the safe direction:
+#: the prefilter only has to be a superset of the answer.
+_KM_PER_DEGREE_AT_BOX_TOP = 65.4
+
+
+def _expansion_degrees(radius_km: float) -> float:
+    """How far in degrees to widen the bounding box for the index prefilter."""
+    return radius_km / _KM_PER_DEGREE_AT_BOX_TOP

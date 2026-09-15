@@ -3734,6 +3734,66 @@ a hypothesis, not an observation**; the file was one `grep` away throughout. The
 is to apply every edit, verify each independently against the file, and only then commit — which is
 the same discipline the project already applies to tests, arriving a layer up.
 
+### An edge case asserted from documentation, and what the database actually did
+
+`db-004` is the one real PostGIS spatial query FR-905 asks for, and the item was amended before its
+tests were written to fix both ends of its boundary. The original failure case said a discontinuity
+just *outside* N km must be excluded; the amendment added that a finding *exactly* N km away is
+inside, on the grounds that `ST_DWithin` is inclusive. That is what the documentation says, and it is
+what the test asserted.
+
+It is not what PostGIS 3.5 does. Measured directly:
+
+```
+ST_Distance(a::geography, b::geography)  =  34338.94037894 m
+ST_DWithin(a::geography, b::geography, 34338.94037894)  =  false
+```
+
+The round trip through kilometres introduces no drift at all — the value comes back bit-identical —
+so this is not floating-point error in the caller. **The operator itself excludes the boundary on
+geography**, where the distance is computed on a spheroid and the containment test is a separate code
+path from the measurement.
+
+The correction was not to force inclusivity. Comparing `ST_Distance <= radius` instead would have
+given the documented behaviour and lost the index assist, trading a real property for an edge case no
+measured distance occupies. What the item now specifies is that a finding **one metre inside** the
+radius is returned and one metre outside is not, which brackets the edge to metre precision and
+leaves exact equality where it belongs — undefined, and PostGIS's business.
+
+The methodological point is the one this phase keeps producing, now in a fourth form. The per-channel
+baseline claim could not be proved against the project's own quiet data; the track signature could not
+be separated from the corpus background; two mutations that looked like test gaps were artefacts of
+how I built them; and here an edge case was specified from a manual rather than from the system.
+**Every one was found by measuring the thing rather than reasoning about it, and in each case the
+reasoning had been confident and wrong.** For a dissertation that argues for explainable, checkable
+detection, that is not an embarrassing pattern to record — it is the argument.
+
+### The index the query could not have used, and the prefilter that fixes it
+
+`db-001` created a GiST index on a geometry column with a comment naming `db-004` as its reason, and
+`db-008` carried that index to the table the findings actually live in. Neither would have helped.
+
+Distance has to be measured on geography, because the stored geometry is in degrees and a degree is
+not a distance — at 52 degrees north a degree of longitude is about 69 km and a degree of latitude
+about 111, so a radius applied to raw coordinates is wrong by a different factor in each direction.
+But casting the column to geography in the predicate is a function call on the column, and a plain
+GiST index on the geometry cannot answer it. The query would have been correct and would have
+scanned the table, which is precisely the failure `db-001`'s own comment predicted: *it fails as a
+performance claim rather than a correctness one, which is the kind of defect that survives every
+functional test.*
+
+The fix is the standard PostGIS idiom and worth stating because it is not obvious: a bounding-box
+prefilter with `&&`, which the geometry index answers, followed by the exact `ST_DWithin` on
+geography over the survivors. The expansion is deliberately generous — computed from the shortest
+degree of longitude anywhere in the corpus box, so it over-covers at every lower latitude — because
+an over-wide prefilter costs a few extra exact comparisons and an under-wide one silently loses rows.
+
+What made this visible was writing a test that asserts the *plan* rather than the answer: sequential
+scans disabled, `EXPLAIN` inspected for an index scan naming the location column. That is an unusual
+test to write and it is the only kind that could have caught this, because every assertion about
+returned rows passes either way. **A performance guarantee needs a test that can see the plan**, and
+this project now has one.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;
