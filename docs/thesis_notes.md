@@ -4039,6 +4039,66 @@ batch of 120 runs generated from one base seed, and the eight matched triples sh
 The recall figure in particular should be re-measured against a second batch before it is reported as
 a property of the detector rather than of this batch.)*
 
+### Where the intermediate findings actually leak, and where they cannot
+
+Two intermediate producers now exist, `anom-010`'s discontinuities and `anom-004`'s clusters, with no
+reportable rule yet built on either. The question this raises is whether a layer with poor
+discrimination, declared intermediate, can still damage the results that matter — the anomalies an
+analyst sees and the hypotheses generated from them. The answer differs for the two, and only one of
+them is safe by construction.
+
+**The hypothesis layer is structurally insulated, and not by accident.** `evb-001` takes *anomalies*
+as its input and states that the bundle is the only thing the AI layer ever receives; `api-009` keeps
+ground truth out of it. An intermediate finding has no path to a model: it is not an anomaly, so it
+cannot enter a bundle, so it cannot reach a prompt. That boundary was drawn for a different reason —
+keeping raw observations away from a hosted provider — and it happens to contain this problem too.
+
+**Attribution is not insulated, and the exposure is measurable.** The unsafe path is indirect. If a
+fused rule is misled by background clusters it raises a *real* anomaly; that anomaly builds a bundle
+whose evidence genuinely exists; the grounding check in `ai-008` passes, because every claim does
+trace to the evidence supplied; and the model produces a confident, well-grounded, wrong explanation.
+A grounding check cannot catch a correctly-grounded wrong premise, and this is the shape of failure
+it is blind to.
+
+The measurement that matters is not the clean run. On a `normal-baseline` run `RF-NOISE` is silent,
+so nothing fuses and `anom-008`'s control passes regardless. The dangerous case is a run whose truth
+is `rf-sensor-fault`: the radio side fires legitimately and correctly, and the only question is
+whether any background track cluster happens to lie within the fusion radius. Across all twenty
+sensor-fault runs, clustering at 20 km and measuring distance with `db-004`:
+
+| Fusion radius | Runs with a background cluster in range | Runs with one of three or more members |
+|---|---|---|
+| 55.7 km | 12 of 20 (60%) | 4 of 20 |
+| 60 km | 14 of 20 (70%) | 5 of 20 |
+| 70 km | 14 of 20 (70%) | 5 of 20 |
+| 85.7 km | 15 of 20 (75%) | 6 of 20 |
+
+`anom-005` as specified — an RF noise anomaly and a co-located track-gap cluster in the same window —
+would therefore report `possible_interference_zone` on about seventy per cent of the runs whose
+correct answer is `possible_sensor_fault`. `anom-006` compounds it: it is defined to be mutually
+exclusive with `anom-005` for the same cluster, so the false fusion does not merely add a wrong
+anomaly, it removes the run from the rule that would have got it right.
+
+**A minimum cluster size helps and cannot be used.** Requiring three or more members cuts the
+exposure from 70 per cent to 25 per cent at a 60 km radius, which looks like the obvious fix until it
+is checked against the true positives. With `TRACK-GAP` recall at 21 per cent, a staged run with
+between two and eleven affected aircraft typically yields one to three findings in total, and only
+one of the measured runs produced three detections on staged aircraft. The threshold that suppresses
+the background suppresses the signal at the same time, because they are the same size. There is no
+value of the parameter that separates them.
+
+That is the finding, and it is a single number rather than three problems: **the background is not too
+large, the recall is too small.** Clustering is not at fault and neither is fusion; both are
+downstream of a detector that sees one staged aircraft in five. Until that changes, no arrangement of
+radii or cluster sizes in the rules above it can produce a discriminating result, and building those
+rules first would produce three items that pass their unit tests on constructed fixtures and fail
+together at evaluation time, with the cause two layers below where the failure appeared.
+
+*(Threat to validity for the evaluation chapter: this exposure is measured on one batch, at one
+clustering radius, with one staleness policy. The direction of the result is robust — it is driven by
+the ratio of signal to background, which the parameter sweep showed to be stable — but the specific
+percentages are not yet a property of the system.)*
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;

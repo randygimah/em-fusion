@@ -4310,6 +4310,74 @@ gaps in a quiet run ever chain into a group large enough to raise something? If 
 zero-anomalies control fails and the radius has to be reconsidered. That measurement is owed as soon
 as this item and the clustering rule both exist — and deliberately was not guessed at in advance.
 
+## 65. We have two intermediate findings now, and I am unsure whether these will affect future
+results, especially anomalies and later hypothesis generation
+
+**Half of it cannot happen and half of it already does — and the half that does is the dangerous
+one.** The concern is right, and splitting it in two is what makes it actionable.
+
+### The hypothesis layer cannot be reached by an intermediate finding
+
+The evidence bundle — the only thing the AI layer ever receives — is built from **anomalies**, not
+findings. An intermediate finding is not an anomaly, so it cannot enter a bundle, so it cannot reach
+a model. Nothing has to be added to enforce that; the boundary was drawn to keep raw observations
+away from a hosted provider, and it happens to contain this too.
+
+### Attribution can be reached, and the damage is invisible to the safeguard
+
+The unsafe path is indirect, and it defeats the check that exists to catch bad output:
+
+| Step | What happens |
+|---|---|
+| 1 | A fused rule sees a genuine radio anomaly and a background track cluster nearby |
+| 2 | It raises a **real** anomaly — the evidence genuinely exists |
+| 3 | The bundle is built from that evidence and is complete |
+| 4 | The grounding check passes, because every claim really does trace to the evidence |
+| 5 | The model produces a confident, well-grounded, **wrong** explanation |
+
+A grounding check verifies that claims trace to the evidence given. It cannot verify that the
+evidence meant what the rule assumed. **A correctly grounded wrong premise is exactly the failure it
+is blind to**, and that is worth stating in the write-up rather than leaving as an implied strength.
+
+### How exposed the system actually is
+
+The clean run is not the dangerous case: with nothing staged the radio rule is silent, nothing fuses,
+and the zero-anomalies control passes whatever the track side is doing. The dangerous case is a run
+whose truth is a **sensor fault** — the radio side fires legitimately, and the only question is
+whether a background track cluster happens to be nearby. Measured across all twenty such runs:
+
+| Fusion radius | Runs with a background cluster in range |
+|---|---|
+| 55.7 km | 12 of 20 (60%) |
+| 60 km | 14 of 20 (70%) |
+| 85.7 km | 15 of 20 (75%) |
+
+So the fusion rule as written would announce *possible interference zone* on about seventy per cent
+of the runs whose correct answer is *possible sensor fault* — and because the data-source rule is
+defined to be mutually exclusive with it for the same cluster, the wrong rule takes the run away from
+the right one rather than merely adding noise beside it.
+
+### Why the obvious fix is not available
+
+Requiring a cluster of three or more members drops that exposure from 70 per cent to 25. It cannot be
+used. Track-gap recall is 21 per cent, so a staged run with two to eleven affected aircraft produces
+one to three findings in total, and only one measured run produced three detections on staged
+aircraft. The threshold that suppresses the background suppresses the signal, because **they are the
+same size**.
+
+### What it actually means
+
+One number, not three problems: **the background is not too large, the recall is too small.**
+Clustering is not at fault and neither is fusion — both sit downstream of a detector that sees one
+staged aircraft in five. So the two intermediate layers are not themselves a threat; they are
+faithful reporters of an input that is too weak, and the honest response is to fix the input rather
+than to tune the layers above it until a control goes green.
+
+The practical consequence is an ordering change. The three fusion rules are **not** built next. If
+they were, all three would pass their unit tests against constructed fixtures and fail together at
+evaluation time, with the cause two layers below where the failure showed up — which is the most
+expensive possible moment to discover it. See [[thesis_notes]] and §64.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -4455,6 +4523,8 @@ as this item and the clustering rule both exist — and deliberately was not gue
 | **Source record vs observation** | What the emitter produces and what the DAL produces. The first has no provenance, no data mode and no run identifier; the second has all three. `scn-001` emits the first only. |
 | **Track observation** | One replayed row: one aircraft, one instant, one position, one staleness reading. What `ObservationType.TRACK` means. Distinct from a *track*, which is the whole sequence, and from an *aircraft*, which is the thing observed. See §56. |
 | **Zone centre** | The receiver a run's incident is built around, chosen from the run's seed out of the seven in the layout. Shared by both halves of a run, which is what makes the radio anomaly and the track effect co-located by construction. See §55. |
+| **Correctly grounded wrong premise** | An explanation in which every claim really does trace to the evidence supplied, while the evidence itself was assembled by a rule that misread the situation. The failure mode the grounding check cannot see, and the reason a passing grounding rate is not by itself a claim about correctness. See §65. |
+| **Matched control** (track side) | An `rf-sensor-fault` run at the same seed as a staged run: same corpus window, same aircraft, nothing staged on tracks. Used in place of a `normal-baseline` run, which in the stored batch shares a seed with nothing and so replays different traffic. See §65. |
 | **Transitive closure grouping** | Grouping where membership chains: if A is near B and B is near C, all three are one group even when A and C are far apart. What the clustering query does, and the reason a cluster can span much more than the radius that produced it. See §64. |
 | **Group of one** | An isolated finding returned as its own cluster rather than discarded. Kept deliberately, because a dropout that happened alone is evidence of a data-source problem rather than of an incident. See §64. |
 | **Target draw** | The per-aircraft decision of whether a run stages on it: a keyed derivation from the run's seed and the aircraft's pseudonym, accepted below the 8% affected fraction. Order-independent, and disjoint between runs sharing a zone. See §55. |
