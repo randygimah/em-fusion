@@ -4414,6 +4414,65 @@ The outcome is reported whichever way it falls, as `scn-006`'s prediction was. I
 the correct response is to weaken `anom-012`'s claims, not to average the two batches until the
 number looks better.
 
+### The replication, scored against a pre-registration that was written first
+
+The pre-registration above was committed before batch 3 existed. This is the result, reported against
+it rather than around it.
+
+**Batch 3 was scored at batch 2's thresholds, not at thresholds refitted to itself.** That is the only
+part of this measurement that could genuinely fail, and it is worth being explicit about why. Every
+figure quoted for this rule up to that point came from choosing the best-separating threshold *on the
+same twenty pairs being scored*, which is fitting; repeated on a fresh batch it would produce a
+flattering number every time, and the two batches agreeing would mean nothing at all.
+
+| Radius | Batch 2, fitted | Batch 3, out of sample | Pooled, 40 pairs |
+|---|---|---|---|
+| 30 km | 5/20 vs 2/20, J +0.15, p 0.407 | 11/20 vs 5/20, J +0.30, p 0.105 | 16/40 vs 7/40, J +0.23, **p 0.047** |
+| 45 km | 10/20 vs 5/20, J +0.25, p 0.191 | 13/20 vs 5/20, J +0.40, p 0.025 | 23/40 vs 10/40, J +0.32, **p 0.006** |
+| 60 km | 16/20 vs 9/20, J +0.35, p 0.048 | 15/20 vs 6/20, J +0.45, p 0.010 | 31/40 vs 15/40, J +0.40, **p 0.001** |
+
+**Five of the six rates fall inside the intervals batch 2 predicted, and the ordering across radii is
+preserved.** The sixth does not: recall at 30 km came in at 55 per cent against a predicted interval
+of 11 to 47. It is recorded here as a miss rather than absorbed into a general verdict of agreement,
+and the reason it is worth being careful about is that it **missed in the favourable direction**. A
+pre-registration that is honoured only when the surprise is unwelcome is not a pre-registration.
+
+**A caveat of my own turned out to be the artefact.** The statistics taken on batch 2 alone had led to
+the conclusion that only the widest radius separates the rule from its control, and that was carried
+into the spec item, the notes and the progress note as a limitation of the method. Pooled over 40
+pairs, all three radii separate, at p = 0.047, 0.006 and 0.001. The limitation was the sample size.
+That is a correction of a correction, and the useful part is the general shape: a null result on
+twenty paired observations is very often a statement about twenty, and this project has now made that
+mistake in the same week as making the opposite one — asserting a precision twenty pairs could not
+support. Both are the same error with the sign flipped.
+
+**What the replication does not change is the strength.** Pooled Youden's J is 0.23 to 0.40, against a
+scale where zero is a coin flip. The rule is now reliably better than chance and still nowhere near
+something that could be acted on alone, and the radio side of the same system remains beyond five
+sigma. The curve is now supported well enough to choose a radius from; the choice still belongs to the
+evaluation, and to the unsettled ordering between the three fusion rules.
+
+### The generator fix, on three batches
+
+`scn-006` was measured on one batch when it landed. Three batches now exist and the picture is
+consistent in direction and better than the first repair suggested:
+
+| Batch | Generator | Recall, all types | Recall, `gnss-degradation` | Parked aircraft in the answer key |
+|---|---|---|---|---|
+| 1 | original | 25% | 37% | 209 of 381 (55%) |
+| 2 (seed 20260916) | repaired | 69% | 81% | 1 of 62 (2%) |
+| 3 (seed 20260917) | repaired | **81%** | **95%** | **0 of 74** |
+
+The loss account `anom-011` asked for is now settled as well. In batch 3, of 14 remaining misses, 11
+are on-ground and 3 are below threshold, with **nothing at all** lost to the interior filter, to an
+aircraft absent from its run, or to an unbracketed absence. The on-ground remainder is no longer
+parked aircraft — those cannot be targeted any more — but aircraft that took off or landed during the
+window, which is the detector being right rather than a defect to chase.
+
+The staging yield across the two repaired batches is 58 runs of 80, or **72.5 per cent**, which is
+close enough to the 75 per cent first measured that the campaign sizing in `eval-002` stands: roughly
+200 runs for 150 staged incidents.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;

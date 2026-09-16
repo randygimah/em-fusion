@@ -4637,6 +4637,67 @@ significance only at the wide radius, and every figure is a single-batch estimat
 picking a radius from it would be picking from noise. A second independently seeded batch comes
 first — the same condition already set for the recall figure in §66. See [[thesis_notes]] and §68.
 
+## 70. Generate a second batch and re-measure before building anom-012
+
+**It replicated, it got stronger, and it overturned a caveat of mine from two hours earlier.**
+
+### How the test was set up so it could actually fail
+
+Batch 3 (base seed 20260917, 60 runs) was scored at **batch 2's thresholds**, not at thresholds
+refitted to batch 3. That distinction is the whole test. Every figure quoted for this rule up to now
+came from picking the best-separating threshold *on the same twenty pairs being scored* — which is
+fitting, and on a fresh batch would produce a flattering number every time. Two batches agreeing
+under that procedure would mean nothing.
+
+The criteria for agreement and disagreement were written into `thesis_notes.md` and committed
+**before the batch existed**.
+
+### Result
+
+| Radius | Batch 2 (fitted) | Batch 3 (out of sample) | Pooled, 40 pairs |
+|---|---|---|---|
+| 30 km | 5/20 vs 2/20, p 0.407 | 11/20 vs 5/20, p 0.105 | 16/40 vs 7/40, **p 0.047** |
+| 45 km | 10/20 vs 5/20, p 0.191 | 13/20 vs 5/20, p 0.025 | 23/40 vs 10/40, **p 0.006** |
+| 60 km | 16/20 vs 9/20, p 0.048 | 15/20 vs 6/20, p 0.010 | 31/40 vs 15/40, **p 0.001** |
+
+**Five of six rates landed inside the intervals batch 2 predicted, and the ordering across radii
+held.** The sixth did not — recall at 30 km came in at 55% against a predicted 11–47%. It is recorded
+as a miss, not folded into a general "it replicated", because **it missed in the favourable
+direction**. A pre-registration honoured only when the surprise is unwelcome is not one.
+
+### The caveat that was itself the artefact
+
+§69 said only the 60 km point was distinguishable from chance, and that went into the spec item, the
+notes and the progress note as a limitation of the method. **Pooled over 40 pairs, all three radii
+separate.** The limitation was the sample size.
+
+That is a correction of a correction, and the shape is worth keeping: **a null result on twenty
+paired observations is very often a statement about twenty.** In the same week this project asserted
+a precision that twenty pairs could not support (§69) *and* accepted a null that twenty pairs could
+not establish. Same error, opposite sign.
+
+### What did not change
+
+Pooled Youden's J is **0.23–0.40**. Reliably better than chance now; still nowhere near something to
+act on alone; still incomparable with the radio side's five-sigma separation. The answer to §69's
+question is unchanged — only its statistical footing is.
+
+### The generator fix, on three batches
+
+| Batch | Generator | Recall (all) | `gnss-degradation` | Parked in answer key |
+|---|---|---|---|---|
+| 1 | original | 25% | 37% | 55% |
+| 2 | repaired | 69% | 81% | 2% |
+| 3 | repaired | **81%** | **95%** | **0%** |
+
+And the loss account is settled: of 14 remaining misses in batch 3, 11 are on-ground and 3 below
+threshold — with **nothing** lost to the interior filter, to a missing aircraft, or to an unbracketed
+absence. The on-ground remainder is no longer parked aircraft (they cannot be targeted now) but ones
+that took off or landed mid-window, which is the detector being right.
+
+Staging yield across both repaired batches is 58 of 80 = **72.5%**, so the ~200-runs-for-150-incidents
+sizing in §68 stands. See [[thesis_notes]] and §69.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -4782,6 +4843,7 @@ first — the same condition already set for the recall figure in §66. See [[th
 | **Source record vs observation** | What the emitter produces and what the DAL produces. The first has no provenance, no data mode and no run identifier; the second has all three. `scn-001` emits the first only. |
 | **Track observation** | One replayed row: one aircraft, one instant, one position, one staleness reading. What `ObservationType.TRACK` means. Distinct from a *track*, which is the whole sequence, and from an *aircraft*, which is the thing observed. See §56. |
 | **Zone centre** | The receiver a run's incident is built around, chosen from the run's seed out of the seven in the layout. Shared by both halves of a run, which is what makes the radio anomaly and the track effect co-located by construction. See §55. |
+| **Out-of-sample threshold** | Scoring a new batch at the threshold an earlier batch chose, rather than refitting. The only part of a replication that can genuinely fail — refitting makes every batch agree with itself. See §70. |
 | **Youden's J** | Recall minus false-alarm rate: 0 is a coin flip, 1 is perfect. The track evidence scores 0.15–0.35; an instrument worth acting on wants above 0.6. The one number that says how good a detector is without hiding either half. See §69. |
 | **Rate excess** | The track side's contribution to fusion, replacing cluster size: dropouts per minute inside a disc during a window, over the same disc outside it. Internal to one run and one place, so it needs no external threshold. See §68. |
 | **Staging yield** | The fraction of runs of a staged type that actually stage on something — 75% after the airborne gate. A run that stages nothing is a baseline run wearing the wrong label and must leave every metric, not just recall. See §68. |

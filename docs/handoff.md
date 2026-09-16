@@ -15,7 +15,7 @@ cannot yet do.
 
 ## Current state
 
-**37 of 93 spec items pass.** Backend suite **763 passed at 99.91% coverage** in the container, with
+**37 of 93 spec items pass.** Three batches are stored: runs 1–120 (original generator), 121–180 (base seed 20260916, repaired), 181–240 (base seed 20260917, repaired). Keep all three — batch 1 is the before-evidence for `scn-006` and 2/3 are the replication pair for `anom-012`. Backend suite **763 passed at 99.91% coverage** in the container, with
 ruff, black and mypy clean. Working tree clean at `f7a6126`.
 
 Built and passing this session:
@@ -142,14 +142,16 @@ any container-mounted measurement.
    window, over the same disc outside it. Centre and window come from a detected RF episode, never
    from ground truth (`api-009`). Measured before it was specified, over 20 seed-matched pairs:
    30 km catches 5 of 20 staged and fires on 2 of 20 controls; 45 km, 10 and 5; 60 km, 16 and 9.
-   **Do not fix a radius from that curve.** Fisher's exact gives p=0.407, 0.191 and 0.048 — only the
-   widest point separates from its control at all — and Wilson intervals are about ±20 points, so
-   choosing a radius from it would be choosing from noise. A second independently seeded batch is
-   required first, on `anom-011`'s terms. Youden's J is 0.15–0.35 against a scale where 0 is a coin
-   flip; the radio side of the same system is beyond five sigma, so **the two halves of the fusion
-   evidence are not comparable in strength** and `anom-005` must not treat them as equal votes. The
-   direction of the false-attribution improvement is supported (14/20 [48–85] against 2/20 [3–30]);
-   the headline "70% to 10%" was overstated when first written and is corrected in `qa.md` §69.
+   **Replicated on batch 3** (base seed 20260917), scored out of sample at batch 2's thresholds:
+   11/20 vs 5/20 at 30 km, 13/20 vs 5/20 at 45 km, 15/20 vs 6/20 at 60 km. Five of six rates inside
+   batch 2's intervals and the ordering preserved; recall at 30 km missed high (55% against [11–47])
+   and is recorded as a miss. **Pooled over 40 pairs all three radii separate** — p = 0.047, 0.006,
+   0.001 — which supersedes the earlier finding that only 60 km did; that was sample size, not
+   method. Youden's J pooled is 0.23–0.40 against a scale where 0 is a coin flip, so the rule is
+   reliably better than chance and still far from actionable alone. The radio side is beyond five
+   sigma, so **the two halves of the fusion evidence are not comparable in strength** and `anom-005`
+   must not treat them as equal votes. The curve is now firm enough to choose a radius from; the
+   choice belongs to step 2.
 2. **Settle the ordering of `anom-005`, `anom-006` and `anom-007` before fixing any threshold.**
    `anom-007` separates a sensor fault from interference on the **RF pattern alone** — one sensor
    abnormal, spatial neighbours nominal — which is a far stronger signal than any track evidence
