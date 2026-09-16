@@ -104,6 +104,7 @@ def _record(
     contact_staleness_s: float = 0.0,
     lat: float = _CENTRE.lat,
     lon: float = _CENTRE.lon,
+    on_ground: bool = False,
 ) -> dict[str, Any]:
     """One track source record, in the shape the OpenSky adapter emits.
 
@@ -123,7 +124,7 @@ def _record(
             "velocity_ms": 194.26,
             "heading_deg": 135.64,
             "vertical_rate_ms": 13.33,
-            "on_ground": False,
+            "on_ground": on_ground,
             "position_staleness_s": position_staleness_s,
             "contact_staleness_s": contact_staleness_s,
         },
@@ -466,3 +467,110 @@ def test_replay_window_applies_a_transform_and_honours_a_drop(
     assert result.accepted == 2
     assert result.quarantined == 0
     assert len(repository.observations) == 2
+
+
+# --------------------------------------------------- staging only on flight
+#
+# Spec: scn-006. The targeting asked one question -- is this inside the zone --
+# and an aircraft parked at an airfield inside it was targeted like one flying
+# through. Measured across 77 staged runs, **209 of 381 aircraft the answer key
+# called staged were on the ground for every report of the run**: 55 per cent
+# of every injection landed where nothing could be detected.
+#
+# `anom-010` then refuses them, correctly, because an aircraft on the ground
+# stopped reporting when it was switched off and its stale position is
+# indistinguishable from that. Both components behave as specified and the
+# combination guarantees a false negative, which is why the fix goes in the
+# targeting rather than in the metrics.
+
+
+def _targeted_icao(spec: RunSpec, count: int = 200) -> str:
+    """An identifier this run would actually stage on."""
+    perturber = _perturber(spec)
+    for index in range(count):
+        if perturber.targets(f"{index:06x}"):
+            return f"{index:06x}"
+    raise AssertionError("this run targets nothing in the synthetic fleet")
+
+
+def test_a_record_from_an_aircraft_on_the_ground_is_left_alone() -> None:
+    """The record passes every other gate -- in the window, inside the zone,
+    drawn as a target -- and is still untouched."""
+    # spec: scn-006
+    spec = _spec()
+    perturber = _perturber(spec)
+    icao = _targeted_icao(spec)
+
+    grounded = perturber.apply(_record(icao24=icao, on_ground=True))
+
+    assert grounded == _record(icao24=icao, on_ground=True)
+
+
+def test_an_aircraft_on_the_ground_never_reaches_the_answer_key() -> None:
+    """The half that matters. A parked aircraft left in the key is a
+    guaranteed false negative in `eval-002`, and filtering it out afterwards
+    would leave the perturbed record in the run with nothing naming it."""
+    # spec: scn-006, scn-002, eval-002
+    spec = _spec()
+    perturber = _perturber(spec)
+    icao = _targeted_icao(spec)
+
+    perturber.apply(_record(icao24=icao, on_ground=True))
+
+    assert perturber.affected == frozenset()
+
+
+def test_the_same_aircraft_is_staged_on_once_it_is_flying() -> None:
+    """An aircraft airborne for part of the window is eligible for that part.
+    It is detectable while it was flying, so excluding it wholesale would trade
+    one bias for another."""
+    # spec: scn-006
+    spec = _spec(scenario_type=ScenarioType.GNSS_DEGRADATION)
+    perturber = _perturber(spec)
+    icao = _targeted_icao(spec)
+
+    perturber.apply(_record(icao24=icao, on_ground=True))
+    assert perturber.affected == frozenset()
+
+    airborne = perturber.apply(_record(icao24=icao, on_ground=False))
+
+    assert airborne is not None
+    assert airborne["payload"]["position_staleness_s"] > 1.06
+    assert len(perturber.affected) == 1
+
+
+def test_suppression_does_not_remove_a_grounded_record() -> None:
+    """`aircraft-coverage-gap` stages by suppressing rows. Suppressing a parked
+    aircraft's rows would stage a disruption on something that cannot be
+    disrupted, and the answer key would not name it."""
+    # spec: scn-006, scn-002
+    spec = _spec(scenario_type=ScenarioType.AIRCRAFT_COVERAGE_GAP)
+    perturber = _perturber(spec)
+    icao = _targeted_icao(spec)
+
+    assert perturber.apply(_record(icao24=icao, on_ground=True)) is not None
+    assert perturber.apply(_record(icao24=icao, on_ground=False)) is None
+
+
+def test_the_ground_test_does_not_change_which_aircraft_are_drawn() -> None:
+    """The draw stays a function of the seed and the aircraft's identity, so a
+    run remains reproducible from its seed (NFR-601). The ground test decides
+    whether a *record* is perturbed, not whether an aircraft is eligible."""
+    # spec: scn-006, NFR-601
+    spec = _spec()
+
+    assert _targeted_aircraft(spec) == _targeted_aircraft(spec)
+    assert _perturber(spec).targets(_targeted_icao(spec))
+
+
+def test_a_grounded_record_outside_the_zone_is_still_left_alone() -> None:
+    """The gates compose rather than replacing one another."""
+    # spec: scn-006
+    spec = _spec()
+    perturber = _perturber(spec)
+    icao = _targeted_icao(spec)
+
+    far = _record(icao24=icao, on_ground=True, lat=49.2, lon=3.2)
+
+    assert perturber.apply(far) == far
+    assert perturber.affected == frozenset()
