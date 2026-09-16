@@ -4286,6 +4286,81 @@ nothing rather than staging on an ineligible aircraft — but it means a batch y
 than it did, and the evaluation's target of 100 to 150 staged incidents now needs roughly a quarter
 more runs than a naive count suggests. Worth carrying into the campaign plan.
 
+### Changing the question rather than the parameters
+
+With clustering shown not to discriminate even after the generator was repaired, two routes were
+available and the choice between them is a methodological one rather than a technical one.
+
+The first was to make the signal bigger: split the incident radius, which is one number serving two
+contradictory requirements, and raise the eight per cent affected fraction until staged clusters
+stand out from background clusters. It would probably work. It was rejected because the parameter
+would then have been chosen by searching for a value at which the detector succeeds, and every
+detection metric afterwards would be partly a measurement of that search. An examiner asking how the
+affected fraction was set deserves a better answer than "we raised it until detection worked".
+
+The second was to change the question the track side is asked. Cluster size asks *is there a large
+group here*, and answers it against an absolute standard that the background already meets. The
+replacement asks *at this place, is the rate of discontinuities higher during the window than at the
+same place outside it* — a comparison internal to one run and one location, which makes each run its
+own control on both axes and needs no absolute threshold calibrated against anything external.
+
+**Measured before being specified**, over 20 seed-matched pairs in the repaired batch:
+
+| Radius | Staged runs caught | Control runs that fired |
+|---|---|---|
+| 30 km | 5 of 20 (25%) | **2 of 20 (10%)** |
+| 45 km | 10 of 20 (50%) | 5 of 20 (25%) |
+| 60 km | 16 of 20 (80%) | 9 of 20 (45%) |
+
+As a standalone detector that is poor, and saying so is the point of recording both columns. What
+makes it worth building is the comparison with what it replaces. `anom-005` as specified fires when
+an RF anomaly has any co-located track cluster, and a background cluster lies within the fusion
+radius on **70 per cent** of the runs whose truth is a sensor fault — the rule would misattribute
+most of them, and being mutually exclusive with `anom-006` for the same cluster, would take them from
+that rule as well. At 30 km the rate excess fires on **10 per cent** of those same controls.
+
+**The improvement is in false attribution, not in sensitivity**, and that is the failure that
+mattered. A detection layer whose whole claim is explainability is damaged more by confidently
+reporting interference where a sensor is broken than by missing an incident quietly.
+
+### A confound found, measured, and then deliberately not engineered around
+
+The naive form of the test is confounded. The incident window sits in the middle of a run, and a gap
+measured as an absence needs a report either side of it, so findings are easier to detect mid-run
+than at its edges. Control runs therefore score a ratio above one — 2.95 at a 60 km radius — purely
+from where the window sits.
+
+The obvious correction is a difference-in-differences: divide the disc's during-versus-outside ratio
+by the same ratio computed over the rest of the box, which shares the temporal edge effect and not
+the incident. It is more defensible in principle and it was implemented and measured alongside the
+naive form.
+
+It makes no difference. Separation by Youden's J is **+0.35 for both forms at 60 km** and **+0.25 for
+both at 45 km**; the correction rescales the scores without reordering them, because the edge effect
+applies almost equally to the disc and to its complement. The simpler form was kept and the confound
+is recorded rather than engineered around — which is the right outcome for a thesis, since the more
+elaborate estimator would have looked more rigorous while measuring the same thing.
+
+### The discrimination the track side may not have to carry
+
+One observation recorded while measuring, and deliberately not acted on yet, because acting on it
+would change three items at once.
+
+The hard case throughout has been telling a sensor fault from environmental interference, and the
+track side has been asked to do it: `anom-005` claims the run when track evidence is co-located and
+`anom-006` when it is not. But `anom-007` separates the same two causes from the **RF pattern alone**
+— one sensor abnormal with its spatial neighbours nominal is a fault; several adjacent sensors
+abnormal together is the environment. On this generator that is an eight-decibel elevation on a
+single sensor against clean neighbours, which is a far stronger signal than any track evidence
+measured in this session.
+
+If `anom-007` claims the sensor-fault runs first, the track side is no longer the discriminator for
+that case, and `anom-012`'s threshold can be read from the sensitive end of its curve rather than the
+specific end — 16 of 20 staged runs caught at 60 km, rather than 5 of 20 at 30 km, with the false
+attributions that would have caused already removed by a different rule. The ordering between the
+three fusion rules therefore has to be settled before any of their thresholds are fixed, and it has
+never been written down.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;

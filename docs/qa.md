@@ -4514,6 +4514,72 @@ correctly attributed reportable anomaly. The number an examiner will actually wa
 and it cannot exist until the fusion rules do. See §63 for the distinction and §66 for why the figure
 moved.
 
+## 68. Go with route B — change the question rather than the scenario parameters
+
+**Chosen, and measured before being written down.** The decision, what it buys, and what it does not.
+
+### The two routes
+
+| | What it does | Why it was or was not chosen |
+|---|---|---|
+| **A — bigger signal** | Split the incident radius, raise the 8% affected fraction until staged clusters stand out | **Rejected.** The parameter would have been chosen by searching for a value at which the detector succeeds, making every later metric partly a measurement of that search. |
+| **B — different question** ⭐ | Ask *"at this place, is the rate of dropouts higher during the window than at the same place outside it?"* | **Chosen.** Each run becomes its own control on both axes — place and time — so no threshold has to be calibrated against anything external. |
+
+### What it actually buys, both columns
+
+| Radius | Staged runs caught | Control runs that fired |
+|---|---|---|
+| 30 km | 5 of 20 (25%) | **2 of 20 (10%)** |
+| 45 km | 10 of 20 (50%) | 5 of 20 (25%) |
+| 60 km | 16 of 20 (80%) | 9 of 20 (45%) |
+
+**As a standalone detector this is poor, and the second column is printed for that reason.** What
+makes it worth building is the comparison with what it replaces: the fusion rule as specified fires
+on any co-located cluster, and a background cluster sits in fusion range on **70%** of the runs whose
+truth is a sensor fault. At 30 km the rate excess fires on **10%** of those same runs.
+
+**The gain is in false attribution, not in sensitivity.** For a system whose claim is explainability,
+confidently reporting interference where a sensor is broken is a worse failure than quietly missing
+an incident.
+
+### A confound that turned out not to matter
+
+The window sits mid-run, and a gap needs a report either side to be seen, so findings are easier to
+detect in the middle than at the edges — control runs score a ratio of 2.95 from that alone. The
+textbook correction is a difference-in-differences against the rest of the box.
+
+Measured, it changes **nothing**: separation is +0.35 for both forms at 60 km, +0.25 for both at
+45 km. The correction rescales without reordering. The simpler form is kept and the confound is
+recorded — the more elaborate estimator would have looked more rigorous while measuring the same
+thing, which is worth knowing before it appears in a methods chapter.
+
+### The campaign sizing question
+
+With parked aircraft ineligible, **10 of 40 runs now stage nothing** — a 75% yield.
+
+| | |
+|---|---|
+| Target staged incidents | 150 |
+| Runs needed | **~200** |
+| Staged aircraft available | ~315 |
+| Extra compute | ~35 minutes |
+
+The count is the easy part. The part that matters: **a run of a staged type that staged nothing is a
+baseline run wearing the wrong label.** It must be excluded from *every* metric, not just recall —
+counting it in precision or the false-positive rate would score a rule that correctly reported
+nothing as having missed something. `eval-002` is amended to require the exclusion count be printed
+alongside the metrics.
+
+### One thing deliberately left open
+
+The hard case has always been telling a sensor fault from interference, and the track side has been
+asked to do it. But the sensor-fault rule separates those two causes from the **radio pattern alone**
+— one sensor abnormal with clean neighbours is a fault — which is a far stronger signal than any
+track evidence measured here. If that rule claims those runs first, the track threshold can be read
+from the *sensitive* end of the curve instead of the specific end. **The ordering between the three
+fusion rules has never been written down, and has to be before any threshold is fixed.** See
+[[thesis_notes]] and §66.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -4659,6 +4725,8 @@ moved.
 | **Source record vs observation** | What the emitter produces and what the DAL produces. The first has no provenance, no data mode and no run identifier; the second has all three. `scn-001` emits the first only. |
 | **Track observation** | One replayed row: one aircraft, one instant, one position, one staleness reading. What `ObservationType.TRACK` means. Distinct from a *track*, which is the whole sequence, and from an *aircraft*, which is the thing observed. See §56. |
 | **Zone centre** | The receiver a run's incident is built around, chosen from the run's seed out of the seven in the layout. Shared by both halves of a run, which is what makes the radio anomaly and the track effect co-located by construction. See §55. |
+| **Rate excess** | The track side's contribution to fusion, replacing cluster size: dropouts per minute inside a disc during a window, over the same disc outside it. Internal to one run and one place, so it needs no external threshold. See §68. |
+| **Staging yield** | The fraction of runs of a staged type that actually stage on something — 75% after the airborne gate. A run that stages nothing is a baseline run wearing the wrong label and must leave every metric, not just recall. See §68. |
 | **Injection** | What the generator does to a run: perturbing records and recording what was perturbed. Distinct from an **anomaly**, which is what a detector reports — nothing is an anomaly until something detects it. See §67. |
 | **Prevalence** | The fraction of all cases that are actual positives — here about 8%, the affected fraction the generator draws against. A property of the scenario design, and routinely confused with recall, whose denominator is the positives alone. See §67. |
 | **The generator** | The machinery that builds a run — zone, targets, perturbation, answer key. One piece of software, distinct from the five **scenario types**, which are parameters handed to it. A defect in shared targeting therefore appears in every type at once. See §67. |
