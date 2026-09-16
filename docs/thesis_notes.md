@@ -4213,6 +4213,79 @@ that ordering. A result that arrives overwhelmingly in one bucket deserves a sec
 designed to falsify it, and this is the second time in two days that doing so changed the
 conclusion.)*
 
+### A prediction recorded in advance, and falsified on the first test
+
+`scn-006` was written with a falsifiable prediction attached, and the prediction was wrong. Recording
+it in full, because a prediction that is only reported when it succeeds is not evidence, and the
+reason it failed is more useful than the prediction would have been.
+
+**The prediction.** `anom-004` measured no separation between a staged run and its seed-matched
+control at any radius from 5 to 60 km. That measurement was taken on runs where 55 per cent of the
+intended signal was never present, because the generator was staging on parked aircraft. Repairing
+the targeting should roughly double the detected staged findings per run, and that might make
+clustering discriminate. It was recorded as something to re-measure after the fix and to report
+whichever way it fell.
+
+**The fix worked, measured on a second independently seeded batch of 60 runs:**
+
+| | Batch 1 (original) | Batch 2 (airborne gate) |
+|---|---|---|
+| Parked aircraft in the answer key | 209 of 381 (55%) | 1 of 62 (2%) |
+| Recall, `gnss-degradation` | 37% | **81%** |
+| Recall, `aircraft-coverage-gap` | 23% | 58% |
+| Recall, all types | 25% | **69%** |
+
+**And clustering still does not discriminate.** Over twenty seed-matched triples, staged minus
+control on the largest cluster a run produces:
+
+| Radius | `gnss-degradation` | `aircraft-coverage-gap` |
+|---|---|---|
+| 5 km | +0.05 (1 of 20 triples) | +0.05 (1 of 20) |
+| 20 km | +0.10 (1 of 20) | +0.10 (1 of 20) |
+| 60 km | +0.40 (3 of 20) | +0.30 (3 of 20) |
+
+The explanation is arithmetic that was available before the prediction was made, and was not done:
+
+| | Batch 1 | Batch 2 |
+|---|---|---|
+| Staged aircraft per staging run | 4.9 | 2.1 |
+| Recall | 25% | 69% |
+| **Detected staged findings per run** | **1.2** | **1.4** |
+| Background findings per run | ~16 | 15.5 |
+
+**`scn-006` fixed the measurement, not the signal.** It raised recall by removing undetectable targets
+from the *denominator*, not by adding detectable ones to the numerator — the airborne gate discards
+55 per cent of targets, and 69 per cent of the survivors is very nearly the same absolute number as
+25 per cent of all of them. Recall nearly tripled while the quantity clustering depends on moved from
+1.2 to 1.4 findings per run.
+
+That is not an argument against the fix. Recall is now an honest figure rather than one depressed by
+a defect, which it has to be before any evaluation metric built on it means anything, and the answer
+key no longer contains aircraft nothing could detect. It is an argument that two separate problems
+were being read as one, and only the smaller has been solved.
+
+**What the remaining problem actually is.** A cluster needs members, and a run supplies one or two
+against a background of fifteen. No radius helps: the staged findings can at most add one or two
+members to whichever background cluster they happen to fall in, and background clusters already reach
+four or five members on their own. The limiting quantity is **how many aircraft a run stages on**,
+which is set by the affected fraction of eight per cent, the zone radius of 60 km, and how much
+traffic happens to be inside that zone during the window. None of those three has been chosen with
+this constraint in mind, and the measurement that would settle them — how many co-located
+discontinuities are needed before a cluster is distinguishable from the background — has not been
+taken.
+
+*(Recorded as an open question rather than answered, and deliberately not fixed by raising the
+affected fraction until the required number is known. Tuning a scenario parameter until a detector
+succeeds on it is the failure this project has avoided four times now, and doing it here would make
+every detection metric a measurement of the tuning.)*
+
+**A second consequence of the fix, which is a cost rather than a benefit.** With parked aircraft no
+longer eligible, more runs stage nothing at all: 10 of 40 in batch 2 against 3 of 80 in batch 1. That
+is `scn-006` behaving as specified — a run whose eligible target set is empty records that it staged
+nothing rather than staging on an ineligible aircraft — but it means a batch yields fewer usable runs
+than it did, and the evaluation's target of 100 to 150 staged incidents now needs roughly a quarter
+more runs than a naive count suggests. Worth carrying into the campaign plan.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;
