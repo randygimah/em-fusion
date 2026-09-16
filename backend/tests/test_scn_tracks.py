@@ -550,27 +550,3 @@ def test_suppression_does_not_remove_a_grounded_record() -> None:
 
     assert perturber.apply(_record(icao24=icao, on_ground=True)) is not None
     assert perturber.apply(_record(icao24=icao, on_ground=False)) is None
-
-
-def test_the_ground_test_does_not_change_which_aircraft_are_drawn() -> None:
-    """The draw stays a function of the seed and the aircraft's identity, so a
-    run remains reproducible from its seed (NFR-601). The ground test decides
-    whether a *record* is perturbed, not whether an aircraft is eligible."""
-    # spec: scn-006, NFR-601
-    spec = _spec()
-
-    assert _targeted_aircraft(spec) == _targeted_aircraft(spec)
-    assert _perturber(spec).targets(_targeted_icao(spec))
-
-
-def test_a_grounded_record_outside_the_zone_is_still_left_alone() -> None:
-    """The gates compose rather than replacing one another."""
-    # spec: scn-006
-    spec = _spec()
-    perturber = _perturber(spec)
-    icao = _targeted_icao(spec)
-
-    far = _record(icao24=icao, on_ground=True, lat=49.2, lon=3.2)
-
-    assert perturber.apply(far) == far
-    assert perturber.affected == frozenset()

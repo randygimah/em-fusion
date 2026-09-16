@@ -5,6 +5,11 @@ different kind of act and is why the two live apart. Two of the five scenario
 types alter the replayed stream, and they alter it in ways that must stay
 distinguishable:
 
+**Only aircraft in flight are staged on** (`scn-006`). The zone test asks
+where an aircraft is; it took a measurement to notice it was not also
+asking whether the aircraft was flying, and that 55 per cent of every
+injection was landing on something parked.
+
 * **`aircraft-coverage-gap` suppresses rows.** The aircraft stops being heard
   from at all, so both staleness clocks run on together. This is what
   `anom-006` should read as a data-source problem.
@@ -217,6 +222,26 @@ class TrackPerturber:
 
         location = record.get("location") or {}
         if not self._perturbation.contains(location.get("lat"), location.get("lon")):
+            return dict(record)
+
+        # Airborne, or nothing happens. Spec: scn-006. This gate sits *above*
+        # the answer key rather than beside the metrics, and the placement is
+        # the whole point: a parked aircraft that were merely excused later
+        # would still carry a perturbed record that no ground truth names.
+        #
+        # Measured before this existed: of 381 aircraft the key called staged,
+        # 209 were on the ground for every report of the run. The zone test
+        # asks where an aircraft is and nothing else, so one parked at an
+        # airfield inside the zone was targeted like one flying through it --
+        # and `anom-010` then refused it, correctly, because an aircraft on the
+        # ground stopped reporting when it was switched off. Two components
+        # each behaving as specified, combining into a guaranteed false
+        # negative.
+        #
+        # Per record, not per aircraft: one that takes off inside the window is
+        # eligible for the part it was flying, and excluding it wholesale would
+        # trade one bias for another.
+        if record["payload"].get("on_ground"):
             return dict(record)
 
         identifier = record["payload"].get("icao24")
