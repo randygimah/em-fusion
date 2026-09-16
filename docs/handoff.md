@@ -15,7 +15,7 @@ cannot yet do.
 
 ## Current state
 
-**37 of 92 spec items pass.** Backend suite **763 passed at 99.91% coverage** in the container, with
+**37 of 93 spec items pass.** Backend suite **763 passed at 99.91% coverage** in the container, with
 ruff, black and mypy clean. Working tree clean at `f7a6126`.
 
 Built and passing this session:
@@ -90,7 +90,7 @@ Files added: `backend/app/detection/{baseline,rf_noise,track_gap,findings,cluste
 Docs: `thesis_notes.md` gained 23 subsections; `qa.md` entries 60–67 and 13 glossary terms;
 `implementation.md` the Phase 8 ordering note and ticks; `CLAUDE.md` a **new agent instruction** —
 explain an item in plain terms before building it, as chat output, never as a file. Progress note at
-version 20.
+version 21.
 
 ## Failed attempts
 
@@ -136,26 +136,30 @@ any container-mounted measurement.
 
 ## Next step
 
-The detection layer is blocked on one question, and it is not a coding question.
+**Route B was chosen and measured; `anom-012` is written and unbuilt.** The path is now clear.
 
-1. **Measure the detectability floor.** How many co-located discontinuities are needed before a
-   cluster is distinguishable from a background that already reaches 4–5 members? Until that number
-   exists, every parameter change is tuning. Cheap: it runs on the two stored batches.
-2. **Split the incident radius**, which is a structural defect independent of the above.
-   `IncidentParameters.radius_km` is one number serving two contradictory requirements: the RF side
-   needs it **large** (the `scn-005` band [55.7, 85.7) km, so a zone contains some receivers and
-   excludes others) and the track side needs it **small** (so staged aircraft land near enough to
-   cluster). The track half currently reuses the RF number with no justification of its own — the
-   docstring's entire argument is about receivers. Needs a spec item.
-3. **Then choose between two routes**, and route B is the recommendation:
-   - **A — make the signal bigger**: split the radius and raise the 8% affected fraction. Risks
-     tuning a scenario parameter until the detector succeeds on it, which would make every detection
-     metric a measurement of the tuning.
-   - **B — change the test**: replace "is there a large cluster" with "is the density of
-     discontinuities near the RF anomaly higher than this run's own background density elsewhere".
-     A within-run comparison needs no absolute threshold, uses the run as its own control, and works
-     with the 1.4 extra findings already present. Needs a spec item and probably amends `anom-004`.
-4. **`anom-005`, `anom-006`, `anom-007`** remain gated behind whichever route is taken.
+1. **Build `anom-012`** — the local rate excess. Findings per unit time inside a disc during a
+   window, over the same disc outside it. Centre and window come from a detected RF episode, never
+   from ground truth (`api-009`). Measured before it was specified, over 20 seed-matched pairs:
+   30 km catches 5 of 20 staged and fires on 2 of 20 controls; 45 km, 10 and 5; 60 km, 16 and 9. Poor
+   as a standalone detector, and it cuts false attribution on sensor-fault runs from **70% to 10%**,
+   which is the failure that mattered.
+2. **Settle the ordering of `anom-005`, `anom-006` and `anom-007` before fixing any threshold.**
+   `anom-007` separates a sensor fault from interference on the **RF pattern alone** — one sensor
+   abnormal, spatial neighbours nominal — which is a far stronger signal than any track evidence
+   measured. If it claims those runs first, `anom-012`'s threshold is read from the sensitive end of
+   its curve (16 of 20) rather than the specific end (5 of 20). This has never been written down and
+   needs a decision, possibly a spec item.
+3. **Then `anom-005`** (amended onto `anom-012`), `anom-006`, `anom-007`.
+
+**Rejected, with the reason recorded** so it is not revisited by accident: raising the 8% affected
+fraction or splitting the incident radius until clusters stand out. The radius split is a real
+structural defect — `IncidentParameters.radius_km` is one number serving the RF side's need for a
+**large** zone (the `scn-005` band, so a zone contains some receivers and excludes others) and the
+track side's need for a **small** one, with the track half reusing the RF number and the docstring's
+entire argument being about receivers. It is worth fixing on its own merits, but **not** as a route
+to making clustering work: a parameter chosen by searching for a value where the detector succeeds
+makes every later metric a measurement of that search.
 
 Owed, unowned:
 
