@@ -4142,6 +4142,77 @@ The defensive form was kept in the code. `min()` does not depend on `db-009`'s o
 holding, and a later change to that ordering — which is a property of a different module, tested
 elsewhere — would silently break the indexed form while leaving every test in this file green.
 
+### Twenty-one per cent was the right number attached to the wrong cause
+
+`anom-011` was written to explain a recall figure, and the explanation reverses the conclusion the
+figure had been used to support. Recorded here in full, because the reversal is more useful than
+either endpoint.
+
+The position at the end of `anom-004` was that clustering cannot discriminate because `TRACK-GAP`
+recall is 21 per cent, and that the detector was therefore too insensitive for any rule above it to
+work. The first half stands. The second was wrong, and wrong in the specific way this item exists to
+prevent: a cause had been *named* — detector sensitivity — rather than counted.
+
+Counting it gives an answer that is almost entirely one thing. Across 77 staged runs of the three
+track-perturbing types, the loss breakdown for 286 undetected staged aircraft is:
+
+| Where the aircraft went | Count | Share |
+|---|---|---|
+| On the ground | 258 | 90% |
+| Gap under the threshold | 26 | 9% |
+| Position stale but contact not fresh | 2 | 1% |
+| Never appeared in the run | 0 | — |
+| No report to bracket the absence | 0 | — |
+| Near the edge of the box | 0 | — |
+
+Ninety per cent in one bucket was suspicious rather than conclusive, because `ON_GROUND` outranks
+`BELOW_THRESHOLD` in the precedence the harness uses and a single grounded report anywhere in a track
+would claim the attribution. Checking it directly: of the undetected staged aircraft, **92 per cent
+are on the ground in every single one of their reports**, with a median of 86 reports each. Not
+aircraft that took off or landed during the window — aircraft parked for its entirety.
+
+The cause is in the generator, not the detector. The zone test asks whether a reported position falls
+within the staged radius and asks nothing else, so an aircraft parked at an airfield inside the zone
+is targeted exactly like one flying through it. `anom-010` then refuses it, correctly: an aircraft on
+the ground stopped reporting because it was switched off, and its stale position is indistinguishable
+from that. Both components are behaving as specified and the combination produces a guaranteed false
+negative.
+
+Restricting the measurement to staged aircraft that were airborne at any point in the run:
+
+| Scenario type | Recall, all staged | Recall, airborne staged |
+|---|---|---|
+| `gnss-degradation` | 37% | **74%** |
+| `ambiguous-mixed-evidence` | 18% | 53% |
+| `aircraft-coverage-gap` | 23% | 46% |
+| All three | 25% | **55%** |
+
+Of 381 aircraft the answer key records as staged, 172 were ever airborne. **Fifty-five per cent of
+every injection lands on an aircraft that cannot be detected**, and the detector that looked
+insensitive at 21 per cent is at 74 on the scenario type whose mechanism is cleanest.
+
+Two things follow, and the second is why this was worth stopping for. The first is `scn-006`: the
+targeting gains an airborne test where the decision is made, following `adp-008`'s precedent of
+keeping unsuitable tracks out of a run rather than correcting the metrics afterwards. The alternative
+— leaving the targeting alone and filtering the answer key — produces identical arithmetic and leaves
+perturbed records in the run that the ground truth does not mention, which is unlabelled staged data
+in a corpus whose entire value is that its key is complete.
+
+The second is that `anom-004`'s null result is now **provisional rather than settled**. It measured
+no separation between a staged run and its matched control at any radius from 5 to 60 km, on runs
+where roughly half the intended signal was never present. Whether doubling the detected staged
+findings per run changes that is unknown, and it is recorded as a falsifiable prediction attached to
+`scn-006` rather than assumed in either direction. The honest summary of where this leaves the
+project is that the fusion rules are still gated — but on a generator fix with a measured effect
+size, rather than on a detector rewrite with none.
+
+*(Method note for the evaluation chapter: the 90 per cent figure was not trusted when it appeared,
+because the harness's own precedence ordering could have produced it. The check that confirmed it —
+counting what fraction of each undetected aircraft's reports were on the ground — is independent of
+that ordering. A result that arrives overwhelmingly in one bucket deserves a second measurement
+designed to falsify it, and this is the second time in two days that doing so changed the
+conclusion.)*
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;

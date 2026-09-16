@@ -4378,6 +4378,65 @@ they were, all three would pass their unit tests against constructed fixtures an
 evaluation time, with the cause two layers below where the failure showed up — which is the most
 expensive possible moment to discover it. See [[thesis_notes]] and §64.
 
+## 66. Correction to §65: the recall was not the detector's fault
+
+**§65 named the wrong cause, and this entry supersedes its conclusion while leaving its measurements
+standing.** §65 is not edited — the reasoning there is what a plausible wrong answer looks like, and
+that is worth keeping.
+
+### What §65 got right and what it got wrong
+
+| Claim in §65 | Verdict |
+|---|---|
+| Intermediate findings cannot reach the AI layer | **Stands** — bundles are built from anomalies |
+| A correctly grounded wrong premise defeats the grounding check | **Stands** |
+| A background cluster sits in fusion range on 70% of sensor-fault runs | **Stands** — measured |
+| Clustering cannot separate staged runs from controls | **Stands, but provisional** — see below |
+| "The background is not too large, the recall is too small" | **Wrong cause named** |
+
+### Where the missing aircraft actually went
+
+Counting the losses rather than naming one, 90% land in a single bucket: the aircraft was **on the
+ground**. That was suspicious rather than conclusive, so it was checked a second way — and of the
+undetected staged aircraft, **92% are on the ground in every single report they make**, with a median
+of 86 reports each. Parked for the entire run, not taking off or landing during it.
+
+The generator's targeting asks whether an aircraft's position is inside the staged zone and asks
+nothing else. An aircraft parked at an airfield in that zone is targeted like one flying through it.
+The detector then refuses it — correctly, because an aircraft on the ground stopped reporting when it
+was switched off, and its stale position is indistinguishable from that.
+
+**Both components behave exactly as specified, and the combination guarantees a false negative.**
+
+### What recall actually is
+
+| Scenario type | All staged aircraft | Aircraft that were airborne |
+|---|---|---|
+| `gnss-degradation` | 37% | **74%** |
+| `ambiguous-mixed-evidence` | 18% | 53% |
+| `aircraft-coverage-gap` | 23% | 46% |
+| All three | 25% | **55%** |
+
+Of 381 aircraft the answer key calls staged, only 172 were ever airborne. **Over half of every
+injection lands where nothing could be detected.**
+
+### What this changes
+
+The fusion rules are still gated, but on something different and much smaller: a generator fix with a
+measured effect size, not a detector rewrite with none. That is `scn-006`.
+
+And the clustering null result becomes **provisional**. It was measured on runs where roughly half
+the intended signal was never present. Whether restoring it changes the answer is recorded as a
+falsifiable prediction to be re-measured after `scn-006`, and reported whichever way it falls — not
+assumed in either direction, which is the mistake this entry is correcting.
+
+### The transferable lesson
+
+A result arriving overwhelmingly in one bucket deserves a second measurement **designed to falsify
+it**. Here the harness's own ranking of reasons could have manufactured the 90%; the check that
+confirmed it counted something the ranking cannot touch. This is the second time in two days that
+doing so changed the conclusion. See [[thesis_notes]] and §65.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
