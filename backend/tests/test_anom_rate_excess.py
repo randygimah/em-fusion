@@ -28,10 +28,10 @@ import dataclasses
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from alembic import command
 from sqlalchemy import Engine, text
 from sqlalchemy.orm import sessionmaker
 
+from alembic import command
 from app.dal.models import Location
 from app.db.findings import save_findings
 from app.db.migrations import alembic_config
@@ -207,7 +207,11 @@ def test_a_finding_overlapping_the_window_counts_as_during(
 @requires_database
 def test_findings_outside_the_radius_are_not_counted(factory: sessionmaker) -> None:
     # spec: anom-012, db-004
-    store(factory, finding(subject="near", at=200), finding(subject="far", at=200, location=FAR))
+    store(
+        factory,
+        finding(subject="near", at=200),
+        finding(subject="far", at=200, location=FAR),
+    )
 
     result = measure(factory)
 
@@ -221,7 +225,11 @@ def test_the_radius_is_a_parameter(factory: sessionmaker) -> None:
     is not fixed here: which point on the trade-off curve is right depends
     on `anom-013`'s ordering, which is unsettled."""
     # spec: anom-012, anom-013
-    store(factory, finding(subject="near", at=200), finding(subject="far", at=200, location=FAR))
+    store(
+        factory,
+        finding(subject="near", at=200),
+        finding(subject="far", at=200, location=FAR),
+    )
 
     assert measure(factory, policy=ExcessPolicy(radius_km=30.0)).during == 1
     assert measure(factory, policy=ExcessPolicy(radius_km=200.0)).during == 2
