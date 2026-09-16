@@ -4437,6 +4437,83 @@ it**. Here the harness's own ranking of reasons could have manufactured the 90%;
 confirmed it counted something the ranking cannot touch. This is the second time in two days that
 doing so changed the conclusion. See [[thesis_notes]] and §65.
 
+## 67. So most staged anomalies were on aircraft on the ground, scn-006 makes it stage only on
+airborne ones, and recall is the fraction of actual positive cases over all cases in the dataset?
+
+**The first two are right. The third is prevalence, not recall — and the difference matters for the
+evaluation chapter.** Three separations are worth making explicit, because two of them are wording
+that will end up in the dissertation.
+
+### "The generator" is not "the scenario types"
+
+| Term | What it is |
+|---|---|
+| **The generator** | The machinery. One piece of software that picks the zone from the seed, chooses which aircraft to stage on, perturbs their records, and writes the answer key. |
+| **A scenario type** | A parameter handed to it — one of five. It decides *what* is staged, not *how* targets are chosen. |
+
+This is why one defect showed up in all three track-perturbing types at once: the targeting code is
+shared, and the scenario type only decides whether the perturbation freezes the position clock
+(`gnss-degradation`) or suppresses the rows (`aircraft-coverage-gap`, `ambiguous-mixed-evidence`).
+
+### An injection is not an anomaly
+
+Worth keeping straight throughout the write-up. The generator performs an **injection** — it
+perturbs records and records what it perturbed. An **anomaly** is what a detector reports. Nothing is
+an anomaly until something detects it, and most of these injections never became one.
+
+### The measured figures
+
+| Scenario type | Staged | Ever airborne | Parked throughout |
+|---|---|---|---|
+| `aircraft-coverage-gap` | 182 | 89 | 51% |
+| `ambiguous-mixed-evidence` | 104 | 36 | 65% |
+| `gnss-degradation` | 95 | 47 | 51% |
+| All three | 381 | 172 | **55%** |
+
+And yes — `scn-006` moves the airborne test to where the target is chosen, so a parked aircraft is
+never picked, rather than being picked and then excused afterwards. See §66 for why filtering the
+answer key instead was rejected.
+
+### Recall, precisely
+
+**Recall = TP / (TP + FN).** The denominator is *only the actual positives*, never all cases.
+
+| Term | Here |
+|---|---|
+| **TP** | A staged aircraft the detector raised a finding for |
+| **FN** | A staged aircraft it raised nothing for |
+| **Denominator** | Every aircraft the answer key says was staged, and nothing else |
+
+So "74% recall for `gnss-degradation`" reads as: *of the aircraft actually disrupted, roughly three
+in four were found.* Aircraft that were never touched appear nowhere in that fraction — which is
+exactly why parked targets were so costly. They sat in the denominator as guaranteed failures while
+having nothing to do with detection quality.
+
+**What was described instead — actual positives over all cases — is prevalence**, the base rate. Here
+that is about 8 per cent, the affected fraction the generator draws against, and it is a property of
+the scenario design rather than of the detector.
+
+### The three numbers that are easy to conflate
+
+| Measure | Formula | The question it answers |
+|---|---|---|
+| **Recall** (sensitivity, TPR) | TP / (TP + FN) | Of what was there, how much did we find? |
+| **Precision** | TP / (TP + FP) | Of what we reported, how much was real? |
+| **False-positive rate** | FP / (FP + TN) | How often do we cry wolf on a clean run? |
+
+Recall says nothing about false alarms and precision says nothing about misses; a detector that
+reports everything scores perfectly on the first and terribly on the second. `eval-002` asks for
+precision, recall, F1 and FPR together for that reason, and `anom-008`'s zero-on-a-clean-run control
+is the third column rather than the first.
+
+### Two caveats that belong beside the figure
+
+The 74 per cent is **per aircraft**, not per run and not per anomaly — a run staging on nine aircraft
+contributes nine entries, not one. And it is recall of an **intermediate finding**, not of a
+correctly attributed reportable anomaly. The number an examiner will actually want is the second one,
+and it cannot exist until the fusion rules do. See §63 for the distinction and §66 for why the figure
+moved.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -4582,6 +4659,9 @@ doing so changed the conclusion. See [[thesis_notes]] and §65.
 | **Source record vs observation** | What the emitter produces and what the DAL produces. The first has no provenance, no data mode and no run identifier; the second has all three. `scn-001` emits the first only. |
 | **Track observation** | One replayed row: one aircraft, one instant, one position, one staleness reading. What `ObservationType.TRACK` means. Distinct from a *track*, which is the whole sequence, and from an *aircraft*, which is the thing observed. See §56. |
 | **Zone centre** | The receiver a run's incident is built around, chosen from the run's seed out of the seven in the layout. Shared by both halves of a run, which is what makes the radio anomaly and the track effect co-located by construction. See §55. |
+| **Injection** | What the generator does to a run: perturbing records and recording what was perturbed. Distinct from an **anomaly**, which is what a detector reports — nothing is an anomaly until something detects it. See §67. |
+| **Prevalence** | The fraction of all cases that are actual positives — here about 8%, the affected fraction the generator draws against. A property of the scenario design, and routinely confused with recall, whose denominator is the positives alone. See §67. |
+| **The generator** | The machinery that builds a run — zone, targets, perturbation, answer key. One piece of software, distinct from the five **scenario types**, which are parameters handed to it. A defect in shared targeting therefore appears in every type at once. See §67. |
 | **Correctly grounded wrong premise** | An explanation in which every claim really does trace to the evidence supplied, while the evidence itself was assembled by a rule that misread the situation. The failure mode the grounding check cannot see, and the reason a passing grounding rate is not by itself a claim about correctness. See §65. |
 | **Matched control** (track side) | An `rf-sensor-fault` run at the same seed as a staged run: same corpus window, same aircraft, nothing staged on tracks. Used in place of a `normal-baseline` run, which in the stored batch shares a seed with nothing and so replays different traffic. See §65. |
 | **Transitive closure grouping** | Grouping where membership chains: if A is near B and B is near C, all three are one group even when A and C are far apart. What the clustering query does, and the reason a cluster can span much more than the radius that produced it. See §64. |
