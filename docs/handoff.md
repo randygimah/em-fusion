@@ -8,162 +8,166 @@ detects deviations with deterministic rules, and turns evidence bundles into sch
 grounding-checked AI hypotheses an analyst reviews. It is decision support, not autonomous
 decision-making.
 
-This session opened Phase 8, the detection layer. It set out to correct three backlog defects found
-while reading the phase, then build the phase's foundations in dependency order rather than in
-identifier order: the baseline engine, the two rules that sit on it, the storage every rule needs,
-and the two spatial queries the fusion rules will sit on.
+This session built Phase 8's foundations in dependency order — baseline, the two rules, storage, the
+two spatial queries — and then spent its second half on a chain of measurements that overturned three
+assumptions the phase had been built on. The detection layer now works and is honest about what it
+cannot yet do.
 
 ## Current state
 
-**35 of 90 spec items pass.** The backend suite is **724 passed at 99.90% coverage** in the
-container, with ruff, black and mypy all clean.
+**37 of 92 spec items pass.** Backend suite **763 passed at 99.91% coverage** in the container, with
+ruff, black and mypy clean. Working tree clean at `f7a6126`.
 
-Built and passing this session, in build order:
+Built and passing this session:
 
-| Item | What it is | Tests | Module coverage |
+| Item | What it is | Tests | Mutations |
 |---|---|---|---|
-| `anom-002` | Rolling-average baseline, per sensor per channel | 27 | 100% |
-| `anom-001` | `RF-NOISE` threshold rule | 28 | 100% |
-| `anom-010` | `TRACK-GAP` continuity rule (new item — FR-304 had none) | 28 | 100% |
-| `db-008` | `detection_findings` table, canonical finding, write and read | 17 | 100% |
-| `db-004` | PostGIS proximity query (Phase 6's last unticked item) | 15 | 100% |
-| `db-009` | PostGIS clustering (new item, split out of `db-004`) | 21 | 100% |
+| `anom-002` | Rolling-average baseline, per sensor per channel | 27 | — |
+| `anom-001` | `RF-NOISE` threshold rule | 28 | 15/15 |
+| `anom-010` | `TRACK-GAP` continuity rule (new item — FR-304 had none) | 28 | 17/17 |
+| `db-008` | `detection_findings` table and the canonical finding | 17 | — |
+| `db-004` | PostGIS proximity query (Phase 6's last unticked item) | 15 | — |
+| `db-009` | PostGIS clustering (new item, split out of `db-004`) | 21 | 10/10 |
+| `anom-004` | `TRACK-CLUSTER` spatial clustering rule | 16 | 11/12 + 1 equivalent |
+| `anom-011` | Sensitivity harness (new item) | 19 | 13/14 + 1 invalid |
+| `scn-006` | Stage only on aircraft in flight (new item) | 4 | 5/5 |
 
-**Measurements taken this session — do not re-derive these.**
+**The three findings that matter, in the order they were made.**
 
-- The corpus background is **137.7 aircraft per quiet run** with a track discontinuity, over about
-  530 seen. Not ten, which is what `anom-010` was specified against. Staged runs give 141.1, and at
-  a 600 s threshold the quiet runs are *higher* than the staged ones (1.0 against 0.6).
-- The **two-clock discriminator** (stale position with fresh contact) narrows the background to 24.6
-  per run with the staged margin unchanged at 3.4.
-- Baseline cells over a quiet run: 56 cells, 1,800 samples each, cell means spanning **0.177 dB**,
-  cell standard deviations 1.437–1.551. Per-cell and pooled are indistinguishable on quiet data,
-  which is why the granularity tests are built from a constructed loud channel.
-- `ST_DWithin` on geography is **not inclusive at its boundary**. `ST_Distance` returns
-  34338.94037894 m and `ST_DWithin` at exactly that value returns false, with zero drift in the
-  round trip through kilometres.
-- `ST_ClusterWithin` has **no geography overload** — both signatures take geometry and a distance in
-  the SRID's own units. EPSG:3035 costs at most **2.57 m on a 5 km radius** across the corpus box
-  (worst at 54°N 3°E); raw degrees would cost ~62% between the axes at 52°N.
-- A 4326→3035→4326 round trip is **not** exact: longitude 5.0 returns as 4.999999999999997.
-- An unordered window partition let a centroid move **8e-15 degrees (0.9 nm)** between runs of the
-  same input, because `ST_Centroid` sums in collection order and the heap decides that order.
-- Centroid in degrees versus in metres differ by **7.69 m** for a cluster spanning 25 km at 52°N.
-- The `adp-008` exclusion list validated from a second code path: quiet-run gaps filter 164 → 32
-  (airborne) → 23 (interior) → **0** once the list is applied. The 23 belong to 4 aircraft, all on
-  the list, none unlisted.
+1. **Clustering does not discriminate.** Over 8 seed-matched triples in batch 1 and 20 in batch 2,
+   the largest cluster on a staged run equals the largest on its own control in almost every triple,
+   at every radius from 5 to 60 km. `anom-004` was rescoped to an intermediate finding as a result.
+2. **The generator was staging on parked aircraft.** 209 of 381 aircraft the answer key called staged
+   were on the ground for every report of their run — 55% of every injection landing where nothing
+   could be detected. `scn-006` fixes it; measured on a second batch, parked aircraft in the key fall
+   to 2% and recall rises from 25% to 69%, 81% for `gnss-degradation`.
+3. **The prediction attached to `scn-006` was falsified.** Clustering still does not discriminate.
+   The fix raised recall by shrinking the *denominator*, not growing the numerator: detected staged
+   findings per run went 1.2 → 1.4, against a background of 15.5.
 
-**Specified and unbuilt:** `anom-003` (z-score), `anom-004` (spatial clustering), `anom-005`
-(fusion), `anom-006` (source-gap), `anom-007`, `anom-009` (latency), `api-011` (connection-pool
-exhaustion), `evb-*`, and everything downstream of them.
+**Measurements — do not re-derive these.**
 
-**Broken and owed:** the **frontend suite exits non-zero**. `pnpm test` reports 81 passed and then
-fails with `TypeError: control.runs.map is not a function` at `scenarioControl.tsx:344`, raised from
-`navigation.test.tsx`. Two separate pre-existing `api-010` defects: the test stubs `fetch` with a
-single mock resolving `json: async () => operationalPicture` for *every* path, and
-`useScenarioControl` never checks the response is an array, so a 200 with the wrong shape crashes
-the screen rather than degrading it. **Two earlier handoffs stated this suite was green. It was
-not.** It needs a spec item covering both halves.
+- Corpus background: **137.7 aircraft per quiet run** with a track discontinuity (of ~530 seen). The
+  two-clock discriminator narrows it to 24.6 at no cost to the staged margin.
+- After the airborne and interior filters: **~15.5 track-gap findings per run**, staged or not.
+- Baseline cells over a quiet run: 56 cells, 1,800 samples each, means spanning 0.177 dB, sds
+  1.437–1.551. Per-cell and pooled are indistinguishable on quiet data.
+- `ST_DWithin` on geography is **not inclusive at its boundary** (34338.94037894 m returns false).
+- `ST_ClusterWithin` has **no geography overload**. EPSG:3035 costs ≤ 2.57 m on a 5 km radius across
+  the corpus box; raw degrees would cost ~62% between the axes at 52°N.
+- A 4326→3035→4326 round trip is **not** exact: 5.0 returns as 4.999999999999997.
+- An unordered window partition moved a centroid by **8e-15 degrees** between runs of the same input.
+- Background clusters reach **4–5 members** unaided; a run supplies **1–2** staged findings.
+- A background cluster sits within the fusion radius of the faulty sensor on **70% of
+  `rf-sensor-fault` runs** at 60 km.
+- Batch 2 staging yield: **10 of 40 runs stage nothing**, against 3 of 80 in batch 1.
+
+**Database holds two batches.** Batch 1, runs 1–120, original generator. Batch 2, runs 121–180, base
+seed `20260916`, airborne gate active. Keep both: the pair is the before/after evidence for `scn-006`.
+
+**Broken and owed:** the **frontend suite exits non-zero**. `pnpm test` reports 81 passed then fails
+with `TypeError: control.runs.map is not a function` at `scenarioControl.tsx:344`, from
+`navigation.test.tsx`. Two pre-existing `api-010` defects: the test stubs `fetch` with one mock
+resolving `json: async () => operationalPicture` for every path, and `useScenarioControl` never checks
+the response is an array. **Three earlier handoffs said this suite was green. It was not.**
 
 ## Files in flight
 
-None. The working tree is clean at `b9632f3`.
+None. Working tree clean at `f7a6126`.
 
 ## Changed
 
-Commits this session, oldest first:
+Commits, newest first: `f7a6126` docs (scn-006 measured, prediction falsified) · `f503986`
+feat(scn-006) · `0c0a156` test(scn-006) · `e964222` spec(scn-006 + recall correction) · `37145aa`
+feat(anom-011) · `a980fda` feat(anom-004) · `3cd8f04` spec(anom-004 amended, anom-011 added) ·
+`75a03ba` docs(clustering measurement) · `b9632f3` feat(db-009) · `9cfe74d` feat(db-004).
 
-- `spec: add anom-010` and the three backlog corrections that opened the phase
-- `feat(anom-002)`, `feat(anom-001)`, `feat(anom-010)` — baseline and the two rules
-- `spec: add db-008`, `feat(db-008)` — the findings table and canonical shape
-- `spec: amend db-004` (three times), `feat(db-004): the PostGIS proximity query - tests pass` — `9cfe74d`
-- `spec: amend db-009 — ST_ClusterWithin has no geography variant` — `43b0466`
-- `test: add tests for db-009` — `5f611bb`
-- `feat(db-009): PostGIS clustering of detection findings - tests pass` — `b9632f3`
-
-Files added: `backend/app/detection/{baseline,rf_noise,track_gap,findings}.py`,
+Files added: `backend/app/detection/{baseline,rf_noise,track_gap,findings,clustering,sensitivity}.py`,
 `backend/app/db/findings.py`, `backend/alembic/versions/0003_detection_findings.py`,
-`backend/tests/test_anom_{baseline,rf_noise,track_gap}.py`,
+`backend/tests/test_{anom_baseline,anom_rf_noise,anom_track_gap,anom_clustering,anom_sensitivity}.py`,
 `backend/tests/test_db_{findings,proximity,clustering}.py`, `docs/phase8_detection.md`.
 
-Docs: `docs/thesis_notes.md` gained sixteen subsections; `docs/qa.md` gained entries 60–64 and eight
-glossary terms; `docs/implementation.md` gained the Phase 8 ordering note and several ticks;
-`CLAUDE.md` gained the detection package, the db package, the alembic row, the `phase8_detection.md`
-row, and **a new agent instruction**: explain an item in plain terms before building it, as chat
-output and never as a file. The published progress note is at version 19.
-
-New dependency on PostGIS behaviour: EPSG:3035 must be present in `spatial_ref_sys`. It ships with
-the standard image and is asserted implicitly by the clustering tests.
+Docs: `thesis_notes.md` gained 23 subsections; `qa.md` entries 60–67 and 13 glossary terms;
+`implementation.md` the Phase 8 ordering note and ticks; `CLAUDE.md` a **new agent instruction** —
+explain an item in plain terms before building it, as chat output, never as a file. Progress note at
+version 20.
 
 ## Failed attempts
 
-**Four assumptions were confidently wrong and measurement caught each one.** Recording them together
-because the pattern is the point: every one concerned a *dependency* or the *data*, never this
-system's own code.
+**Six assumptions were confidently wrong and measurement caught every one.** All six concerned a
+*dependency* or the *data*; none concerned this project's own code, where claims are made by reading
+it rather than by recalling documentation.
 
-1. **`anom-010` was specified against ten corpus tracks.** The real figure is 137.7 per run — wrong
-   by two orders of magnitude. The item had to be rescoped mid-build from reportable anomalies to
-   intermediate findings, and `anom-008` amended to count only the fused rules.
-2. **`anom-002`'s per-channel requirement was specified as provable against quiet data.** It is not:
-   a pooled implementation reproduces the per-cell numbers to three decimal places.
-3. **`db-004` was amended to claim `ST_DWithin` is inclusive at the boundary**, on the strength of
-   the documentation. The database disagrees. The item now brackets the boundary to metre precision.
-4. **`db-009` specified grouping "on geography" using a function that has no geography overload.**
-   Both halves were written in the same sentence. One catalogue query would have caught it before it
-   became a constraint.
+1. `anom-010` was specified against ten corpus tracks. The real figure is 137.7 per run.
+2. `anom-002`'s per-channel requirement was specified as provable against quiet data. It is not.
+3. `db-004` was amended to claim `ST_DWithin` is inclusive at the boundary, from the documentation.
+   The database disagrees.
+4. `db-009` specified grouping "on geography" using a function with no geography overload — both
+   halves written in the same sentence.
+5. **`anom-011` named a cause rather than counting one.** The conclusion "the recall is too small"
+   was right about the number and wrong about the cause: 90% of losses were `on_ground`, and 92% of
+   those aircraft were parked for the entire run. Corrected in `qa.md` §66, which supersedes §65
+   without editing it.
+6. **`scn-006`'s prediction was falsified on its first test.** Recorded in advance, reported against
+   interest. The arithmetic that would have have saved it — detected staged findings per run, not
+   recall — was available before the prediction was made and was not done.
 
-**Mutation survivors, each a distinct kind of weak test.** `anom-002`: deleting the empty-baseline
-guard left the suite green because the *next* guard raised — the test passed for the wrong reason.
-`anom-001`: cells emitted in arrival order survived because the determinism test used a single cell.
-`anom-010`: four survivors, two of them boundary cases carried from `anom-001` but not carried
-across, one a guard reachable only through its neighbour, and **one an invalid mutation I built
-myself** — `zip(reports, reports[1:] or reports)` is equivalent except for single-report aircraft.
-An equivalent mutant counted as a survivor makes the score worse, not better.
+**Mutation survivors, each a distinct kind.** `anom-002`: a test passing for the wrong reason (the
+*next* guard raised). `anom-001`: determinism tested with a single cell. `anom-010`: four, including
+one invalid mutation I built. `anom-004`: one **equivalent** mutant — `members[0].started_at` equals
+`min(...)` because `db-009` orders by start time, proved equivalent by its `ended_at` twin dying
+instantly. `anom-011`: two genuine gaps found and closed, plus one more invalid mutation of mine.
 
-**`statistics.mean` → `sum()/len()` is an equivalent mutant on CPython 3.12+**, which uses Neumaier
-compensated summation. Verified over 300,000 random 30-sample sets.
+**Two tests written for `scn-006` were deleted before implementation** because they passed against
+the unfixed code. Recorded as a deviation, though the rule was followed rather than broken.
 
-**Docker hung for about 25 minutes.** A `make test-backend` left to time out at 600 s left
-`em-fusion-backend-run-b7279e364837` alive holding a lock; the next run blocked on the schema drop
-and `docker ps` itself stopped responding. Cleared with `docker rm -f`. **I then misread the
-resulting `Error 137` — SIGKILL from my own cleanup — as a pass**, because the background wrapper
-reported exit 0. Check for a stale `em-fusion-backend-run-*` container before blaming the database.
+**Docker hung ~25 minutes** — a timed-out `make test-backend` left a run container holding a lock.
+Check for a stale `em-fusion-backend-run-*` before blaming the database. I also misread the resulting
+`Error 137` as a pass.
 
-**Commit `0bae703` claimed three files and contained one.** A multi-file edit script's later
-assertion failed after earlier writes had already landed, and the commit in the same shell
-invocation ran regardless. **Worse: I diagnosed which edit had failed from the traceback's line
-number, repaired only that one, and the repo map silently lacked `track_gap.py` for a day.** Second
-occurrence of the same shape. The rule now followed is: apply every edit, verify each with an
-independent grep, and only then commit. It caught nothing this time because it was followed.
+**Four empty files leaked into `backend/`** from `docker compose run -v file:/app/x.py` — `/app` is
+itself a bind mount of `./backend`, so Docker created the mount points on the host. Remove them after
+any container-mounted measurement.
 
-**`make lint` had not been run after `db-004`.** `test_db_proximity.py` carried two E501 violations
-into main and they were only found when `db-009` ran the checks. Fixed in `b9632f3`. The root
+**`make lint` had not been run after `db-004`**, so two E501 violations reached main. The root
 `make check` has still never been run in full.
 
-**`psql -U em_fusion` fails** — the role is `postgres`. Compose sets `POSTGRES_USER` with a
-`postgres` default and only `POSTGRES_DB` is `em_fusion`.
+**`psql -U em_fusion` fails** — the role is `postgres`.
 
 ## Next step
 
-1. **`anom-004`** — spatial clustering, the rule over `db-009`. Its description still calls `db-004`
-   "the clustering query"; correct that reference when picking it up. **This is where the session's
-   central finding gets tested**: whether the ~138 background discontinuities in a quiet run ever
-   chain into a group large enough for `SOURCE-GAP` to fire on. If they do, `anom-008`'s
-   zero-on-a-clean-run control fails and the radius needs rethinking. Do not pre-tune it.
-2. **`anom-003`** — z-score. It carries a recorded, falsifiable prediction: it should need **no
-   change** to `app/db/findings.py`. Score that prediction when it lands; it is the RQ1
-   extensibility claim at a second seam.
-3. **`anom-005`**, then `anom-006` — the fusion rules, which are the first reportable output.
+The detection layer is blocked on one question, and it is not a coding question.
 
-Open and unowned:
+1. **Measure the detectability floor.** How many co-located discontinuities are needed before a
+   cluster is distinguishable from a background that already reaches 4–5 members? Until that number
+   exists, every parameter change is tuning. Cheap: it runs on the two stored batches.
+2. **Split the incident radius**, which is a structural defect independent of the above.
+   `IncidentParameters.radius_km` is one number serving two contradictory requirements: the RF side
+   needs it **large** (the `scn-005` band [55.7, 85.7) km, so a zone contains some receivers and
+   excludes others) and the track side needs it **small** (so staged aircraft land near enough to
+   cluster). The track half currently reuses the RF number with no justification of its own — the
+   docstring's entire argument is about receivers. Needs a spec item.
+3. **Then choose between two routes**, and route B is the recommendation:
+   - **A — make the signal bigger**: split the radius and raise the 8% affected fraction. Risks
+     tuning a scenario parameter until the detector succeeds on it, which would make every detection
+     metric a measurement of the tuning.
+   - **B — change the test**: replace "is there a large cluster" with "is the density of
+     discontinuities near the RF anomaly higher than this run's own background density elsewhere".
+     A within-run comparison needs no absolute threshold, uses the run as its own control, and works
+     with the 1.4 extra findings already present. Needs a spec item and probably amends `anom-004`.
+4. **`anom-005`, `anom-006`, `anom-007`** remain gated behind whichever route is taken.
 
-- The frontend suite's non-zero exit and `useScenarioControl`'s malformed-success crash. Needs a
-  spec item covering the test stub and the array check.
+Owed, unowned:
+
+- The frontend suite's non-zero exit and `useScenarioControl`'s malformed-success crash.
+- **Campaign sizing**: at a 75% staging yield, 150 staged incidents needs ~200 runs, not 150. And a
+  run that stages nothing must be excluded from recall explicitly (`measure_recall` refuses it) but
+  must not be counted as a staged run in precision or FPR either — `eval-002` needs to say so.
 - `adp-008`'s exclusion list is **not applied to baseline windows** — owed to the generator.
-  `load_exclusions` already exists in `app/scenario/tracks.py`.
-- Detection latency has no definition. It is Track 0 and it gates `anom-009`.
-- Detector radii are unchosen; the measured band is [55.7, 85.7) km.
+- Detection latency has no definition. Track 0, gates `anom-009`.
 - `anom-008`'s threat to validity must be reported in `eval-002`.
-- `api-011` (connection-pool exhaustion), `nav-002`, reset and replay endpoints, `ops-002` (CI).
+- `anom-003` (z-score) carries the `db-008` extensibility prediction, now scored once as a **partial**
+  by `anom-004`: storage untouched, but `subject` had to widen from one thing to several.
+- `api-011`, `nav-002`, reset and replay endpoints, `ops-002` (CI).
 - `docs/qa.md` has a duplicate §47. Fix by note, never by renumbering.
 - Frontend has no coverage tooling; `pnpm format` has not been run; mypy does not check `tests/`.
