@@ -90,7 +90,7 @@ Files added: `backend/app/detection/{baseline,rf_noise,track_gap,findings,cluste
 Docs: `thesis_notes.md` gained 23 subsections; `qa.md` entries 60–67 and 13 glossary terms;
 `implementation.md` the Phase 8 ordering note and ticks; `CLAUDE.md` a **new agent instruction** —
 explain an item in plain terms before building it, as chat output, never as a file. Progress note at
-version 21.
+version 22.
 
 ## Failed attempts
 
@@ -141,9 +141,15 @@ any container-mounted measurement.
 1. **Build `anom-012`** — the local rate excess. Findings per unit time inside a disc during a
    window, over the same disc outside it. Centre and window come from a detected RF episode, never
    from ground truth (`api-009`). Measured before it was specified, over 20 seed-matched pairs:
-   30 km catches 5 of 20 staged and fires on 2 of 20 controls; 45 km, 10 and 5; 60 km, 16 and 9. Poor
-   as a standalone detector, and it cuts false attribution on sensor-fault runs from **70% to 10%**,
-   which is the failure that mattered.
+   30 km catches 5 of 20 staged and fires on 2 of 20 controls; 45 km, 10 and 5; 60 km, 16 and 9.
+   **Do not fix a radius from that curve.** Fisher's exact gives p=0.407, 0.191 and 0.048 — only the
+   widest point separates from its control at all — and Wilson intervals are about ±20 points, so
+   choosing a radius from it would be choosing from noise. A second independently seeded batch is
+   required first, on `anom-011`'s terms. Youden's J is 0.15–0.35 against a scale where 0 is a coin
+   flip; the radio side of the same system is beyond five sigma, so **the two halves of the fusion
+   evidence are not comparable in strength** and `anom-005` must not treat them as equal votes. The
+   direction of the false-attribution improvement is supported (14/20 [48–85] against 2/20 [3–30]);
+   the headline "70% to 10%" was overstated when first written and is corrected in `qa.md` §69.
 2. **Settle the ordering of `anom-005`, `anom-006` and `anom-007` before fixing any threshold.**
    `anom-007` separates a sensor fault from interference on the **RF pattern alone** — one sensor
    abnormal, spatial neighbours nominal — which is a far stronger signal than any track evidence

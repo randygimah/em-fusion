@@ -4580,6 +4580,63 @@ from the *sensitive* end of the curve instead of the specific end. **The orderin
 fusion rules has never been written down, and has to be before any threshold is fixed.** See
 [[thesis_notes]] and §66.
 
+## 69. When you say "for a detector this is not good", what do you mean?
+
+**Two things — and answering it properly turned up an overstatement in §68 that is corrected here.**
+
+### What "not good" means, with a scale
+
+| Radius | Recall | False-alarm rate | Youden's J |
+|---|---|---|---|
+| 30 km | 25% | 10% | +0.15 |
+| 45 km | 50% | 25% | +0.25 |
+| 60 km | 80% | 45% | +0.35 |
+
+**Youden's J** is recall minus false-alarm rate: **0** is a coin flip — firing on staged and clean
+runs equally often — and **1** is perfect. The best point here is **0.35**. A screening instrument
+anyone would act on generally wants better than 0.6.
+
+In plain terms, at the two ends of that curve:
+
+- At 30 km you **miss three incidents in four**.
+- At 60 km you **cry wolf on nearly half of all clean runs**, which directly violates the
+  zero-on-a-clean-run requirement.
+
+There is no point on the curve that could be shipped as a standalone alarm.
+
+**The contrast inside this same system is what makes it stark.** The radio side stages an 8 dB
+elevation against a baseline spread of about 1.5 dB — beyond five sigma, essentially never wrong. One
+half of the fusion evidence is near-infallible and the other is barely better than guessing. A rule
+that treats them as two equal votes would be claiming something the measurements do not support.
+
+### The correction
+
+§68 says the change cuts false attribution from 70% to 10%. Running the significance test that should
+have been run before saying it:
+
+| Radius | Fisher's exact *p* |
+|---|---|
+| 30 km | **0.407** |
+| 45 km | 0.191 |
+| 60 km | **0.048** |
+
+**Only the 60 km point is distinguishable from chance at all**, and marginally. At 30 km — the point
+the 10% figure comes from — the rule is not statistically separable from its control on 20 pairs.
+
+The intervals say the same. That 10% is **2 of 20**, 95% interval **[3–30]**. The 70% it replaces is
+**14 of 20**, interval **[48–85]**. They do not overlap, so the *direction* is supported — but
+"70% to 10%" states a precision the sample cannot carry.
+
+**What should have been said:** false attribution falls substantially, the effect reaches
+significance only at the wide radius, and every figure is a single-batch estimate good to about
+±20 points.
+
+### What follows from it
+
+**No threshold may be fixed from this curve.** Each point is one batch to within twenty points;
+picking a radius from it would be picking from noise. A second independently seeded batch comes
+first — the same condition already set for the recall figure in §66. See [[thesis_notes]] and §68.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -4725,6 +4782,7 @@ fusion rules has never been written down, and has to be before any threshold is 
 | **Source record vs observation** | What the emitter produces and what the DAL produces. The first has no provenance, no data mode and no run identifier; the second has all three. `scn-001` emits the first only. |
 | **Track observation** | One replayed row: one aircraft, one instant, one position, one staleness reading. What `ObservationType.TRACK` means. Distinct from a *track*, which is the whole sequence, and from an *aircraft*, which is the thing observed. See §56. |
 | **Zone centre** | The receiver a run's incident is built around, chosen from the run's seed out of the seven in the layout. Shared by both halves of a run, which is what makes the radio anomaly and the track effect co-located by construction. See §55. |
+| **Youden's J** | Recall minus false-alarm rate: 0 is a coin flip, 1 is perfect. The track evidence scores 0.15–0.35; an instrument worth acting on wants above 0.6. The one number that says how good a detector is without hiding either half. See §69. |
 | **Rate excess** | The track side's contribution to fusion, replacing cluster size: dropouts per minute inside a disc during a window, over the same disc outside it. Internal to one run and one place, so it needs no external threshold. See §68. |
 | **Staging yield** | The fraction of runs of a staged type that actually stage on something — 75% after the airborne gate. A run that stages nothing is a baseline run wearing the wrong label and must leave every metric, not just recall. See §68. |
 | **Injection** | What the generator does to a run: perturbing records and recording what was perturbed. Distinct from an **anomaly**, which is what a detector reports — nothing is an anomaly until something detects it. See §67. |

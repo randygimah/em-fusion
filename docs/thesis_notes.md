@@ -4323,6 +4323,28 @@ that rule as well. At 30 km the rate excess fires on **10 per cent** of those sa
 mattered. A detection layer whose whole claim is explainability is damaged more by confidently
 reporting interference where a sensor is broken than by missing an incident quietly.
 
+**The strength of that claim was overstated when first written, and the correction belongs here
+rather than in a footnote.** Twenty pairs is a small sample and the counts above carry wide
+intervals. Two-sided Fisher's exact on staged against control gives p=0.407 at 30 km, p=0.191 at
+45 km and p=0.048 at 60 km: **only the widest radius separates the rule from its control at all**,
+and marginally. Wilson intervals on the rates are roughly plus or minus twenty percentage points —
+the 10 per cent false-alarm figure is 2 of 20, interval [3–30], and the 70 per cent it replaces is 14
+of 20, interval [48–85]. Those intervals do not overlap, so the direction of the improvement is
+supported; the specific pair of numbers is not. The honest statement is that false attribution falls
+substantially and that the effect reaches significance only at the wide radius.
+
+The consequence for the build is concrete: **no threshold may be fixed from this curve**, because
+each of its three points is estimated from one batch to within about twenty points, and choosing a
+radius from it would be choosing from noise. A second independently seeded batch is required first,
+on the terms `anom-011` already sets for the recall figure.
+
+Worth stating plainly for the evaluation chapter: as a standalone detector this scores a Youden's J
+between 0.15 and 0.35, on a scale where zero is a coin flip and a screening instrument anyone would
+act on wants better than 0.6. Within the same system, the radio side separates an 8 dB elevation from
+a baseline spread of about 1.5 dB — beyond five sigma. **The two halves of the fusion evidence are
+not remotely comparable in strength**, and a fusion rule that treats them as two equal votes would be
+making a claim the measurements do not support.
+
 ### A confound found, measured, and then deliberately not engineered around
 
 The naive form of the test is confounded. The incident window sits in the middle of a run, and a gap
