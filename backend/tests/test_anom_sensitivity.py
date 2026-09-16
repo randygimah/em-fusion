@@ -146,7 +146,9 @@ def test_the_diagnostic_path_agrees_with_the_detection_path() -> None:
     ]
 
     raised = {gap.aircraft_id for gap in detect_track_gaps(observations, POLICY)}
-    explained = {v.aircraft_id for v in explain_track_gaps(observations, POLICY) if v.detected}
+    explained = {
+        v.aircraft_id for v in explain_track_gaps(observations, POLICY) if v.detected
+    }
 
     assert raised == explained == {"found"}
 
@@ -188,7 +190,9 @@ def test_an_aircraft_on_the_ground_is_rejected_as_such() -> None:
         report(aircraft="parked", at=300),
     ]
 
-    assert Rejection.ON_GROUND in reasons(explain_track_gaps(observations, POLICY), "parked")
+    assert Rejection.ON_GROUND in reasons(
+        explain_track_gaps(observations, POLICY), "parked"
+    )
 
 
 def test_an_aircraft_at_the_edge_of_the_box_is_rejected_as_such() -> None:
@@ -223,7 +227,9 @@ def test_an_unbracketed_absence_is_rejected_as_such() -> None:
     # spec: anom-011, anom-010, scn-002
     observations = [report(aircraft="solo", at=0)]
 
-    assert Rejection.NO_PAIR in reasons(explain_track_gaps(observations, POLICY), "solo")
+    assert Rejection.NO_PAIR in reasons(
+        explain_track_gaps(observations, POLICY), "solo"
+    )
 
 
 def test_a_stale_position_without_fresh_contact_is_rejected_as_such() -> None:
@@ -232,13 +238,71 @@ def test_a_stale_position_without_fresh_contact_is_rejected_as_such() -> None:
     the count is for."""
     # spec: anom-011, anom-010, dal-001
     observations = [
-        report(aircraft="lost", at=0, position_staleness_s=200.0, contact_staleness_s=90.0),
-        report(aircraft="lost", at=10, position_staleness_s=210.0, contact_staleness_s=100.0),
+        report(
+            aircraft="lost", at=0, position_staleness_s=200.0, contact_staleness_s=90.0
+        ),
+        report(
+            aircraft="lost",
+            at=10,
+            position_staleness_s=210.0,
+            contact_staleness_s=100.0,
+        ),
     ]
 
     assert Rejection.CONTACT_NOT_FRESH in reasons(
         explain_track_gaps(observations, POLICY), "lost"
     )
+
+
+def test_an_aircraft_detected_only_by_the_frozen_path_counts_as_detected() -> None:
+    """`anom-010` has two mechanisms and this one reaches neither of the
+    cases above: position stale while contact stays fresh, with the reports
+    too close together for the absence rule to see anything. A diagnostic
+    that consulted only the absence path would call this a miss and agree
+    with the detection path on every other case in this file.
+    """
+    # spec: anom-011, anom-010
+    observations = [
+        report(
+            aircraft="frozen", at=0, position_staleness_s=200.0, contact_staleness_s=0.0
+        ),
+        report(
+            aircraft="frozen",
+            at=10,
+            position_staleness_s=210.0,
+            contact_staleness_s=0.0,
+        ),
+    ]
+
+    raised = {gap.aircraft_id for gap in detect_track_gaps(observations, POLICY)}
+    (verdict,) = explain_track_gaps(observations, POLICY)
+
+    assert raised == {"frozen"}
+    assert verdict.detected
+    assert verdict.rejections == ()
+
+
+def test_a_loss_is_attributed_to_the_reason_it_got_furthest_on() -> None:
+    """An aircraft usually trips several guards, and they are not equally
+    informative. This one had a genuinely long gap and was turned away for
+    being on the ground; it is also, trivially, not stale, which is true of
+    almost every ordinary report and says nothing. Attributing it to the
+    second would bury the finding this item exists to produce.
+    """
+    # spec: anom-011
+    observations = [
+        report(aircraft="grounded", at=0, on_ground=True),
+        report(aircraft="grounded", at=300),
+    ]
+
+    result = measure_recall(
+        staged_aircraft={"grounded"},
+        observations=observations,
+        policy=POLICY,
+        conditions=CONDITIONS,
+    )
+
+    assert result.losses == {Loss.ON_GROUND: 1}
 
 
 # ------------------------------------------------------------------ recall
@@ -273,7 +337,10 @@ def test_a_staged_aircraft_absent_from_the_run_is_a_loss_not_an_omission() -> No
     failure with a different cause from every other entry here, and
     dropping it from the denominator would flatter the figure."""
     # spec: anom-011, scn-002
-    observations = [report(aircraft="present", at=0), report(aircraft="present", at=300)]
+    observations = [
+        report(aircraft="present", at=0),
+        report(aircraft="present", at=300),
+    ]
 
     result = measure_recall(
         staged_aircraft={"present", "ghost"},
@@ -385,8 +452,7 @@ def test_the_conditions_are_derived_from_the_policy_not_retyped() -> None:
     assert result.conditions.contact_fresh_within_s == 45.0
 
 
-def test_recall_is_deterministic(
-) -> None:
+def test_recall_is_deterministic() -> None:
     # spec: anom-011, NFR-601
     observations = [
         report(aircraft="hit", at=0),
@@ -397,11 +463,15 @@ def test_recall_is_deterministic(
     staged = {"hit", "brief"}
 
     first = measure_recall(
-        staged_aircraft=staged, observations=observations, policy=POLICY,
+        staged_aircraft=staged,
+        observations=observations,
+        policy=POLICY,
         conditions=CONDITIONS,
     )
     second = measure_recall(
-        staged_aircraft=staged, observations=list(reversed(observations)), policy=POLICY,
+        staged_aircraft=staged,
+        observations=list(reversed(observations)),
+        policy=POLICY,
         conditions=CONDITIONS,
     )
 

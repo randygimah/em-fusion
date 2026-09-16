@@ -74,6 +74,40 @@ class RuleError(ValueError):
     """The rule was configured in a way that could only mislead."""
 
 
+class Rejection(str, Enum):
+    """Why an aircraft raised nothing. Spec: anom-011.
+
+    Three of these are the rule being **right** -- an aircraft on the
+    ground was switched off, one at the edge of the box flew out of view,
+    a gap under the threshold is under the threshold -- and three are a
+    loss worth explaining. Counting them apart is what turns a recall
+    figure into an account, and `anom-011` forbids naming a cause without
+    counting it.
+    """
+
+    #: Fewer than two reports, so an absence has nothing to bracket it.
+    NO_PAIR = "no_pair"
+    BELOW_THRESHOLD = "below_threshold"
+    ON_GROUND = "on_ground"
+    NOT_INTERIOR = "not_interior"
+    POSITION_NOT_STALE = "position_not_stale"
+    CONTACT_NOT_FRESH = "contact_not_fresh"
+
+
+#: Most-informative first: how far an aircraft got before being turned
+#: away. A single-report track is definitively "not enough data" whatever
+#: else is true of it, so `NO_PAIR` leads; `POSITION_NOT_STALE` trails,
+#: because it is true of almost every ordinary report and says least.
+_PRECEDENCE = (
+    Rejection.NO_PAIR,
+    Rejection.NOT_INTERIOR,
+    Rejection.ON_GROUND,
+    Rejection.CONTACT_NOT_FRESH,
+    Rejection.BELOW_THRESHOLD,
+    Rejection.POSITION_NOT_STALE,
+)
+
+
 class GapShape(str, Enum):
     """Which of the two signatures the discontinuity has.
 
@@ -224,11 +258,7 @@ def _not_heard(reports: Sequence[_Report], policy: GapPolicy) -> list[TrackGapFi
     """
     findings: list[TrackGapFinding] = []
     for before, after in zip(reports, reports[1:], strict=False):
-        if after.timestamp - before.timestamp <= policy.threshold:
-            continue
-        if before.on_ground or after.on_ground:
-            continue
-        if not _both_interior(before, after, policy):
+        if _judge_pair(before, after, policy) is not None:
             continue
         findings.append(
             TrackGapFinding(
@@ -240,6 +270,24 @@ def _not_heard(reports: Sequence[_Report], policy: GapPolicy) -> list[TrackGapFi
             )
         )
     return findings
+
+
+def _judge_pair(before: _Report, after: _Report, policy: GapPolicy) -> Rejection | None:
+    """Why this consecutive pair is not a gap, or `None` if it is one.
+
+    The single copy of the absence rule's guards. `anom-011`'s diagnostic
+    path reads it rather than restating it, because a second copy of a rule
+    written to explain the first is the trap this project already recorded
+    once, when a remedy lived in two places and the third caller knew about
+    neither.
+    """
+    if after.timestamp - before.timestamp <= policy.threshold:
+        return Rejection.BELOW_THRESHOLD
+    if before.on_ground or after.on_ground:
+        return Rejection.ON_GROUND
+    if not _both_interior(before, after, policy):
+        return Rejection.NOT_INTERIOR
+    return None
 
 
 def _both_interior(before: _Report, after: _Report, policy: GapPolicy) -> bool:
@@ -268,12 +316,22 @@ def _frozen(reports: Sequence[_Report], policy: GapPolicy) -> list[TrackGapFindi
     return findings
 
 
+def _judge_report(report: _Report, policy: GapPolicy) -> Rejection | None:
+    """Why this report is not part of a frozen episode, or `None` if it is.
+
+    Same argument as `_judge_pair`: one copy, read by both paths.
+    """
+    if report.on_ground:
+        return Rejection.ON_GROUND
+    if report.position_staleness <= policy.threshold:
+        return Rejection.POSITION_NOT_STALE
+    if report.contact_staleness >= policy.contact_fresh_within:
+        return Rejection.CONTACT_NOT_FRESH
+    return None
+
+
 def _is_frozen(report: _Report, policy: GapPolicy) -> bool:
-    return (
-        not report.on_ground
-        and report.position_staleness > policy.threshold
-        and report.contact_staleness < policy.contact_fresh_within
-    )
+    return _judge_report(report, policy) is None
 
 
 def _frozen_finding(episode: Sequence[_Report]) -> TrackGapFinding:
@@ -287,3 +345,60 @@ def _frozen_finding(episode: Sequence[_Report]) -> TrackGapFinding:
         ended_at=episode[-1].timestamp,
         location=first.location,
     )
+
+
+@dataclass(frozen=True, slots=True)
+class AircraftVerdict:
+    """What the rule concluded about one aircraft, and why. Spec: anom-011.
+
+    Every aircraft in the input gets exactly one of these, including the
+    ones nothing was raised for -- an aircraft missing from the verdicts
+    would sit silently outside the accounting, which is the failure this
+    whole item exists to stop.
+    """
+
+    aircraft_id: str
+    detected: bool
+    #: Empty when detected. Otherwise most-informative first, by
+    #: `_PRECEDENCE`: how far the aircraft got before being turned away.
+    rejections: tuple[Rejection, ...]
+
+
+def explain_track_gaps(
+    observations: Iterable[CanonicalObservation], policy: GapPolicy
+) -> tuple[AircraftVerdict, ...]:
+    """The same judgements `detect_track_gaps` makes, with the reasons kept.
+
+    Changes no detection behaviour and adds no rule: it calls the same two
+    judgement functions the detection path calls, and a test holds the two
+    paths in agreement on which aircraft are detected.
+    """
+    per_aircraft: dict[str, list[_Report]] = {}
+    for report in _reports(observations):
+        per_aircraft.setdefault(report.aircraft_id, []).append(report)
+
+    verdicts: list[AircraftVerdict] = []
+    for aircraft_id in sorted(per_aircraft):
+        reports = sorted(per_aircraft[aircraft_id], key=lambda r: r.timestamp)
+        detected = bool(_not_heard(reports, policy) or _frozen(reports, policy))
+
+        found: set[Rejection] = set()
+        if not detected:
+            if len(reports) < 2:
+                found.add(Rejection.NO_PAIR)
+            for before, after in zip(reports, reports[1:], strict=False):
+                if (why := _judge_pair(before, after, policy)) is not None:
+                    found.add(why)
+            for report in reports:
+                if (why := _judge_report(report, policy)) is not None:
+                    found.add(why)
+
+        verdicts.append(
+            AircraftVerdict(
+                aircraft_id=aircraft_id,
+                detected=detected,
+                rejections=tuple(r for r in _PRECEDENCE if r in found),
+            )
+        )
+
+    return tuple(verdicts)
