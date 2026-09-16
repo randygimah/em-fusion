@@ -4473,6 +4473,56 @@ The staging yield across the two repaired batches is 58 runs of 80, or **72.5 pe
 close enough to the 75 per cent first measured that the campaign sizing in `eval-002` stands: roughly
 200 runs for 150 staged incidents.
 
+### Settling an ordering that had never been written down
+
+Three rules produce the anomalies an analyst sees, and until now they were specified as three
+independent tests. Reading them together shows they are not: they partition a single decision, and
+the partition had no declared order, so which one claimed a run would have been decided by whichever
+happened to be evaluated first — a property of the source file rather than of the evidence.
+
+The order settled in `anom-013` is `anom-007`, then `anom-006`, then `anom-005`, and the argument for
+it is an asymmetry that has been measured rather than assumed. `anom-007` separates a broken receiver
+from an environmental cause using the RF pattern alone: one sensor abnormal with its spatial
+neighbours nominal. On this generator that is an eight-decibel elevation against a baseline spread of
+about 1.5 dB, beyond five sigma. The track side's rate excess, pooled over 40 matched pairs, reaches
+a Youden's J of 0.40. **Asking the weaker signal to arbitrate what the stronger one already settles
+is the error**, and it is the error that produced a background track cluster inside the fusion radius
+on 14 of 20 sensor-fault runs.
+
+What makes this worth recording as a design decision rather than an implementation detail is that it
+*removes* a question instead of answering it. The alternative was to make the track evidence good
+enough to tell a fault from interference — the direction the whole session had been pushing in, and
+the direction that produced two rejected parameter-tuning routes. Ordering the rules so that the
+fault is decided before the track side is consulted means the track evidence never has to make that
+distinction at all. Its remaining job is to separate interference from nothing, which is a much
+easier question and one its measured strength can support.
+
+The consequence for `anom-012` is recorded and deliberately not acted on: once `anom-007` claims the
+sensor-fault runs, the radius should be read from the sensitive end of the trade-off curve — 31 of 40
+at 60 km — rather than the specific end. That is left unfixed because the argument assumes `anom-007`
+claims them, `anom-007` does not exist, and its catch rate has never been measured. Fixing a
+threshold on an assumption about an unbuilt component would be the same class of error as the two
+already recorded this session, with the added disadvantage of being harder to notice.
+
+### Building the replacement, and one decision the measurement forced
+
+`anom-012` computes the rate excess and nothing else: no threshold, no severity, and a policy with no
+default radius. The absence of a default is the part worth explaining, because the obvious thing is to
+supply one. The three measured radii are not a curve with a maximum to be found; they are three
+different trades between a missed incident and a misattributed one, and which is right depends on
+`anom-013`'s ordering and on costs the evaluation has not yet assigned. A default would make that
+choice silently, in the one place nobody reviewing the fusion rule would think to look.
+
+Two implementation decisions came from the measurement rather than from taste. The disc is selected
+with `db-004`'s proximity query rather than by computing distances in the detector, because a second
+copy of the distance rule is the trap this repository recorded when a remedy lived in two places and
+a third caller knew about neither. And the ratio is **smoothed** — one finding per run, spread over
+the run's whole span, added to both rates — because a window holding findings against a remainder
+holding none otherwise gives an infinite ratio that no threshold can order against a finite one. The
+smoothing is not a detail: every figure quoted for this rule was measured with it, so changing it
+would silently invalidate the replication, and the module says so where someone tempted to tidy it
+would read it.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;

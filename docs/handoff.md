@@ -15,7 +15,7 @@ cannot yet do.
 
 ## Current state
 
-**37 of 93 spec items pass.** Three batches are stored: runs 1–120 (original generator), 121–180 (base seed 20260916, repaired), 181–240 (base seed 20260917, repaired). Keep all three — batch 1 is the before-evidence for `scn-006` and 2/3 are the replication pair for `anom-012`. Backend suite **763 passed at 99.91% coverage** in the container, with
+**38 of 94 spec items pass.** Three batches are stored: runs 1–120 (original generator), 121–180 (base seed 20260916, repaired), 181–240 (base seed 20260917, repaired). Keep all three — batch 1 is the before-evidence for `scn-006` and 2/3 are the replication pair for `anom-012`. Backend suite **763 passed at 99.91% coverage** in the container, with
 ruff, black and mypy clean. Working tree clean at `f7a6126`.
 
 Built and passing this session:
@@ -138,7 +138,10 @@ any container-mounted measurement.
 
 **Route B was chosen and measured; `anom-012` is written and unbuilt.** The path is now clear.
 
-1. **Build `anom-012`** — the local rate excess. Findings per unit time inside a disc during a
+**Done since this section was last written: `anom-013` settled the ordering (specced, unbuilt) and
+`anom-012` is built and passing — 12 tests, 775 passed at 99.91%, ten of ten mutations killed.**
+
+1. ~~Build `anom-012`~~ — **done.** — the local rate excess. Findings per unit time inside a disc during a
    window, over the same disc outside it. Centre and window come from a detected RF episode, never
    from ground truth (`api-009`). Measured before it was specified, over 20 seed-matched pairs:
    30 km catches 5 of 20 staged and fires on 2 of 20 controls; 45 km, 10 and 5; 60 km, 16 and 9.
@@ -152,7 +155,11 @@ any container-mounted measurement.
    sigma, so **the two halves of the fusion evidence are not comparable in strength** and `anom-005`
    must not treat them as equal votes. The curve is now firm enough to choose a radius from; the
    choice belongs to step 2.
-2. **Settle the ordering of `anom-005`, `anom-006` and `anom-007` before fixing any threshold.**
+2. ~~Settle the ordering~~ — **done, as `anom-013`: `anom-007` first, then `anom-006`, then
+   `anom-005`.** Specced and unbuilt. The three partition one decision; a zone claimed by an earlier
+   rule is not offered to a later one. **Build `anom-007` next**, because `anom-012`'s radius cannot
+   be chosen until its catch rate on sensor-fault runs is measured — the whole ordering argument
+   assumes it claims them, and that assumption is untested.
    `anom-007` separates a sensor fault from interference on the **RF pattern alone** — one sensor
    abnormal, spatial neighbours nominal — which is a far stronger signal than any track evidence
    measured. If it claims those runs first, `anom-012`'s threshold is read from the sensitive end of
