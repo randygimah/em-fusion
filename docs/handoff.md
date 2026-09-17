@@ -85,6 +85,10 @@ listed at session start (`nav-001` work) are untouched and still uncommitted.
 - `e59db8b` spec: correct anom-007 — the neighbour test reads readings, not episodes
 - `d6580e1` test: rewrite anom-007 tests for the readings-based neighbour test
 - New: `backend/app/detection/sensor_fault.py`, `backend/tests/test_anom_sensor_fault.py`
+- Progress note republished as **version 25** — new section "Step two, and the thing it caught
+  in itself", with a figure of the fragmented incident and one of the two neighbour
+  populations; the ambiguous row of the ladder table corrected (it stages one receiver, so
+  step two claims it); the held-back radius panel released; counts to 39/94, 824 tests, 99.92%
 - Updated: `docs/spec.jsonl` (anom-007 amended twice, then `passes: true`), `CLAUDE.md` repo map,
   `docs/thesis_notes.md` (four new Implementation subsections), `docs/qa.md` §72 plus two glossary
   terms
