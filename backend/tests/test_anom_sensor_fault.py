@@ -123,9 +123,7 @@ def policy(radius: float | None = NEAR) -> FaultPolicy:
 
 def test_a_lone_loud_receiver_with_clean_neighbours_is_a_fault() -> None:
     # spec: anom-007 -- the rule's whole purpose, in one case.
-    result = detect_sensor_faults(
-        findings((loud(sensor="RF-01"),)), LAYOUT, policy()
-    )
+    result = detect_sensor_faults(findings((loud(sensor="RF-01"),)), LAYOUT, policy())
 
     assert len(result.faults) == 1
     fault = result.faults[0]
@@ -150,9 +148,7 @@ def test_several_adjacent_sensors_abnormal_raise_no_fault_at_all() -> None:
     # spec: anom-007 -- the failure case as the item words it. RF-04, RF-05
     # and RF-06 form a chain in which each is a neighbour of the next.
     result = detect_sensor_faults(
-        findings(
-            (loud(sensor="RF-04"), loud(sensor="RF-05"), loud(sensor="RF-06"))
-        ),
+        findings((loud(sensor="RF-04"), loud(sensor="RF-05"), loud(sensor="RF-06"))),
         LAYOUT,
         policy(),
     )
@@ -313,9 +309,7 @@ def test_the_unjudged_neighbours_are_named_in_the_evidence() -> None:
 
 def test_a_lone_channel_between_clean_ones_is_high_confidence() -> None:
     # spec: anom-007 -- the pattern a real emission does not easily make.
-    result = detect_sensor_faults(
-        findings((loud(sensor="RF-01"),)), LAYOUT, policy()
-    )
+    result = detect_sensor_faults(findings((loud(sensor="RF-01"),)), LAYOUT, policy())
 
     fault = result.faults[0]
     assert fault.confidence is Confidence.HIGH
@@ -355,9 +349,7 @@ def test_a_partial_spread_is_medium_confidence() -> None:
 def test_broadband_and_single_channel_do_not_share_a_confidence() -> None:
     # spec: anom-007 -- the failure case stated as the item states it,
     # rather than only through the two bands separately.
-    single = detect_sensor_faults(
-        findings((loud(sensor="RF-01"),)), LAYOUT, policy()
-    )
+    single = detect_sensor_faults(findings((loud(sensor="RF-01"),)), LAYOUT, policy())
     whole = detect_sensor_faults(
         findings(tuple(loud(sensor="RF-01", channel=c) for c in range(8))),
         LAYOUT,
@@ -397,9 +389,7 @@ def test_the_two_tests_are_two_records() -> None:
     # spec: anom-007 -- the frequency test is recorded distinctly rather
     # than folded into the spatial one, because they are evidence of
     # different kinds and the bundle must show which carries the argument.
-    result = detect_sensor_faults(
-        findings((loud(sensor="RF-01"),)), LAYOUT, policy()
-    )
+    result = detect_sensor_faults(findings((loud(sensor="RF-01"),)), LAYOUT, policy())
 
     fault = result.faults[0]
     assert fault.spatial.neighbours == ("RF-02", "RF-03")
@@ -477,9 +467,7 @@ def test_the_fault_is_located_at_the_receiver() -> None:
     # spec: anom-007 -- one sensor's fault is at that sensor and nowhere
     # else; an area would claim ground nothing was observed across.
     site = LAYOUT.site("RF-01")
-    result = detect_sensor_faults(
-        findings((loud(sensor="RF-01"),)), LAYOUT, policy()
-    )
+    result = detect_sensor_faults(findings((loud(sensor="RF-01"),)), LAYOUT, policy())
 
     assert result.faults[0].location == Location(lat=site.lat, lon=site.lon)
 
@@ -539,7 +527,9 @@ def test_the_output_does_not_depend_on_the_order_of_the_input() -> None:
         loud(sensor="RF-07"),
     )
     forwards = detect_sensor_faults(findings(anomalies), LAYOUT, policy())
-    backwards = detect_sensor_faults(findings(tuple(reversed(anomalies))), LAYOUT, policy())
+    backwards = detect_sensor_faults(
+        findings(tuple(reversed(anomalies))), LAYOUT, policy()
+    )
 
     assert forwards == backwards
     assert [f.sensor_id for f in forwards.faults] == ["RF-01", "RF-04", "RF-07"]
@@ -548,9 +538,7 @@ def test_the_output_does_not_depend_on_the_order_of_the_input() -> None:
 def test_a_fault_is_frozen() -> None:
     # spec: anom-007 -- a detection value object is evidence, and evidence
     # that can be edited after the fact is not evidence.
-    result = detect_sensor_faults(
-        findings((loud(sensor="RF-01"),)), LAYOUT, policy()
-    )
+    result = detect_sensor_faults(findings((loud(sensor="RF-01"),)), LAYOUT, policy())
 
     with pytest.raises(dataclasses.FrozenInstanceError):
         result.faults[0].sensor_id = "RF-02"  # type: ignore[misc]
@@ -566,3 +554,83 @@ def test_a_dismissal_always_carries_its_reason() -> None:
 
     assert all(isinstance(d, Dismissal) and d.reason for d in result.dismissed)
     assert any("RF-02" in d.reason for d in result.dismissed if d.sensor_id == "RF-01")
+
+
+def test_isolation_is_readable_from_the_evidence() -> None:
+    # spec: anom-007 -- the bundle (`evb-001`) has to say *why* in words,
+    # and "the deviation was isolated to one channel" is the sentence. It
+    # is derived from the recorded channels rather than stored beside them,
+    # so the summary and the evidence cannot disagree.
+    alone = detect_sensor_faults(findings((loud(sensor="RF-01"),)), LAYOUT, policy())
+    spread = detect_sensor_faults(
+        findings((loud(sensor="RF-01", channel=3), loud(sensor="RF-01", channel=4))),
+        LAYOUT,
+        policy(),
+    )
+
+    assert alone.faults[0].spectral.isolated is True
+    assert alone.faults[0].spectral.broadband is False
+    assert spread.faults[0].spectral.isolated is False
+
+
+def test_episodes_meeting_at_a_tick_are_one_window() -> None:
+    # spec: anom-007 -- the same inclusive endpoint the neighbour test
+    # uses, applied to the merge. Two episodes sharing a reading are one
+    # event seen on two channels, not two events.
+    first = loud(
+        sensor="RF-01",
+        channel=3,
+        started_at=WINDOW_START,
+        ended_at=WINDOW_START + timedelta(seconds=100),
+    )
+    second = loud(
+        sensor="RF-01",
+        channel=4,
+        started_at=WINDOW_START + timedelta(seconds=100),
+        ended_at=WINDOW_END,
+    )
+    result = detect_sensor_faults(findings((first, second)), LAYOUT, policy())
+
+    assert len(result.faults) == 1
+    assert result.faults[0].spectral.channels == (3, 4)
+
+
+def test_the_window_ends_at_the_latest_reading_not_the_latest_episode() -> None:
+    # spec: anom-007 -- a long episode that began first still sets the end
+    # of the merged window. Taking the end from the last episode by start
+    # time would cut the window short whenever a broadband deviation ran
+    # underneath a brief one.
+    long_one = loud(
+        sensor="RF-01",
+        channel=3,
+        started_at=WINDOW_START,
+        ended_at=WINDOW_END,
+    )
+    brief = loud(
+        sensor="RF-01",
+        channel=4,
+        started_at=WINDOW_START + timedelta(seconds=50),
+        ended_at=WINDOW_START + timedelta(seconds=100),
+    )
+    result = detect_sensor_faults(findings((long_one, brief)), LAYOUT, policy())
+
+    assert result.faults[0].ended_at == WINDOW_END
+
+
+def test_episodes_arriving_out_of_time_order_still_split_at_the_quiet() -> None:
+    # spec: anom-007, NFR-601 -- the merge walks episodes in time order, and
+    # without that the later episode is seen first, the earlier one falls
+    # inside its span, and the two become one window covering the quiet
+    # between them. Nothing in the finding would show it had happened.
+    second = WINDOW_END + timedelta(seconds=600)
+    late = loud(
+        sensor="RF-01",
+        started_at=second,
+        ended_at=second + timedelta(seconds=300),
+    )
+    early = loud(sensor="RF-01")
+    result = detect_sensor_faults(findings((late, early)), LAYOUT, policy())
+
+    assert len(result.faults) == 2
+    assert result.faults[0].ended_at == WINDOW_END
+    assert result.faults[1].started_at == second
