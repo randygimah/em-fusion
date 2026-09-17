@@ -4523,6 +4523,107 @@ smoothing is not a detail: every figure quoted for this rule was measured with i
 would silently invalidate the replication, and the module says so where someone tempted to tidy it
 would read it.
 
+### The sensor-fault rule, and a defect the unit tests could not have found
+
+`anom-007` separates a broken receiver from a cause out in the world using two pieces of evidence that
+are deliberately not combined: the receiver's close neighbours, and the channels either side of the
+one that moved. The geography argument is that interference has a location and reaches whatever is
+near it, so a receiver away from its normal while its neighbours sit at theirs is describing itself.
+The frequency argument is independent of it: a real emission spills into adjacent channels, so an
+isolated channel between two normal ones is a pattern the physics does not easily produce, while the
+whole plan rising together is the weaker claim because a wideband emitter parked beside the receiver
+would look the same. Confidence is High, Medium and Low across those three cases and qualifies the
+*attribution* rather than the deviation, whose severity `anom-001` already carries.
+
+The item was built, its thirty-six unit tests passed, its mutation pass killed eighteen of twenty, and
+the implementation was wrong. The measurement that the item itself required found it.
+
+Built as first written, the rule read a neighbour's nominality off `anom-001`'s episodes: a neighbour
+with no overlapping anomaly was treated as clean. Over the 240 stored runs that gave a catch rate of
+60 of 60 on the runs whose truth is a sensor fault -- the number `anom-013`'s ordering depends on, and
+it held without qualification -- and it also claimed **21 of 60 gnss-degradation runs**, on a staged
+receiver, inside the staged window. That is a misattribution of exactly the class `anom-013` was
+written to remove, running in the opposite direction.
+
+The cause was neither the radius nor the layout. `scn-002`'s injected elevation is 8 dB scaled per cell
+per tick by 1 + 0.25 of a standard normal draw, and `anom-001`'s threshold is 6 dB, so roughly one tick
+in six falls short and ends the episode: a staged cell emits a median of six episodes where the
+incident is one. Two receivers loud through the same 300 s therefore have fragments that never
+overlap, and each reads as isolated from the other. Measured across the 120 staged runs, the
+neighbours in those windows sat 2.51 dB above their own baselines at the fifth percentile and 4.46 dB
+at the median -- and not one of the thirty-seven measurements crossed the 6 dB anomaly threshold in
+the window concerned. Every one of them was invisible to a test built on episodes.
+
+The repair is a reversal of a decision recorded on the item the same day, and the original wording of
+the item was right: it asked for "the readings of its spatial neighbours in the same window", and the
+amendment had replaced the readings with another rule's findings because that made the rule pure and
+testable without a database. *Was this receiver anomalous* and *was this receiver nominal* are
+different questions, and only the second one is this rule's. Asking it of the readings removed all
+twenty-one misattributions and cost none of the sixty catches.
+
+### Choosing the nominality bar from two populations rather than from one
+
+The bar is the one number the repair introduces, and it was set from a measurement designed to make it
+falsifiable. Two populations were collected over the 120 staged runs: the elevation of a neighbour the
+incident also touched, during a window the rule was about to call a fault, and the elevation of a
+neighbour it did not touch. The first reaches 2.51 dB at the fifth percentile and 4.46 dB at the
+median; the second sits at −0.05 dB at the median and 1.58 dB at the ninety-fifth. The populations
+separate, and 2 dB lies in the gap between them.
+
+Two decisions follow from the shape of that measurement rather than from the chosen value. The bar is
+reported with its neighbours -- 1.0 and 1.5 dB give the same result on this corpus, 3.0 dB gives five
+misattributions and 4.0 gives seven -- so the choice is visibly a plateau rather than a maximum, which
+is the distinction `anom-012`'s radius had to be protected from. And it is expressed in decibels
+rather than in multiples of the baseline's own spread, because that is `anom-003`, and keeping the two
+apart is what stops one detector being counted twice in an evidence bundle.
+
+The rejected alternative is recorded because it also works on this corpus. Treating a neighbour episode
+within 30 s of the window as overlapping it removes all twenty-one misattributions too, keeps all sixty
+catches, and requires no readings at all. It was rejected on an argument rather than on a count: it
+answers whether the neighbour was *anomalous recently*, and it only works while the neighbour crosses
+`anom-001`'s threshold somewhere nearby. The 8 dB elevation is the generator's choice and not a
+property of interference; a weaker emitter, or a neighbour further out, raises a neighbour by three or
+four decibels, produces no episode at any tolerance, and would read as nominal for ever. The readings
+form sees it directly. This is a case where the cheaper repair passes every test available today and
+fails the first realistic change to the scenario, and the measurement could not have distinguished
+them -- only the argument could.
+
+### What the episode boundary was also costing, and the refusal that fell out of the repair
+
+The same fragmentation had a second effect nobody had looked for. Because the window came from the
+episodes, one broken receiver was reported roughly five times per run, each fault spanning a median of
+20 s of a 300 s incident. Taking `anom-001`'s episodes as the *seed* and the readings as the boundary
+-- the event began where the receiver left its baseline, not where a threshold happened to be crossed
+-- brings that to 1.13 faults per run at a median span of exactly 300 s. The window now recovers the
+incident. It overruns at the top, 390 s at the maximum, because a tick either side can still read
+above a 2 dB bar on ordinary noise; that is the price of a bar low enough to keep the window
+contiguous, and it is recorded rather than trimmed.
+
+Separating the seed from the boundary also created a case that had not existed before: an episode
+whose window the readings do not sustain, where the receiver sits inside the bar of its own baseline
+across the whole window the episode seeds. That is now refused as undecided rather than reported,
+because a threshold crossing the window does not bear out is not evidence about an instrument. It is
+responsible for most of the improvement in the false-positive rate: runs staging nothing on the RF
+grid raise a fault on 6 of 100 of them, down from 14 of 100. The residue is `anom-001`'s own false
+positives promoted one layer up, and a minimum-duration constraint belongs to that item rather than
+to this one.
+
+### Two results this measurement produced that are not about the rule
+
+First, the ordering `anom-013` declares is now supported by the number it was missing. The rule claims
+every one of the sixty sensor-fault runs, on the right receiver and in the right window, so the
+assumption that putting it first moves those runs out of fusion's way is not an assumption any more.
+`anom-012`'s radius can therefore be read from the sensitive end of its curve, which was the decision
+that has been waiting on this item.
+
+Second, and less comfortably, the rule claims **20 of 20 ambiguous-mixed-evidence runs at High
+confidence, with no trace of ambiguity in the output.** That follows from the scenario design rather
+than from a defect: `scn-002` stages that type on a single receiver by construction, and `anom-013`
+offers a claimed zone to no later rule. It is a threat to the validity of any evaluation that treats
+the ambiguous type as a test of whether the system can express uncertainty -- because under this
+ordering it cannot, and the type instead measures how confidently the system resolves a case designed
+not to resolve. Recorded here before the evaluation is designed rather than discovered inside it.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;

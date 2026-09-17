@@ -4754,6 +4754,122 @@ never been measured. Choosing a setting from an assumption about an unbuilt comp
 mistake this project made twice this week. Build it, measure it, then choose. See §68, §70,
 [[thesis_notes]].
 
+## 72. Move onto anom-007
+
+**The rule that tells a broken receiver from real interference — and the one place in the build so far
+where the tests passed, the mutation pass passed, and the code was still wrong.**
+
+### What it is for, in plain terms
+
+Seven radio receivers, each listening on eight narrow channels. When one starts reporting a raised
+noise floor there are two very different reasons, needing opposite responses: something out there is
+interfering, or **that box has broken**. Sending an analyst to hunt a jammer when the truth is a faulty
+receiver wastes the investigation *and* leaves the fault in place — and a fault keeps producing
+anomalies forever, so it poisons every later measurement too.
+
+Two pieces of evidence, deliberately kept apart:
+
+| Evidence | The argument | What it looks like for a fault |
+|---|---|---|
+| **Geography** | Interference has a location and reaches whatever is near it | One receiver away from its normal, its close neighbours sitting at theirs |
+| **Frequency** | A real transmitter spills into the channels either side of it | One channel raised, the channels above and below clean |
+
+They are recorded as two records rather than blended into one score, because an analyst needs to see
+which one is carrying the argument.
+
+### Why it goes first
+
+It consults **no aircraft evidence at all**. That is the whole point of the ordering in §71: the
+broken-receiver question is answerable from the radio side alone, on a signal worth more than five
+standard deviations, so it must never be arbitrated by aircraft-side evidence worth barely better than
+a coin flip. Everything left after this rule speaks is a genuinely different question.
+
+### The measurement it owed
+
+`anom-013`'s ordering **assumed** this rule claims the runs whose truth is a broken receiver. That was
+never tested, and `anom-012`'s radius was held back waiting on it. Measured over all 240 stored runs:
+
+**60 of 60**, on the right receiver, inside the right window. The assumption holds without
+qualification, and the radius can now be chosen.
+
+### The defect the measurement found
+
+The same run also showed the rule claiming **21 of 60 interference runs** as broken receivers — the
+same class of misattribution `anom-013` was written to remove, running the other way.
+
+The cause is worth stating carefully, because it is invisible from inside the unit tests:
+
+- The injected elevation is 8 dB scaled per tick by `1 + 0.25 × a normal draw`, against a 6 dB anomaly
+  threshold.
+- So about **one tick in six falls short** and ends the episode. A cell loud for a whole 300-second
+  incident emits a **median of six episodes**, not one.
+- Two receivers loud through the same incident can therefore have fragments that never overlap — and
+  each reads as isolated from the other.
+
+Measured, in the windows where that happened: the neighbours sat **2.51 dB above their own baselines at
+the 5th percentile, 4.46 dB at the median**, and **not one of them** crossed the 6 dB threshold there.
+Every one was invisible to a test built on episodes.
+
+### The fix, and the wrong assumption it corrects
+
+> **The wrong assumption was mine, recorded on the item that morning:** that a neighbour with no
+> reported anomaly is a neighbour reading normally.
+
+It is not. **"Was this receiver anomalous" and "was this receiver nominal" are different questions**,
+and only the second one is this rule's. The first is answered with a threshold built for a different
+purpose — one tuned so that *crossing it* means something, which says nothing about what *not*
+crossing it means.
+
+The item's original wording had asked for "the readings of its spatial neighbours in the same window".
+The amendment replaced readings with another rule's findings, because that made the rule pure and
+testable without a database. The original wording was right.
+
+Reading the neighbours' readings against their own baselines: **21 misattributions → 0, and all 60
+catches kept.**
+
+### Where the bar came from
+
+The one new number is how far a receiver may sit from its baseline and still count as nominal. It was
+set from two populations rather than from one:
+
+| Population | 5th pct | median | 95th pct |
+|---|---|---|---|
+| Neighbour the incident **also touched** | 2.51 dB | 4.46 dB | 5.96 dB |
+| Neighbour it **did not touch** | −1.71 dB | −0.05 dB | 1.58 dB |
+
+They separate, and **2 dB sits in the gap**. Reported with its neighbours so the choice is visibly a
+plateau and not a maximum: 1.0 and 1.5 dB give the same answer, 3.0 gives 5 misattributions, 4.0 gives 7.
+
+### The cheaper fix that was rejected, and why
+
+Treating a neighbour episode within 30 s of the window as overlapping it also gives 0 of 60 and 60 of
+60. It needs no readings at all. It was rejected **on an argument, not on a count**: it asks whether
+the neighbour was *anomalous recently*, and it only works while the neighbour crosses the anomaly
+threshold somewhere nearby. The 8 dB elevation is the generator's choice, not a property of
+interference — a weaker emitter raises a neighbour by 3 or 4 dB, produces no episode at any tolerance,
+and would read as nominal forever.
+
+**Worth recording as a general trap:** the cheaper repair passed every test available and fails the
+first realistic change to the scenario. No measurement could separate the two — only the argument could.
+
+### A second thing the episode boundary was costing
+
+One broken receiver was being reported about **five times per run**, each fault spanning a median of
+20 s of a 300 s incident. Taking the episodes as the *seed* and the readings as the *boundary* — the
+event began where the receiver left its baseline, not where a threshold happened to be crossed — gives
+**1.13 faults per run at a median span of exactly 300 s**. The window now recovers the incident.
+
+### Two findings worth recording as limitations
+
+1. **The confidence bands have no corpus behind them.** All 240 stored runs are narrowband, so every
+   fault raised is High. Medium and Low exist in unit tests only, and must not be quoted as measured
+   until a broadband arm is generated.
+2. **The ambiguous scenario is resolved 20 of 20 as a broken receiver, at High confidence, with no
+   trace of ambiguity.** That follows from the design — that type stages a single receiver by
+   construction, and the ordering offers a claimed zone to no later rule. It is a **threat to the
+   validity** of any evaluation treating the ambiguous type as a test of whether the system can express
+   uncertainty: under this ordering it cannot. See [[thesis_notes]], §71.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -4913,3 +5029,5 @@ mistake this project made twice this week. Build it, measure it, then choose. Se
 | **Group of one** | An isolated finding returned as its own cluster rather than discarded. Kept deliberately, because a dropout that happened alone is evidence of a data-source problem rather than of an incident. See §64. |
 | **Target draw** | The per-aircraft decision of whether a run stages on it: a keyed derivation from the run's seed and the aircraft's pseudonym, accepted below the 8% affected fraction. Order-independent, and disjoint between runs sharing a zone. See §55. |
 | **Matched control** | A `normal-baseline` run generated at the same seed and window as a scenario run, so the two differ only in the cells the incident touches — 60 of 5,040 on the measured pair. A counterfactual of the scenario rather than an independent sample of quiet. See §54. |
+| **Nominal** (a receiver) | Reading within a set distance of its own baseline across a window — 2 dB by measurement. Deliberately *not* "not currently anomalous": a threshold tuned so that crossing it means something says nothing about what not crossing it means. See §72. |
+| **Seed and boundary** | Two jobs one detector's output was doing at once. `RF-NOISE`'s episodes say which receiver is worth asking about (the seed); the readings say where its event began and ended (the boundary). Conflating them made one incident arrive as six. See §72. |

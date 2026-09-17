@@ -377,7 +377,9 @@ def test_the_radius_defaults_to_the_layout_discrimination_radius() -> None:
     # every sensor a neighbour inside it and a non-neighbour beyond, so the
     # default defers to validated configuration rather than inventing one.
     left = run((loud(sensor="RF-01"),), ONE_LOUD, radius=None)
-    right = run((loud(sensor="RF-01"),), ONE_LOUD, radius=LAYOUT.discrimination_radius_km)
+    right = run(
+        (loud(sensor="RF-01"),), ONE_LOUD, radius=LAYOUT.discrimination_radius_km
+    )
 
     assert left.faults[0].spatial.radius_km == LAYOUT.discrimination_radius_km
     assert left == right
@@ -485,9 +487,7 @@ def test_a_neighbour_with_no_baseline_cannot_be_judged_nominal() -> None:
 def test_a_neighbour_with_no_readings_cannot_be_judged_nominal() -> None:
     # spec: anom-007 -- the same argument for a receiver that reported
     # nothing at all in the window.
-    result = run(
-        (loud(sensor="RF-01"),), observations=grid(ONE_LOUD, omit=("RF-02",))
-    )
+    result = run((loud(sensor="RF-01"),), observations=grid(ONE_LOUD, omit=("RF-02",)))
 
     assert result.faults == ()
     assert result.dismissed[0].verdict is Verdict.UNDECIDED
@@ -548,9 +548,7 @@ def test_a_lone_channel_between_nominal_ones_is_high_confidence() -> None:
 def test_the_whole_plan_rising_together_is_low_confidence() -> None:
     # spec: anom-007 -- the item's second failure case. A wideband emitter
     # beside the receiver produces this too, so it is the weaker claim.
-    result = run(
-        (loud(sensor="RF-01"),), {("RF-01", c): STAGED_DB for c in CHANNELS}
-    )
+    result = run((loud(sensor="RF-01"),), {("RF-01", c): STAGED_DB for c in CHANNELS})
 
     assert len(result.faults) == 1
     assert result.faults[0].confidence is Confidence.LOW
@@ -590,7 +588,7 @@ def test_the_spread_is_measured_below_the_anomaly_threshold_too() -> None:
     )
 
     assert result.faults[0].confidence is Confidence.MEDIUM
-    assert result.faults[0].spectral.adjacent_abnormal == (5,)
+    assert result.faults[0].spectral.adjacent_abnormal == (L1, 5)
 
 
 def test_an_adjacent_channel_with_no_baseline_prevents_the_high_claim() -> None:
@@ -658,7 +656,7 @@ def test_one_receiver_raised_on_eight_channels_is_one_fault() -> None:
     # spec: anom-007 -- a fault is a property of a box. Per-episode output
     # would make one broken receiver read as eight sensor faults.
     result = run(
-        (loud(sensor="RF-01", channel=c) for c in CHANNELS),
+        tuple(loud(sensor="RF-01", channel=c) for c in CHANNELS),
         {("RF-01", c): STAGED_DB for c in CHANNELS},
     )
 
@@ -783,14 +781,12 @@ def test_a_track_observation_is_refused() -> None:
             scenario_run_id=1,
         ),
         payload=TrackPayload(
-            icao24="abc123",
-            callsign="TEST",
-            origin_country="Netherlands",
-            time_position=int(WINDOW_START.timestamp()),
-            last_contact=int(WINDOW_START.timestamp()),
-            baro_altitude_m=10000.0,
-            on_ground=False,
+            aircraft_id="pseudonym-1",
+            altitude_m=10000.0,
             velocity_ms=250.0,
+            on_ground=False,
+            position_staleness_s=5.0,
+            contact_staleness_s=5.0,
         ),
     )
 
@@ -804,8 +800,11 @@ def test_a_baseline_for_a_different_metric_is_refused() -> None:
     # same mismatch and this rule reads the same table.
     table = baselines(RfMetric.SNR_DB)
     mismatched = dataclasses.replace(
-        table, baselines={c: dataclasses.replace(b, metric=RfMetric.POWER_DBM)
-                          for c, b in table.baselines.items()}
+        table,
+        baselines={
+            c: dataclasses.replace(b, metric=RfMetric.POWER_DBM)
+            for c, b in table.baselines.items()
+        },
     )
 
     with pytest.raises(FaultError, match="metric"):
@@ -884,3 +883,80 @@ def test_a_dismissal_always_carries_its_reason() -> None:
 
     assert all(isinstance(d, Dismissal) and d.reason for d in result.dismissed)
     assert any("RF-02" in d.reason for d in result.dismissed if d.sensor_id == "RF-01")
+
+
+def test_a_neighbour_that_reported_nothing_in_the_window_is_undecided() -> None:
+    # spec: anom-007 -- a receiver present in the run but silent across
+    # this window is as unmeasurable as one that never reported at all,
+    # and for the same reason: there is nothing to compare.
+    result = run(
+        (loud(sensor="RF-01"),),
+        observations=tuple(
+            o
+            for o in grid(ONE_LOUD)
+            if o.payload.sensor_id != "RF-02"
+            or not (WINDOW_START <= o.timestamp <= WINDOW_END)
+        ),
+    )
+
+    assert result.faults == ()
+    assert result.dismissed[0].verdict is Verdict.UNDECIDED
+    assert result.dismissed[0].spatial.unjudged == ("RF-02",)
+
+
+def test_an_episode_the_readings_do_not_sustain_is_undecided() -> None:
+    # spec: anom-007 -- `anom-001` raises an episode on a threshold being
+    # crossed. If the receiver sits at its baseline across the window that
+    # episode seeds, there is no pattern to attribute, and reporting a
+    # fault on it would claim a broken instrument from a single tick.
+    result = run((loud(sensor="RF-01"),), None)
+
+    assert result.faults == ()
+    assert len(result.dismissed) == 1
+    assert result.dismissed[0].verdict is Verdict.UNDECIDED
+    assert "no pattern" in result.dismissed[0].reason
+
+
+def test_a_neighbour_raised_on_another_channel_is_not_the_same_cause() -> None:
+    # spec: anom-007 -- a cause that reached two receivers reached them on
+    # the same part of the band. A neighbour raised somewhere else in the
+    # plan is a second event, and reading it as corroboration would excuse
+    # a fault by pointing at an unrelated one.
+    result = run(
+        (loud(sensor="RF-01", channel=0),),
+        {("RF-01", 0): STAGED_DB, ("RF-02", 7): STAGED_DB},
+    )
+
+    assert [f.sensor_id for f in result.faults] == ["RF-01"]
+
+
+def test_one_raised_channel_on_a_neighbour_is_enough() -> None:
+    # spec: anom-007 -- the neighbour is judged on its worst channel among
+    # the ones the subject was raised on, not its best. Averaging a raised
+    # channel against a nominal one would hide the corroboration.
+    result = run(
+        (loud(sensor="RF-01", channel=3), loud(sensor="RF-01")),
+        {("RF-01", 3): STAGED_DB, ("RF-01", L1): STAGED_DB, ("RF-02", L1): STAGED_DB},
+    )
+
+    assert result.faults == ()
+    assert result.dismissed[0].verdict is Verdict.ENVIRONMENTAL
+
+
+def test_a_single_raised_tick_does_not_make_a_neighbour_abnormal() -> None:
+    # spec: anom-007 -- nominality is a question about the window, so the
+    # measure is the mean across it and not the worst instant in it. On a
+    # peak, one tick of ordinary noise on one neighbour would excuse every
+    # fault in the layout.
+    spike = WINDOW_START + timedelta(seconds=100)
+    result = run(
+        (loud(sensor="RF-01"),),
+        observations=swap(
+            grid(ONE_LOUD),
+            grid({("RF-02", L1): STAGED_DB}, window=(spike, spike)),
+            (("RF-02", L1),),
+        ),
+    )
+
+    assert [f.sensor_id for f in result.faults] == ["RF-01"]
+    assert dict(result.faults[0].spatial.elevations)["RF-02"] < 1.0
