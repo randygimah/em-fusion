@@ -5048,6 +5048,127 @@ Only the broken-receiver test produces claims, so the ladder cannot be run end t
 measurement of it over the corpus is possible until the fusion rule lands. Written onto the item
 rather than left to be discovered. See §72, §73, [[thesis_notes]].
 
+## 75. Whether anom-005 gates on the rate excess, then anom-006
+
+**Two questions, two answers, and both came out different from what the backlog expected.**
+
+### Question one: should the interference rule require the aircraft evidence to pass a threshold?
+
+The spec said **both conditions are necessary** — a radio anomaly *and* co-located aircraft evidence.
+With a radius finally chosen (§73), the apparent job was just to pick the threshold.
+
+**The curve answers a question the rule doesn't face.** Every figure for the excess was measured over
+*all* runs of each type. Under the ordering, the rule sees almost none of them:
+
+| What reaches the interference rule | |
+|---|---|
+| `gnss-degradation` (real interference) | 40 of 40 |
+| `aircraft-coverage-gap` | 0 of 40 |
+| `normal-baseline` | 0 of 20 |
+| `rf-sensor-fault` | 1 of 40 — and its window is zero-length, so unmeasurable |
+
+So the population arriving is **40 true interference zones and one unmeasurable leak**. A gate would
+report 26 of the 40 and reject nothing, because there is nothing false there to reject.
+
+### The finding that actually settled it
+
+The 14 zones a gate would lose are not zones where the aircraft evidence was weak. **They are zones
+with almost no aircraft in them.**
+
+| | |
+|---|---|
+| All 14 hold | **4 or fewer** track findings in the whole run |
+| 5 of them hold | none at all during the window |
+| 2 of them hold | none anywhere |
+| Meanwhile, across all 40 | median ratio **3.87**, 75th percentile **11.47** |
+
+So the gate would suppress an interference report — one backed by an 8 dB radio signal — **because
+few aircraft happened to be flying near the incident.** That is not a sensitivity trade-off. It is a
+detector whose output depends on traffic density at the staged location, which is a property of where
+the generator put the zone.
+
+**The threshold is kept but demoted**: it becomes the boundary between confidence bands rather than a
+condition of firing. Nothing measured is wasted and the cost disappears. And the confidence is
+three-valued, exactly like the broken-receiver rule's verdict, with the third band being *too little
+traffic to judge* — which must not read as absent corroboration.
+
+> That is now the **third** place in the detection layer where silence had to be separated from
+> evidence of absence: unjudged radio cells (§72), unmeasurable neighbours (§72), and now empty discs.
+> Three times in one layer is a property of building detectors over incomplete observation, not three
+> coincidences.
+
+### The limitation that decision rests on
+
+The corpus contains **no scenario producing a multi-receiver radio anomaly that isn't interference** —
+no weather, no distant emitter, no two receivers failing together. So what is measured is that the
+gate has *no opportunity to help here*, not that it would never help.
+
+The decision stands anyway, on a principle worth stating plainly: **a gate whose benefit is
+unmeasurable and whose cost is measured at 14 of 40 cannot be justified on this evidence.** If such an
+arm is ever generated, the question reopens with data.
+
+### Question two: build the coverage-gap rule
+
+**No — and not because of its design.** The measurement taken before choosing its threshold said it
+should not be built yet at all.
+
+**Its defensive job is already done.** The rule exists to keep a coverage gap from being called
+interference. Measured: **0 of 40 coverage-gap runs reach the interference rule**, because that
+scenario stages nothing on the radio grid. The misattribution it was written to prevent can no longer
+happen — prevented by the *absence of a strong signal*, not by the presence of a weak one.
+
+What's left is the positive claim: saying *we are not hearing aircraft here*. And:
+
+| Over 40 seed-matched pairs | |
+|---|---|
+| Coverage-gap run, mean findings | **16.1** |
+| Its matched control | **15.1** |
+| Staged strictly greater / tied / **lower** | 23 / 17 / **0** |
+
+Zero discordant losses in 40 pairs is about as strong as evidence of *existence* gets. It is also
+**one finding in fifteen** — and a detector sees one run, without its control.
+
+### The zone-level version is worse than counting
+
+Cluster the findings to propose zones, score each with the rate excess, take the strongest per run:
+
+| Cluster radius | staged beats control | control beats staged |
+|---|---|---|
+| 20 km | 7 | 3 |
+| 40 km | 5 | 4 |
+| 60 km | 4 | 2 |
+
+That is chance. **The machinery destroys a signal that raw counting preserves.** The mechanism is the
+one question one exposed: a ratio over a disc holding 1–3 findings is dominated by the smoothing term,
+so taking a *maximum across zones* selects for small-sample noise rather than for effect.
+
+> Worth recording generally: a statistic chosen to be robust in one setting can be **strictly worse
+> than the naive count** in another, and taking the extreme value across many candidates is exactly
+> where that reverses.
+
+And building it as specified would be *actively wrong*, not merely weak: it fires when dropouts exist
+with no co-located radio anomaly, a quiet run holds ~15 dropouts and no radio anomaly, so it would
+fire on **every quiet run** and destroy the zero-anomalies control.
+
+### What actually blocks it
+
+Not the detector — the corpus, and specifically the open question already recorded when staging was
+restricted to airborne aircraft: **the limiting quantity is how many aircraft a run stages on.**
+
+Mean **1.7 aircraft per run**, and **11 of 40 runs stage none at all** — so a quarter of the arm has an
+empty answer key and is indistinguishable from its control by construction. That is now written up as
+its own generator item.
+
+### Two items, one cost
+
+That generator fix and the minimum-duration item (§73) are now blocked on **the same act**: both
+invalidate every detection figure measured through the current batches. Deferring each is right
+twice over — and it means a queue is forming of changes that share one cost.
+
+**The position recorded on both: when a regeneration happens, both land in it and every figure is
+re-measured together.** That converts two separate invalidations into one, and gives the re-measured
+figures a single set of conditions to be reported under. See §72, §73, [[thesis_notes]].
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -5213,3 +5334,5 @@ rather than left to be discovered. See §72, §73, [[thesis_notes]].
 | **Discharged, not overturned** | A recorded decision whose argument was conditional, where the condition has since been met — as against one shown to be wrong. The distinction matters because only the second needs the original reasoning retracted. See §73. |
 | **Claim** | A rule's bid for a zone — rule, anomaly type, place and window, and nothing else. Carries no severity or confidence, because the ladder decides *which* answer is given and never how strongly. See §74. |
 | **Zone** | A place and an interval that a candidate anomaly occupies. A point and a window, never an area: a radio anomaly is located at the reporting receiver, and inventing an extent would claim ground nothing was observed across. See §74. |
+| **Demoted threshold** | A measured cut-off kept as a confidence boundary rather than used as a condition of firing. Preserves what the measurement bought without paying the cost of rejecting true positives. See §75. |
+| **Empty answer key** | A run labelled as staging an incident whose ground truth names no aircraft — 11 of 40 coverage-gap runs. Indistinguishable from its control by construction, so it silently dilutes any recall measured over the arm. See §75. |

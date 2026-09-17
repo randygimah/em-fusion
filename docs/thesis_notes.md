@@ -4790,6 +4790,106 @@ shape of a zone produced by a rule that does not exist is how a parameter gets f
 imagination rather than to evidence, so the value is justified for the claims that exist today and
 revisited when the third rule produces its own.
 
+### A gate that would have rejected reports on the grounds of low air traffic
+
+`anom-005` was specified from the outset with both conditions necessary: a radio anomaly *and*
+co-located track evidence. Once `anom-012` had a measured trade-off curve and a chosen radius, the
+apparent decision was simply which point on that curve to gate at. The measurement that settled it
+instead removed the gate, and did so for a reason the curve could not show.
+
+The curve was measured over all runs of each type. Under `anom-013`, `anom-005` sees almost none of
+them. Measured over batches 2 and 3 plus the twenty quiet runs, the zones actually reaching the rule
+are 40 of 40 `gnss-degradation`, 0 of 40 `aircraft-coverage-gap`, 0 of 20 `normal-baseline` and 1 of
+40 `rf-sensor-fault` — and that single leaked fault carries a zero-length window and cannot be
+measured at all. The population arriving at the rule is forty true interference zones and one
+unmeasurable leak. A gate at the pre-registered threshold would report 26 of the 40 and reject
+nothing, because there is nothing false there to reject.
+
+The decisive part is what the fourteen rejected zones have in common. They are not zones where the
+track evidence was weak; they are zones with almost no air traffic in them. Every one of the fourteen
+holds four or fewer track findings in the disc across the whole run — five hold none during the
+window, two hold none anywhere — while the distribution over all forty has a median ratio of 3.87 and
+a seventy-fifth percentile of 11.47. The gate would therefore suppress an interference report, backed
+by an eight-decibel radio signal, because few aircraft happened to be near the incident. That is not
+a specificity/sensitivity trade-off at all; it is a detector whose output depends on traffic density
+at the staged location, which is a property of where the generator put the zone.
+
+The threshold is kept and demoted rather than discarded: it becomes the boundary between confidence
+bands rather than a condition of firing, so the measurement still does work and the cost disappears.
+The confidence is three-valued in the same shape `anom-007` uses, and for the same reason — the third
+band is *too little traffic to judge*, which must not read as absent corroboration. That is now the
+third distinct place in the detection layer where silence had to be separated from evidence of
+absence, after `anom-001`'s unjudged cells and `anom-007`'s unmeasurable neighbours. A pattern
+recurring three times in one layer is worth naming in the write-up as a property of building
+detectors over incomplete observation, rather than as three coincidences.
+
+### The limitation that decision rests on, stated rather than buried
+
+What the measurement establishes is that the gate has no opportunity to help in this corpus, not that
+it would never help. There is no scenario type producing a multi-receiver radio anomaly that is *not*
+interference — no weather, no distant emitter, no two receivers failing together — so the population
+arriving at `anom-005` is pure by construction. A deployment would not be.
+
+The decision stands anyway, and the reason is worth stating as a principle rather than as a
+convenience: a gate whose benefit is unmeasurable and whose cost is measured at fourteen of forty
+cannot be justified on this evidence. If a corpus arm is ever generated that stages such a cause, the
+question reopens with data. That is a different posture from deciding the gate is wrong in general,
+and the item records which of the two is being claimed.
+
+### A rule that cannot be built, and the difference between a weak detector and an absent signal
+
+`anom-006` was next, and the measurement taken before specifying its threshold established that it
+should not be built at all yet. The finding is worth the space because it separates two things that
+look identical from inside a failing detector.
+
+Its defensive job turns out to be already done. The item exists to keep a coverage gap from being
+reported as interference, and measured over 240 runs, 0 of 40 coverage-gap runs reach `anom-005` —
+because that type stages nothing on the radio grid and `anom-005`'s trigger is a radio anomaly. The
+misattribution the rule was written to prevent can no longer occur, and it is prevented by the
+*absence of a strong signal* rather than by the presence of a weak one. What remains is the positive
+claim: saying we are not hearing aircraft here, when that is true.
+
+Against forty seed-matched pairs, the effect is real and unmistakable and far too small to act on. A
+coverage-gap run holds a mean of 16.1 track-gap findings against its control's 15.1, and **never
+fewer**: 23 pairs strictly greater, 17 tied, none lower. Zero discordant losses in forty pairs is
+about as strong as evidence of existence gets. It is also one finding in fifteen, and a detector sees
+one run without its control.
+
+The zone-level design does not rescue it and actively makes it worse. Proposing zones by clustering
+the findings and scoring each with `anom-012`'s rate excess, then taking the strongest zone per run,
+gives staged against control of 7 to 3 at a 20 km cluster radius, 5 to 4 at 40 km and 4 to 2 at
+60 km. That is chance. **The machinery destroys a signal that raw counting preserves**, and the
+mechanism is the one `anom-005`'s measurement exposed: a ratio over a disc holding one to three
+findings is dominated by the smoothing term, so taking a maximum across zones selects for
+small-sample noise rather than for effect. A statistic chosen to be robust in one setting can be
+strictly worse than the naive count in another, and taking the extreme value across many candidates
+is where that reverses.
+
+Building the rule as specified would have been actively wrong rather than merely weak: it fires when
+dropouts are present and no co-located radio anomaly exists, a quiet run holds about fifteen findings
+and no radio anomaly, so it would fire on every quiet run in the corpus and destroy `anom-008`'s
+zero-anomalies control. A discrimination threshold is mandatory and no threshold on the available
+quantities provides one.
+
+### Two items now blocked on the same act, and the argument for doing it once
+
+What blocks `anom-006` is not its design but the corpus, and specifically the open question `scn-006`
+already recorded: the limiting quantity is how many aircraft a run stages on. Since that fix
+restricted staging to airborne aircraft, the eligible pool shrank and the eight per cent fraction
+draws a mean of 1.7 aircraft per run, with 11 of 40 runs drawing none — so a quarter of the
+coverage-gap arm has an empty answer key and is indistinguishable from its control by construction.
+That is now written as `scn-007`, which guarantees a floor while keeping the draw order-independent
+and reproducible from the seed.
+
+`scn-007` and `anom-014` are now blocked on the same act. Both are generator or upstream-detector
+changes; both would invalidate every detection figure measured through the current batches —
+`anom-007`'s 60 of 60, `anom-012`'s curve, `anom-011`'s recall, and a replication scored against a
+pre-registration written before it ran. Deferring each individually is the right call twice over, and
+it also means the project is accumulating a queue of changes that share one cost. The position
+recorded on both items is that when a regeneration happens, both land in it and every figure is
+re-measured together — which converts two separate invalidations into one, and gives the re-measured
+figures a single set of conditions to be reported under.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;

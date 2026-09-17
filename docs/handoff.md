@@ -13,12 +13,13 @@ was waiting on, because `anom-013` assumes it claims the runs whose truth is a b
 that assumption had never been tested. It then settled `anom-012`'s radius, which was blocked on
 that same assumption — and found, on the way, that the curve the radius would have been chosen from
 had been measured on inputs the rule never receives. It finished with `anom-013`, the precedence
-that makes the ordering a declaration rather than a coincidence.
+that makes the ordering a declaration rather than a coincidence — then settled `anom-005`'s gating
+question and found that `anom-006` cannot honestly be built on the corpus as it stands.
 
 ## Current state
 
-**`anom-007`, the `anom-012` amendment and `anom-013` are all built, measured and green.** 95 spec
-items, **40 passing**. Backend suite: **851 passed, 99.92% coverage** with the database
+**`anom-007`, the `anom-012` amendment and `anom-013` are all built, measured and green.** **96 spec
+items, 40 passing** (`scn-007` added, unbuilt by design). Backend suite: **851 passed, 99.92% coverage** with the database
 (`make test-backend`). Lint and mypy clean. `anom-007`: 49 tests, 100% module coverage, **27 of 28
 mutants killed, no survivors** (the 28th site removed as a redundant guarantee). The `anom-012`
 amendment: 3 new tests plus one replaced, **5 of 5 killed**. `anom-013`: 24 tests, 100% module
@@ -125,6 +126,47 @@ untouched ones 1.58 dB at the 95th, and the choice is a plateau (1.0 and 1.5 dB 
   quantity at all, or carry it as evidence strength while firing on the radio pattern, is `anom-005`'s
   decision and is now the most consequential open question in detection.
 
+### `anom-005` does not gate on the rate excess — decided, recorded, unbuilt
+
+The trade-off curve answers a question the rule does not face. Measured over batches 2–3 plus the 20
+quiet runs, the zones reaching `anom-005` are **40 of 40 gnss-degradation, 0 of 40
+aircraft-coverage-gap, 0 of 20 normal-baseline, 1 of 40 rf-sensor-fault** — and that one leak carries
+a zero-length window. A gate would report 26 of 40 and **reject nothing**, because nothing false
+arrives there.
+
+What settles it: the 14 zones a gate would lose all hold **4 or fewer** track findings in the whole
+run (5 hold none during the window, 2 none anywhere), against a median ratio of 3.87 and p75 of 11.47
+over all 40. The gate would reject an interference report **on the grounds of low traffic density at
+the staged location**. The threshold is kept but **demoted to a confidence boundary**, three-valued
+in `anom-007`'s shape, the third band being *too little traffic to judge*.
+
+Limitation on the record: the corpus has no multi-receiver RF anomaly that is *not* interference, so
+the gate's benefit is **unmeasurable, not measured-zero**. Decision stands — an unmeasurable benefit
+against a cost measured at 14 of 40 — and reopens if such an arm is generated.
+
+### `anom-006` is blocked by the corpus, not by its design — specified, not built
+
+Its **defensive job is already done**: 0 of 40 coverage-gap runs reach `anom-005`, so the
+misattribution it exists to prevent cannot occur. What remains is the positive claim, and:
+
+- Over 40 seed-matched pairs: **16.1 findings against the control's 15.1, and never fewer** (23
+  greater, 17 tied, **0 lower**). Real beyond doubt, and one in fifteen.
+- **Zone-level scoring is at chance** — 7:3, 5:4, 4:2 at 20/40/60 km cluster radii. The machinery
+  *destroys* a signal raw counting preserves: a ratio over a disc of 1–3 findings is dominated by the
+  smoothing term, so a maximum across zones selects small-sample noise.
+- Building it as specified would be **actively wrong**: it would fire on every quiet run (~15
+  findings, no RF anomaly) and destroy `anom-008`'s control.
+
+**Root cause is `scn-006`'s own recorded open question** — the limiting quantity is how many aircraft
+a run stages on. Mean **1.7 per run, 11 of 40 stage nothing at all**. Now written as **`scn-007`**.
+
+### Two items blocked on one act
+
+`scn-007` and `anom-014` both require regenerating the batches, which invalidates every detection
+figure measured through them. **Recorded on both: when a regeneration happens, both land in it and
+every figure is re-measured together** — one invalidation instead of two, and one set of conditions
+for the re-measured figures.
+
 ## Files in flight
 
 Tree is clean apart from the documentation commit this handoff belongs to. The frontend changes
@@ -147,6 +189,9 @@ listed at session start (`nav-001` work) are untouched and still uncommitted.
 - `f778cf1` feat(anom-012): the radius, the real window source, and a zero-length refusal - tests pass
 - `45dde95` spec: amend anom-013 — the ladder resolves claims, not rules
 - `a808fa0` test: add tests for anom-013
+- `32d0d2b` feat(anom-013): the reportable rule precedence - tests pass
+- `b29f1cf` spec: anom-005 does not gate on the rate excess
+- `d142b91` spec: anom-006 is blocked by the corpus, not by its design; add scn-007
 - New: `backend/app/detection/precedence.py`, `backend/tests/test_anom_precedence.py`
 - Updated: `docs/spec.jsonl` (anom-007 amended twice then `passes: true`; anom-012 amended with six
   decisions then `passes: true`; **anom-014 added**, `passes: false` by design), `CLAUDE.md` repo map,
@@ -191,15 +236,21 @@ listed at session start (`nav-001` work) are untouched and still uncommitted.
 
 ## Next step
 
-1. **Decide whether `anom-005` gates on the rate excess.** At 60 km and the pre-registered threshold
-   it fires on 26 of 40 interference runs, so as a necessary condition it loses 14. The alternative is
-   to fire on the radio pattern and carry the excess as evidence strength in the bundle. This is the
-   decision the whole ordering argument has been converging on and it should be taken deliberately,
-   with the 8 dB versus Youden's-J-0.3 asymmetry in front of it.
-2. **`anom-006` (SOURCE-GAP)**, which now has a precedence to plug into rather than a mutual
-   exclusion it would have to implement itself. Its only obligation to `anom-013` is to emit a claim.
-3. **`anom-005` (FUSION-SPATIAL)** — and when it lands, measure the ladder end to end over the 240
-   runs and record the result on `anom-013`, which ships without it.
+**A decision is owed before more detection work: regenerate the corpus, or keep building around it?**
+`scn-007` and `anom-014` are both specified and both blocked on it, and `anom-006` cannot be built
+until `scn-007` lands. Building `anom-005` first is possible and does not depend on either.
+
+1. **`anom-005` (FUSION-SPATIAL)** — buildable now and unblocked. Trigger is the RF pattern alone; the
+   excess is carried as confidence. **One thing to measure during the build**: the count floor
+   separating "measurably below threshold" from "too little traffic to judge". The arithmetic
+   constraint is that `anom-012`'s smoothing term must not dominate the rate — measure it, do not
+   pick it from the 14 values above, which is the sample it would be scored against.
+   When it lands, **measure the ladder end to end** over the 240 runs and record it on `anom-013`,
+   which ships without that.
+2. **`scn-007` + `anom-014` together**, with a full batch regeneration and a re-measurement of every
+   detection figure under one set of conditions. This is the larger call and belongs to the user.
+3. **`anom-006`**, only after `scn-007`, and repeat the pair measurement before choosing any
+   threshold in it.
 4. `anom-003`, the z-score, which carries the `db-008` extensibility prediction scored once as a
    partial.
 
@@ -207,7 +258,10 @@ listed at session start (`nav-001` work) are untouched and still uncommitted.
 
 - ~~A minimum-duration constraint on `anom-001`~~ — now **`anom-014`**, specified and deliberately
   unbuilt. Regenerate and re-measure every batch *together* if it is ever built, never one item at a
-  time.
+  time. **`scn-007` is now blocked on the same act** — do them in one regeneration.
+- **The `aircraft-coverage-gap` arm currently has no rule.** It contributes only correct
+  non-detections to `eval-002` and must not be reported as though the system had been tested on it.
+  A threat to validity, recorded on `anom-006`.
 - A **broadband generation arm**, without which `anom-007`'s Medium and Low confidence bands have no
   corpus behind them.
 - The **frontend suite exits non-zero**: `TypeError: control.runs.map is not a function` at
