@@ -36,7 +36,12 @@ from app.dal.models import Location
 from app.db.findings import save_findings
 from app.db.migrations import alembic_config
 from app.detection.findings import DetectionFinding
-from app.detection.rate_excess import ExcessPolicy, RateExcess, measure_rate_excess
+from app.detection.rate_excess import (
+    DEFAULT_RADIUS_KM,
+    ExcessPolicy,
+    RateExcess,
+    measure_rate_excess,
+)
 from tests.conftest import requires_database
 
 RUN_ID = 1
@@ -301,10 +306,85 @@ def test_the_result_carries_no_severity_and_no_threshold() -> None:
     assert not names & {"severity", "threshold", "confidence", "score", "reportable"}
 
 
-def test_the_policy_has_no_default_radius() -> None:
-    """Deliberate. Every measured point is a different trade-off between a
-    missed incident and a misattributed one, and a default would quietly
-    make that choice for the caller."""
-    # spec: anom-012, anom-013
-    with pytest.raises(TypeError):
-        ExcessPolicy()  # type: ignore[call-arg]
+def test_the_policy_defaults_to_the_chosen_radius() -> None:
+    """A reversal, and the reason it is one.
+
+    This item shipped with *no* default, because every measured point on
+    the curve was a different trade-off between a missed incident and a
+    misattributed one and a default would have made that choice quietly.
+    That argument is discharged rather than overturned: `anom-007` claims
+    every sensor-fault run, so nothing but interference reaches a fusion
+    decision -- 40 of 40 gnss-degradation, 0 of 40 aircraft-coverage-gap,
+    1 of 40 rf-sensor-fault -- and with no false-positive pressure the
+    curve is read at its sensitive end. 60 km is also `scn-002`'s own
+    configured incident radius, so the disc matches the scale of the zone
+    it measures, which is configuration and not per-run ground truth.
+    """
+    # spec: anom-012, anom-007, anom-013, scn-002
+    assert DEFAULT_RADIUS_KM == 60.0
+    assert ExcessPolicy().radius_km == DEFAULT_RADIUS_KM
+
+
+# ------------------------------------- the window this rule is actually given
+
+
+@pytest.mark.database
+@requires_database
+def test_a_zero_length_window_is_refused(factory: sessionmaker) -> None:
+    """The window `api-009` supplies comes from a detected episode, and a
+    single-reading episode has its start equal to its end -- 6 of 86 staged
+    runs produce one as their longest. The rate divides by that length.
+    Refused rather than clamped: a clamped window returns a number computed
+    over one reading, and nothing in the result would say so."""
+    # spec: anom-012, anom-001, anom-014
+    store(factory, finding(subject="a", at=150))
+    instant = START + timedelta(seconds=150)
+
+    with pytest.raises(ValueError, match="no length"):
+        measure(factory, window=(instant, instant))
+
+
+@pytest.mark.database
+@requires_database
+def test_a_window_that_ends_before_it_starts_is_refused(
+    factory: sessionmaker,
+) -> None:
+    """The same refusal from the other side. A negative length would make
+    `outside_s` larger than the run and the ratio finite and meaningless,
+    which is worse than a division by zero because nothing would fail."""
+    # spec: anom-012
+    store(factory, finding(subject="a", at=150))
+
+    with pytest.raises(ValueError, match="no length"):
+        measure(
+            factory,
+            window=(START + timedelta(seconds=420), START + timedelta(seconds=120)),
+        )
+
+
+@pytest.mark.database
+@requires_database
+def test_a_window_shorter_than_the_event_moves_the_ratio_against_it(
+    factory: sessionmaker,
+) -> None:
+    """Why the window comes from `anom-007`'s assessment and not from an
+    `anom-001` episode: the window and its complement are the two halves of
+    the ratio, so a window shorter than the event puts the event's own
+    findings into the reference period it is compared against.
+
+    Measured on the corpus, the longest episode on a run has a median
+    length of 90 s against a staged 300 s, while `anom-007`'s window --
+    seeded by the episodes, bounded by the readings -- has a median of
+    320 s. This is that difference, in the small."""
+    # spec: anom-012, anom-007, anom-013
+    store(
+        factory,
+        *(finding(subject=f"a{i}", at=at) for i, at in enumerate(range(130, 410, 40))),
+    )
+    fragment = (WINDOW[0], WINDOW[0] + timedelta(seconds=90))
+
+    whole = measure(factory, window=WINDOW)
+    short = measure(factory, window=fragment)
+
+    assert short.ratio < whole.ratio
+    assert short.outside > whole.outside
