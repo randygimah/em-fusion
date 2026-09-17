@@ -6,19 +6,27 @@ abnormality rather than its size. `anom-001` decides whether a reading is
 abnormal; this decides what the pattern of abnormality implicates.
 
 Two pieces of evidence, kept apart deliberately. **Geography**: a receiver
-loud while its close neighbours read nominal is describing itself, not the
-air, and three adjacent receivers loud together is the environment and
-must raise nothing. **Frequency**: a real emission spills into the
-channels either side of it, so a lone loud channel between two clean ones
-is a pattern the physics does not easily produce -- while the whole plan
-rising together is the weaker claim, because a wideband emitter parked
-beside the receiver looks the same from here.
+away from its normal while its close neighbours sit at theirs is
+describing itself, not the air, and receivers going together is the
+environment and must raise nothing. **Frequency**: a real emission spills
+into the channels either side of it, so a lone raised channel between two
+normal ones is a pattern the physics does not easily produce -- while the
+whole plan rising together is the weaker claim, because a wideband emitter
+parked beside the receiver looks the same from here.
 
-Most of the tests below are about what the rule refuses to conclude. The
-one that matters most is `test_an_unjudged_neighbour_is_not_a_clean_one`:
-`anom-001` reports the cells it could not judge precisely so that silence
-is never read as cleanliness, and this is the first consumer with the
-opportunity to make that mistake.
+**Nominality is measured from readings, not from another rule's episodes,
+and that is a correction rather than a preference.** Built the other way,
+the rule claimed 21 of 60 interference runs as broken receivers: the
+injected elevation varies per tick, roughly one tick in six falls short of
+`anom-001`'s threshold, and a receiver loud for a whole incident therefore
+emits a string of short episodes rather than one. Two receivers loud
+through the same window can then have fragments that never overlap, and
+each reads as isolated. The neighbours in those windows were sitting 2.5
+to 6 dB above their own baselines and not one of them exceeded the anomaly
+threshold there. Asking "was this receiver anomalous" in place of "was
+this receiver nominal" is the whole of the defect.
+
+Most of the tests below are about what the rule refuses to conclude.
 """
 
 from __future__ import annotations
@@ -29,8 +37,18 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from app.dal.models import Location
-from app.detection.baseline import RfCell, RfMetric
+from app.dal.models import (
+    CanonicalObservation,
+    DataMode,
+    Location,
+    ObservationType,
+    Provenance,
+    RfPayload,
+    SourceType,
+    TrackPayload,
+    ValidationStatus,
+)
+from app.detection.baseline import Baseline, BaselineTable, RfCell, RfMetric
 from app.detection.rf_noise import (
     ReadingRef,
     RfNoiseAnomaly,
@@ -40,6 +58,7 @@ from app.detection.rf_noise import (
 )
 from app.detection.sensor_fault import (
     ANOMALY_TYPE,
+    DEFAULT_NOMINAL_WITHIN_DB,
     RULE_ID,
     Confidence,
     Dismissal,
@@ -52,12 +71,22 @@ from app.detection.sensor_fault import (
 from app.scenario.layout import load_layout
 
 LAYOUT = load_layout()
+SENSORS = tuple(site.sensor_id for site in LAYOUT.sensors)
+CHANNELS = tuple(channel.index for channel in LAYOUT.channels)
 
 #: The GNSS L1 channel, which is what `scn-002` stages a narrowband
 #: incident on. Its neighbours in the plan are 3 and 5.
 L1 = 4
 
+#: The quiet nominal `scn-001`'s emitter produces, and the spread measured
+#: over the twenty quiet runs.
+QUIET_DBM = -95.0
+QUIET_SNR = 12.0
+QUIET_SPREAD = 1.5
+
 START = datetime(2026, 9, 17, 12, 0, 0, tzinfo=UTC)
+TICK = timedelta(seconds=10)
+RUN_END = START + timedelta(seconds=900)
 #: The staged window: 120 s into the run, 300 s long (`scn-002` defaults).
 WINDOW_START = START + timedelta(seconds=120)
 WINDOW_END = START + timedelta(seconds=420)
@@ -73,6 +102,113 @@ WIDE = 110.0
 #: neighbour and the rule has nothing to compare against.
 BLIND = 40.0
 
+#: The staged elevation. Well past the 2 dB nominality bar and past
+#: `anom-001`'s 6 dB threshold.
+STAGED_DB = 8.0
+#: Past the nominality bar and short of the anomaly threshold: the case
+#: the corpus produced and the episode-based test could not see.
+SUB_THRESHOLD_DB = 5.0
+
+
+def baselines(
+    metric: RfMetric = RfMetric.POWER_DBM,
+    without: tuple[RfCell, ...] = (),
+) -> BaselineTable:
+    """A baseline for every cell in the layout, as `anom-002` builds one."""
+    mean = QUIET_DBM if metric is RfMetric.POWER_DBM else QUIET_SNR
+    table = {
+        RfCell(sensor, channel): Baseline(
+            cell=RfCell(sensor, channel),
+            metric=metric,
+            mean=mean,
+            stdev=QUIET_SPREAD,
+            samples=1800,
+        )
+        for sensor in SENSORS
+        for channel in CHANNELS
+        if RfCell(sensor, channel) not in without
+    }
+    return BaselineTable(
+        metric=metric, window=timedelta(hours=1), ending_at=RUN_END, baselines=table
+    )
+
+
+def grid(
+    elevate: dict[tuple[str, int], float] | None = None,
+    window: tuple[datetime, datetime] = (WINDOW_START, WINDOW_END),
+    omit: tuple[str, ...] = (),
+) -> tuple[CanonicalObservation, ...]:
+    """The dense sensor x channel x time grid `scn-005` specifies.
+
+    Every cell reads its quiet nominal, except those named in `elevate`,
+    which are raised by that many dB inside the window -- and whose SNR
+    falls by the same amount, because noise rising is what drives it down.
+    """
+    raised = elevate or {}
+    observations: list[CanonicalObservation] = []
+    for sensor in SENSORS:
+        if sensor in omit:
+            continue
+        site = LAYOUT.site(sensor)
+        for channel in CHANNELS:
+            at = START
+            while at <= RUN_END:
+                lift = (
+                    raised.get((sensor, channel), 0.0)
+                    if window[0] <= at <= window[1]
+                    else 0.0
+                )
+                observations.append(
+                    CanonicalObservation(
+                        source_id="rf",
+                        source_type=SourceType.SYNTHETIC_RF,
+                        observation_type=ObservationType.RF,
+                        timestamp=at,
+                        location=Location(lat=site.lat, lon=site.lon),
+                        data_mode=DataMode.SYNTHETIC,
+                        validation_status=ValidationStatus.VALID,
+                        provenance=Provenance(
+                            source_id="rf",
+                            source_type=SourceType.SYNTHETIC_RF,
+                            data_mode=DataMode.SYNTHETIC,
+                            scenario_run_id=1,
+                        ),
+                        payload=RfPayload(
+                            sensor_id=sensor,
+                            channel_index=channel,
+                            centre_frequency_mhz=1575.42,
+                            band="GNSS-L1",
+                            power_dbm=QUIET_DBM + lift,
+                            snr_db=QUIET_SNR - lift,
+                            bandwidth_mhz=2.0,
+                            signal_type="noise",
+                            baseline_delta_db=lift,
+                        ),
+                    )
+                )
+                at += TICK
+    return tuple(observations)
+
+
+def swap(
+    base: tuple[CanonicalObservation, ...],
+    other: tuple[CanonicalObservation, ...],
+    cells: tuple[tuple[str, int], ...],
+) -> tuple[CanonicalObservation, ...]:
+    """`base`, with the named cells' readings taken from `other`.
+
+    Two grids differ only in when a cell is raised, so this composes runs
+    where one receiver's event sits in a different window from another's.
+    """
+    named = set(cells)
+
+    def cell(o: CanonicalObservation) -> tuple[str, int]:
+        return (o.payload.sensor_id, o.payload.channel_index)
+
+    return tuple(o for o in base if cell(o) not in named) + tuple(
+        o for o in other if cell(o) in named
+    )
+
 
 def loud(
     *,
@@ -80,19 +216,17 @@ def loud(
     channel: int = L1,
     started_at: datetime = WINDOW_START,
     ended_at: datetime = WINDOW_END,
-    deviation: float = 8.0,
 ) -> RfNoiseAnomaly:
     """One `anom-001` episode, as that rule would emit it."""
     site = LAYOUT.site(sensor)
-    cell = RfCell(sensor, channel)
     return RfNoiseAnomaly(
-        cell=cell,
+        cell=RfCell(sensor, channel),
         metric=RfMetric.POWER_DBM,
         severity=Severity.HIGH,
         started_at=started_at,
         ended_at=ended_at,
         location=Location(lat=site.lat, lon=site.lon),
-        peak_deviation=deviation,
+        peak_deviation=STAGED_DB,
         triggering=(
             ReadingRef(sensor_id=sensor, channel_index=channel, timestamp=started_at),
         ),
@@ -100,7 +234,7 @@ def loud(
 
 
 def blind_cell(sensor: str, channel: int = L1) -> UnjudgedCell:
-    """A cell `anom-001` could not assess. Not the same as a quiet one."""
+    """A cell `anom-001` could not assess."""
     return UnjudgedCell(
         cell=RfCell(sensor, channel),
         reason="baseline had 4 of 30 samples required",
@@ -114,16 +248,41 @@ def findings(
     return RfNoiseFindings(anomalies=anomalies, unjudged=unjudged)
 
 
-def policy(radius: float | None = NEAR) -> FaultPolicy:
-    return FaultPolicy(neighbour_radius_km=radius)
+def policy(
+    radius: float | None = NEAR, bar: float = DEFAULT_NOMINAL_WITHIN_DB
+) -> FaultPolicy:
+    return FaultPolicy(neighbour_radius_km=radius, nominal_within_db=bar)
+
+
+def run(
+    anomalies: tuple[RfNoiseAnomaly, ...],
+    elevate: dict[tuple[str, int], float] | None = None,
+    *,
+    unjudged: tuple[UnjudgedCell, ...] = (),
+    table: BaselineTable | None = None,
+    observations: tuple[CanonicalObservation, ...] | None = None,
+    radius: float | None = NEAR,
+    bar: float = DEFAULT_NOMINAL_WITHIN_DB,
+):
+    return detect_sensor_faults(
+        findings(anomalies, unjudged),
+        grid(elevate) if observations is None else observations,
+        baselines() if table is None else table,
+        LAYOUT,
+        policy(radius, bar),
+    )
+
+
+#: The ordinary case: RF-01 raised on L1 alone, everything else nominal.
+ONE_LOUD = {("RF-01", L1): STAGED_DB}
 
 
 # --- the spatial test ---------------------------------------------------
 
 
-def test_a_lone_loud_receiver_with_clean_neighbours_is_a_fault() -> None:
+def test_a_lone_raised_receiver_with_nominal_neighbours_is_a_fault() -> None:
     # spec: anom-007 -- the rule's whole purpose, in one case.
-    result = detect_sensor_faults(findings((loud(sensor="RF-01"),)), LAYOUT, policy())
+    result = run((loud(sensor="RF-01"),), ONE_LOUD)
 
     assert len(result.faults) == 1
     fault = result.faults[0]
@@ -133,10 +292,11 @@ def test_a_lone_loud_receiver_with_clean_neighbours_is_a_fault() -> None:
     assert result.dismissed == ()
 
 
-def test_an_abnormal_neighbour_makes_it_environmental_not_a_fault() -> None:
+def test_a_raised_neighbour_makes_it_environmental_not_a_fault() -> None:
     # spec: anom-007 -- the item's first failure case, minimal form.
-    result = detect_sensor_faults(
-        findings((loud(sensor="RF-01"), loud(sensor="RF-02"))), LAYOUT, policy()
+    result = run(
+        (loud(sensor="RF-01"), loud(sensor="RF-02")),
+        {("RF-01", L1): STAGED_DB, ("RF-02", L1): STAGED_DB},
     )
 
     assert result.faults == ()
@@ -144,13 +304,28 @@ def test_an_abnormal_neighbour_makes_it_environmental_not_a_fault() -> None:
     assert {d.verdict for d in result.dismissed} == {Verdict.ENVIRONMENTAL}
 
 
-def test_several_adjacent_sensors_abnormal_raise_no_fault_at_all() -> None:
+def test_a_neighbour_raised_below_the_anomaly_threshold_is_not_nominal() -> None:
+    # spec: anom-007 -- the corpus case, and the reason this rule reads
+    # readings rather than episodes. RF-02 is 5 dB above its own baseline
+    # and `anom-001` said nothing about it, because 5 dB is short of the
+    # 6 dB threshold. It is still plainly not nominal, and a cause that
+    # reached two receivers is not a broken one.
+    result = run(
+        (loud(sensor="RF-01"),),
+        {("RF-01", L1): STAGED_DB, ("RF-02", L1): SUB_THRESHOLD_DB},
+    )
+
+    assert result.faults == ()
+    assert result.dismissed[0].verdict is Verdict.ENVIRONMENTAL
+    assert "RF-02" in result.dismissed[0].reason
+
+
+def test_several_adjacent_receivers_raised_produce_no_fault_at_all() -> None:
     # spec: anom-007 -- the failure case as the item words it. RF-04, RF-05
     # and RF-06 form a chain in which each is a neighbour of the next.
-    result = detect_sensor_faults(
-        findings((loud(sensor="RF-04"), loud(sensor="RF-05"), loud(sensor="RF-06"))),
-        LAYOUT,
-        policy(),
+    result = run(
+        (loud(sensor="RF-04"), loud(sensor="RF-05"), loud(sensor="RF-06")),
+        {(s, L1): STAGED_DB for s in ("RF-04", "RF-05", "RF-06")},
     )
 
     assert result.faults == ()
@@ -158,66 +333,40 @@ def test_several_adjacent_sensors_abnormal_raise_no_fault_at_all() -> None:
     assert all(d.verdict is Verdict.ENVIRONMENTAL for d in result.dismissed)
 
 
-def test_a_neighbour_loud_in_a_different_window_does_not_excuse_the_fault() -> None:
-    # spec: anom-007 -- the neighbour test is per window, not per run. A
-    # receiver that was loud an hour earlier says nothing about now.
-    later = WINDOW_END + timedelta(seconds=600)
-    result = detect_sensor_faults(
-        findings(
-            (
-                loud(sensor="RF-01"),
-                loud(
-                    sensor="RF-02",
-                    started_at=later,
-                    ended_at=later + timedelta(seconds=300),
-                ),
-            )
+def test_a_neighbour_raised_in_a_different_window_does_not_excuse_it() -> None:
+    # spec: anom-007 -- nominality is asked about *this* window. A receiver
+    # that was raised an hour earlier says nothing about now.
+    later = WINDOW_END + timedelta(seconds=120)
+    result = run(
+        (loud(sensor="RF-01"),),
+        observations=swap(
+            grid(ONE_LOUD),
+            grid({("RF-02", L1): STAGED_DB}, window=(later, RUN_END)),
+            (("RF-02", L1),),
         ),
-        LAYOUT,
-        policy(),
     )
 
-    assert {f.sensor_id for f in result.faults} == {"RF-01", "RF-02"}
+    assert [f.sensor_id for f in result.faults] == ["RF-01"]
 
 
-def test_overlap_is_inclusive_at_the_endpoint() -> None:
-    # spec: anom-007 -- an episode's end is its last *exceeding* reading,
-    # not the first quiet one, so a neighbour ending on the tick this one
-    # starts genuinely overlapped it by a reading. Strict comparison here
-    # would call that neighbour clean and raise a fault.
-    result = detect_sensor_faults(
-        findings(
-            (
-                loud(sensor="RF-01"),
-                loud(
-                    sensor="RF-02",
-                    started_at=WINDOW_START - timedelta(seconds=300),
-                    ended_at=WINDOW_START,
-                ),
-            )
-        ),
-        LAYOUT,
-        policy(),
-    )
-
-    assert result.faults == ()
-
-
-def test_a_sensor_beyond_the_radius_is_not_a_neighbour() -> None:
+def test_a_receiver_beyond_the_radius_is_not_a_neighbour() -> None:
     # spec: anom-007 -- RF-01 and RF-04 are 104.3 km apart, so at 70 km
     # neither is evidence about the other and both stand alone.
-    result = detect_sensor_faults(
-        findings((loud(sensor="RF-01"), loud(sensor="RF-04"))), LAYOUT, policy()
+    result = run(
+        (loud(sensor="RF-01"), loud(sensor="RF-04")),
+        {("RF-01", L1): STAGED_DB, ("RF-04", L1): STAGED_DB},
     )
 
     assert {f.sensor_id for f in result.faults} == {"RF-01", "RF-04"}
 
 
-def test_a_wider_radius_brings_that_sensor_into_the_test() -> None:
+def test_a_wider_radius_brings_that_receiver_into_the_test() -> None:
     # spec: anom-007 -- the radius is configuration and it changes the
     # answer, which is what makes it configuration rather than a constant.
-    result = detect_sensor_faults(
-        findings((loud(sensor="RF-01"), loud(sensor="RF-04"))), LAYOUT, policy(WIDE)
+    result = run(
+        (loud(sensor="RF-01"), loud(sensor="RF-04")),
+        {("RF-01", L1): STAGED_DB, ("RF-04", L1): STAGED_DB},
+        radius=WIDE,
     )
 
     assert result.faults == ()
@@ -227,24 +376,18 @@ def test_the_radius_defaults_to_the_layout_discrimination_radius() -> None:
     # spec: anom-007 -- `scn-005` already validates that value as leaving
     # every sensor a neighbour inside it and a non-neighbour beyond, so the
     # default defers to validated configuration rather than inventing one.
-    left = detect_sensor_faults(findings((loud(sensor="RF-01"),)), LAYOUT, policy(None))
-    right = detect_sensor_faults(
-        findings((loud(sensor="RF-01"),)),
-        LAYOUT,
-        policy(LAYOUT.discrimination_radius_km),
-    )
+    left = run((loud(sensor="RF-01"),), ONE_LOUD, radius=None)
+    right = run((loud(sensor="RF-01"),), ONE_LOUD, radius=LAYOUT.discrimination_radius_km)
 
     assert left.faults[0].spatial.radius_km == LAYOUT.discrimination_radius_km
     assert left == right
 
 
 def test_no_neighbour_inside_the_radius_is_undecided_not_a_fault() -> None:
-    # spec: anom-007 -- the vacuous case. No neighbours means no abnormal
+    # spec: anom-007 -- the vacuous case. No neighbours means no raised
     # neighbours, which read as a pass would make every RF anomaly in the
-    # layout a sensor fault.
-    result = detect_sensor_faults(
-        findings((loud(sensor="RF-01"),)), LAYOUT, policy(BLIND)
-    )
+    # layout a broken receiver.
+    result = run((loud(sensor="RF-01"),), ONE_LOUD, radius=BLIND)
 
     assert result.faults == ()
     assert len(result.dismissed) == 1
@@ -252,52 +395,136 @@ def test_no_neighbour_inside_the_radius_is_undecided_not_a_fault() -> None:
     assert "40" in result.dismissed[0].reason
 
 
-# --- what silence is not ------------------------------------------------
+# --- the bar ------------------------------------------------------------
 
 
-def test_an_unjudged_neighbour_is_not_a_clean_one() -> None:
-    # spec: anom-007 -- `anom-001` reports what it could not judge so that
-    # nothing downstream mistakes silence for cleanliness. This is the
-    # first consumer able to make that mistake.
-    result = detect_sensor_faults(
-        findings((loud(sensor="RF-01"),), (blind_cell("RF-02"),)), LAYOUT, policy()
+def test_the_nominality_bar_is_configuration() -> None:
+    # spec: anom-007 -- 3 dB of neighbour elevation is above the default
+    # bar and below a wider one, and the verdict follows the bar. The
+    # default sits in a measured gap: staged neighbours reach 2.51 dB at
+    # the 5th percentile, untouched ones 1.58 dB at the 95th.
+    staged = {("RF-01", L1): STAGED_DB, ("RF-02", L1): 3.0}
+    strict = run((loud(sensor="RF-01"),), staged, bar=2.0)
+    lax = run((loud(sensor="RF-01"),), staged, bar=4.0)
+
+    assert strict.faults == ()
+    assert len(lax.faults) == 1
+
+
+def test_the_default_bar_sits_above_the_quiet_spread() -> None:
+    # spec: anom-007 -- a bar inside the ordinary wobble of a quiet cell
+    # would dismiss every fault as environmental. The measured spread is
+    # about 1.5 dB.
+    assert DEFAULT_NOMINAL_WITHIN_DB > QUIET_SPREAD
+
+
+def test_a_neighbour_at_its_baseline_is_nominal() -> None:
+    # spec: anom-007 -- the other half of the bar: nothing is inferred
+    # from a neighbour reading exactly what it always reads.
+    result = run((loud(sensor="RF-01"),), ONE_LOUD)
+
+    assert result.faults[0].spatial.abnormal == ()
+    assert dict(result.faults[0].spatial.elevations)["RF-02"] == pytest.approx(0.0)
+
+
+def test_the_measured_elevation_is_carried_for_every_neighbour() -> None:
+    # spec: anom-007 -- "RF-02 sat 5.0 dB above its own normal" is a
+    # sentence an analyst can check; "RF-02 was abnormal" is not.
+    result = run(
+        (loud(sensor="RF-01"),),
+        {("RF-01", L1): STAGED_DB, ("RF-02", L1): SUB_THRESHOLD_DB},
     )
 
-    assert result.faults == ()
-    assert len(result.dismissed) == 1
-    assert result.dismissed[0].verdict is Verdict.UNDECIDED
-    assert "RF-02" in result.dismissed[0].reason
+    elevations = dict(result.dismissed[0].spatial.elevations)
+    assert elevations["RF-02"] == pytest.approx(SUB_THRESHOLD_DB)
+    assert elevations["RF-03"] == pytest.approx(0.0)
 
 
-def test_an_abnormal_neighbour_outranks_an_unjudged_one() -> None:
-    # spec: anom-007 -- positive evidence of an environmental cause settles
-    # it; missing data elsewhere does not turn that into a maybe.
-    result = detect_sensor_faults(
-        findings((loud(sensor="RF-01"), loud(sensor="RF-03")), (blind_cell("RF-02"),)),
+def test_nominality_is_measured_in_the_direction_the_metric_chooses() -> None:
+    # spec: anom-007, anom-001 -- noise rising drives SNR down, so a
+    # *fallen* SNR on a neighbour is the same event and a risen one is not.
+    # Derived from the baseline table's metric rather than configured: a
+    # direction a caller can set wrongly is a silent wrong answer.
+    fallen = detect_sensor_faults(
+        findings((loud(sensor="RF-01"),)),
+        grid({("RF-01", L1): STAGED_DB, ("RF-02", L1): SUB_THRESHOLD_DB}),
+        baselines(RfMetric.SNR_DB),
+        LAYOUT,
+        policy(),
+    )
+    risen = detect_sensor_faults(
+        findings((loud(sensor="RF-01"),)),
+        grid({("RF-01", L1): STAGED_DB, ("RF-02", L1): -SUB_THRESHOLD_DB}),
+        baselines(RfMetric.SNR_DB),
         LAYOUT,
         policy(),
     )
 
+    assert fallen.faults == ()
+    assert len(risen.faults) == 1
+
+
+# --- what cannot be measured -------------------------------------------
+
+
+def test_a_neighbour_with_no_baseline_cannot_be_judged_nominal() -> None:
+    # spec: anom-007 -- a receiver with nothing to compare against is not
+    # a receiver reading normally, and calling it one turns missing data
+    # into a fault diagnosis.
+    result = run(
+        (loud(sensor="RF-01"),),
+        ONE_LOUD,
+        table=baselines(without=(RfCell("RF-02", L1),)),
+    )
+
     assert result.faults == ()
-    assert [d.verdict for d in result.dismissed if d.sensor_id == "RF-01"] == [
-        Verdict.ENVIRONMENTAL
-    ]
+    assert result.dismissed[0].verdict is Verdict.UNDECIDED
+    assert "RF-02" in result.dismissed[0].reason
 
 
-def test_an_unjudged_cell_beyond_the_radius_is_irrelevant() -> None:
+def test_a_neighbour_with_no_readings_cannot_be_judged_nominal() -> None:
+    # spec: anom-007 -- the same argument for a receiver that reported
+    # nothing at all in the window.
+    result = run(
+        (loud(sensor="RF-01"),), observations=grid(ONE_LOUD, omit=("RF-02",))
+    )
+
+    assert result.faults == ()
+    assert result.dismissed[0].verdict is Verdict.UNDECIDED
+    assert result.dismissed[0].spatial.unjudged == ("RF-02",)
+
+
+def test_a_raised_neighbour_outranks_one_that_cannot_be_measured() -> None:
+    # spec: anom-007 -- positive evidence of an environmental cause settles
+    # it; missing data elsewhere does not turn that into a maybe.
+    result = run(
+        (loud(sensor="RF-01"),),
+        {("RF-01", L1): STAGED_DB, ("RF-03", L1): STAGED_DB},
+        table=baselines(without=(RfCell("RF-02", L1),)),
+    )
+
+    assert result.faults == ()
+    assert result.dismissed[0].verdict is Verdict.ENVIRONMENTAL
+
+
+def test_a_missing_baseline_beyond_the_radius_is_irrelevant() -> None:
     # spec: anom-007 -- only the neighbours are the neighbour test. RF-07
     # is 229.6 km from RF-01.
-    result = detect_sensor_faults(
-        findings((loud(sensor="RF-01"),), (blind_cell("RF-07"),)), LAYOUT, policy()
+    result = run(
+        (loud(sensor="RF-01"),),
+        ONE_LOUD,
+        table=baselines(without=(RfCell("RF-07", L1),)),
     )
 
     assert [f.sensor_id for f in result.faults] == ["RF-01"]
 
 
-def test_the_unjudged_neighbours_are_named_in_the_evidence() -> None:
+def test_the_neighbours_that_could_not_be_measured_are_named() -> None:
     # spec: anom-007 -- a dismissal a reader cannot check is an assertion.
-    result = detect_sensor_faults(
-        findings((loud(sensor="RF-01"),), (blind_cell("RF-02"),)), LAYOUT, policy()
+    result = run(
+        (loud(sensor="RF-01"),),
+        ONE_LOUD,
+        table=baselines(without=(RfCell("RF-02", L1),)),
     )
 
     assert result.dismissed[0].spatial.unjudged == ("RF-02",)
@@ -307,9 +534,9 @@ def test_the_unjudged_neighbours_are_named_in_the_evidence() -> None:
 # --- the frequency test -------------------------------------------------
 
 
-def test_a_lone_channel_between_clean_ones_is_high_confidence() -> None:
+def test_a_lone_channel_between_nominal_ones_is_high_confidence() -> None:
     # spec: anom-007 -- the pattern a real emission does not easily make.
-    result = detect_sensor_faults(findings((loud(sensor="RF-01"),)), LAYOUT, policy())
+    result = run((loud(sensor="RF-01"),), ONE_LOUD)
 
     fault = result.faults[0]
     assert fault.confidence is Confidence.HIGH
@@ -321,24 +548,21 @@ def test_a_lone_channel_between_clean_ones_is_high_confidence() -> None:
 def test_the_whole_plan_rising_together_is_low_confidence() -> None:
     # spec: anom-007 -- the item's second failure case. A wideband emitter
     # beside the receiver produces this too, so it is the weaker claim.
-    result = detect_sensor_faults(
-        findings(tuple(loud(sensor="RF-01", channel=c) for c in range(8))),
-        LAYOUT,
-        policy(),
+    result = run(
+        (loud(sensor="RF-01"),), {("RF-01", c): STAGED_DB for c in CHANNELS}
     )
 
     assert len(result.faults) == 1
     assert result.faults[0].confidence is Confidence.LOW
-    assert result.faults[0].spectral.channels == tuple(range(8))
+    assert result.faults[0].spectral.channels == CHANNELS
 
 
 def test_a_partial_spread_is_medium_confidence() -> None:
     # spec: anom-007 -- between the two: the deviation reached an adjacent
     # channel but not the plan.
-    result = detect_sensor_faults(
-        findings((loud(sensor="RF-01", channel=3), loud(sensor="RF-01", channel=4))),
-        LAYOUT,
-        policy(),
+    result = run(
+        (loud(sensor="RF-01", channel=3), loud(sensor="RF-01")),
+        {("RF-01", 3): STAGED_DB, ("RF-01", L1): STAGED_DB},
     )
 
     fault = result.faults[0]
@@ -349,23 +573,33 @@ def test_a_partial_spread_is_medium_confidence() -> None:
 def test_broadband_and_single_channel_do_not_share_a_confidence() -> None:
     # spec: anom-007 -- the failure case stated as the item states it,
     # rather than only through the two bands separately.
-    single = detect_sensor_faults(findings((loud(sensor="RF-01"),)), LAYOUT, policy())
-    whole = detect_sensor_faults(
-        findings(tuple(loud(sensor="RF-01", channel=c) for c in range(8))),
-        LAYOUT,
-        policy(),
-    )
+    single = run((loud(sensor="RF-01"),), ONE_LOUD)
+    whole = run((loud(sensor="RF-01"),), {("RF-01", c): STAGED_DB for c in CHANNELS})
 
     assert single.faults[0].confidence is not whole.faults[0].confidence
 
 
-def test_an_unjudged_adjacent_channel_prevents_the_high_claim() -> None:
+def test_the_spread_is_measured_below_the_anomaly_threshold_too() -> None:
+    # spec: anom-007 -- the same correction as the neighbour test, one axis
+    # over. A 5 dB rise on the adjacent channel is spread the episodes
+    # would not show, and spread is what separates an emission from an
+    # instrument.
+    result = run(
+        (loud(sensor="RF-01"),),
+        {("RF-01", L1): STAGED_DB, ("RF-01", 5): SUB_THRESHOLD_DB},
+    )
+
+    assert result.faults[0].confidence is Confidence.MEDIUM
+    assert result.faults[0].spectral.adjacent_abnormal == (5,)
+
+
+def test_an_adjacent_channel_with_no_baseline_prevents_the_high_claim() -> None:
     # spec: anom-007 -- isolation cannot be claimed over a channel nobody
-    # assessed: the unjudged neighbour might have been loud.
-    result = detect_sensor_faults(
-        findings((loud(sensor="RF-01"),), (blind_cell("RF-01", 5),)),
-        LAYOUT,
-        policy(),
+    # could assess: it might have been raised.
+    result = run(
+        (loud(sensor="RF-01"),),
+        ONE_LOUD,
+        table=baselines(without=(RfCell("RF-01", 5),)),
     )
 
     fault = result.faults[0]
@@ -376,9 +610,7 @@ def test_an_unjudged_adjacent_channel_prevents_the_high_claim() -> None:
 def test_an_end_of_plan_channel_has_one_adjacent_channel() -> None:
     # spec: anom-007 -- channel 0 has only channel 1 beside it, and a
     # missing neighbour at the edge of the plan is not a missing reading.
-    result = detect_sensor_faults(
-        findings((loud(sensor="RF-01", channel=0),)), LAYOUT, policy()
-    )
+    result = run((loud(sensor="RF-01", channel=0),), {("RF-01", 0): STAGED_DB})
 
     fault = result.faults[0]
     assert fault.spectral.adjacent_checked == (1,)
@@ -389,13 +621,29 @@ def test_the_two_tests_are_two_records() -> None:
     # spec: anom-007 -- the frequency test is recorded distinctly rather
     # than folded into the spatial one, because they are evidence of
     # different kinds and the bundle must show which carries the argument.
-    result = detect_sensor_faults(findings((loud(sensor="RF-01"),)), LAYOUT, policy())
+    result = run((loud(sensor="RF-01"),), ONE_LOUD)
 
     fault = result.faults[0]
     assert fault.spatial.neighbours == ("RF-02", "RF-03")
     assert fault.spatial.abnormal == ()
     assert fault.spectral.channels == (L1,)
     assert type(fault.spatial) is not type(fault.spectral)
+
+
+def test_isolation_is_readable_from_the_evidence() -> None:
+    # spec: anom-007 -- the bundle (`evb-001`) has to say *why* in words,
+    # and "the deviation was isolated to one channel" is the sentence. It
+    # is derived from the recorded channels rather than stored beside them,
+    # so the summary and the evidence cannot disagree.
+    alone = run((loud(sensor="RF-01"),), ONE_LOUD)
+    spread = run(
+        (loud(sensor="RF-01", channel=3), loud(sensor="RF-01")),
+        {("RF-01", 3): STAGED_DB, ("RF-01", L1): STAGED_DB},
+    )
+
+    assert alone.faults[0].spectral.isolated is True
+    assert alone.faults[0].spectral.broadband is False
+    assert spread.faults[0].spectral.isolated is False
 
 
 def test_confidence_is_never_a_number() -> None:
@@ -406,68 +654,89 @@ def test_confidence_is_never_a_number() -> None:
 # --- the unit of judgement ----------------------------------------------
 
 
-def test_one_receiver_loud_on_eight_channels_is_one_fault() -> None:
+def test_one_receiver_raised_on_eight_channels_is_one_fault() -> None:
     # spec: anom-007 -- a fault is a property of a box. Per-episode output
     # would make one broken receiver read as eight sensor faults.
-    result = detect_sensor_faults(
-        findings(tuple(loud(sensor="RF-01", channel=c) for c in range(8))),
-        LAYOUT,
-        policy(),
+    result = run(
+        (loud(sensor="RF-01", channel=c) for c in CHANNELS),
+        {("RF-01", c): STAGED_DB for c in CHANNELS},
     )
 
     assert len(result.faults) == 1
 
 
-def test_two_episodes_with_quiet_between_them_are_two_faults() -> None:
-    # spec: anom-007 -- the same argument `anom-001` makes at reading
-    # level: one window must not span the quiet hour in the middle of it.
-    second = WINDOW_END + timedelta(seconds=600)
-    result = detect_sensor_faults(
-        findings(
-            (
-                loud(sensor="RF-01"),
-                loud(
-                    sensor="RF-01",
-                    started_at=second,
-                    ended_at=second + timedelta(seconds=300),
-                ),
-            )
-        ),
-        LAYOUT,
-        policy(),
+def test_a_fragmented_episode_is_one_fault_not_several() -> None:
+    # spec: anom-007 -- the corpus defect, at the other end. The injected
+    # elevation varies per tick and about one tick in six falls short of
+    # `anom-001`'s threshold, so one incident arrives as a string of short
+    # episodes. The window is the period the receiver was not nominal,
+    # found by the episodes and delimited by the readings.
+    fragments = tuple(
+        loud(
+            sensor="RF-01",
+            started_at=WINDOW_START + timedelta(seconds=offset),
+            ended_at=WINDOW_START + timedelta(seconds=offset + 20),
+        )
+        for offset in (0, 60, 120, 240)
     )
-
-    assert len(result.faults) == 2
-    assert result.faults[0].ended_at < result.faults[1].started_at
-
-
-def test_the_window_spans_the_episodes_that_made_it() -> None:
-    # spec: anom-007 -- the merged window is the union of its parts, so a
-    # reader can find every contributing reading from the fault alone.
-    early = loud(
-        sensor="RF-01",
-        channel=3,
-        started_at=WINDOW_START,
-        ended_at=WINDOW_START + timedelta(seconds=100),
-    )
-    late = loud(
-        sensor="RF-01",
-        channel=4,
-        started_at=WINDOW_START + timedelta(seconds=50),
-        ended_at=WINDOW_END,
-    )
-    result = detect_sensor_faults(findings((early, late)), LAYOUT, policy())
+    result = run(fragments, ONE_LOUD)
 
     assert len(result.faults) == 1
     assert result.faults[0].started_at == WINDOW_START
     assert result.faults[0].ended_at == WINDOW_END
 
 
+def test_two_events_with_a_nominal_period_between_them_are_two_faults() -> None:
+    # spec: anom-007 -- the same argument `anom-001` makes at reading
+    # level: one window must not span the quiet between two events. The
+    # extension stops where the receiver returns to nominal.
+    second = WINDOW_END + timedelta(seconds=120)
+    early = grid(ONE_LOUD)
+    late = grid({("RF-01", L1): STAGED_DB}, window=(second, RUN_END))
+    observations = tuple(
+        o
+        for o in early
+        if (o.payload.sensor_id, o.payload.channel_index) != ("RF-01", L1)
+        or o.timestamp <= WINDOW_END
+    ) + tuple(
+        o
+        for o in late
+        if (o.payload.sensor_id, o.payload.channel_index) == ("RF-01", L1)
+        and o.timestamp > WINDOW_END
+    )
+    result = run(
+        (
+            loud(sensor="RF-01"),
+            loud(sensor="RF-01", started_at=second, ended_at=RUN_END),
+        ),
+        observations=observations,
+    )
+
+    assert len(result.faults) == 2
+    assert result.faults[0].ended_at == WINDOW_END
+    assert result.faults[1].started_at == second
+
+
+def test_the_window_covers_the_whole_period_the_receiver_was_raised() -> None:
+    # spec: anom-007 -- `anom-001`'s episode is the seed and not the
+    # boundary: it begins where the threshold was crossed, and the event
+    # began where the receiver left its baseline.
+    late = loud(
+        sensor="RF-01",
+        started_at=WINDOW_START + timedelta(seconds=100),
+        ended_at=WINDOW_START + timedelta(seconds=150),
+    )
+    result = run((late,), ONE_LOUD)
+
+    assert result.faults[0].started_at == WINDOW_START
+    assert result.faults[0].ended_at == WINDOW_END
+
+
 def test_the_fault_is_located_at_the_receiver() -> None:
-    # spec: anom-007 -- one sensor's fault is at that sensor and nowhere
-    # else; an area would claim ground nothing was observed across.
+    # spec: anom-007 -- one receiver's fault is at that receiver and
+    # nowhere else; an area would claim ground nothing was observed across.
     site = LAYOUT.site("RF-01")
-    result = detect_sensor_faults(findings((loud(sensor="RF-01"),)), LAYOUT, policy())
+    result = run((loud(sensor="RF-01"),), ONE_LOUD)
 
     assert result.faults[0].location == Location(lat=site.lat, lon=site.lon)
 
@@ -478,7 +747,7 @@ def test_the_fault_is_located_at_the_receiver() -> None:
 def test_a_quiet_run_produces_nothing_and_says_so() -> None:
     # spec: anom-007, anom-008 -- no anomalies is not the same as not
     # having looked, and this rule has nothing to look at without them.
-    result = detect_sensor_faults(findings(), LAYOUT, policy())
+    result = run((), None)
 
     assert result.faults == ()
     assert result.dismissed == ()
@@ -486,12 +755,61 @@ def test_a_quiet_run_produces_nothing_and_says_so() -> None:
 
 def test_an_anomaly_from_outside_the_layout_is_refused() -> None:
     # spec: anom-007 -- findings and layout that disagree are a caller bug.
-    # Skipping the sensor would judge fewer receivers than were reported,
+    # Skipping the receiver would judge fewer of them than were reported,
     # without saying so.
     stray = dataclasses.replace(loud(sensor="RF-01"), cell=RfCell("RF-99", L1))
 
     with pytest.raises(FaultError, match="RF-99"):
-        detect_sensor_faults(findings((stray,)), LAYOUT, policy())
+        run((stray,), ONE_LOUD)
+
+
+def test_a_track_observation_is_refused() -> None:
+    # spec: anom-007, anom-013 -- the ordering puts this rule first because
+    # it decides on the RF pattern alone. Now that it takes observations,
+    # a track observation among them is refused rather than skipped, which
+    # is what keeps that guarantee structural.
+    track = CanonicalObservation(
+        source_id="a",
+        source_type=SourceType.OPENSKY,
+        observation_type=ObservationType.TRACK,
+        timestamp=WINDOW_START,
+        location=Location(lat=52.0, lon=5.0),
+        data_mode=DataMode.REPLAYED,
+        validation_status=ValidationStatus.VALID,
+        provenance=Provenance(
+            source_id="a",
+            source_type=SourceType.OPENSKY,
+            data_mode=DataMode.REPLAYED,
+            scenario_run_id=1,
+        ),
+        payload=TrackPayload(
+            icao24="abc123",
+            callsign="TEST",
+            origin_country="Netherlands",
+            time_position=int(WINDOW_START.timestamp()),
+            last_contact=int(WINDOW_START.timestamp()),
+            baro_altitude_m=10000.0,
+            on_ground=False,
+            velocity_ms=250.0,
+        ),
+    )
+
+    with pytest.raises(FaultError, match="track"):
+        run((loud(sensor="RF-01"),), observations=grid(ONE_LOUD) + (track,))
+
+
+def test_a_baseline_for_a_different_metric_is_refused() -> None:
+    # spec: anom-007, anom-002 -- comparing a power reading against an SNR
+    # baseline produces a number and no meaning. `anom-001` refuses the
+    # same mismatch and this rule reads the same table.
+    table = baselines(RfMetric.SNR_DB)
+    mismatched = dataclasses.replace(
+        table, baselines={c: dataclasses.replace(b, metric=RfMetric.POWER_DBM)
+                          for c, b in table.baselines.items()}
+    )
+
+    with pytest.raises(FaultError, match="metric"):
+        run((loud(sensor="RF-01"),), ONE_LOUD, table=mismatched)
 
 
 def test_a_non_positive_radius_is_refused() -> None:
@@ -501,15 +819,22 @@ def test_a_non_positive_radius_is_refused() -> None:
         FaultPolicy(neighbour_radius_km=0.0)
 
 
+def test_a_non_positive_bar_is_refused() -> None:
+    # spec: anom-007 -- a bar of zero calls every neighbour abnormal on
+    # floating-point noise, so every fault becomes environmental and the
+    # rule silently never fires.
+    with pytest.raises(FaultError):
+        FaultPolicy(nominal_within_db=0.0)
+
+
 def test_the_rule_cannot_see_track_evidence() -> None:
-    # spec: anom-007, anom-013 -- the ordering puts this rule first because
-    # it decides on the RF pattern alone. Enforced by what it can be handed
-    # rather than by remembering not to look.
+    # spec: anom-007, anom-013 -- enforced by what it can be handed rather
+    # than by remembering not to look.
     parameters = set(inspect.signature(detect_sensor_faults).parameters)
     fields = {f.name for f in dataclasses.fields(SensorFault)}
     fields |= {f.name for f in dataclasses.fields(FaultPolicy)}
 
-    assert parameters == {"findings", "layout", "policy"}
+    assert parameters == {"findings", "observations", "baselines", "layout", "policy"}
     assert not any(
         word in name
         for name in fields
@@ -523,13 +848,17 @@ def test_the_output_does_not_depend_on_the_order_of_the_input() -> None:
     anomalies = (
         loud(sensor="RF-04"),
         loud(sensor="RF-01", channel=3),
-        loud(sensor="RF-01", channel=4),
+        loud(sensor="RF-01"),
         loud(sensor="RF-07"),
     )
-    forwards = detect_sensor_faults(findings(anomalies), LAYOUT, policy())
-    backwards = detect_sensor_faults(
-        findings(tuple(reversed(anomalies))), LAYOUT, policy()
-    )
+    elevate = {
+        ("RF-04", L1): STAGED_DB,
+        ("RF-01", 3): STAGED_DB,
+        ("RF-01", L1): STAGED_DB,
+        ("RF-07", L1): STAGED_DB,
+    }
+    forwards = run(anomalies, elevate)
+    backwards = run(tuple(reversed(anomalies)), elevate)
 
     assert forwards == backwards
     assert [f.sensor_id for f in forwards.faults] == ["RF-01", "RF-04", "RF-07"]
@@ -538,7 +867,7 @@ def test_the_output_does_not_depend_on_the_order_of_the_input() -> None:
 def test_a_fault_is_frozen() -> None:
     # spec: anom-007 -- a detection value object is evidence, and evidence
     # that can be edited after the fact is not evidence.
-    result = detect_sensor_faults(findings((loud(sensor="RF-01"),)), LAYOUT, policy())
+    result = run((loud(sensor="RF-01"),), ONE_LOUD)
 
     with pytest.raises(dataclasses.FrozenInstanceError):
         result.faults[0].sensor_id = "RF-02"  # type: ignore[misc]
@@ -548,89 +877,10 @@ def test_a_dismissal_always_carries_its_reason() -> None:
     # spec: anom-007 -- the dismissals are this rule's half of the audit
     # trail for `anom-013`: the ladder must be able to say why a zone was
     # not claimed here before offering it to the next rule.
-    result = detect_sensor_faults(
-        findings((loud(sensor="RF-01"), loud(sensor="RF-02"))), LAYOUT, policy()
+    result = run(
+        (loud(sensor="RF-01"), loud(sensor="RF-02")),
+        {("RF-01", L1): STAGED_DB, ("RF-02", L1): STAGED_DB},
     )
 
     assert all(isinstance(d, Dismissal) and d.reason for d in result.dismissed)
     assert any("RF-02" in d.reason for d in result.dismissed if d.sensor_id == "RF-01")
-
-
-def test_isolation_is_readable_from_the_evidence() -> None:
-    # spec: anom-007 -- the bundle (`evb-001`) has to say *why* in words,
-    # and "the deviation was isolated to one channel" is the sentence. It
-    # is derived from the recorded channels rather than stored beside them,
-    # so the summary and the evidence cannot disagree.
-    alone = detect_sensor_faults(findings((loud(sensor="RF-01"),)), LAYOUT, policy())
-    spread = detect_sensor_faults(
-        findings((loud(sensor="RF-01", channel=3), loud(sensor="RF-01", channel=4))),
-        LAYOUT,
-        policy(),
-    )
-
-    assert alone.faults[0].spectral.isolated is True
-    assert alone.faults[0].spectral.broadband is False
-    assert spread.faults[0].spectral.isolated is False
-
-
-def test_episodes_meeting_at_a_tick_are_one_window() -> None:
-    # spec: anom-007 -- the same inclusive endpoint the neighbour test
-    # uses, applied to the merge. Two episodes sharing a reading are one
-    # event seen on two channels, not two events.
-    first = loud(
-        sensor="RF-01",
-        channel=3,
-        started_at=WINDOW_START,
-        ended_at=WINDOW_START + timedelta(seconds=100),
-    )
-    second = loud(
-        sensor="RF-01",
-        channel=4,
-        started_at=WINDOW_START + timedelta(seconds=100),
-        ended_at=WINDOW_END,
-    )
-    result = detect_sensor_faults(findings((first, second)), LAYOUT, policy())
-
-    assert len(result.faults) == 1
-    assert result.faults[0].spectral.channels == (3, 4)
-
-
-def test_the_window_ends_at_the_latest_reading_not_the_latest_episode() -> None:
-    # spec: anom-007 -- a long episode that began first still sets the end
-    # of the merged window. Taking the end from the last episode by start
-    # time would cut the window short whenever a broadband deviation ran
-    # underneath a brief one.
-    long_one = loud(
-        sensor="RF-01",
-        channel=3,
-        started_at=WINDOW_START,
-        ended_at=WINDOW_END,
-    )
-    brief = loud(
-        sensor="RF-01",
-        channel=4,
-        started_at=WINDOW_START + timedelta(seconds=50),
-        ended_at=WINDOW_START + timedelta(seconds=100),
-    )
-    result = detect_sensor_faults(findings((long_one, brief)), LAYOUT, policy())
-
-    assert result.faults[0].ended_at == WINDOW_END
-
-
-def test_episodes_arriving_out_of_time_order_still_split_at_the_quiet() -> None:
-    # spec: anom-007, NFR-601 -- the merge walks episodes in time order, and
-    # without that the later episode is seen first, the earlier one falls
-    # inside its span, and the two become one window covering the quiet
-    # between them. Nothing in the finding would show it had happened.
-    second = WINDOW_END + timedelta(seconds=600)
-    late = loud(
-        sensor="RF-01",
-        started_at=second,
-        ended_at=second + timedelta(seconds=300),
-    )
-    early = loud(sensor="RF-01")
-    result = detect_sensor_faults(findings((late, early)), LAYOUT, policy())
-
-    assert len(result.faults) == 2
-    assert result.faults[0].ended_at == WINDOW_END
-    assert result.faults[1].started_at == second
