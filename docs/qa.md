@@ -4870,6 +4870,108 @@ event began where the receiver left its baseline, not where a threshold happened
    validity** of any evaluation treating the ambiguous type as a test of whether the system can express
    uncertainty: under this ordering it cannot. See [[thesis_notes]], §71.
 
+## 73. Move to anom-012, but first settle any open and unowned that may apply to it
+
+**The right question, and it found something the open list did not contain.**
+
+### The open items, triaged against anom-012
+
+| Open item | Applies? |
+|---|---|
+| Minimum episode duration on `anom-001` | **Partly** — it is the upstream cause of one defect below |
+| A broadband generation arm | No — that is `anom-007`'s confidence bands |
+| `adp-008` exclusion applied to baseline windows | No — this rule uses no baseline. It compares a disc against *itself* inside one run, so natural gaps inflate both halves alike |
+| A detection-latency definition | No — that gates `anom-009`. Worth noting `anom-007`'s readings-bounded window makes "onset" meaningful for the first time, which helps it later |
+| Frontend suite, `api-011`, `nav-002`, reset/replay, CI, tooling | No |
+
+### The blocker that was not on the list
+
+**The trade-off curve the radius would have been chosen from was measured with the centre and window
+taken from ground truth.** In production both come from a detected radio episode, per the rule that
+ground truth never leaves the run record — and `anom-007` had just established that an episode is not
+an incident.
+
+| Window source | median length | unusable |
+|---|---|---|
+| Ground truth — what the curve assumed | 300 s | — |
+| A raw `anom-001` episode | **90 s** | 6 of 86 |
+| `anom-007`'s assessment | **320 s** | 1 of 41 |
+
+The staged incident is 300 s long.
+
+**Why a short window is worse than it sounds.** The window and its complement are the two *halves of
+the same ratio*. A window shorter than the event does not merely measure less of it — it moves the
+rest of the event into the reference period the window is being compared against. The numerator falls
+and the denominator rises at the same time.
+
+Re-scored at the same pre-registered thresholds with the window the rule will actually be given:
+**18 of 40 at 30 km, 21 at 45, 26 at 60**, against 15, 20 and 28 from the ground-truth windows. The
+curve survives and flattens.
+
+> **Worth recording as a general trap.** The measurement was taken to answer one question — *does
+> this signal exist at all?* — where seeding from truth is the correct method, because it isolates
+> the signal from the detector's ability to find it. It then silently became the evidence for a
+> second question it was never designed for: *what should this parameter be?* Nothing had to be
+> withdrawn. The check was cheap, the result was benign, and it was still the difference between a
+> parameter chosen from evidence and one chosen from a coincidence.
+
+### And the control arm turns out to be the wrong one
+
+Every false-alarm figure for this rule was measured against `rf-sensor-fault` runs. **The rule
+ordering removes those before fusion ever sees them.** Of the 120 runs in the replication batches,
+those reaching a fusion decision at all:
+
+| Arm | Reaches fusion |
+|---|---|
+| `gnss-degradation` (real interference) | 40 of 40 |
+| `aircraft-coverage-gap` (the arm that *could* produce a false call) | **0 of 40** |
+| `rf-sensor-fault` (claimed by the broken-receiver test) | 1 of 40 |
+
+So the arm the specificity was measured against never arrives, and the arm that could actually cause a
+false interference call does not occur once in forty runs. **There is effectively no false-positive
+pressure at this step** — which is what the ordering predicted, now measured rather than assumed.
+
+### The answer: 60 km, on two independent grounds
+
+1. With no false-positive pressure, the curve is read at its **sensitive end**.
+2. 60 km is the scenario's **own configured incident radius**, so the disc matches the scale of the
+   zone it measures — configuration, not per-run ground truth, and the same basis the clustering rule
+   already used.
+
+### A reversal, and the distinction that makes it one
+
+This rule shipped with **no default radius**, with a test asserting the absence and the recorded
+reason that "a default would make that choice quietly". Adding one now looks like contradicting that.
+
+**It is a discharge, not an overturn.** The original objection was to a choice made *silently*, not to
+the existence of a choice. Once the choice is made in the open with its reasons attached, a named
+constant carrying those reasons is more discoverable than the number repeated at every call site. The
+test was replaced rather than deleted, and the replacement asserts the value *and* cites the reasons —
+so the reversal is visible from the test suite, not only from the backlog.
+
+### One defect, found by supplying realistic input
+
+A single-reading radio episode has its start equal to its end. The rate divides by the window's
+length. **6 of 86 runs produce one**, and the rule crashed. Now refused rather than clamped: a clamped
+zero-length window returns a number computed over one reading with nothing to mark it as different
+from a measurement.
+
+### Why the upstream fix is specified and left unbuilt
+
+A minimum episode duration on the radio rule would remove the cause. It is written as its own item and
+deliberately not built:
+
+- The problem is real — the radio rule raises an episode on **14 of 100** runs that stage nothing.
+- The harm is already contained **twice downstream**, and the promoted false-positive rate is already
+  down from 14 of 100 to 6 of 100.
+- Building it changes the radio rule, and **every detection figure in the project was measured through
+  it** — the 60 of 60, this curve on 40 matched pairs, the recall figures, and a replication scored
+  against a pre-registration written before it ran.
+
+That is the whole evidence base, spent to tidy the source of a harm that is already caught. If
+something ever depends on it that the downstream refusals do not cover, the batches get regenerated
+and re-measured **together**, not one item at a time. See §72, [[thesis_notes]].
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -5031,3 +5133,5 @@ event began where the receiver left its baseline, not where a threshold happened
 | **Matched control** | A `normal-baseline` run generated at the same seed and window as a scenario run, so the two differ only in the cells the incident touches — 60 of 5,040 on the measured pair. A counterfactual of the scenario rather than an independent sample of quiet. See §54. |
 | **Nominal** (a receiver) | Reading within a set distance of its own baseline across a window — 2 dB by measurement. Deliberately *not* "not currently anomalous": a threshold tuned so that crossing it means something says nothing about what not crossing it means. See §72. |
 | **Seed and boundary** | Two jobs one detector's output was doing at once. `RF-NOISE`'s episodes say which receiver is worth asking about (the seed); the readings say where its event began and ended (the boundary). Conflating them made one incident arrive as six. See §72. |
+| **Seeded from truth** | A measurement that takes its centre and window from the answer key. Correct for asking whether a signal exists, because it isolates the signal from the detector's ability to find it — and invalid as evidence for choosing a parameter the rule will apply to detected inputs. See §73. |
+| **Discharged, not overturned** | A recorded decision whose argument was conditional, where the condition has since been met — as against one shown to be wrong. The distinction matters because only the second needs the original reasoning retracted. See §73. |

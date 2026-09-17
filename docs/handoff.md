@@ -10,14 +10,39 @@ decision-making.
 
 This session built `anom-007`, the sensor-fault rule — the step the whole reportable-rule ordering
 was waiting on, because `anom-013` assumes it claims the runs whose truth is a broken receiver and
-that assumption had never been tested.
+that assumption had never been tested. It then settled `anom-012`'s radius, which was blocked on
+that same assumption — and found, on the way, that the curve the radius would have been chosen from
+had been measured on inputs the rule never receives.
 
 ## Current state
 
-**`anom-007` is built, measured, corrected, re-measured and green.** 94 spec items, 39 passing.
-Backend suite: **824 passed, 99.92% coverage** with the database (`make test-backend`). Lint and
-mypy clean. 49 tests on this item, 100% coverage on the module, **27 of 28 mutants killed and no
-survivors** (the 28th site was removed as a redundant guarantee).
+**`anom-007` and the `anom-012` amendment are both built, measured and green.** 95 spec items,
+39 passing. Backend suite: **827 passed, 99.92% coverage** with the database (`make test-backend`).
+Lint and mypy clean. `anom-007`: 49 tests, 100% module coverage, **27 of 28 mutants killed, no
+survivors** (the 28th site removed as a redundant guarantee). The `anom-012` amendment: 3 new tests
+plus one replaced, **5 of 5 mutants killed**.
+
+### `anom-012`'s radius is 60 km, and the curve behind it was re-measured first
+
+The recorded curve — 16/23/31 of 40 at 30/45/60 km — was measured with the centre and window taken
+from **ground truth**. In production both come from a detected episode (`api-009`), and `anom-007`
+had just established that an episode is not an incident. Measured over batches 2 and 3: the longest
+`anom-001` episode on a run has a median length of **90 s** against a staged 300 s, while
+`anom-007`'s window (seeded by episodes, bounded by readings) has a median of **320 s**. Six of 86
+runs produce a **zero-length** episode, which divided by zero inside `measure_rate_excess`.
+
+Re-scored at the same pre-registered thresholds (1.79 / 1.79 / 1.58) with the realistic window:
+**18 / 21 / 26 of 40** at 30 / 45 / 60 km, against 15 / 20 / 28 from ground-truth windows. The curve
+survives and flattens; nothing was withdrawn.
+
+**The control arm was also wrong.** Of the 120 runs in batches 2–3, those reaching a fusion decision
+at all are **40 of 40 `gnss-degradation`, 0 of 40 `aircraft-coverage-gap`, 1 of 40
+`rf-sensor-fault`** — the ordering removes the arm every specificity figure was measured against, and
+the arm that could actually cause a false interference call never occurs. With no false-positive
+pressure the curve is read at its sensitive end, which `anom-013` predicted and this measures.
+
+60 km also happens to be `scn-002`'s own configured incident radius, so the disc matches the zone it
+measures — configuration, not per-run ground truth, and the basis `anom-004` already used.
 
 ### The measurement the item owed
 
@@ -69,8 +94,13 @@ untouched ones 1.58 dB at the 95th, and the choice is a plateau (1.0 and 1.5 dB 
   `anom-013` offering a claimed zone to no later rule. A **threat to the validity** of any evaluation
   treating that type as a test of whether the system can express uncertainty.
 - Runs staging nothing on the RF grid still raise a fault on **6 of 100** of them (down from 14 of
-  100): `anom-001` false positives promoted one layer up. A minimum-duration constraint belongs to
-  `anom-001`, not here, and is unowned.
+  100): `anom-001` false positives promoted one layer up. Now owned as **`anom-014`**, specified and
+  deliberately unbuilt — building it changes `anom-001`, and every detection figure in the project
+  was measured through `anom-001`. See below.
+- **At the chosen radius and threshold the excess fires on 26 of 40 interference runs.** Used as a
+  *necessary* condition `anom-005` would lose 14 of them. Whether that rule should gate on this
+  quantity at all, or carry it as evidence strength while firing on the radio pattern, is `anom-005`'s
+  decision and is now the most consequential open question in detection.
 
 ## Files in flight
 
@@ -89,9 +119,15 @@ listed at session start (`nav-001` work) are untouched and still uncommitted.
   in itself", with a figure of the fragmented incident and one of the two neighbour
   populations; the ambiguous row of the ladder table corrected (it stages one receiver, so
   step two claims it); the held-back radius panel released; counts to 39/94, 824 tests, 99.92%
-- Updated: `docs/spec.jsonl` (anom-007 amended twice, then `passes: true`), `CLAUDE.md` repo map,
-  `docs/thesis_notes.md` (four new Implementation subsections), `docs/qa.md` §72 plus two glossary
-  terms
+- `03b5caf` spec: amend anom-012 for the real window source and the radius; add anom-014
+- `c4be93d` test: add tests for the anom-012 amendment
+- Updated: `docs/spec.jsonl` (anom-007 amended twice then `passes: true`; anom-012 amended with six
+  decisions then `passes: true`; **anom-014 added**, `passes: false` by design), `CLAUDE.md` repo map,
+  `docs/thesis_notes.md` (eight new Implementation subsections), `docs/qa.md` §72 and §73 plus four
+  glossary terms
+- Changed in `rate_excess.py`: `DEFAULT_RADIUS_KM = 60.0` and `ExcessPolicy.radius_km` defaults to it
+  (**a reversal** — the test asserting no default is replaced, not deleted); a zero-length window is
+  refused; the docstring now names `anom-007`'s assessment as the window source
 
 ## Failed attempts
 
@@ -114,22 +150,33 @@ listed at session start (`nav-001` work) are untouched and still uncommitted.
   needed (silently consumed, zero faults), a wrong expectation for the adjacent-channel ring when two
   neighbouring channels are both raised, and `TrackPayload` built with OpenSky field names rather
   than the DAL's pseudonymised ones.
+- **I invented the pre-registered thresholds** in the first re-measurement script (1.55/1.32/1.19).
+  The real ones are **1.79 / 1.79 / 1.58**, recorded in the scratchpad pre-registration. Caught
+  before the run finished and the run was restarted; had it not been, the whole re-measurement would
+  have been scored against numbers that were never pre-registered.
+- Three further scripting failures before that run produced anything: `detect_track_gaps` returns a
+  tuple, not an object with `.findings`; `save_findings` takes the session *factory*, not a session;
+  and the zero-length window crashed the rule itself, which turned out to be the defect rather than a
+  script bug.
 
 ## Next step
 
-1. **Choose `anom-012`'s radius.** It is unblocked for the first time: `anom-007` claims 60 of 60
-   sensor-fault runs, so `anom-005`'s remaining discrimination is interference against nothing rather
-   than interference against a fault, and the radius is read from the sensitive end — 31 of 40 at
-   60 km. Record the choice on `anom-012` with the argument, not just the number.
-2. **Build `anom-013`**, the precedence, which now has all three of its inputs measured.
-3. `anom-006` (SOURCE-GAP) and `anom-005` (FUSION-SPATIAL, amended onto `anom-012`).
+1. **Build `anom-013`**, the precedence. All three of its inputs are now measured, and the
+   measurement above gives it something it did not have: the runs that actually reach each step.
+2. **Decide whether `anom-005` gates on the rate excess.** At 60 km and the pre-registered threshold
+   it fires on 26 of 40 interference runs, so as a necessary condition it loses 14. The alternative is
+   to fire on the radio pattern and carry the excess as evidence strength in the bundle. This is the
+   decision the whole ordering argument has been converging on and it should be taken deliberately,
+   with the 8 dB versus Youden's-J-0.3 asymmetry in front of it.
+3. `anom-006` (SOURCE-GAP), then `anom-005` itself.
 4. `anom-003`, the z-score, which carries the `db-008` extensibility prediction scored once as a
    partial.
 
 ### Open and unowned
 
-- A **minimum-duration constraint on `anom-001`**, which would remove the residual 6 of 100
-  false-positive rate this item surfaced. Needs its own spec item.
+- ~~A minimum-duration constraint on `anom-001`~~ — now **`anom-014`**, specified and deliberately
+  unbuilt. Regenerate and re-measure every batch *together* if it is ever built, never one item at a
+  time.
 - A **broadband generation arm**, without which `anom-007`'s Medium and Low confidence bands have no
   corpus behind them.
 - The **frontend suite exits non-zero**: `TypeError: control.runs.map is not a function` at

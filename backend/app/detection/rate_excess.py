@@ -47,18 +47,35 @@ from app.detection.track_gap import RULE_ID as SOURCE_RULE_ID
 
 FINDING_TYPE = "track_rate_excess"
 
+#: How wide a patch to measure over, in kilometres.
+#:
+#: This item shipped without a default, deliberately: the three measured
+#: radii were three different trades between a missed incident and a
+#: misattributed one, and a default would have made that choice quietly.
+#: That argument is discharged rather than overturned. `anom-007` claims
+#: every sensor-fault run, so the only runs reaching a fusion decision are
+#: the interference ones -- 40 of 40 gnss-degradation against 0 of 40
+#: aircraft-coverage-gap and 1 of 40 rf-sensor-fault -- and with no
+#: false-positive pressure at that step the curve is read at its sensitive
+#: end, which is what `anom-013` predicted from the ordering.
+#:
+#: The second reason needs no measurement: 60 km is `scn-002`'s own
+#: configured incident radius, so the disc matches the scale of the zone it
+#: measures. That is configuration rather than per-run ground truth, and it
+#: is the basis `anom-004` used for its own default.
+DEFAULT_RADIUS_KM = 60.0
+
 
 @dataclass(frozen=True, slots=True)
 class ExcessPolicy:
     """How wide a patch to measure over.
 
-    **No default.** The three measured radii are three different trades
-    between a missed incident and a misattributed one, not a curve with a
-    maximum, and a default would make that choice quietly on the caller's
-    behalf in the one place nobody would look for it.
+    Defaults to `DEFAULT_RADIUS_KM`, which carries the reasoning. The
+    number is still a choice and still reversible; what changed is that it
+    has been made in the open rather than left to each call site.
     """
 
-    radius_km: float
+    radius_km: float = DEFAULT_RADIUS_KM
 
     def __post_init__(self) -> None:
         if self.radius_km <= 0:
@@ -111,10 +128,21 @@ def measure_rate_excess(
 ) -> RateExcess:
     """The rate inside a disc during a window, against the same disc outside it.
 
-    `window` and `centre` come from a detected RF episode and never from
-    ground truth: an observation carries no scenario type for the engine to
-    recognise staged data by (`api-009`), and this rule must not be the
-    place that changes.
+    `window` and `centre` come from `anom-007`'s assessment of a zone and
+    never from ground truth: an observation carries no scenario type for
+    the engine to recognise staged data by (`api-009`), and this rule must
+    not be the place that changes.
+
+    **From the assessment, and not from an `anom-001` episode directly.**
+    An episode is not an incident: the injected elevation dips below that
+    rule's threshold about one tick in six, so one 300 s incident arrives
+    as a median of six episodes, and the longest of them has a median
+    length of 90 s. `anom-007`'s window is seeded by those episodes and
+    bounded by the readings, and recovers the incident at a median of
+    320 s. That matters more here than anywhere else, because the window
+    and its complement are the two halves of the ratio -- a window a third
+    of the true length puts two thirds of the incident's own findings into
+    the reference period they are being compared against.
 
     A rate and not a count, because the window and its complement have
     different durations -- on the generator's own numbers, 300 s against
@@ -124,6 +152,14 @@ def measure_rate_excess(
     window_s = (window[1] - window[0]).total_seconds()
     span_s = (run_span[1] - run_span[0]).total_seconds()
     outside_s = span_s - window_s
+    if window_s <= 0:
+        raise ValueError(
+            "the window has no length, so there is no period to measure a rate "
+            "over. A single-reading RF episode has its start equal to its end "
+            "and 6 of 86 staged runs produce one; clamping it would return a "
+            "number computed over one reading with nothing to mark it as "
+            "different from a measurement."
+        )
     if outside_s <= 0:
         raise ValueError(
             "the window covers the whole run, so there is no reference period "

@@ -4624,6 +4624,102 @@ the ambiguous type as a test of whether the system can express uncertainty -- be
 ordering it cannot, and the type instead measures how confidently the system resolves a case designed
 not to resolve. Recorded here before the evaluation is designed rather than discovered inside it.
 
+### A trade-off curve measured on inputs the rule would never receive
+
+`anom-012`'s radius was held back through three items on an explicit condition: it could not be
+chosen until `anom-007` existed and its catch rate on sensor-fault runs had been measured. When that
+condition was discharged, the obvious move was to read the recorded curve — 16 of 40 at 30 km, 23 at
+45, 31 at 60 — at its sensitive end and take 60 km. Checking where those numbers came from first
+turned out to matter more than the choice.
+
+**They were measured with the centre and the window taken from ground truth.** The measuring script
+says so in its own header, and at the time that was defensible: the question it was asking was
+whether the *signal* existed at all, and seeding it from truth isolates the signal from the
+detector's ability to find it. What was never revisited is that the rule does not receive those
+inputs. Per `api-009` its centre and window come from a detected RF episode, and `anom-007`
+established the week before that an `anom-001` episode is not an incident — the injected elevation
+dips below the threshold about one tick in six, so one 300 s incident arrives as a median of six
+episodes.
+
+The consequence is sharper for this rule than for any other, because the window and its complement
+are the two halves of the ratio it computes. A window shorter than the event does not merely measure
+less of it; it moves the remainder of the event into the reference period the window is being
+compared against, depressing the numerator and inflating the denominator at once. Measured over the
+same 40 matched pairs, the longest episode on a run has a median length of 90 s against a staged
+300 s, while `anom-007`'s window — seeded by the episodes and bounded by the readings — has a median
+of 320 s.
+
+Re-scored at the same pre-registered thresholds, with the window the rule will actually be given:
+18 of 40 at 30 km, 21 at 45, 26 at 60, against 15, 20 and 28 from the ground-truth windows. The curve
+survives and flattens. Nothing had to be withdrawn, which is the outcome that makes this worth
+recording rather than the outcome that would have made it dramatic: **the check was cheap, the result
+was benign, and it was still the difference between a parameter chosen from evidence and a parameter
+chosen from a coincidence.** The general form is that a measurement taken to answer one question —
+does this signal exist — silently becomes the evidence for a second question it was never designed
+for, which is how a parameter gets chosen.
+
+### The control arm that the rule ordering removes
+
+A second assumption failed the same check, and this one changed the decision rather than the numbers.
+
+Every specificity figure recorded for `anom-012` was measured against `rf-sensor-fault` runs as the
+negative arm: a run at the same seed, replaying the same traffic, with nothing staged on the track
+side. That was the right control while the fusion rule was expected to argue with sensor faults.
+`anom-013` removed that expectation, and the measurement confirms it removes the arm as well. Of the
+120 runs in the replication batches, those reaching a fusion decision at all are 40 of 40
+`gnss-degradation`, **0 of 40 `aircraft-coverage-gap`, and 1 of 40 `rf-sensor-fault`.**
+
+So the arm the curve's false-alarm rate was measured against never reaches the rule, and the arm that
+could actually produce a false interference call — a coverage gap with a spurious radio anomaly
+beside it, which is the failure `anom-006` exists to prevent — does not occur once in forty runs.
+There is effectively no false-positive pressure at this step, which is what `anom-013` predicted from
+the ordering alone and is now measured rather than assumed.
+
+That is what justifies reading the curve at its sensitive end, and it is a stronger justification
+than the one `anom-013` offered, because it is a property of what reaches the rule rather than an
+argument about what ought to. The radius is 60 km on that basis and on a second, independent one:
+60 km is `scn-002`'s own configured incident radius, so the disc matches the scale of the zone it
+measures. That is configuration rather than per-run ground truth — the same class of knowledge as the
+number of receivers in the layout — and it is the basis `anom-004` already used for its own default.
+
+### Discharging an argument rather than overturning it
+
+`anom-012` shipped with no default radius, and a test asserting the absence. The recorded reason was
+that every measured point was a different trade-off and a default would make that choice quietly, in
+the one place nobody reviewing the fusion rule would look. Adding a default now is a reversal, and
+the distinction worth preserving is that the original argument was not *wrong* — it was conditional,
+and the condition has been met. The objection was to a choice made silently, not to the existence of
+a choice. Once the choice is made in the open with its reasons attached, a named constant carrying
+those reasons is more discoverable than the number repeated at every call site, which is the
+arrangement `anom-004` and `anom-007` already use for values of exactly this kind.
+
+The test was replaced rather than deleted, and the replacement asserts the value *and* cites the
+reasons in its docstring, so the reversal is visible from the test suite rather than only from the
+backlog.
+
+### A defect found by supplying realistic input rather than by reasoning about it
+
+Feeding the rule detected windows rather than ground-truth ones also crashed it. A single-reading
+`anom-001` episode has its start equal to its end, and the rate divides by the window's length: 6 of
+86 runs produce such an episode as their longest. The item had a failure case for a window that
+leaves no remainder and none for a window that leaves no window.
+
+It is refused rather than clamped. A clamped zero-length window would return a number computed over
+one reading with nothing in the result to mark it as different from a measurement, which is the shape
+of error this project has twice recorded as the expensive one.
+
+The upstream fix — a minimum episode duration on `anom-001` — is specified as `anom-014` and
+deliberately left unbuilt, and the reasoning is the part worth keeping. The problem it would solve is
+real and measured: `anom-001` raises an episode on 14 of 100 runs that stage nothing on the RF grid.
+But the harm is already contained twice downstream, by `anom-007`'s refusal of episodes its readings
+do not sustain and by the refusal above. Building it would change `anom-001`, and every detection
+figure in this chapter — `anom-007`'s 60 of 60, `anom-012`'s curve on 40 matched pairs, `anom-011`'s
+recall, and a batch-3 replication scored against a pre-registration written before it ran — was
+measured through `anom-001`. That is the whole evidence base, spent on removing the source of a harm
+that is already caught. The decision is to specify it, record why it waits, and regenerate and
+re-measure the batches together if something ever depends on it that the downstream refusals do not
+cover.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;
