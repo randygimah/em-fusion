@@ -4972,6 +4972,82 @@ That is the whole evidence base, spent to tidy the source of a harm that is alre
 something ever depends on it that the downstream refusals do not cover, the batches get regenerated
 and re-measured **together**, not one item at a time. See §72, [[thesis_notes]].
 
+## 74. Let's move to anom-013
+
+**The ladder itself — and the item's oddity is that two of the three rules it orders do not exist
+yet.**
+
+### What it does, in plain terms
+
+Three answers the system may give: *that receiver is broken*, *we are not hearing aircraft here*,
+*something is interfering*. They are not three independent tests but **one question asked three times
+in a fixed order**. A candidate event is offered to each rule in turn, and once one rule claims it, no
+later rule is offered it at all.
+
+The reason is measured. With no order, a background cluster of aircraft dropouts sits close enough to
+a broken receiver on **14 runs in 20** — so the interference rule claims most of the broken-receiver
+runs, and because the coverage rule is defined never to speak about an event interference has claimed,
+the wrong answer does not merely get added. **It takes the event away from the rule that would have
+been right.**
+
+### Why build it before the rules it orders
+
+Because the coverage rule's own specification already said it was *mutually exclusive with the fusion
+rule for the same cluster* — and until a precedence existed, that was a sentence in a document that no
+code enforced. Building the two rules first would mean implementing that exclusion **twice**, once in
+each of them, which is the arrangement the constraint was written to prevent.
+
+### How an unfinishable item was made finishable
+
+> **It resolves claims, not rules.**
+
+Each rule emits a bid for a zone. The ladder sorts the bids by a declared constant and returns at most
+one per zone plus a ledger. The rules' only obligation to it is "emit a claim" — so nothing in the
+ladder changes when the other two arrive.
+
+The alternative — a resolver that *calls* the three rules — cannot be built before them and could only
+be proved against stubs. **This project has just paid for that arrangement once**: the broken-receiver
+test passed 36 unit tests and a mutation pass built from clean constructed episodes, and was wrong
+about the corpus (§72). A mechanism that orders whatever it is handed can be tested honestly today.
+
+### The ordering already works, before anything enforces it
+
+From the measurement taken for the radius (§73), of 120 runs, what reaches a fusion decision at all:
+40 of 40 interference, 0 of 40 coverage-gap, 1 of 40 sensor-fault.
+
+**That is the separation this item exists to produce, and it is already there without it.** The honest
+reading: it is currently a property of *what the rules happen to emit* rather than of any declaration
+— the broken-receiver test claims those runs because its evidence is strong, not because anything
+forbids a later rule claiming them too. The moment the fusion rule exists and bids for a zone the
+fault rule has taken, the separation depends on a rule nobody wrote down. **That is an argument for
+writing it down before the third rule arrives, not after.**
+
+### Two decisions inside it that are not obvious
+
+| Decision | Why the obvious reading is wrong |
+|---|---|
+| **Suppression is between rules, never within one** | "At most one anomaly per zone" read literally would also suppress a rule's *second* finding in the same place. Two broken receivers 45 km apart are two broken receivers, and reporting one would be wrong in a way nothing downstream could detect |
+| **An undecided verdict is not a claim** | The fault rule is three-valued. Both ways it declines — *environmental* and *cannot tell* — pass the zone on. Otherwise "I cannot decide" silently becomes "nobody may decide", which is a stronger claim than the evidence supports and the opposite of what the word means |
+
+### One parameter recorded as provisional rather than defended
+
+Two claims are one zone when their centres are within a configured radius **and** their windows
+overlap. The default is the layout's own 70 km discrimination radius — the range over which one cause
+reaches two receivers, already validated and already used by the fault rule. Deliberately **not** the
+60 km from §73, which answers a different question that happens to use the same units.
+
+It is provisional for a specific reason, not as a general hedge: a fusion zone may span a centre *and
+its neighbours*, up to about 120 km across, and two claims at opposite ends of one incident would then
+fail this test and both be reported. **Guessing now at the shape of a zone produced by a rule that does
+not exist is how a parameter gets fitted to an imagination rather than to evidence.** It is justified
+for the claims that exist today and revisited when the third rule produces its own.
+
+### What it ships without
+
+Only the broken-receiver test produces claims, so the ladder cannot be run end to end and no
+measurement of it over the corpus is possible until the fusion rule lands. Written onto the item
+rather than left to be discovered. See §72, §73, [[thesis_notes]].
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -5135,3 +5211,5 @@ and re-measured **together**, not one item at a time. See §72, [[thesis_notes]]
 | **Seed and boundary** | Two jobs one detector's output was doing at once. `RF-NOISE`'s episodes say which receiver is worth asking about (the seed); the readings say where its event began and ended (the boundary). Conflating them made one incident arrive as six. See §72. |
 | **Seeded from truth** | A measurement that takes its centre and window from the answer key. Correct for asking whether a signal exists, because it isolates the signal from the detector's ability to find it — and invalid as evidence for choosing a parameter the rule will apply to detected inputs. See §73. |
 | **Discharged, not overturned** | A recorded decision whose argument was conditional, where the condition has since been met — as against one shown to be wrong. The distinction matters because only the second needs the original reasoning retracted. See §73. |
+| **Claim** | A rule's bid for a zone — rule, anomaly type, place and window, and nothing else. Carries no severity or confidence, because the ladder decides *which* answer is given and never how strongly. See §74. |
+| **Zone** | A place and an interval that a candidate anomaly occupies. A point and a window, never an area: a radio anomaly is located at the reporting receiver, and inventing an extent would claim ground nothing was observed across. See §74. |

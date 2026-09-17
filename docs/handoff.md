@@ -12,15 +12,38 @@ This session built `anom-007`, the sensor-fault rule — the step the whole repo
 was waiting on, because `anom-013` assumes it claims the runs whose truth is a broken receiver and
 that assumption had never been tested. It then settled `anom-012`'s radius, which was blocked on
 that same assumption — and found, on the way, that the curve the radius would have been chosen from
-had been measured on inputs the rule never receives.
+had been measured on inputs the rule never receives. It finished with `anom-013`, the precedence
+that makes the ordering a declaration rather than a coincidence.
 
 ## Current state
 
-**`anom-007` and the `anom-012` amendment are both built, measured and green.** 95 spec items,
-39 passing. Backend suite: **827 passed, 99.92% coverage** with the database (`make test-backend`).
-Lint and mypy clean. `anom-007`: 49 tests, 100% module coverage, **27 of 28 mutants killed, no
-survivors** (the 28th site removed as a redundant guarantee). The `anom-012` amendment: 3 new tests
-plus one replaced, **5 of 5 mutants killed**.
+**`anom-007`, the `anom-012` amendment and `anom-013` are all built, measured and green.** 95 spec
+items, **40 passing**. Backend suite: **851 passed, 99.92% coverage** with the database
+(`make test-backend`). Lint and mypy clean. `anom-007`: 49 tests, 100% module coverage, **27 of 28
+mutants killed, no survivors** (the 28th site removed as a redundant guarantee). The `anom-012`
+amendment: 3 new tests plus one replaced, **5 of 5 killed**. `anom-013`: 24 tests, 100% module
+coverage, **16 of 16 killed**.
+
+### `anom-013` is built, and it resolves claims rather than rules
+
+That scoping is what made it finishable with two of its three rules unbuilt: each rule emits a bid
+for a zone, the ladder sorts bids by a declared constant and returns at most one per zone with a
+ledger. `anom-006` and `anom-005`'s only obligation to it is to emit a claim. The alternative — a
+resolver that calls the three rules — could only have been proved against stubs, which is the
+arrangement that let `anom-007` pass 36 tests and a mutation pass while being wrong about the corpus.
+
+Decisions worth not re-deriving: **suppression is cross-rule only** (two broken receivers are two
+events; suppressing within a rule would cap each rule at one finding per run); **an undecided verdict
+is not a claim** (both of `anom-007`'s declines pass the zone on, or "I cannot decide" becomes
+"nobody may decide"); **a claim whose rule has no declared position is refused**, never appended.
+
+The zone-identity radius defaults to the layout's 70 km discrimination radius and is **recorded as
+provisional**: an `anom-005` zone may span a centre and its neighbours, up to ~120 km across, and two
+claims at opposite ends of one incident would then both be reported. Revisit when `anom-005`
+produces a zone rather than guessing its shape now.
+
+**What it ships without:** only `anom-007` produces claims, so the ladder cannot run end to end and
+no corpus measurement of it is possible until `anom-005` lands.
 
 ### `anom-012`'s radius is 60 km, and the curve behind it was re-measured first
 
@@ -121,6 +144,10 @@ listed at session start (`nav-001` work) are untouched and still uncommitted.
   step two claims it); the held-back radius panel released; counts to 39/94, 824 tests, 99.92%
 - `03b5caf` spec: amend anom-012 for the real window source and the radius; add anom-014
 - `c4be93d` test: add tests for the anom-012 amendment
+- `f778cf1` feat(anom-012): the radius, the real window source, and a zero-length refusal - tests pass
+- `45dde95` spec: amend anom-013 — the ladder resolves claims, not rules
+- `a808fa0` test: add tests for anom-013
+- New: `backend/app/detection/precedence.py`, `backend/tests/test_anom_precedence.py`
 - Updated: `docs/spec.jsonl` (anom-007 amended twice then `passes: true`; anom-012 amended with six
   decisions then `passes: true`; **anom-014 added**, `passes: false` by design), `CLAUDE.md` repo map,
   `docs/thesis_notes.md` (eight new Implementation subsections), `docs/qa.md` §72 and §73 plus four
@@ -158,17 +185,21 @@ listed at session start (`nav-001` work) are untouched and still uncommitted.
   tuple, not an object with `.findings`; `save_findings` takes the session *factory*, not a session;
   and the zero-length window crashed the rule itself, which turned out to be the defect rather than a
   script bug.
+- `anom-013`'s tests were written expecting a `DEFAULT_ZONE_RADIUS_KM` constant, where `anom-007`'s
+  established pattern is a `None` that defers to the layout. Changed the test to match the codebase
+  rather than adding a redundant constant — the test had never passed, so nothing was weakened.
 
 ## Next step
 
-1. **Build `anom-013`**, the precedence. All three of its inputs are now measured, and the
-   measurement above gives it something it did not have: the runs that actually reach each step.
-2. **Decide whether `anom-005` gates on the rate excess.** At 60 km and the pre-registered threshold
+1. **Decide whether `anom-005` gates on the rate excess.** At 60 km and the pre-registered threshold
    it fires on 26 of 40 interference runs, so as a necessary condition it loses 14. The alternative is
    to fire on the radio pattern and carry the excess as evidence strength in the bundle. This is the
    decision the whole ordering argument has been converging on and it should be taken deliberately,
    with the 8 dB versus Youden's-J-0.3 asymmetry in front of it.
-3. `anom-006` (SOURCE-GAP), then `anom-005` itself.
+2. **`anom-006` (SOURCE-GAP)**, which now has a precedence to plug into rather than a mutual
+   exclusion it would have to implement itself. Its only obligation to `anom-013` is to emit a claim.
+3. **`anom-005` (FUSION-SPATIAL)** — and when it lands, measure the ladder end to end over the 240
+   runs and record the result on `anom-013`, which ships without it.
 4. `anom-003`, the z-score, which carries the `db-008` extensibility prediction scored once as a
    partial.
 

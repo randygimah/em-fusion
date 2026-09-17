@@ -31,7 +31,6 @@ import pytest
 
 from app.dal.models import Location
 from app.detection.precedence import (
-    DEFAULT_ZONE_RADIUS_KM,
     RULE_ORDER,
     Claim,
     PrecedenceError,
@@ -65,14 +64,12 @@ LATER = (START + timedelta(seconds=600), START + timedelta(seconds=900))
 #: Measured from the shipped layout. RF-01 to RF-02 is 45.3 km, so the two
 #: are one zone at the default radius; RF-01 to RF-04 is 104.3 km and they
 #: are not.
-HERE = Location(lat=52.3105, lon=4.7683)     # RF-01, Schiphol
-NEAR = Location(lat=51.9569, lon=4.4375)     # RF-02, Rotterdam, 45.3 km
-AWAY = Location(lat=51.45, lon=5.3745)       # RF-04, Eindhoven, 104.3 km
+HERE = Location(lat=52.3105, lon=4.7683)  # RF-01, Schiphol
+NEAR = Location(lat=51.9569, lon=4.4375)  # RF-02, Rotterdam, 45.3 km
+AWAY = Location(lat=51.45, lon=5.3745)  # RF-04, Eindhoven, 104.3 km
 
 
-def zone(
-    centre: Location = HERE, window: tuple[datetime, datetime] = WINDOW
-) -> Zone:
+def zone(centre: Location = HERE, window: tuple[datetime, datetime] = WINDOW) -> Zone:
     return Zone(centre=centre, started_at=window[0], ended_at=window[1])
 
 
@@ -86,7 +83,7 @@ def claim(
     return Claim(rule_id=rule_id, anomaly_type=anomaly_type, zone=zone(centre, window))
 
 
-def policy(radius: float = DEFAULT_ZONE_RADIUS_KM) -> PrecedencePolicy:
+def policy(radius: float | None = None) -> PrecedencePolicy:
     return PrecedencePolicy(zone_radius_km=radius)
 
 
@@ -178,9 +175,11 @@ def test_the_zone_radius_is_configuration() -> None:
 
 def test_the_zone_radius_defaults_to_the_layout_discrimination_radius() -> None:
     # spec: anom-013, scn-005 -- the distance over which one cause can reach
-    # two receivers, already validated there and already used by anom-007.
-    # Deliberately not anom-012's 60 km, which answers a different question.
-    assert DEFAULT_ZONE_RADIUS_KM == LAYOUT.discrimination_radius_km
+    # two receivers, already validated there and already used by anom-007
+    # for the same reason. Deliberately not anom-012's 60 km, which answers
+    # a different question: how wide a patch to count dropouts over.
+    assert PrecedencePolicy().radius_for(LAYOUT) == LAYOUT.discrimination_radius_km
+    assert PrecedencePolicy().radius_for(LAYOUT) != 60.0
 
 
 def test_windows_meeting_at_an_instant_overlap() -> None:
@@ -326,9 +325,7 @@ def dismissal(sensor: str, verdict: Verdict) -> Dismissal:
 def test_a_fault_becomes_a_claim_on_its_own_zone() -> None:
     # spec: anom-013, anom-007 -- the adapter, and the only producer of
     # claims that exists today.
-    claims = claims_from_sensor_faults(
-        SensorFaultFindings(faults=(fault(),)), LAYOUT
-    )
+    claims = claims_from_sensor_faults(SensorFaultFindings(faults=(fault(),)), LAYOUT)
 
     assert len(claims) == 1
     assert claims[0].rule_id == FAULT

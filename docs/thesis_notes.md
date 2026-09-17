@@ -4720,6 +4720,76 @@ that is already caught. The decision is to specify it, record why it waits, and 
 re-measure the batches together if something ever depends on it that the downstream refusals do not
 cover.
 
+### Building a precedence over rules that do not exist yet
+
+`anom-013` declares the order in which the three reportable rules speak, and two of those rules were
+unbuilt when it was written. That looks like a reason to defer it, and the opposite turned out to be
+true: `anom-006`'s own specification already carried the constraint that it is *mutually exclusive
+with `anom-005` for the same cluster*, and until a precedence existed that constraint was a sentence
+in a document rather than something any code could enforce. Building the two rules first would have
+meant implementing that exclusion twice, once in each of them, which is the arrangement the
+constraint was written to avoid.
+
+The scoping decision that made the item finishable is that **it resolves claims rather than rules.**
+Each rule emits a bid for a zone; the ladder sorts the bids by a declared constant and hands back at
+most one per zone with a ledger of what was suppressed and by whom. The alternative — a resolver that
+calls the three rules itself — cannot be built before them, and could only have been proved against
+stubs. This project has just paid for that arrangement once: `anom-007` passed thirty-six unit tests
+and a mutation pass built from clean constructed episodes, and was wrong about the corpus. A
+mechanism that orders whatever it is handed can be tested honestly today; a mechanism that
+orchestrates two absent rules cannot.
+
+What that scoping costs is stated on the item rather than discovered later: only `anom-007` produces
+claims, so the ladder cannot be exercised end to end, and no measurement of it over the corpus is
+possible until `anom-005` lands.
+
+### The ordering already worked before anything enforced it
+
+The measurement taken for `anom-012`'s radius answers a question about `anom-013` as a side effect.
+Of the 120 runs in the replication batches, those reaching a fusion decision at all are 40 of 40
+`gnss-degradation`, 0 of 40 `aircraft-coverage-gap` and 1 of 40 `rf-sensor-fault` — because
+`anom-007` claims the rest outright.
+
+That is the separation this item was written to produce, and it is already present without it. The
+honest reading is that it is currently a property of *what the rules happen to emit* rather than of a
+declaration anything checks: `anom-007` claims those runs because its own evidence is strong, not
+because anything forbids a later rule from claiming them too. The moment `anom-005` exists and bids
+for a zone `anom-007` has taken, the separation depends on a rule nobody wrote down. That is an
+argument for writing it down before the third rule arrives rather than after, which is the ordering
+this session took.
+
+### Two decisions inside the ladder that are not obvious
+
+**Suppression is between rules and never within one.** The tempting reading of "at most one
+reportable anomaly per candidate zone" is that a zone admits one anomaly full stop, which would also
+suppress a rule's second finding in the same place. Two broken receivers forty-five kilometres apart
+are two broken receivers, and a rule that reported one of them would be wrong in a way nothing
+downstream could detect. The exclusion the item exists to enforce is `anom-006`'s with `anom-005`,
+which is cross-rule by construction, so the implementation skips same-rule comparisons deliberately
+and a mutation that removes that skip is killed by a test that says why.
+
+**An undecided verdict is not a claim.** `anom-007` is three-valued, and the two ways it declines a
+zone — environmental, or not decidable — both pass the zone to the next step untouched. The
+environmental case is straightforward, since that is precisely what `anom-005` exists for. The
+undecided case is the one worth arguing: a rule that could not tell must not thereby block the rules
+that might, or "I cannot decide" would silently become "nobody may decide", which is a stronger claim
+than the evidence supports and the opposite of what the word means.
+
+### A parameter recorded as provisional rather than defended
+
+Two claims count as one zone when their centres lie within a configured radius and their windows
+overlap. The default is the layout's own discrimination radius, on the same argument `anom-007` uses
+for its neighbour test: it is the distance `scn-005` validates as the range over which one cause can
+reach two receivers. Deliberately not `anom-012`'s 60 km, which answers how wide a patch to count
+dropouts over — a different question that happens to be asked in the same units.
+
+It is recorded as provisional on the item, and the reason is specific rather than a general hedge. An
+`anom-005` zone may span a centre and its neighbours, up to about 120 km across, and two claims at
+opposite ends of one incident would then fail this test and both be reported. Guessing now at the
+shape of a zone produced by a rule that does not exist is how a parameter gets fitted to an
+imagination rather than to evidence, so the value is justified for the claims that exist today and
+revisited when the third rule produces its own.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;
