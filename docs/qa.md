@@ -5169,6 +5169,94 @@ twice over — and it means a queue is forming of changes that share one cost.
 re-measured together.** That converts two separate invalidations into one, and gives the re-measured
 figures a single set of conditions to be reported under. See §72, §73, [[thesis_notes]].
 
+## 76. Agree with your recommendation — build anom-005
+
+**Built, and the end-to-end run found two defects that 38 passing tests and a clean mutation pass
+could not.**
+
+### What the rule does now
+
+It fires on the **radio pattern alone**: a zone the broken-receiver rule declined as *environmental*,
+which is already the finding that more than one receiver deviated together. It does not repeat that
+test — it consumes the verdict.
+
+The aircraft evidence is carried beside it as **corroboration**, in three states, and confidence has a
+**floor of Medium that the aircraft side cannot breach**. The reason is the whole argument of the last
+three sessions: by the time this rule fires, the radio evidence is beyond five sigma. A signal with a
+Youden's J near 0.3 can *raise* that claim and must not be able to lower it. **The rule never emits
+Low**, and that is recorded rather than left as a branch nobody notices.
+
+### Defect one: 160 zones from 60 events
+
+An incident spanning two receivers has **both** dismissed as environmental, each naming the other. One
+zone per dismissal describes the same event twice. Every unit test had used a single dismissal —
+which is not what the rule upstream actually emits.
+
+Fixed by merging dismissals into events first, grouped on the broken-receiver rule's *own* naming of
+which receivers deviated together rather than measuring distance again. Membership chains, so three
+receivers are one event even where the outer two never name each other. Result: **61 zones for 60
+staged runs and one leak** — exactly one per event.
+
+> **This is the third time the unit of report has had to be corrected upward.** Readings → episodes
+> (§ the radio rule). Episodes → one verdict per receiver (§72). Receivers → one zone per event (here).
+> The pattern: each rule's natural output is its *evidence*, and the thing worth reporting is one level
+> coarser. The test that would have caught it, every time, is the one that feeds the rule what the
+> layer below really produces.
+
+### Defect two: an unstated contract between two items
+
+The ladder suppresses between rules and **never within one** — deliberately, because two broken
+receivers are two events. That is safe *only* if each rule emits one claim per event. So the 160 zones
+would all have been reported.
+
+Neither document stated that contract. Only running the two together exposed it.
+
+### The no-gate decision got much stronger after it was made
+
+| Corroboration | Per receiver (40 runs) | **Per event (61 zones)** |
+|---|---|---|
+| Corroborated | 6 | **7** |
+| Not corroborated | 9 | **7** |
+| Not measurable | 25 | **47** |
+
+The decision not to gate was taken on "a gate would report 26 of 40 and reject nothing". The merged
+figures say a gate would report **7 of 60** — because 47 of 61 zones cannot have their aircraft side
+measured at all.
+
+**On this corpus the aircraft side is not a weak second vote. It is absent in three quarters of cases
+and confirms in about one in nine.** That is uncomfortable to record after two sessions of work on the
+rate excess, and it is the honest reading. It does not make that work wasted — the excess is why
+cluster size was abandoned, and the reason its contribution is so thin is the same corpus limitation
+§75 identified. But any claim about *fusing* radio and aircraft evidence in this system has to be
+stated as what it is: **on the current corpus, fusion is the radio evidence with an occasional
+corroborating note.**
+
+### The whole ladder, measured for the first time
+
+| Staged | Runs | Decided as specified |
+|---|---|---|
+| `rf-sensor-fault` | 60 | **60** |
+| `gnss-degradation` | 60 | **60** |
+| `ambiguous-mixed-evidence` | 20 | 20, as a sensor fault by design |
+| `aircraft-coverage-gap` | 80 | 75 correctly silent |
+| `normal-baseline` | 20 | 19 correctly silent |
+
+**No zone in any run received two answers** — the precedence's first failure case, and it does not
+occur.
+
+Two things that look like failures and are not: six runs staging nothing on the radio grid raise a
+sensor fault (that is the radio rule's own false-positive rate promoted one layer, owned by the
+minimum-duration item); and six runs carry a second anomaly of the other type in a *different* zone
+(the guarantee is one answer **per zone**, never per run — a run may genuinely hold a broken receiver
+in one place and interference in another).
+
+### The number that must not be read as a result
+
+**The 75 of 80 coverage-gap row.** Those non-detections are correct only because that rule is unbuilt:
+the system is silent on that arm because it has no rule for it, not because it judged and declined.
+Reporting it as a success would be precisely the error the zero-anomalies control exists to prevent,
+one level up. See §72, §75, [[thesis_notes]].
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -5336,3 +5424,5 @@ figures a single set of conditions to be reported under. See §72, §73, [[thesi
 | **Zone** | A place and an interval that a candidate anomaly occupies. A point and a window, never an area: a radio anomaly is located at the reporting receiver, and inventing an extent would claim ground nothing was observed across. See §74. |
 | **Demoted threshold** | A measured cut-off kept as a confidence boundary rather than used as a condition of firing. Preserves what the measurement bought without paying the cost of rejecting true positives. See §75. |
 | **Empty answer key** | A run labelled as staging an incident whose ground truth names no aircraft — 11 of 40 coverage-gap runs. Indistinguishable from its control by construction, so it silently dilutes any recall measured over the arm. See §75. |
+| **Corroboration** | What the aircraft side contributed to a claim the radio side already established — corroborated, not corroborated, or not measurable. Kept separate from confidence so a weak signal can raise a claim and never lower it. See §76. |
+| **Unit of report** | The thing a rule announces, as against the evidence it announces it from. Corrected upward three times in this project: readings to episodes, episodes to receivers, receivers to events. See §76. |

@@ -4890,6 +4890,78 @@ recorded on both items is that when a regeneration happens, both land in it and 
 re-measured together — which converts two separate invalidations into one, and gives the re-measured
 figures a single set of conditions to be reported under.
 
+### Two defects an end-to-end run found that unit tests and mutation testing could not
+
+`anom-005` was built with thirty-eight tests, a hundred per cent coverage of its module, and a
+mutation pass in which every genuine mutant died. It was then run over the corpus as part of the whole
+ladder, and two things showed up immediately that none of that could have revealed.
+
+The first was arithmetic: the ladder produced **160 interference zones from 60 staged runs**. An
+incident spanning two receivers has both dismissed as environmental by `anom-007`, each naming the
+other, so emitting one zone per dismissal describes the same event twice. Every unit test had used a
+single dismissal, which is not what the upstream rule emits. The fix merges dismissals into events
+before any zone is produced, grouping on `anom-007`'s own finding of which receivers deviated together
+rather than measuring distance a second time, with membership chaining so that a deviation reaching
+three receivers is one event even where the outer two never name each other. The corpus then yields 61
+zones for 60 staged runs and one leaked fault — exactly one per event.
+
+This is the third time in this project that the unit of report has had to be corrected upward:
+`anom-001` groups readings into episodes, `anom-007` groups episodes into one verdict per receiver,
+and now `anom-005` groups receivers into one zone per event. The pattern is that each rule's natural
+output is its *evidence*, and the thing worth reporting is one level coarser. It is worth stating in
+the write-up as a design lesson rather than three separate bugs, because in each case the test that
+would have caught it is the one that feeds the rule what the layer below actually produces.
+
+The second defect was a consequence of the first that nobody would have looked for. `anom-013`
+suppresses between rules and never within one, deliberately — two broken receivers are two events.
+That decision is safe only if each rule emits one claim per event, so the 160 zones would all have
+been reported. The precedence and the rule it orders had a contract between them that neither
+document stated, and only running them together exposed it.
+
+### A parameter whose case got stronger after it was settled
+
+Merging also changed the corroboration figures, and the change is large enough to be worth recording
+in its own right. Per receiver, over 40 runs: corroborated 6, not corroborated 9, not measurable 25.
+Per event, over the merged 61 zones: **corroborated 7, not corroborated 7, not measurable 47.**
+
+The decision not to gate `anom-005` on the track evidence was taken on a measurement showing a gate
+would report 26 of 40 and reject nothing. The merged figures make that case much stronger: a gate
+would report **7 of 60** staged interference runs, because 47 of 61 zones cannot have their track side
+measured at all — the disc holds no finding in one of the two periods. On this corpus the track side
+is not a weak second vote. It is absent in three quarters of cases and confirms in about one in nine.
+
+That is an uncomfortable result to record after two sessions of work on `anom-012`, and it is the
+honest one. It does not make that work wasted: the rate excess is the reason cluster size was
+abandoned, it is what `anom-006` was measured against, and the reason its contribution is so thin here
+is the same corpus limitation `scn-007` exists to fix — a mean of 1.7 staged aircraft per run leaves
+most discs with nothing in them. What it does mean is that any claim about the *fusion* of radio and
+track evidence in this system must be stated as what it is: on the current corpus, fusion is the radio
+evidence with an occasional corroborating note.
+
+### The whole ladder, measured for the first time
+
+With `anom-005` built, the three-step decision could be run end to end over all 240 runs:
+
+| Staged | Runs | Decided as specified |
+|---|---|---|
+| `rf-sensor-fault` | 60 | 60 |
+| `gnss-degradation` | 60 | 60 |
+| `ambiguous-mixed-evidence` | 20 | 20, as a sensor fault by design |
+| `aircraft-coverage-gap` | 80 | 75 correctly silent |
+| `normal-baseline` | 20 | 19 correctly silent |
+
+**No zone in any run received two answers**, which is `anom-013`'s first failure case and it does not
+occur. Six runs that stage nothing on the radio grid raise a sensor fault, which is `anom-001`'s own
+false-positive rate promoted one layer and is owned by `anom-014`. Five interference runs and one
+sensor-fault run carry a second anomaly of the other type in a *different* zone; that is not a
+precedence violation, because the guarantee is one answer per zone and never per run, and a run may
+genuinely hold a broken receiver in one place and interference in another.
+
+The figure that must not be read as a result is the coverage-gap row. Those 75 correct non-detections
+are correct only because `anom-006` is unbuilt: the system is silent on that arm because it has no
+rule for it, not because it judged and declined. Reporting 75 of 80 as a success would be exactly the
+error `anom-008` exists to prevent, one level up.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;

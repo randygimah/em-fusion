@@ -13,13 +13,56 @@ was waiting on, because `anom-013` assumes it claims the runs whose truth is a b
 that assumption had never been tested. It then settled `anom-012`'s radius, which was blocked on
 that same assumption — and found, on the way, that the curve the radius would have been chosen from
 had been measured on inputs the rule never receives. It finished with `anom-013`, the precedence
-that makes the ordering a declaration rather than a coincidence — then settled `anom-005`'s gating
-question and found that `anom-006` cannot honestly be built on the corpus as it stands.
+that makes the ordering a declaration rather than a coincidence; settled `anom-005`'s gating question
+and built it; and found that `anom-006` cannot honestly be built on the corpus as it stands. **All
+three reportable rules that can be built now are built**, and the ladder has been measured end to end.
 
 ## Current state
 
-**`anom-007`, the `anom-012` amendment and `anom-013` are all built, measured and green.** **96 spec
-items, 40 passing** (`scn-007` added, unbuilt by design). Backend suite: **851 passed, 99.92% coverage** with the database
+**`anom-007`, the `anom-012` amendment, `anom-013` and `anom-005` are all built, measured and
+green.** **96 spec items, 41 passing** (`scn-007` and `anom-014` added, unbuilt by design).
+Backend suite **889 passed, 99.92% coverage**. `anom-005`: 38 tests, 100% module coverage, every
+genuine mutant killed and one proven equivalent.
+
+### The ladder, end to end over all 240 runs — the measurement `anom-013` shipped without
+
+| Staged | Runs | Decided as specified |
+|---|---|---|
+| `rf-sensor-fault` | 60 | **60** |
+| `gnss-degradation` | 60 | **60** |
+| `ambiguous-mixed-evidence` | 20 | 20, as a sensor fault by design |
+| `aircraft-coverage-gap` | 80 | 75 correctly silent |
+| `normal-baseline` | 20 | 19 correctly silent |
+
+**No zone in any run received two answers** — `anom-013`'s first failure case, and it does not occur.
+
+Two things that look like failures and are not: 6 runs staging nothing on the RF grid raise a sensor
+fault (`anom-001`'s own false-positive rate promoted one layer, owned by `anom-014`); and 6 runs carry
+a second anomaly of the other type in a **different zone** (the guarantee is one answer per *zone*,
+never per run).
+
+**Do not read the 75 of 80 coverage-gap row as a result.** Those non-detections are correct only
+because `anom-006` is unbuilt — silent for want of a rule, not because it judged and declined.
+
+### `anom-005` is built, and the end-to-end run found two defects the unit tests could not
+
+It fires on the **RF pattern alone** — a zone `anom-007` declined as environmental — and carries the
+excess as three-valued corroboration. Confidence has a **floor of Medium the track side cannot
+breach**; the rule never emits Low.
+
+1. **160 zones from 60 events.** Both receivers in an incident are dismissed as environmental, each
+   naming the other, so one zone per dismissal reports the same event twice. Every unit test had used
+   a single dismissal — not what `anom-007` actually emits. Fixed by merging on `anom-007`'s own
+   naming, with chaining; the corpus now yields **61 zones for 61 events**.
+2. **An unstated contract between two items.** `anom-013` suppresses cross-rule only, deliberately —
+   which is safe only if each rule emits one claim per event. Neither document said so, and only
+   running them together exposed it.
+
+**The no-gate decision got much stronger after it was made.** Per event: corroborated 7, not
+corroborated 7, **not measurable 47** of 61. A gate would report **7 of 60**, not 26 of 40. On this
+corpus the track side is absent in three quarters of cases and confirms in about one in nine — so any
+claim about *fusion* must be stated as what it is: the radio evidence with an occasional corroborating
+note. Backend suite: **851 passed, 99.92% coverage** with the database
 (`make test-backend`). Lint and mypy clean. `anom-007`: 49 tests, 100% module coverage, **27 of 28
 mutants killed, no survivors** (the 28th site removed as a redundant guarantee). The `anom-012`
 amendment: 3 new tests plus one replaced, **5 of 5 killed**. `anom-013`: 24 tests, 100% module
@@ -192,6 +235,11 @@ listed at session start (`nav-001` work) are untouched and still uncommitted.
 - `32d0d2b` feat(anom-013): the reportable rule precedence - tests pass
 - `b29f1cf` spec: anom-005 does not gate on the rate excess
 - `d142b91` spec: anom-006 is blocked by the corpus, not by its design; add scn-007
+- `12389d3` docs: the anom-005 gating decision and the anom-006 blocker
+- `38cea7f` spec: correct anom-005's confidence design; qualify anom-012's figures
+- `2b22a13` test: add tests for anom-005
+- `35a3945` feat(anom-005): the fusion rule - tests pass
+- New: `backend/app/detection/fusion.py`, `backend/tests/test_anom_fusion.py`
 - New: `backend/app/detection/precedence.py`, `backend/tests/test_anom_precedence.py`
 - Updated: `docs/spec.jsonl` (anom-007 amended twice then `passes: true`; anom-012 amended with six
   decisions then `passes: true`; **anom-014 added**, `passes: false` by design), `CLAUDE.md` repo map,
@@ -236,23 +284,21 @@ listed at session start (`nav-001` work) are untouched and still uncommitted.
 
 ## Next step
 
-**A decision is owed before more detection work: regenerate the corpus, or keep building around it?**
-`scn-007` and `anom-014` are both specified and both blocked on it, and `anom-006` cannot be built
-until `scn-007` lands. Building `anom-005` first is possible and does not depend on either.
+**The detection layer is now blocked on one decision, and it is the user's: regenerate the corpus, or
+keep building around it?** Nothing further in detection is honestly measurable without it.
 
-1. **`anom-005` (FUSION-SPATIAL)** — buildable now and unblocked. Trigger is the RF pattern alone; the
-   excess is carried as confidence. **One thing to measure during the build**: the count floor
-   separating "measurably below threshold" from "too little traffic to judge". The arithmetic
-   constraint is that `anom-012`'s smoothing term must not dominate the rate — measure it, do not
-   pick it from the 14 values above, which is the sample it would be scored against.
-   When it lands, **measure the ladder end to end** over the 240 runs and record it on `anom-013`,
-   which ships without that.
-2. **`scn-007` + `anom-014` together**, with a full batch regeneration and a re-measurement of every
-   detection figure under one set of conditions. This is the larger call and belongs to the user.
-3. **`anom-006`**, only after `scn-007`, and repeat the pair measurement before choosing any
-   threshold in it.
-4. `anom-003`, the z-score, which carries the `db-008` extensibility prediction scored once as a
-   partial.
+1. **`scn-007` + `anom-014` together, in one regeneration.** Both are specified and unbuilt, both
+   invalidate every detection figure measured through the current batches, and they now block a third
+   thing: `anom-006` cannot be built until `scn-007` lands, and `anom-005`'s corroboration is absent
+   in 47 of 61 zones for the same underlying reason — a mean of 1.7 staged aircraft per run. Doing
+   them together converts three separate invalidations into one, and gives every re-measured figure a
+   single set of conditions to be reported under.
+2. **`anom-006`**, only after `scn-007`, repeating the seed-matched pair measurement before any
+   threshold in it is chosen.
+3. `anom-003`, the z-score, which carries the `db-008` extensibility prediction scored once as a
+   partial. Independent of the regeneration question, so buildable now if the answer is "not yet".
+4. **`evb-001`**, evidence bundles — also independent, and the natural consumer of what the ladder now
+   produces.
 
 ### Open and unowned
 
@@ -261,7 +307,9 @@ until `scn-007` lands. Building `anom-005` first is possible and does not depend
   time. **`scn-007` is now blocked on the same act** — do them in one regeneration.
 - **The `aircraft-coverage-gap` arm currently has no rule.** It contributes only correct
   non-detections to `eval-002` and must not be reported as though the system had been tested on it.
-  A threat to validity, recorded on `anom-006`.
+  A threat to validity, recorded on `anom-006` and visible as the 75-of-80 row above.
+- **Fusion is currently the radio evidence with an occasional corroborating note.** 47 of 61 zones
+  have no measurable track side. Any write-up claiming multi-source fusion must say so plainly.
 - A **broadband generation arm**, without which `anom-007`'s Medium and Low confidence bands have no
   corpus behind them.
 - The **frontend suite exits non-zero**: `TypeError: control.runs.map is not a function` at
