@@ -4698,6 +4698,62 @@ that took off or landed mid-window, which is the detector being right.
 Staging yield across both repaired batches is 58 of 80 = **72.5%**, so the ~200-runs-for-150-incidents
 sizing in §68 stands. See [[thesis_notes]] and §69.
 
+## 71. The rule ordering in plain terms is good — put it in the progress note with diagrams
+
+**Added as its own section, with two figures.** Recording here what the section argues, because the
+plain-English framing is the one that will survive into the write-up.
+
+### The framing
+
+Three rules were written as three independent tests, each deciding for itself whether to speak. They
+are not three tests. They are **one decision with three possible answers**, asked in a fixed order:
+
+| Step | Question | If yes | If no |
+|---|---|---|---|
+| 1 | Is there a radio anomaly at all? | continue to 2 | **we are not hearing aircraft here** |
+| 2 | One receiver only, neighbours clean? | **that receiver is broken** | continue to 3 |
+| 3 | Aircraft dropouts unusually frequent nearby? | **something is interfering** | nothing reported |
+
+Each step is reachable only by failing the one above, so exactly one answer comes out — and an event
+claimed at step two is never offered to step three.
+
+### Why the order is this one
+
+**The aircraft side enters last, and only at step three.** That looks arbitrary until the strengths
+are compared:
+
+| Evidence | Strength |
+|---|---|
+| One receiver at +8 dB, six neighbours within ~1.5 dB | **beyond five sigma** |
+| Aircraft rate excess, pooled over 40 pairs | **Youden's J = 0.40** |
+
+A broken receiver produces a picture nothing else produces — one receiver screaming while every
+neighbour reports an ordinary afternoon. Interference washes over several at once, because it is out
+there rather than in the equipment. **No aircraft evidence can improve on that**, and asking it to try
+is what produced the misattribution.
+
+### What ordering does that tuning could not
+
+Previously the interference rule fired on any nearby cluster of dropouts, so on runs whose truth was a
+broken receiver it fired **14 times in 20** — and since the coverage rule never speaks about an event
+the interference rule claimed, the wrong answer *took the event away from* the rule that would have
+been right.
+
+Every earlier attempt aimed at making the aircraft evidence strong enough to tell those apart, and two
+of those attempts were rejected for amounting to adjusting the experiment until the detector passed.
+**Deciding the equipment fault first means the aircraft evidence never has to make that distinction at
+all.** Its remaining job — interference versus nothing — is a much easier question, and one its
+measured strength supports.
+
+### What the section deliberately does not claim
+
+The obvious next move is to relax the aircraft test now that the broken-receiver case is handled
+elsewhere: the wide setting catches 31 staged hours in 40 rather than 16. **Not done, deliberately.**
+The argument rests on step two claiming those hours, step two is unbuilt, and its success rate has
+never been measured. Choosing a setting from an assumption about an unbuilt component is the same
+mistake this project made twice this week. Build it, measure it, then choose. See §68, §70,
+[[thesis_notes]].
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -4843,6 +4899,7 @@ sizing in §68 stands. See [[thesis_notes]] and §69.
 | **Source record vs observation** | What the emitter produces and what the DAL produces. The first has no provenance, no data mode and no run identifier; the second has all three. `scn-001` emits the first only. |
 | **Track observation** | One replayed row: one aircraft, one instant, one position, one staleness reading. What `ObservationType.TRACK` means. Distinct from a *track*, which is the whole sequence, and from an *aircraft*, which is the thing observed. See §56. |
 | **Zone centre** | The receiver a run's incident is built around, chosen from the run's seed out of the seven in the layout. Shared by both halves of a run, which is what makes the radio anomaly and the track effect co-located by construction. See §55. |
+| **Rule precedence** | The three reportable rules arranged as one decision asked in a fixed order — radio anomaly at all, then confined to one receiver, then aircraft evidence — rather than as three tests racing each other. Exactly one answer results, and an event claimed early is never offered later. See §71. |
 | **Out-of-sample threshold** | Scoring a new batch at the threshold an earlier batch chose, rather than refitting. The only part of a replication that can genuinely fail — refitting makes every batch agree with itself. See §70. |
 | **Youden's J** | Recall minus false-alarm rate: 0 is a coin flip, 1 is perfect. The track evidence scores 0.15–0.35; an instrument worth acting on wants above 0.6. The one number that says how good a detector is without hiding either half. See §69. |
 | **Rate excess** | The track side's contribution to fusion, replacing cluster size: dropouts per minute inside a disc during a window, over the same disc outside it. Internal to one run and one place, so it needs no external threshold. See §68. |

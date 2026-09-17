@@ -90,7 +90,7 @@ Files added: `backend/app/detection/{baseline,rf_noise,track_gap,findings,cluste
 Docs: `thesis_notes.md` gained 23 subsections; `qa.md` entries 60–67 and 13 glossary terms;
 `implementation.md` the Phase 8 ordering note and ticks; `CLAUDE.md` a **new agent instruction** —
 explain an item in plain terms before building it, as chat output, never as a file. Progress note at
-version 23.
+version 24.
 
 ## Failed attempts
 
