@@ -5103,6 +5103,58 @@ give a zone-level rule enough co-located dropouts to concentrate. Whether that i
 `anom-006` to be built at all is a question for re-measurement after the regeneration, and it is
 explicitly not settled by this item.
 
+### The corpus is not one corpus, and a measurement of mine was taken across the join
+
+Found while mapping the stored runs in order to plan the regeneration, and recorded because it is a
+threat to the validity of figures already on the record as well as an error of my own.
+
+The 240 stored runs were generated in twelve batches of twenty, and the generator changed underneath
+them twice. The evidence is unambiguous once the runs are grouped by block:
+
+| Block | Run length | Mean aircraft named on the answer key |
+|---|---|---|
+| ids 1-20 | **600 s** | 4.35 |
+| ids 21-100 | 900 s | 4.75 - 5.20 |
+| ids 121-220 | 900 s | **1.55 - 1.85** |
+
+Two separate changes. The first twenty runs are 600 seconds where every later run is 900, so they
+carry two thirds of the track observations - 22,470 against 33,779 for the same seeds regenerated
+later. And runs 1-100 predate `scn-006`, the gate restricting staging to aircraft in flight, so their
+answer keys name a mean of about five aircraft where later runs name fewer than two. Most of that
+difference is aircraft that were parked, which `anom-010` correctly refuses to find, because an
+aircraft on the ground stopped reporting when it was switched off.
+
+That explains a structure that first looked like duplication. Twenty seeds appear twice within the
+`aircraft-coverage-gap` arm, because runs 41-60 are runs 1-20 regenerated at the corrected length.
+The arm is therefore **80 runs over 60 distinct seeds**, and any figure quoted "of 80" weights twenty
+of them twice while also including twenty runs shorter than the rest.
+
+**The error this caused was mine.** `scn-007`'s floor was measured over all 60 seed-matched pairs in
+the corpus, which straddles the `scn-006` boundary. The high-count cells of that curve - six, nine,
+eleven and twelve staged aircraft - can only be drawn from the pre-gate blocks, because the later
+generator never stages that many. Those cells are therefore populated almost entirely by runs whose
+staged aircraft were largely parked and undetectable by construction, which depresses the measured
+excess exactly where the floor is being read. The measurement was restricted to the post-`scn-006`
+region and re-run.
+
+This is the same error the project has now made in three different costumes, and it is worth naming
+once rather than three times: **a measurement is only evidence for a decision if it was taken on the
+inputs the decision will actually face.** `anom-012`'s curve was first measured with the centre and
+window taken from ground truth, which the rule never receives. `anom-005`'s gating trade-off was
+first quoted over all runs of each type, when the ladder means the rule only ever sees some of them.
+And here, a parameter for the *next* generator was read off runs made by two *previous* ones. In each
+case the arithmetic was correct and the population was wrong.
+
+`anom-014`'s minimum duration is unaffected, and that was checked rather than assumed. It measures RF
+episodes, and neither change touched the RF grid: `scn-006` gates track staging only, and the shorter
+block affects just twenty runs, all of them in the staged-no-RF group where a shorter stream can only
+*reduce* the count of false episodes. The finding that every false episode is exactly one reading long
+is a property of the noise distribution and does not depend on how many readings there were.
+
+The consequence for the regeneration is a requirement rather than a caveat: **generate the whole
+corpus with one generator, at one run length, and record the base seed and run count of every batch**
+- which is what `scn-008` now exists to make possible.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;

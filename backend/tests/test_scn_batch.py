@@ -436,6 +436,12 @@ def test_a_row_carrying_batch_provenance_still_rebuilds_its_run() -> None:
     assert rebuilt.seed == spec.seed
     assert rebuilt.start == spec.start
     assert rebuilt.duration_seconds == spec.duration_seconds
+    # Found by mutation: asserting the row rebuilds is not the same as
+    # asserting the provenance came back with it. A `from_record` that
+    # silently dropped the batch passed every other test here, and the row
+    # would then stop naming its batch the moment it made a round trip.
+    assert rebuilt.batch == spec.batch
+    assert rebuilt == spec
 
 
 def test_a_row_with_no_batch_still_rebuilds_its_run() -> None:
@@ -480,6 +486,31 @@ def test_a_batch_index_outside_its_own_batch_is_refused() -> None:
 
 
 def test_a_negative_batch_index_is_refused() -> None:
+    """Refused by the field constraint rather than by the validator below it,
+    which is why this matches on the field and not on the prose."""
     # spec: scn-008
-    with pytest.raises(ValueError, match="batch"):
+    with pytest.raises(ValueError, match="index"):
         _spec().with_batch(base_seed=BASE_SEED, index=-1, runs=20)
+
+
+def test_every_run_in_a_batch_records_that_batch() -> None:
+    """The item is inert unless the batch entrypoint supplies it, and a
+    provenance field that nothing populates is worse than none at all --
+    it reads as evidence the batch was recorded."""
+    # spec: scn-008, scn-003
+    seeds = derive_seeds(BASE_SEED, MIN_RUNS)
+    windows = derive_windows(CORPUS, seeds, RUN_SECONDS)
+
+    for index, (seed, window) in enumerate(zip(seeds, windows, strict=True)):
+        spec = RunSpec(
+            scenario_type=ScenarioType.GNSS_DEGRADATION,
+            parameters=BaselineParameters(),
+            incident=IncidentParameters(),
+            seed=seed,
+            start=window.start,
+            duration_seconds=RUN_SECONDS,
+        ).with_batch(base_seed=BASE_SEED, index=index, runs=MIN_RUNS)
+
+        recorded = spec.as_parameters()
+        re_derived = derive_seeds(recorded["base_seed"], recorded["batch_runs"])
+        assert re_derived[recorded["batch_index"]] == seed

@@ -79,6 +79,36 @@ class BaselineParameters(_Frozen):
     nominal_snr_db: float = 20.0
 
 
+class BatchProvenance(_Frozen):
+    """Which batch a run came from, and where in it (`scn-008`).
+
+    Provenance rather than a generation input: nothing here reaches a single
+    emitted reading, and `from_record` accepts a row carrying it without
+    treating it as a parameter it must understand.
+
+    The three values exist together because separately they prove nothing.
+    With all three, `derive_seeds(base_seed, runs)[index]` re-derives the
+    run's own seed, so the claim "this run came from that batch" is
+    checkable against the row rather than merely asserted on it. A recorded
+    number nobody can check is barely better than a lost one, which is what
+    every base seed before this item became.
+    """
+
+    base_seed: int = Field(ge=0)
+    index: int = Field(ge=0)
+    runs: int = Field(gt=0)
+
+    @model_validator(mode="after")
+    def _index_names_a_run_in_this_batch(self) -> BatchProvenance:
+        if self.index >= self.runs:
+            raise ValueError(
+                f"batch index {self.index} names no run in a batch of "
+                f"{self.runs}. The provenance would then be unverifiable by "
+                "construction, which is the one thing it exists not to be."
+            )
+        return self
+
+
 class RunSpec(_Frozen):
     """A run, fully described: the three inputs plus the span to emit over.
 
@@ -96,6 +126,11 @@ class RunSpec(_Frozen):
     seed: int = Field(ge=0)
     start: datetime
     duration_seconds: int = Field(gt=0)
+    #: Which batch produced this run (`scn-008`). None for a run generated
+    #: outside a batch -- not a batch of one, because a synthetic value here
+    #: would be indistinguishable from a real one and the field exists to be
+    #: trusted.
+    batch: BatchProvenance | None = None
 
     @model_validator(mode="after")
     def _start_is_absolute(self) -> RunSpec:
@@ -107,6 +142,20 @@ class RunSpec(_Frozen):
                 "differently on a machine in another zone"
             )
         return self
+
+    def with_batch(self, *, base_seed: int, index: int, runs: int) -> RunSpec:
+        """The same run, saying which batch it came from (`scn-008`).
+
+        Returns a new spec rather than mutating: the class is frozen because
+        a spec editable after a run has started describes something other
+        than what was emitted, and that argument does not stop applying to
+        provenance.
+        """
+        return self.model_copy(
+            update={
+                "batch": BatchProvenance(base_seed=base_seed, index=index, runs=runs)
+            }
+        )
 
     @classmethod
     def create(
@@ -148,12 +197,19 @@ class RunSpec(_Frozen):
         module constant, and not from the database, which is where a campaign
         reads it from.
         """
-        return {
+        recorded: dict[str, Any] = {
             **self.parameters.model_dump(),
             **self.incident.model_dump(),
             "start": self.start.isoformat(),
             "duration_seconds": self.duration_seconds,
         }
+        # `scn-008`. Written only when there is a batch: a run generated
+        # outside one records nothing rather than inventing a batch of one.
+        if self.batch is not None:
+            recorded["base_seed"] = self.batch.base_seed
+            recorded["batch_index"] = self.batch.index
+            recorded["batch_runs"] = self.batch.runs
+        return recorded
 
     @classmethod
     def from_record(
@@ -184,6 +240,18 @@ class RunSpec(_Frozen):
 
         start = datetime.fromisoformat(str(remaining.pop("start")))
         duration_seconds = int(remaining.pop("duration_seconds"))
+
+        # `scn-008`'s three values are provenance, not generation inputs, so
+        # they come off here rather than falling through to the refusal
+        # below. Absent on every run generated before that item, and those
+        # rows stay readable.
+        batch = None
+        if "base_seed" in remaining:
+            batch = BatchProvenance(
+                base_seed=int(remaining.pop("base_seed")),
+                index=int(remaining.pop("batch_index")),
+                runs=int(remaining.pop("batch_runs")),
+            )
         baseline = {
             name: remaining.pop(name)
             for name in list(remaining)
@@ -208,6 +276,7 @@ class RunSpec(_Frozen):
             seed=seed,
             start=start,
             duration_seconds=duration_seconds,
+            batch=batch,
         )
 
 

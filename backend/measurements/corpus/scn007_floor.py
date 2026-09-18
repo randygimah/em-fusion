@@ -18,6 +18,18 @@ The limit of it, stated in advance: the current generator draws a mean of
 cannot be read far. If it cannot be read at all, that is the finding, and
 the floor then has to come from the background arithmetic instead -- which
 this also prints.
+
+**Restricted to runs 121-240 by default, and that is not a detail.** Runs
+1-100 were generated before scn-006 put the airborne gate in, when 55 per
+cent of every injection landed on a parked aircraft: their answer keys name
+a mean of 4.4 to 5.2 aircraft against 1.6 to 1.9 afterwards, and most of
+the difference is aircraft that anom-010 correctly refuses because an
+aircraft on the ground stopped reporting when it was switched off. Measured
+across the boundary, the high-count cells fill up with runs whose staged
+aircraft were never detectable, and the curve reads as though more staging
+buys nothing. Runs 1-20 are also 600 s where every later run is 900 s, so
+they carry two thirds of the track observations. Override with RUN_LO and
+RUN_HI only to look at the old generator deliberately.
 """
 from __future__ import annotations
 
@@ -57,10 +69,14 @@ def tracks_for(run_id):
         payload=TrackPayload(**r["payload"])) for r in rows]
 
 
+LO = int(os.environ.get("RUN_LO", "121"))
+HI = int(os.environ.get("RUN_HI", "240"))
+
 with factory.begin() as s:
     runs = s.execute(text(
-        "SELECT id, scenario_type, seed, ground_truth FROM scenario_runs ORDER BY id"
-    )).mappings().all()
+        "SELECT id, scenario_type, seed, ground_truth FROM scenario_runs "
+        "WHERE id BETWEEN :lo AND :hi ORDER BY id"), {"lo": LO, "hi": HI}).mappings().all()
+print(f"runs {LO}-{HI} (post-scn-006 by default; 1-100 used the pre-gate generator)")
 
 # Pair a coverage-gap run with the run sharing its seed that staged nothing
 # on the tracks -- the same corpus window and the same aircraft.
@@ -75,8 +91,7 @@ for seed, arms in by_seed.items():
     if staged and control:
         pairs.append((staged, control))
 
-print(f"seed-matched pairs: {len(pairs)} over all 240 runs "
-      f"(source_gap_ceiling.py restricts to runs 121-240 and gets 40)")
+print(f"seed-matched pairs: {len(pairs)}")
 
 by_count = defaultdict(list)
 staged_counts = []
