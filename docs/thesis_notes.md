@@ -5459,6 +5459,46 @@ is generated, because changing either afterwards invalidates every run already s
 campaign makes that cost visible rather than hiding it, which is the point of recording the reasoning
 now.
 
+### The mixed-evidence arm is a controlled comparison, not a duplicate
+
+The first write-up of the `anom-006` closure recorded that `ambiguous-mixed-evidence` and
+`rf-sensor-fault` produce the same reportable answer on all sixty runs each, and treated that purely
+as a limitation. That is half the story, and the missing half reverses the practical conclusion: the
+arm is doing real experimental work and should not be dropped.
+
+The question is whether the two arms are identical in the *data* or only in the *output*. Measured
+over all sixty shared seeds, they stage the same receiver, the same elevation above baseline and the
+same incident window in sixty of sixty, and their RF observation streams are **identical byte for
+byte in sixty of sixty**. The only staged difference is that the ambiguous arm additionally removes
+five aircraft.
+
+The pair therefore differs in exactly one variable, which is the definition of a controlled
+comparison, and it changes what the identical verdict means. Both arms being decided
+`possible_sensor_fault` sixty times out of sixty is not a null result reported for completeness; it
+is a positive finding that **a simultaneous disturbance to the track picture does not perturb the RF
+verdict**. The sensor-fault arm alone cannot establish that, having no disturbance to be immune to.
+In the vocabulary of controls, the arm is a negative control living inside a positive one: the
+positive half asks whether the fault can be found, and the negative half asks whether something
+irrelevant can change the answer. Only this arm answers the second question, and deleting it would
+delete the answer.
+
+Three reporting consequences follow, and they are narrower than "keep it" or "drop it". The arm
+should be reported as the immunity check, quoting the identical-stream figure so a reader can see
+the comparison is controlled. It should *not* be reported as a third independent positive arm, since
+its positive half duplicates the sensor-fault arm by construction. And it remains the right vehicle
+for the conflict case `anom-013` has never been given — identical RF plus five removed aircraft is
+precisely two claims over one place with everything else held constant — so what is missing there is
+a second producing rule, not a different scenario design.
+
+The measurement carries a methodological warning of its own, and it is the third instance of the same
+fault in this project. Its first version reported four of sixty pairs differing, which read as
+generator non-determinism and would have been a far more serious finding than the question being
+asked. It was an artefact: the digest ordered rows by a payload key that does not exist, so every row
+within a timestamp sorted equal and the order came from the heap. Diffing a "differing" pair showed
+the same values in a different channel order. **A sort key that does not exist sorts everything equal
+and raises no error**, which makes this failure silent in a way the `db-009` centroid case was not,
+and a digest taken over rows needs an order that is provably total rather than merely plausible.
+
 ### Limitation: the aircraft-coverage-gap arm has no positive rule
 
 Stated in full, in the order a write-up needs it, because this is the project's largest single
@@ -5542,8 +5582,9 @@ positive claim, and honesty about it: **the arm contributes no true positives to
 correct non-detections are correct only because nothing judges it, and it must never be reported as
 though the system had been tested on it.**
 
-**A consequence that is easy to miss.** With `anom-006` absent, `ambiguous-mixed-evidence` and
-`rf-sensor-fault` are **indistinguishable in the detection layer's reportable output** — both are
+**A consequence that is easy to miss, and a correction to how it was first written up.** With
+`anom-006` absent, `ambiguous-mixed-evidence` and `rf-sensor-fault` are **indistinguishable in the
+detection layer's reportable output** — both are
 decided `possible_sensor_fault` on all 60 runs. The only staged difference between them is the track
 gap, `tracks.py` gives the ambiguous arm the same `SUPPRESS` mode as the coverage-gap arm, and
 `fusion.py` consumes only `anom-007`'s *environmental* verdict, so on a single-receiver run the track

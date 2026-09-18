@@ -1,0 +1,22 @@
+corpus v2 -- one generator, 900 s runs, anom-014 and scn-007 active; base seeds 1412660662, 965530111, 655209063
+
+seed-matched pairs: 60
+RF observation stream identical, byte for byte     60/60
+same receiver staged                               60/60
+same incident window                               60/60
+same elevation above baseline                      60/60
+
+staged aircraft per run, min/median/max:
+  rf-sensor-fault            0/0/0
+  ambiguous-mixed-evidence   5/5/5
+
+FINDING. The two arms stage the same receiver, the same fault, over the same
+window, and produce an identical RF stream in 60 of 60 pairs. The only
+staged difference is that ambiguous-mixed-evidence also removes aircraft.
+So the pair is a controlled comparison differing in one variable, and both
+arms being decided `possible_sensor_fault` 60 of 60 is a measured result:
+a simultaneous track-side disturbance does not perturb the RF verdict.
+`rf-sensor-fault` alone cannot show that, having no disturbance to be
+immune to. The arm is a negative control inside a positive one and should
+not be dropped as redundant -- though with `anom-006` closed it cannot yet
+serve its other purpose, of giving `anom-013` a second competing claim.

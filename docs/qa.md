@@ -5587,6 +5587,76 @@ See `docs/thesis_notes.md` for the full limitation — why the scenario was chos
 measurements taken, what closed it, and the five options for making it work with the reason each was
 declined. Related: [§79](#79-lets-look-at-anom-006-as-per-docshandoffmd).
 
+## 81. Should we drop ambiguous-mixed-evidence from the scenarios, or keep it and explain why it behaves how it behaves?
+
+**Keep it — and the reason is stronger than "explain it". It is currently doing real experimental
+work, and §80 undersold it.** That entry described the arm as indistinguishable from
+`rf-sensor-fault` and framed that purely as a limitation. Indistinguishable *in reportable output* is
+true. Redundant is not, and the difference is measurable.
+
+### What was measured
+
+`measurements/corpus/arm_rf_identity.py`, over all 60 shared seeds:
+
+| Between `rf-sensor-fault` and `ambiguous-mixed-evidence` at a shared seed | |
+|---|---|
+| Same receiver staged | 60/60 |
+| Same incident window | 60/60 |
+| Same elevation above baseline | 60/60 |
+| **RF observation stream identical, byte for byte** | **60/60** |
+| Staged aircraft (min/median/max) | `rf-sensor-fault` **0/0/0** · `ambiguous` **5/5/5** |
+
+### Why that changes the answer
+
+The two arms differ in **exactly one variable**. Everything on the radio side is not merely similar
+but bit-identical; the only thing that changes is whether five aircraft are also removed.
+
+That makes the pair a **controlled comparison**, and it makes the identical verdict a *result* rather
+than the absence of one:
+
+> A simultaneous disturbance to the track picture does not perturb the RF verdict. 60 of 60.
+
+`rf-sensor-fault` alone cannot establish that, because it has no disturbance to be immune to. In
+control terms the arm is a **negative control living inside a positive one**: the positive half asks
+*can you find the fault?*, the negative half asks *can something irrelevant make you change your
+answer?* Both are answered, and only this arm answers the second.
+
+Dropping it would delete a measured immunity result and leave a claim the remaining arms cannot
+support.
+
+### What it still cannot do, stated separately
+
+It was also meant to be the arm that forces `anom-013` to arbitrate — two claims over one place, and
+a declared order picking the winner. It cannot, because its track half is exactly what the closed
+`anom-006` would have read. So:
+
+- **Keep**, and report it as the immunity check, quoting the identical-stream figure so a reader can
+  see the comparison is controlled.
+- **Do not** report it as a third independent positive arm — its positive half duplicates
+  `rf-sensor-fault` by construction.
+- **Do not** report "no place received two answers" as evidence the ordering works. On every arm
+  exactly one rule bids. The ordering is proved by unit tests and a mutation pass; the corpus has
+  never exercised it.
+
+And the arm is measurably the *right* vehicle for that future test: identical RF plus five removed
+aircraft is precisely two claims over one place with everything else held constant. What is missing
+is a second producer, not a different scenario.
+
+### A trap worth keeping from how this was measured
+
+The first version of the comparison reported **4 of 60 pairs differing**, which looked like generator
+non-determinism — a far more serious problem than the question being asked. It was not. The digest
+ordered rows by a payload key that **does not exist**, so every row within a timestamp sorted equal
+and the order came from the heap. Diffing a "differing" pair showed the same values in a different
+channel order.
+
+**A key that does not exist sorts everything equal and raises no error.** This is the third time an
+unordered partition has produced a false result in this project. A digest over rows needs a *total*
+order, and it is worth asserting that the sort key is real.
+
+Supersedes the emphasis in [§80](#80-does-this-mean-we-now-only-have-4-scenarios-instead-of-5-to-work-with)
+— the table there is correct; the characterisation of the mixed arm as merely a limitation is not.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |

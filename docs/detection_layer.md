@@ -47,7 +47,7 @@ corpus has never exercised it.
 | Quiet baseline | nothing | silence, 60/60 | Negative control |
 | One broken receiver | one receiver | *that receiver is broken*, 60/60 | **Positive** |
 | Interference | several receivers | *something is interfering*, 60/60 | **Positive** |
-| Mixed evidence | one receiver **+ an aircraft gap** | *that receiver is broken*, 60/60 | **Positive** — indistinguishable from the row above |
+| Mixed evidence | one receiver **+ an aircraft gap** | *that receiver is broken*, 60/60 | **Positive, with a negative inside it** — see below |
 | Aircraft coverage gap | an aircraft gap only | silence, 60/60 | Negative control, **discriminating** |
 
 So **three hour-types produce a finding and two produce silence.** The coverage-gap hours are not a
@@ -55,6 +55,19 @@ duplicate of the quiet ones: quiet hours prove the system stays silent when *not
 coverage-gap hours prove it stays silent when *something real happens that no radio test should
 claim*. That is the stronger of the two guarantees, and it is the job this hour-type was scoped for
 from the beginning.
+
+**Neither of the two "duplicate-looking" hour-types is a duplicate.** The coverage-gap hours and the
+quiet hours differ as above. The mixed hours and the broken-receiver hours look identical in output —
+both *that receiver is broken*, 60/60 — but measured at every shared seed they stage the same
+receiver, the same size of fault, the same window, and an **identical radio stream, byte for byte, in
+60 of 60 pairs**. The single difference is that the mixed hour also removes five aircraft. So the
+answer not changing is a result, not an absence of one: a simultaneous disturbance to the aircraft
+picture does not perturb the radio verdict. The broken-receiver hours alone cannot show that, having
+no disturbance to be immune to.
+
+What the mixed hours **cannot** do yet is supply a second competing claim, because the aircraft half
+of their evidence is exactly what the unbuilt test 2 would have read. That is why "no event received
+two answers" is not evidence the ordering works.
 
 ## The one fact almost every decision descends from
 

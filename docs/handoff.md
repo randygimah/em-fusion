@@ -81,8 +81,15 @@ Tree is clean. Nothing is part-built: this session added a measurement and close
 
 - `9584d74` spec: close `anom-006` again — the threshold measurement it asked for
 - `66896df` docs: the `anom-006` threshold measurement written up
+- `e3e3492` docs: state the coverage-gap limitation in full, and its consequences
+- `64c8f75` docs: progress note — controls, and the closed coverage-gap test
 - New: `backend/measurements/corpus/source_gap_threshold_sweep.py` and its `.log`,
-  `backend/measurements/corpus/source_gap_threshold_prereg.md` (with its change log)
+  `backend/measurements/corpus/source_gap_threshold_prereg.md` (with its change log),
+  `backend/measurements/corpus/arm_rf_identity.py` and its `.log`
+- `docs/progress_note.html`: new **positive/negative controls** section mapping all five arms, the
+  stale "worth trying again" section replaced with the closure, roadmap reordered (`evb-001` first),
+  coverage-gap confound marked **dormant rather than retired** — it returns if the generator is ever
+  changed to give coverage gaps a place
 - Changed: `docs/spec.jsonl` (`anom-006` amended, still `passes: false`),
   `docs/detection_layer.md` (ladder row 2 and the coverage-test section rewritten),
   `docs/thesis_notes.md` (Implementation subsection on paired vs single-run tests),
@@ -115,6 +122,14 @@ Tree is clean. Nothing is part-built: this session added a measurement and close
   genuinely produce identical track findings. **Byte-identical columns are never a coincidence and
   should always be chased** — this one turned into a standing correction to how negatives are
   counted.
+- **A digest ordered by a payload key that does not exist reported false generator differences.**
+  Comparing the two sensor-fault-shaped arms, the first pass ordered rows by `payload->>'channel_hz'`
+  — no payload carries that key — so every row within a timestamp sorted equal and the order came
+  from the heap. 4 of 60 pairs looked like generator non-determinism, which would have been far more
+  serious than the question being asked. Diffing one showed the same values in a different channel
+  order; under a total order it is **60 of 60 identical**. **A non-existent sort key sorts everything
+  equal and raises no error** — the third unordered-partition fault in this project, and the
+  quietest, since `db-009`'s centroid at least moved a number.
 - **Rebuilding the script by splicing dropped a module constant** (`CACHE`), which failed
   immediately with a `NameError`. Cost one run; caught because the script fails at import rather
   than silently.
@@ -148,11 +163,16 @@ the near-term detection work. The order is a recommendation, not a constraint.
   so. The coverage-gap arm is **not** redundant with the baseline — it is a discriminating negative
   testing specificity against cross-modal leakage, which is the role `research_scope.md` scoped it
   for from the outset.
-- **`ambiguous-mixed-evidence` is indistinguishable from `rf-sensor-fault` in reportable output.**
-  Both are decided `possible_sensor_fault` 60/60. `tracks.py` gives the ambiguous arm the same
-  `SUPPRESS` mode as the coverage-gap arm, and `fusion.py` consumes only `anom-007`'s *environmental*
-  verdict, so on a single-receiver run the staged track gap never reaches a claim. Recorded on
-  `anom-006`, `eval-002` and `anom-013`.
+- **`ambiguous-mixed-evidence` is indistinguishable from `rf-sensor-fault` in reportable output —
+  but it is NOT redundant, and must not be dropped.** Both are decided `possible_sensor_fault` 60/60,
+  because `fusion.py` consumes only `anom-007`'s *environmental* verdict, so on a single-receiver run
+  the staged track gap never reaches a claim. **Measured** (`arm_rf_identity.py`): across all 60
+  shared seeds the two arms stage the same receiver, elevation and window, and their RF streams are
+  **identical byte for byte 60/60** — the only difference is five removed aircraft. So the pair is a
+  controlled comparison differing in one variable, and the identical verdict is a measured immunity
+  result: a simultaneous track-side disturbance does not perturb the RF verdict. Report it as the
+  immunity check, not as a third independent positive arm. Recorded on `eval-002` and `anom-013`;
+  reasoning in `docs/qa.md` §81.
 - **`anom-013`'s ordering has never arbitrated a real conflict on this corpus.** Exactly one rule
   bids per arm, so "0 zones given two answers" is not evidence the suppression path works — it is
   proved by unit tests and a mutation pass, and never reached by the corpus. The arm meant to create
