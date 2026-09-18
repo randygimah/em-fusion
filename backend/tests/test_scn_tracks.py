@@ -51,6 +51,7 @@ from app.scenario.incident import (
     ground_truth,
 )
 from app.scenario.layout import load_layout
+from app.scenario.seeding import derive_unit
 from app.scenario.tracks import (
     TrackMode,
     TrackPerturber,
@@ -789,3 +790,90 @@ def test_the_answer_key_records_what_the_survey_found() -> None:
     assert truth["aircraft_eligible"] == 2
     assert truth["aircraft_requested"] == 5
     assert truth["aircraft_floor_reached"] is False
+
+
+# --- four tests added after a mutation pass found the gaps they close ------
+
+
+def test_the_chosen_set_is_the_lowest_derived_values_under_this_seed() -> None:
+    # spec: scn-007, scn-001
+    # Found by mutation: both "rank by nothing, take the set's own order" and
+    # "rank by pseudonym, ignoring the seed" survived every test above. The
+    # order-independence test could not see them because a small set of
+    # strings iterates the same way whatever order it was built in, and the
+    # different-seed test could not either, because changing the seed also
+    # moves the zone centre and so changes the pool. This holds the pool and
+    # the seed fixed and pins the ranking itself.
+    records = _pool(50)
+    perturbation = plan_track_perturbation(LAYOUT, _spec())
+    assert perturbation is not None
+    selection = select_targets(
+        perturbation, records, pseudonymiser=PSEUDONYMISER, minimum=7
+    )
+
+    eligible = {
+        p
+        for record in records
+        if (p := PSEUDONYMISER.aircraft(record["payload"]["icao24"])) is not None
+    }
+    expected = sorted(
+        eligible, key=lambda p: (derive_unit(SEED, "track-target", p), p)
+    )[:7]
+    assert selection.chosen == frozenset(expected)
+
+    # And the chosen are strictly below every unchosen one, which is what
+    # "the lowest n" means and what an arbitrary order would not give.
+    chosen_values = {derive_unit(SEED, "track-target", p) for p in selection.chosen}
+    rest = {derive_unit(SEED, "track-target", p) for p in eligible - selection.chosen}
+    assert max(chosen_values) < min(rest)
+
+
+def test_a_pool_exactly_the_size_of_the_floor_has_reached_it() -> None:
+    # spec: scn-007
+    # Found by mutation: `>` passed every test because none sat on the
+    # boundary. The boundary belongs to the configured value, as it does for
+    # anom-014's minimum duration and anom-001's bands.
+    assert _selection(_pool(5), minimum=5).floor_reached is True
+    assert _selection(_pool(4), minimum=5).floor_reached is False
+
+
+def test_the_floor_stages_more_than_the_fraction_alone_would_have() -> None:
+    # spec: scn-007
+    # Found by mutation: a perturber that ignored its selection entirely and
+    # fell back to the fraction survived, because on that pool the two sets
+    # happened to coincide. Here they cannot: 8 per cent of 20 is 2, and the
+    # floor asks for 8.
+    records = _pool(20)
+    perturbation = plan_track_perturbation(LAYOUT, _spec())
+    assert perturbation is not None
+    selection = select_targets(
+        perturbation, records, pseudonymiser=PSEUDONYMISER, minimum=8
+    )
+    assert len(selection.chosen) == 8
+
+    perturber = TrackPerturber(
+        perturbation, pseudonymiser=PSEUDONYMISER, selection=selection
+    )
+    for record in records:
+        perturber.apply(record)
+    assert perturber.affected == selection.chosen
+
+    unbounded = TrackPerturber(perturbation, pseudonymiser=PSEUDONYMISER)
+    fraction_only = {
+        p
+        for record in records
+        if (p := PSEUDONYMISER.aircraft(record["payload"]["icao24"])) is not None
+        and unbounded.targets(record["payload"]["icao24"])
+    }
+    assert len(fraction_only) < 8
+    assert perturber.affected != fraction_only
+
+
+def test_the_floor_does_not_lower_what_the_fraction_asked_for() -> None:
+    # spec: scn-007
+    # The floor is a floor and never a ceiling: where the fraction already
+    # exceeds it the fraction wins, or a large pool would be capped at the
+    # minimum and the arm would lose the traffic it was meant to carry.
+    selection = _selection(_pool(400), minimum=5)
+    assert selection.requested == 32
+    assert len(selection.chosen) == 32
