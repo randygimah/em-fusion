@@ -539,3 +539,167 @@ def test_an_anomaly_is_immutable() -> None:
     assert isinstance(anomaly, RfNoiseAnomaly)
     with pytest.raises(Exception):
         anomaly.severity = Severity.HIGH  # type: ignore[misc]
+
+
+# ---------------------------------------------------------------------------
+# anom-014: a threshold crossing that lasts one reading is not an event.
+#
+# anom-001 raises at least one episode on 14 of 100 runs that stage nothing
+# on the RF grid, and a single-reading episode has a start equal to its end
+# -- a window of no length, which anom-012 divides by. The minimum removes
+# the cause rather than the symptom.
+#
+# Two things these tests fix and the measurement does not. A suppressed
+# episode is *reported*, in its own field rather than among the unjudged
+# cells: "I looked and it was too brief" is a different claim from "I had no
+# baseline, so I did not look", and only the first has a window worth
+# carrying. And the boundary belongs to the configured value -- an episode
+# exactly at the minimum is kept -- which is the item's own failure case.
+#
+# The value of the minimum is not asserted here. It is measured by
+# backend/measurements/corpus/rf_noise_episode_duration.py and recorded on
+# the constant; these tests would pass at any minimum, which is what makes
+# them tests of the mechanism rather than of the number.
+# ---------------------------------------------------------------------------
+
+
+def policy_with(minimum_s: float) -> ThresholdPolicy:
+    """The shipped policy, with only the minimum duration changed."""
+    return ThresholdPolicy(
+        metric=RfMetric.POWER_DBM,
+        direction=Direction.ABOVE,
+        threshold=6.0,
+        medium_at=10.0,
+        high_at=15.0,
+        minimum_duration=timedelta(seconds=minimum_s),
+    )
+
+
+def test_an_episode_shorter_than_the_minimum_raises_no_anomaly() -> None:
+    # spec: anom-014
+    # Two readings, 10 s apart, against a 30 s minimum.
+    observations = run_of([QUIET_DBM, JUST_OVER, JUST_OVER, QUIET_DBM])
+    found = detect_rf_noise(observations, baseline_of(CELL), policy_with(30))
+    assert found.anomalies == ()
+
+
+def test_a_suppressed_episode_is_reported_rather_than_dropped() -> None:
+    # spec: anom-014, anom-008
+    # Silently dropping it would reopen the hole anom-008 exists to close:
+    # "zero anomalies" satisfied by not having said what was discarded.
+    observations = run_of([QUIET_DBM, JUST_OVER, JUST_OVER, QUIET_DBM])
+    found = detect_rf_noise(observations, baseline_of(CELL), policy_with(30))
+    assert len(found.suppressed) == 1
+    suppressed = found.suppressed[0]
+    assert suppressed.cell == CELL
+    assert suppressed.started_at == START + INTERVAL
+    assert suppressed.ended_at == START + 2 * INTERVAL
+    assert suppressed.readings == 2
+    assert suppressed.minimum == timedelta(seconds=30)
+
+
+def test_an_episode_exactly_at_the_minimum_is_kept() -> None:
+    # spec: anom-014
+    # The item's own failure case: the boundary belongs to the configured
+    # value, not to the comparison. Four readings 10 s apart span 30 s.
+    observations = run_of([JUST_OVER, JUST_OVER, JUST_OVER, JUST_OVER])
+    found = detect_rf_noise(observations, baseline_of(CELL), policy_with(30))
+    assert len(found.anomalies) == 1
+    assert found.anomalies[0].ended_at - found.anomalies[0].started_at == timedelta(
+        seconds=30
+    )
+    assert found.suppressed == ()
+
+
+def test_an_episode_past_the_minimum_is_kept_and_not_reported_suppressed() -> None:
+    # spec: anom-014
+    observations = run_of([JUST_OVER] * 6)
+    found = detect_rf_noise(observations, baseline_of(CELL), policy_with(30))
+    assert len(found.anomalies) == 1
+    assert found.suppressed == ()
+
+
+def test_a_single_reading_episode_is_suppressed() -> None:
+    # spec: anom-014, anom-012
+    # The zero-length window measure_rate_excess divided by: 6 of 86 staged
+    # runs produced one. anom-012 refuses it downstream; this removes it.
+    observations = run_of([QUIET_DBM, JUST_OVER, QUIET_DBM])
+    found = detect_rf_noise(observations, baseline_of(CELL), policy_with(10))
+    assert found.anomalies == ()
+    assert len(found.suppressed) == 1
+    assert found.suppressed[0].started_at == found.suppressed[0].ended_at
+    assert found.suppressed[0].readings == 1
+
+
+def test_a_minimum_of_zero_keeps_a_single_reading_episode() -> None:
+    # spec: anom-014
+    # The pre-anom-014 behaviour stays representable, and therefore testable.
+    observations = run_of([QUIET_DBM, JUST_OVER, QUIET_DBM])
+    found = detect_rf_noise(observations, baseline_of(CELL), policy_with(0))
+    assert len(found.anomalies) == 1
+    assert found.suppressed == ()
+
+
+def test_the_minimum_is_configuration_and_changes_the_answer() -> None:
+    # spec: anom-014
+    # The same readings, two policies: a number in the rule could not do this.
+    observations = run_of([QUIET_DBM, JUST_OVER, JUST_OVER, JUST_OVER, QUIET_DBM])
+    baselines = baseline_of(CELL)
+    assert len(detect_rf_noise(observations, baselines, policy_with(20)).anomalies) == 1
+    assert detect_rf_noise(observations, baselines, policy_with(30)).anomalies == ()
+
+
+def test_suppression_is_per_episode_and_not_per_cell() -> None:
+    # spec: anom-014
+    # One cell, one brief crossing and one sustained one. Suppressing the
+    # cell rather than the episode would lose the real event with the blip.
+    observations = run_of(
+        [JUST_OVER, QUIET_DBM, JUST_OVER, JUST_OVER, JUST_OVER, JUST_OVER]
+    )
+    found = detect_rf_noise(observations, baseline_of(CELL), policy_with(20))
+    assert len(found.anomalies) == 1
+    assert len(found.suppressed) == 1
+    assert found.anomalies[0].started_at == START + 2 * INTERVAL
+    assert found.suppressed[0].started_at == START
+
+
+def test_a_negative_minimum_is_refused() -> None:
+    # spec: anom-014
+    # Refused rather than clamped: a configuration error must not become a
+    # rule that has quietly stopped suppressing anything.
+    with pytest.raises(RuleError, match="minimum duration"):
+        ThresholdPolicy(
+            metric=RfMetric.POWER_DBM,
+            direction=Direction.ABOVE,
+            threshold=6.0,
+            medium_at=10.0,
+            high_at=15.0,
+            minimum_duration=timedelta(seconds=-1),
+        )
+
+
+def test_suppressed_episodes_come_back_in_a_stable_order() -> None:
+    # spec: anom-014, NFR-601
+    # Two cells, each with a brief crossing. The order must be the cells'
+    # order and not the order the readings happened to arrive in.
+    first = run_of([QUIET_DBM, JUST_OVER, QUIET_DBM], channel_index=0)
+    second = run_of([QUIET_DBM, JUST_OVER, QUIET_DBM], channel_index=1)
+    baselines = baseline_of(RfCell(SENSOR, 0), RfCell(SENSOR, 1))
+    forwards = detect_rf_noise(first + second, baselines, policy_with(10))
+    backwards = detect_rf_noise(second + first, baselines, policy_with(10))
+    assert [s.cell for s in forwards.suppressed] == [
+        RfCell(SENSOR, 0),
+        RfCell(SENSOR, 1),
+    ]
+    assert forwards.suppressed == backwards.suppressed
+
+
+def test_a_suppressed_episode_does_not_disturb_an_unjudged_cell() -> None:
+    # spec: anom-014, anom-001
+    # The two reports are different claims and stay in different fields.
+    observations = run_of([QUIET_DBM, JUST_OVER, QUIET_DBM]) + run_of(
+        [QUIET_DBM], channel_index=7
+    )
+    found = detect_rf_noise(observations, baseline_of(CELL), policy_with(10))
+    assert len(found.suppressed) == 1
+    assert [u.cell for u in found.unjudged] == [RfCell(SENSOR, 7)]
