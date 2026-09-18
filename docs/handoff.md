@@ -26,9 +26,8 @@ items amended).
 | `anom-014` | 12 new | **13 of 13 killed** | minimum episode duration **10 s** | 240 runs, 1,337 episodes |
 | `scn-007` | 21 new | **17 of 19**, 2 provably equivalent | staged-aircraft floor **5** | 60 seed-matched pairs |
 
-Unit tier: **739 passed**, ruff and mypy clean. Database tier: re-running at the time of writing
-after a self-inflicted failure (see Failed attempts) — the last clean run before the `scn-007`
-parameter landed was 916 passed with 99.88% coverage.
+Unit tier: **739 passed**, ruff and mypy clean. Database tier: **925 passed, zero failures**
+(`make test-backend`). **43 spec items passing of 96.**
 
 ### The measurement kit is in the repo — `backend/measurements/`
 
@@ -112,8 +111,8 @@ into the spec item, the thesis notes and `detection_layer.md` so it cannot quiet
 
 ## Files in flight
 
-Tree is clean apart from the documentation commit this handoff belongs to. `docs/spec.jsonl` still
-has `anom-014` and `scn-007` at `passes: false` pending the database tier confirming green.
+Tree is clean apart from the documentation commit this handoff belongs to. `anom-014` and `scn-007`
+are both at `passes: true`.
 
 ## Changed
 
