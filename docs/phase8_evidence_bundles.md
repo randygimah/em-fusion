@@ -223,9 +223,25 @@ stored observation" is a *query*, not a lookup. Two ways forward:
 | Resolve by coordinate at build time — query `observations` by run, subject and timestamp | Needs an index that may not exist; the coordinate must be provably unique, and "provably" means measured, not assumed |
 | Change the `from_*` functions to record row IDs at finding time | Touches every rule's adapter. Findings are derived and regenerable (`db-008` replaces per run per rule), so the stored corpus is not a blocker — but every committed detection figure would want re-running to confirm nothing else moved |
 
-The first is smaller and reversible; the second is the one that makes `ai-008` cheap later. **This is
-a decision owed before tests, not during.** Whichever is chosen, the uniqueness of the coordinate must
-be measured — a resolver that silently matches two rows is worse than one that fails.
+**Measured 2026-09-19, and it settles the question: resolve by coordinate.**
+`measurements/corpus/evidence_ref_uniqueness.py`, over both corpora:
+
+| | Rows | Colliding coordinates |
+|---|---|---|
+| RF by `sensor_id + channel_index + timestamp` | 1,512,000 (v2) + 1,176,000 (v1) | **0** |
+| Track by `aircraft_id + timestamp` | 10,125,355 (v2) + 7,887,810 (v1) | **0** |
+
+Worst collision is one on all four combinations — 20.7M rows, every cited coordinate identifying
+exactly one observation. The ISO round trip is exact too, on 2,000 sampled rows, so a resolver may
+compare the stored string directly rather than normalising first. **No rule adapter changes.**
+
+One cost is recorded rather than hidden. A single resolution takes **64.7 ms**, running as an index
+scan on `ix_observations_scenario_run_id` and then **removing 38,424 rows by filter** — `db-010`'s
+index narrows to the run and nothing narrows further. Fine for a bundle carrying a handful of items,
+not fine for one carrying hundreds. A composite index is therefore a **candidate item, to be decided
+once section 13's evidence-list composition is fixed**, since that is what sets the count. An index
+changes no data and no answer, only cost, which is what makes it safe to add after the fact — the same
+argument `db-010` was added on.
 
 ## 9. Three defects in the specification, found before building
 
@@ -317,10 +333,11 @@ compares two independently computed numbers that must agree.
 
 | Owed | Why it must be fixed first |
 |---|---|
-| `data_mode` per item or per bundle | Section 9. Changing it after tests means rewriting them |
-| Resolve-by-coordinate, or record row IDs at finding time | Section 8. The two produce different test suites |
-| Whether the coordinate `(run, subject, timestamp)` is unique | Must be **measured**, not assumed. A resolver matching two rows silently is worse than one that fails |
-| The bundle's unit: one reported claim | Section 6. Write it into the item so it is not re-derived |
+| ~~`data_mode` per item or per bundle~~ | **Settled 2026-09-19: per item, bundle carries the set.** Amended onto `evb-001` |
+| ~~Resolve-by-coordinate, or record row IDs at finding time~~ | **Settled 2026-09-19: by coordinate.** See section 8 |
+| ~~Whether the coordinate is unique~~ | **Measured: unique, 0 collisions in 20.7M rows.** See section 8 |
+| Whether the evidence list is small enough that 64.7 ms a lookup is acceptable | Follows from the composition decision below. Sets whether a composite index is owed before `evb-002` or after |
+| ~~The bundle's unit: one reported claim~~ | **Settled 2026-09-19.** Amended onto `evb-001` |
 | Whether `suppressed` claims appear in the bundle they were suppressed by | An analyst may want to know a second rule bid and lost; a model given it may treat it as corroboration. Decide deliberately |
 | What a bundle for a `SENSOR-FAULT` claim carries on the track side | Probably nothing, since that verdict never reaches `anom-012` — but "nothing" must be *stated* as not-applicable rather than left absent, or it reads as not-measurable |
 
@@ -329,9 +346,10 @@ compares two independently computed numbers that must agree.
 `evb-001` → `evb-002`, and not in parallel: traceability is a constraint on a shape that does not
 exist yet, and building both at once means discovering the shape twice.
 
-Before either: the spec amendments from section 9, and the uniqueness measurement from section 13.
-That measurement is the only one owed, it is cheap now that `db-010` exists, and it decides which of
-two test suites gets written.
+**Both are done as of 2026-09-19.** The section 9 amendments are on `evb-001`, the measurement is on
+`evb-002`, and what remains owed before tests is the evidence-list composition — what a bundle for
+each of the two claim types actually carries, and whether suppressed claims appear. That is a design
+decision rather than a measurement, and it is the last thing gating tests.
 
 The **template hypothesis generator** in Phase 9 needs no model and nothing from Phase 8.5, so it is
 the natural thing to build immediately after `evb-002` — it is both the correctness fallback and the

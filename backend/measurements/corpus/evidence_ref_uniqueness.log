@@ -1,0 +1,38 @@
+corpus v2 -- one generator, 900 s runs, anom-014 and scn-007 active; base seeds 1412660662, 965530111, 655209063
+
+==========================================================================
+COORDINATE UNIQUENESS, within one scenario run
+==========================================================================
+
+corpus v2:
+  rf     by sensor_id + channel_index + timestamp  1,512,000 rows /  1,512,000 coords  worst=1  colliding=0  UNIQUE
+  track  by aircraft_id + timestamp            10,125,355 rows / 10,125,355 coords  worst=1  colliding=0  UNIQUE
+
+corpus v1:
+  rf     by sensor_id + channel_index + timestamp  1,176,000 rows /  1,176,000 coords  worst=1  colliding=0  UNIQUE
+  track  by aircraft_id + timestamp             7,887,810 rows /  7,887,810 coords  worst=1  colliding=0  UNIQUE
+
+==========================================================================
+TIMESTAMP ROUND TRIP -- ISO string out, parsed value back in
+==========================================================================
+  sampled 2,000 observations
+  ISO string re-matched its own row: 2,000
+  failed to re-match:                0
+
+==========================================================================
+WHAT ONE RESOLUTION COSTS
+==========================================================================
+  Index Scan using ix_observations_scenario_run_id on observations  (cost=0.44..4319.82 rows=1 width=8) (actual time=0.648..64.492 rows=1 loops=1)
+    Index Cond: (scenario_run_id = '306'::smallint)
+    Filter: ((observation_type = 'rf'::text) AND ("timestamp" = '2022-06-27 12:42:30+00'::timestamp with time zone) AND ((payload ->> 'sensor_id'::text) = 'RF-05'::text) AND (((payload ->> 'channel_index'::text))::integer = '0'::smallint))
+    Rows Removed by Filter: 38424
+  Planning Time: 0.168 ms
+  Execution Time: 64.724 ms
+
+==========================================================================
+FINDING: every cited coordinate identifies exactly one row
+==========================================================================
+
+Decides `evb-002`: resolve by coordinate -- no change to the from_* functions.
+The round-trip result is independent of that: it says whether a resolver may
+compare the stored ISO string directly, or must normalise before comparing.
