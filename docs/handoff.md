@@ -240,6 +240,13 @@ listed at session start (`nav-001` work) are untouched and still uncommitted.
 - `2b22a13` test: add tests for anom-005
 - `35a3945` feat(anom-005): the fusion rule - tests pass
 - New: `backend/app/detection/fusion.py`, `backend/tests/test_anom_fusion.py`
+- Progress note republished as **version 26** — new section "The ladder is built, and what it
+  said about two hundred and forty hours", with a figure comparing what the system reports
+  (60 of 60) against what a gate would have reported (7 of 60), and the corroboration
+  breakdown beneath it (7 confirmed / 7 measured-and-quiet / 47 unmeasurable). Carries the
+  honest fusion statement, the 75-of-80 row flagged as not-a-result, and the one-event-one-zone
+  defect as a worked example. Counts to 41/96, 889 tests, and the next-step tier rewritten
+  around the regeneration decision.
 - New: `backend/app/detection/precedence.py`, `backend/tests/test_anom_precedence.py`
 - Updated: `docs/spec.jsonl` (anom-007 amended twice then `passes: true`; anom-012 amended with six
   decisions then `passes: true`; **anom-014 added**, `passes: false` by design), `CLAUDE.md` repo map,
