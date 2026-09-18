@@ -5425,6 +5425,94 @@ deviation of 3.5, and the single run that staged twelve aircraft cleared its con
 aircraft, two would need roughly fourteen. Whether `anom-006` can be built at all remains open, and
 the regeneration is what makes it *askable* rather than what answers it.
 
+## 79. Lets look at anom-006 as per docs/handoff.md
+
+**The measurement it asked for has been taken, and it closes the item.** `anom-006` is now closed
+for the second time, on better evidence than the first closure. What follows is the answer to the
+question the item itself posed, and the distinction that made the question necessary.
+
+### What the rule was for
+
+Of the five staged situations, one is an **aircraft coverage gap**: the receivers that pick up
+aircraft position reports stop hearing some aircraft over one area. Nothing is transmitting; the
+aircraft are simply not heard. `anom-006` is the rule that would say *we have stopped hearing
+aircraft here, and nobody is jamming* — the third rung of the ladder, and the only arm of the corpus
+with no rule at all.
+
+### The distinction that matters, because it was being conflated
+
+Two claims were being treated as one:
+
+| Claim | What it means | How it is tested |
+|---|---|---|
+| "A staged run is usually worse than its own control" | A **paired** comparison, two runs from one seed differing in one respect | Sign test over matched pairs |
+| "A fixed bar tells a staged run from an unstaged one" | A **single-run** decision with no control available | Sensitivity against false-alarm rate |
+
+The first was measured at **20 wins to 7** and reopened the item. It does not imply the second, and
+the amendment reopening the item said so. A paired design is powerful *because* it cancels
+everything the two runs share — same seed, same window, same aircraft, same traffic density — so it
+resolves effects far smaller than the run-to-run variation. A detector inherits none of that
+cancellation: it sees one run, and the variation the pairing removed is exactly what it is exposed
+to. So two populations can be ordered reliably within pairs and overlap almost entirely across runs.
+
+A worked example makes the size of it concrete. At the loosest setting, the worst zone score on a
+**quiet** run and on a **staged** run both reach a maximum of 198.78, with medians of 16.02 and
+16.63 — a difference of four per cent between distributions that share their entire range.
+
+### What the measurement found
+
+Pre-registered first (populations, operating-point rule, failure bar), then scored on a held-out
+base seed the threshold was never fitted to:
+
+| | Development (2 seeds) | Holdout (1 seed) |
+|---|---|---|
+| Coverage gaps caught | 7/40 (0.17) | **3/20 (0.15)** — bar was 0.25 |
+| Quiet runs falsely alarmed | 0/40 | **0/20** |
+| **Interference runs falsely alarmed** | 15/40 | **6/20 (0.30)** |
+
+The last row closes it. The rule fires **twice as often on interference as on the coverage gaps it
+exists to find** — and because `anom-013` orders `SENSOR-FAULT`, `SOURCE-GAP`, `FUSION-SPATIAL`, a
+wrong firing does not merely add a finding, it can claim the zone *before* the interference rule is
+offered it. That risks the one arm the ladder gets right 60 of 60 in order to catch a seventh of an
+arm nothing judges today.
+
+The development and holdout sensitivities agree closely (0.17 against 0.15), which is worth reading
+carefully: it means this is a **reliable measurement of a weak effect**, not a noisy one that more
+runs would resolve. Re-running it on more of the same corpus will not change the answer.
+
+### Why it fails, mechanically
+
+Every run is scored by taking its **worst** zone. A zone holding one or two findings has a rate made
+almost entirely of `anom-012`'s smoothing constant, so taking the worst of many zones reliably
+selects whichever zone had the least data — noise, not signal — and every run has one. Requiring at
+least four findings in a zone suppresses that, and is where what little separation exists appears;
+by then a third of runs produce no qualifying zone at all. The best Youden's J anywhere is **0.275**,
+and it sits at a 0.38 quiet-arm false-alarm rate that `anom-008` forbids outright.
+
+### Two facts that outlive the item
+
+`ambiguous-mixed-evidence` shares `aircraft-coverage-gap`'s track-suppression mode, and
+`rf-sensor-fault` perturbs tracks not at all. So at a shared seed:
+
+```
+normal-baseline      track findings == rf-sensor-fault          (exact)
+aircraft-coverage-gap track findings == ambiguous-mixed-evidence (exact)
+```
+
+**Any track-side figure quoting 120 negatives is counting 60 seeds twice**, and the ambiguous arm is
+not independent evidence about a track-side rule. This was found because those arms produced
+byte-identical columns — which is never a coincidence and should always be chased.
+
+### Worth recording as a limitation
+
+The `aircraft-coverage-gap` arm has **no rule**. Its 60 of 60 correct non-detections are correct only
+because nothing judges that arm, and it must not be reported as though the system had been tested on
+it. Both closures of this item agree on what would change that: a **generator** change, not a
+detector one — a coverage gap must become a zone-level event separable from a staleness freeze
+before any threshold here is worth choosing. Also unmeasured, and recorded rather than assumed:
+whether the wrongly-claimed zones on interference runs actually overlap the interference zones. The
+hazard is established; its size is not.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |

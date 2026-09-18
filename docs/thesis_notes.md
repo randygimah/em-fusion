@@ -5241,6 +5241,84 @@ The general form is worth keeping: a figure that is stable at a suspiciously rou
 matches a constant of the apparatus, should be checked against that constant before it is believed.
 Here the "error" was a distance between two correct answers.
 
+### A paired test reopened an item and a single-run test closed it again
+
+The `anom-006` data-source rule was closed as unbuildable, reopened by the regeneration, and closed
+again a day later by a measurement it had itself demanded. The sequence is worth recording in full
+because the reopening was correct, the closure is correct, and the two are not in tension: they
+answer different questions, and the item said so at the time.
+
+The reopening rested on a paired comparison. Each staged coverage-gap run has a twin generated from
+the same seed over the same corpus window with nothing staged, so the pair differs in exactly one
+respect. Scoring the strongest cluster-proposed zone on each and asking which is worse gave twenty
+wins against seven losses at a 20 km cluster radius, about one in fifty by sign test, where every
+radius had previously been indistinguishable from a coin. The effect is real, and the amendment
+reopening the item recorded it as *buildable to try* and explicitly not as *known to be buildable*,
+with the reason attached: a sign test over matched pairs says the staged zone tends to beat its
+control and says nothing about whether a threshold separates them on a single run, which is the
+question a detector faces.
+
+That distinction is the methodological content of this episode. A paired design is powerful
+precisely because it cancels everything the two runs share — the seed, the window, the aircraft, the
+local density of traffic — so it can resolve an effect far smaller than the variation between runs.
+A detector inherits none of that cancellation. It sees one run and must answer against a fixed bar,
+so it is exposed to exactly the variation the pairing removed. Two populations can therefore be
+ordered reliably within pairs and overlap almost completely across runs, and this one does.
+
+The measurement was pre-registered before it was run, with the populations, the operating-point rule
+and the failure bar fixed in advance, and scored on a held-out base seed the threshold was not
+chosen on. Corpus v2 came from three base seeds of a hundred runs each, so two were used to choose
+an operating point and the third scored once. Without that split the threshold would have been read
+off the same runs that produced the twenty-to-seven and the result would have been fitted to its own
+evidence — the error `rate_excess_prereg.md` was written to avoid, in a place where it would have
+been easy to repeat.
+
+The best operating point that leaves the quiet arm silent is a 60 km cluster radius, a minimum zone
+size of four findings and an excess threshold of 11.53, catching seven of forty coverage gaps on the
+development seeds and three of twenty on the holdout, against a pre-registered bar of one in four.
+The out-of-sample agreement is close — 0.17 against 0.15 — which matters for the strength of the
+conclusion: this is a reliable measurement of a weak effect rather than a noisy measurement that
+more data would resolve. Repeating it on more runs of the same corpus will not change it.
+
+What closes the item is not the low sensitivity but its direction. At that operating point the rule
+fires on six of twenty `gnss-degradation` runs against three of twenty coverage gaps — twice as
+often on the arm it is not for as on the arm it is. That arm freezes reported staleness rather than
+suppressing rows, so it genuinely perturbs the track side; the rule cannot tell the two
+perturbations apart, and it is more sensitive to the wrong one. Because `anom-013` orders
+`SENSOR-FAULT`, `SOURCE-GAP`, `FUSION-SPATIAL`, the data-source rule outranks the interference rule,
+so a wrong firing does not merely add a finding — it can claim the zone before the interference rule
+is offered it. Building this would risk the one arm the ladder decides correctly sixty times out of
+sixty in order to catch a seventh of an arm nothing currently judges. Whether the zones in question
+actually overlap was not measured, so the hazard is established and its magnitude is not; that is
+recorded as a limitation rather than quietly asserted either way.
+
+The mechanism behind the failure is the one predicted when the item was first closed, now visible
+directly. The statistic saturates. At a minimum zone size of one, every arm reaches the same maximum
+ratio of 198.78 and the medians differ by 0.6, because taking the maximum across a run's zones
+selects whichever zone had the fewest findings to average over — `anom-012`'s smoothing constant
+dominating a small sample. Separation only begins to appear at a size floor of four, by which point
+a third of runs produce no qualifying zone at all. The best Youden's J anywhere on the development
+sweep is 0.275, and it occurs at a quiet-arm false-alarm rate of 0.38 that `anom-008` forbids
+outright; `anom-012` reported 0.23 to 0.40 on a curve this project already describes as weak.
+
+Two structural facts fell out of the measurement and outlive the item. `ambiguous-mixed-evidence`
+shares `aircraft-coverage-gap`'s `SUPPRESS` track mode, and `rf-sensor-fault` perturbs tracks not at
+all, so at a shared seed the first pair and the second pair produce *identical* track findings —
+verified by exact comparison, not by summary statistics. Any track-side figure quoting a hundred and
+twenty negatives, or treating the ambiguous arm as independent evidence about a track-side rule, is
+counting sixty seeds twice. The measurement that found this had itself been designed with the wrong
+population table: it named an `rf-interference` arm this project does not have, and omitted the
+ambiguous arm entirely. The error was caught by the arms producing byte-identical columns, which is
+the kind of result that should never be read as a coincidence.
+
+The honest outcome is therefore that the `aircraft-coverage-gap` arm has no rule, that its sixty
+correct non-detections are correct only because nothing judges it, and that this must not be
+reported as though the system had been tested on that arm. Both closures of this item reached the
+same conclusion about what would change it: a generator change rather than a detector one. A
+coverage gap has to become a zone-level event separable from a staleness freeze before any threshold
+here is worth choosing.
+
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;

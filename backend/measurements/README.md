@@ -118,6 +118,7 @@ said**; a script with no log is marked, and its figure lives in `docs/thesis_not
 |---|---|---|
 | `source_gap_ceiling.py` | **Can this rule be built on this corpus at all?** Measures the ceiling, not a design. | No. Over 40 seed-matched pairs: 16.1 findings against the control's 15.1 and **never fewer** (23 greater, 17 tied, **0 lower**) — real beyond doubt, and one in fifteen. Root cause: **1.7 staged aircraft per run, 11 of 40 staging nothing at all.** This is the measurement that forced `scn-007`. |
 | `source_gap_zone_scoring.py` | Does a staged gap **concentrate** anywhere a detector could find? | No — **at chance**: 7:3, 5:4, 4:2 at 20/40/60 km cluster radii. The machinery destroys a signal raw counting preserves. |
+| `source_gap_threshold_sweep.py` | **The detector's own question**: does a *fixed* threshold separate a staged gap from an unstaged run on a **single run**, with no control? Pre-registered in `source_gap_threshold_prereg.md`; fitted on two base seeds and scored once on the third. | **No, and it points the wrong way.** Best zero-false-alarm point (60 km, size floor 4, threshold 11.53) catches **3 of 20** on the holdout against a pre-registered bar of 0.25 — but fires on **6 of 20 `gnss-degradation`** runs, twice the rate of the arm it is for. Best Youden's J anywhere is 0.275, at a 0.38 quiet-arm rate `anom-008` forbids. **This is what closed `anom-006` the second time.** Also established, exactly: `normal-baseline` ≡ `rf-sensor-fault` and `aircraft-coverage-gap` ≡ `ambiguous-mixed-evidence` on the track side, so the clean negative population is **60 seeds, not 120 runs**. |
 
 ### The ladder, and the layers underneath it
 
@@ -184,6 +185,20 @@ Regenerating the batches invalidates every figure above at once, which is exactl
 2. Re-run `corpus/` in this order — later scripts depend on decisions the earlier ones settled:
    `sensor_fault_catch_rate` → `rate_excess_window_source` → `fusion_gate_decision` +
    `fusion_excess_distribution` → `source_gap_ceiling` → `ladder_end_to_end`.
+
+`source_gap_threshold_sweep.py` measures every run in the corpus and takes roughly twenty minutes.
+It caches the per-run zone data (ratios and group sizes only — **no identifier and no position**) so
+the sweep can be re-read without re-measuring:
+
+```bash
+docker compose run --rm --no-deps -T -e PYTHONPATH=/app \
+  -e ZONE_CACHE=/app/measurements/.zone_cache.json -e REUSE_CACHE=1 \
+  backend python measurements/corpus/source_gap_threshold_sweep.py
+```
+
+Drop `REUSE_CACHE` to re-measure from the database. The cache is gitignored — it is derived from the
+corpus and regenerable from it, and committing it would put 300 runs of intermediate data in the
+history for no gain.
 3. **Diff each new log against the committed one** and report every figure that moved, including the
    ones that moved in the project's favour.
 4. Re-run `mutation/` only for modules whose code changed.

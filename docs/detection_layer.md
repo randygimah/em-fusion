@@ -28,7 +28,7 @@ later test is offered it.
 | | Question | Answer | State |
 |---|---|---|---|
 | 1 | One receiver off-normal, neighbours normal? | that receiver is broken | **Built** — 60 of 60, and no longer fires anywhere it shouldn't |
-| 2 | Aircraft dropouts, no radio anomaly nearby? | we are not hearing aircraft here | **Worth trying** — was ruled out, the regeneration reopened it |
+| 2 | Aircraft dropouts, no radio anomaly nearby? | we are not hearing aircraft here | **Ruled out, twice** — the regeneration reopened it and the measurement closed it again |
 | 3 | Several receivers off-normal together? | something is interfering | **Built** — 60 of 60 |
 
 Over all 300 staged hours, **no event anywhere received two different answers** — and every arm is now decided correctly 60 times out of 60, with no spurious firing anywhere at all.
@@ -45,7 +45,7 @@ Over all 300 staged hours, **no event anywhere received two different answers** 
 | The rate excess replaced it | An attempt to get more out of the weak side |
 | The broken-receiver test goes **first** | So the weak signal never arbitrates what the strong one settles |
 | Interference does **not** require aircraft agreement | So the weak signal cannot veto the strong one |
-| The coverage test was ruled out | It has **only** the weak signal — though see below: more aircraft per hour has changed this |
+| The coverage test stays unbuilt | It has **only** the weak signal. More aircraft per hour improved it and did not rescue it — see below |
 
 The radio side has been comparatively simple throughout and has essentially just worked. Nearly all
 the complexity is the aircraft side, and it is the complexity of extracting a reliable decision from
@@ -91,12 +91,39 @@ The aircraft side got materially stronger: the dropout-rate signal roughly doubl
 evidence at all* — better than 47 of 61, and the same sentence: this is the radio evidence with an
 occasional corroborating note, not two sources agreeing.
 
-**The coverage test is worth trying again.** It was ruled out because scoring a place on a staged
-hour against the same place on its control was a coin flip. With five aircraft affected instead of
-1.7, that scoring now wins 20 times against 7 losses. **But it is not proven buildable**: that test
-compares an hour against its own control, and a real detector never has the control — it sees one
-hour and must decide. Whether a fixed bar can separate them on a single hour is a different question
-and has not been measured.
+**The coverage test was tried again, and it fails.** It had been ruled out because scoring a place
+on a staged hour against the same place on its control was a coin flip. With five aircraft affected
+instead of 1.7 that scoring wins 20 times against 7 — which reopened it, but only as *worth trying*,
+because comparing an hour against its own control is not the question a detector faces. A detector
+sees one hour, with no control, and must decide against a fixed bar.
+
+That measurement has now been taken, with the bar for success written down first and the answer
+checked on a block of hours the bar was not chosen on. **It does not work, and it fails in the worst
+available direction.**
+
+| | |
+|---|---|
+| Coverage-gap hours caught | **3 of 20**, where 5 of 20 was the agreed minimum |
+| Quiet hours falsely alarmed | 0 of 20 — the one thing it does get right |
+| **Interference hours falsely alarmed** | **6 of 20 — twice the rate of the thing it is looking for** |
+
+The last row is what closes it. A test that fires more often on interference than on the coverage
+gaps it exists to find is not a weak detector, it is a misleading one — and because it sits *above*
+the interference test in the ladder, a wrong answer there does not simply add noise, it can take the
+event before the interference test is offered it. That would put the one arm the system currently
+gets right 60 times out of 60 at risk, to catch a seventh of an arm nothing looks at today.
+
+**Why it fails is worth keeping.** Score every place on an hour and take the worst, and the worst
+score on a perfectly quiet hour is indistinguishable from the worst on a staged one — both reach the
+same maximum, and their middles differ by half a per cent. Taking the worst of many places selects
+whichever place had the fewest aircraft to average over, which is noise, not signal. Insisting on at
+least four dropouts in a place suppresses that and is where the little separation there is appears —
+by which point a third of hours no longer qualify at all.
+
+**What would change it is the generator, not the detector.** A coverage gap has to become an event
+with a *place*, distinguishable from an hour where aircraft positions merely go stale. Until then
+this arm has no test, its 60-of-60 "correct" score is correct only because nothing looks at it, and
+it must not be reported as though the system had been tested on it.
 
 ## The RF knowledge this project actually needs
 
