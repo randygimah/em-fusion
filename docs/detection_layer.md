@@ -2,7 +2,7 @@
 
 *A standing orientation page. **Edited, never appended to** — unlike `docs/qa.md` (a growing record of
 questions) and `docs/thesis_notes.md` (a growing record of decisions). If something here is out of
-date, change it. Last true as of 18 September 2026.*
+date, change it. Last true as of 18 September 2026, after `anom-014` and `scn-007` were built.*
 
 ---
 
@@ -28,7 +28,7 @@ later test is offered it.
 | | Question | Answer | State |
 |---|---|---|---|
 | 1 | One receiver off-normal, neighbours normal? | that receiver is broken | **Built** — 60 of 60 |
-| 2 | Aircraft dropouts, no radio anomaly nearby? | we are not hearing aircraft here | **Blocked** — see below |
+| 2 | Aircraft dropouts, no radio anomaly nearby? | we are not hearing aircraft here | **Blocked** — both blockers now built, awaiting regeneration |
 | 3 | Several receivers off-normal together? | something is interfering | **Built** — 60 of 60 |
 
 Over all 240 staged hours, **no event anywhere received two different answers.**
@@ -56,7 +56,7 @@ genuinely marginal evidence.
 | Term | In one line |
 |---|---|
 | **Baseline** | What one receiver normally reads on one channel. Never pooled across channels. |
-| **Episode** | A run of consecutive radio readings past the threshold. Not an incident — one incident can arrive as six episodes. |
+| **Episode** | A run of consecutive radio readings past the threshold. Not an incident — one incident can arrive as six episodes. Must last at least 10 s, or it is reported as too brief rather than as an event. |
 | **Finding** | One aircraft's dropout. Raw material, never reported on its own. |
 | **Zone** | A place and a window that a candidate answer occupies. One event, one zone. |
 | **Claim** | One test's bid for a zone. The ladder resolves claims, not tests. |
@@ -76,10 +76,22 @@ aircraft**, and **11 of 40 affect none at all**. That single number is why:
 - the coverage test cannot be built — its signal is 1 extra dropout against a background of 15;
 - the aircraft evidence is unmeasurable in **47 of 61** reported zones.
 
-Two fixes are specified and unbuilt (`scn-007`, more aircraft per hour; `anom-014`, ignore
-single-reading radio blips). Both require regenerating the staged hours, which invalidates every
-detection figure at once — so they should land **together**, in one regeneration, with everything
-re-measured under one set of conditions.
+**Both fixes are now built and waiting on the regeneration.**
+
+| Fix | What it does | Measured value |
+|---|---|---|
+| `anom-014` | A radio blip lasting one reading is not an event | **10 s** — removes 80 of 80 spurious episodes, keeps 140 of 140 real ones |
+| `scn-007` | A floor under how many aircraft an hour affects | **5** — below 3, a staged hour beats its own control 16 times in 26; at 3–5, 15 times in 15 |
+
+Neither takes effect until the staged hours are regenerated, and regenerating invalidates every
+detection figure at once — which is why they were built **together**, so there is one invalidation
+and one set of conditions rather than two.
+
+**What the floor does not fix**, so it is not over-sold: an ordinary hour holds 14.4 dropouts with a
+spread of 3.5, and the one hour in the corpus that affected twelve aircraft beat its control by only
+4.0 — about one spread. No reachable floor makes the coverage test work by *counting dropouts per
+hour*. It removes the hours that could not be scored at all, and gives a place-based test enough
+dropouts close together to work with. Whether that is enough is for re-measurement to say.
 
 ## The RF knowledge this project actually needs
 
