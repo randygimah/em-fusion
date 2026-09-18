@@ -41,6 +41,20 @@ A corpus measurement over all 240 runs takes minutes, not seconds — it rebuild
 the 20 quiet runs and re-runs the detectors over 9.06M observations. Redirect to a log and read the
 log.
 
+Three practical things, each learned the hard way:
+
+- **Most of these scripts print nothing until they finish**, because every `print` sits after the
+  loop. `python -u` does not help with that, so a long run looks exactly like a hung one. To tell
+  them apart, ask the database what it is doing rather than watching the log:
+  `docker compose exec -T postgis psql -U postgres -d em_fusion -c "SELECT state, now()-query_start
+  FROM pg_stat_activity WHERE datname='em_fusion' AND state='active';"`. New scripts should print
+  per-run progress.
+- **Do not run several of these at once.** They each stream millions of rows, and three in parallel
+  turned ten-minute jobs into thirty-minute ones with no work saved.
+- **Never run two `make test-backend` at once.** Both create and drop schema in the same
+  `test_em_fusion` database, and the result is dozens of unrelated-looking schema errors. This has
+  already happened once and cost a full diagnosis.
+
 ## `corpus/` — measurements over stored runs
 
 Each needs the database and a generated corpus. **The figure of record is what the committed `.log`
@@ -53,6 +67,14 @@ said**; a script with no log is marked, and its figure lives in `docs/thesis_not
 | `sensor_fault_catch_rate.py` | Does `SENSOR-FAULT` claim the runs whose truth is a broken receiver — and does it claim anything else? The assumption the whole rule ordering rests on. | 60 of 60 claimed, on the right receiver inside the right window; **0 of 60** interference runs misattributed; 1.13 faults per run at a median span of exactly the staged 300 s. *(no log survived)* |
 | `sensor_fault_fragmentation.py` | Why does a receiver with loud neighbours read as isolated? | One 300 s incident arrives as a **median of six episodes**: the 8 dB injection is scaled per tick by `1 + 0.25·N(0,1)` against a 6 dB threshold, so ~1 tick in 6 falls short. Neighbours sat 2.51 dB (p5) to 4.46 dB (median) above their own baselines and **not one of 37 crossed 6 dB**. *(no log survived)* |
 | `sensor_fault_neighbour_candidates.py` | Tolerance, or readings? Two candidate repairs measured **before either was written**. | Readings win. Also the source of the 2 dB bar: touched neighbours 2.51 dB at p5, untouched 1.58 dB at p95, and the choice is a plateau. *(no log survived)* |
+
+| `rf_noise_episode_duration.py` | What minimum episode duration should `anom-014` use? Measures the two populations a minimum has to separate. | **Total separation.** All 80 episodes outside a staged cell or window are **exactly one reading long**; the 1,257 on a staged cell run to a median of 20 s. A 10 s minimum removes 80 of 80 and still catches **140 of 140** runs that stage RF. 10/20/30 s are a plateau; the bottom is taken because larger values discard more true episodes for no gain. |
+
+### The staged-aircraft floor (`scn-007`)
+
+| Script | The question it answers | Figure of record |
+|---|---|---|
+| `scn007_floor.py` | How many staged aircraft does a coverage-gap run need before it is findable at all? | Below 3 staged, a run beats its own seed-matched control on **16 of 26** pairs; at 3-5 on **15 of 15**. Floor set at 5. Also prints the background the excess must clear: 14.4 findings per control run, sd 3.5 — which is why no reachable floor makes `anom-006` work by counting. |
 
 ### The rate excess (`anom-012`)
 
@@ -148,6 +170,12 @@ Regenerating the batches invalidates every figure above at once, which is exactl
 4. Re-run `mutation/` only for modules whose code changed.
 5. Update `docs/thesis_notes.md` with the new figures *and the conditions they were taken under*,
    then `docs/handoff.md`, `docs/detection_layer.md` and the progress note.
+
+**Record the base seed and run-id range of every batch.** The first corpus did not: `scenario_runs`
+holds each run's own derived seed but nothing holds the base seed a batch came from, and only one
+of them survives anywhere (batch 3's `20260917`, in `corpus/rate_excess_prereg.md`). That is why a
+run-for-run paired comparison across the regeneration is not available, and it is a cheap thing to
+avoid repeating.
 
 A figure re-measured under new conditions is a new figure. Replace the old one rather than averaging,
 and say in the write-up which corpus each was taken on.

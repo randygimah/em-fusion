@@ -1,0 +1,39 @@
+reading intervals present in the corpus, seconds: [10]
+runs staging RF: 140   staging none: 100
+
+TRUE  episodes (staged cell, inside staged window): n=1257
+  seconds  min=0 p5=0 p25=10 median=20 p75=40 max=210
+  readings min=1 p5=1 median=3 max=22
+
+FALSE episodes (everything else): n=80
+  seconds  min=0 p25=0 median=0 p75=0 p95=0 max=0
+  readings min=1 median=1 p95=1 max=1
+
+zero-length episodes (start == end, which anom-012 divides by):
+  among true:  300 of 1257
+  among false: 80 of 80
+
+the trade-off, at candidate minimums (an episode is kept when its
+duration is >= the minimum, so the boundary belongs to the value):
+    minimum    true kept   false kept   runs still firing falsely
+        0s   1257 / 1257      80 / 80   
+       10s    957 / 1257       0 / 80   
+       20s    716 / 1257       0 / 80   
+       30s    549 / 1257       0 / 80   
+       40s    414 / 1257       0 / 80   
+       60s    232 / 1257       0 / 80   
+       90s    102 / 1257       0 / 80   
+      120s     44 / 1257       0 / 80   
+
+THE NUMBER THAT DECIDES IT. The catch rate is per run, not per episode:
+a run survives a minimum if ANY true episode of its own clears it.
+  runs staging RF, with at least one true episode: 140 of 140
+    minimum   runs still caught
+        0s       140 / 140   
+       10s       140 / 140   
+       20s       140 / 140   
+       30s       140 / 140   
+       40s       139 / 140   
+       60s       120 / 140   
+       90s        78 / 140   
+      120s        41 / 140   

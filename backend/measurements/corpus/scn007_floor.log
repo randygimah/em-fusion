@@ -1,0 +1,22 @@
+seed-matched pairs: 60 over all 240 runs (source_gap_ceiling.py restricts to runs 121-240 and gets 40)
+staged aircraft per run: mean 2.72, max 12, zero on 12 of 60
+
+the background a staged run has to clear, from the control arm:
+  findings per control run: mean 14.4, sd 3.5, min 8, max 21
+
+  staged  pairs  staged mean  control mean   excess       wins
+       0     12         15.3          15.3     +0.0     0/12  
+       1     12         14.6          13.8     +0.8     9/12  
+       2     14         15.4          14.6     +0.7     7/14  
+       3      4         17.2          15.2     +2.0     4/4   
+       4      3         18.3          16.3     +2.0     3/3   
+       5      8         16.1          13.9     +2.2     8/8   
+       6      3         13.7          12.7     +1.0     2/3   
+       9      2         14.0          13.0     +1.0     1/2   
+      11      1         16.0          15.0     +1.0     1/1   
+      12      1         13.0           9.0     +4.0     1/1   
+
+the arithmetic, for when the curve is too thin to read:
+  a staged aircraft yields ~1.0 detected dropout (source_gap_ceiling.py).
+  the control background has sd 3.5 findings per run, so an excess
+  of one sd needs about 4 staged aircraft and two sd about 7.
