@@ -5016,21 +5016,212 @@ second pass   <b>5.060000171975998</b></div>
       </p>
     </div>
 
-    <h3>A test that had been ruled out is worth trying again</h3>
+    <h3>A test that had been ruled out was tried again, and failed in the worst available way</h3>
     <p>
-      The third question — <em>are we simply not hearing aircraft here?</em> — was abandoned last
-      time. Scoring a place on a staged hour against the same place on its control was a coin flip at
-      every radius tried. With five aircraft affected per hour instead of 1.7, that same scoring now
-      wins twenty times against seven losses.
+      The third question — <em>are we simply not hearing aircraft here?</em> — was abandoned once.
+      Scoring a place on a staged hour against the same place on its control was a coin flip at every
+      radius tried. With five aircraft affected per hour instead of 1.7, that same scoring won twenty
+      times against seven losses, and the test was reopened.
     </p>
     <div class="panel panel--gap">
       <p>
-        <b>But it is not proven buildable, and the distinction matters.</b> That comparison gives
-        each hour its own control — the same hour, the same aircraft, nothing staged. A real detector
-        never has the control. It sees one hour and must decide. "The staged hour tends to score
-        higher than its twin" and "a fixed bar separates them when you only get one" are different
-        claims, and only the first has been measured. The test is worth attempting; the bar has to be
-        measured before it is chosen.
+        <b>But that is not the question a detector answers, and the distinction is the whole
+        episode.</b> Scoring an hour against its own control compares two hours that differ in
+        exactly one respect — same starting number, same stretch of the day, same aircraft. That is
+        why it can resolve an effect this small. A real detector never gets the control. It sees one
+        hour, against a bar fixed in advance, and everything the pairing quietly cancelled is now
+        variation it has to live with. Two groups can be reliably ordered <em>within pairs</em> and
+        still sit almost entirely on top of each other <em>across</em> hours.
+      </p>
+    </div>
+    <p>
+      So the question was put the way a detector faces it. The bar for success was written down
+      first, the setting was chosen on two thirds of the hours, and it was scored once on the third
+      that had never been looked at — because a bar chosen on the same hours it is judged against
+      will always look like confirmation.
+    </p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>One hour, one fixed bar, no control available</th><th class="n">Result</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="key">Coverage-gap hours correctly caught</td><td class="n">3 / 20</td></tr>
+          <tr><td class="key">Agreed minimum before the measurement was taken</td><td class="n">5 / 20</td></tr>
+          <tr><td class="key">Quiet hours falsely alarmed</td><td class="n">0 / 20</td></tr>
+          <tr class="total"><td class="key"><b>Interference hours falsely alarmed</b></td><td class="n"><b>6 / 20</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="caption">
+      Catching three in twenty where five was the agreed minimum is a failure. The last row is what
+      makes it a closure.
+    </p>
+    <div class="panel panel--warn">
+      <p class="lede"><b>The test points the wrong way.</b></p>
+      <p>
+        At the only setting that keeps the quiet hours silent, it fires <b>twice as often on
+        interference as on the coverage gaps it exists to find</b>. Both stage a real disturbance to
+        the aircraft picture — one removes reports, the other freezes them — and the measurement
+        cannot tell those apart. Worse, this test sits <em>above</em> the interference test in the
+        declared order, so a wrong answer here does not merely add a wrong finding: it can claim the
+        event before the interference test is ever offered it. Building it would put the one kind of
+        hour the system currently gets right sixty times out of sixty at risk, in order to catch a
+        seventh of a kind nothing looks at today. Whether those places would actually collide was not
+        measured — the hazard is established and its size is not.
+      </p>
+    </div>
+    <p>
+      <b>Why it fails is worth keeping,</b> because it is the same trap in a new costume. Every place
+      on an hour gets a score, and the hour is judged on its worst. But a place holding one or two
+      findings has a score made mostly of the smoothing term that stops the arithmetic dividing by
+      zero — so taking the worst of many places reliably picks whichever place had the least data.
+      That is noise selection, not detection, and every hour has such a place. The worst score on a
+      perfectly quiet hour and the worst on a staged one reach the same maximum, and their middles
+      differ by four per cent. Insisting on at least four findings in a place suppresses that, and is
+      where the little separation there is appears — by which point a third of hours no longer
+      qualify at all.
+    </p>
+    <p>
+      One detail decides how much weight this carries. The two thirds used to choose the setting and
+      the third used to judge it agree closely — three in twenty against seven in forty. <b>This is a
+      reliable measurement of a weak effect, not a noisy measurement that more hours would
+      resolve.</b> Running it over more hours of the same corpus cannot change the answer. What would
+      change it is the generator: a coverage gap has to become an event with a <em>place</em>,
+      distinguishable from an hour where aircraft reports merely go stale. That is recorded as future
+      work, and it is declined on cost rather than on merit — it would mean making all the hours a
+      third time and re-measuring every figure in this section.
+    </p>
+
+    <h3>Positive controls, negative controls, and what each kind of hour is actually for</h3>
+    <p>
+      That result is easier to read with a piece of experimental vocabulary that has been doing
+      silent work throughout this project. Every kind of staged hour here is a <b>control</b> of one
+      sort or another, and the two sorts answer opposite questions.
+    </p>
+    <div class="panel">
+      <p>
+        <b>A positive control</b> is a case where something really is there, and the system is
+        required to find it. It answers: <em>can this thing detect what it claims to detect?</em>
+      </p>
+      <p>
+        <b>A negative control</b> is a case where the thing is <em>not</em> there, and the system is
+        required to stay quiet. It answers: <em>is this thing capable of being wrong?</em>
+      </p>
+    </div>
+    <p>
+      The second is the one people skip, and skipping it is how you end up with a machine that scores
+      brilliantly by saying yes to everything. A detector with no negative controls has not been
+      tested; it has been flattered. In this project the operational failure that matters most is not
+      missing an incident — it is <em>inventing</em> one. An analyst told an area is being jammed,
+      when in truth the receivers simply stopped hearing aircraft there, has been actively misled and
+      may act on it. So the negative controls here are not a formality; they test the failure with the
+      highest cost.
+    </p>
+    <p>
+      There is also a distinction <em>within</em> the negative controls that matters more than it
+      sounds:
+    </p>
+    <div class="panel panel--gap">
+      <p>
+        <b>A plain negative</b> has nothing happening at all. It proves the system stays quiet in an
+        empty room.
+      </p>
+      <p>
+        <b>A discriminating negative</b> has something real and disruptive happening — just not the
+        thing being claimed. It proves the system stays quiet <em>while there is something to react
+        to</em>. That is a much stronger guarantee, and an empty room cannot provide it.
+      </p>
+    </div>
+    <p>Here is how the five kinds of hour divide up.</p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Kind of hour</th><th>What is staged</th>
+            <th>What the system says</th><th class="n">Score</th><th>What it is for</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="key">Quiet baseline</td><td>nothing at all</td>
+            <td>silence</td><td class="n">60 / 60</td>
+            <td class="why"><b>Plain negative.</b> Can the system be wrong in an empty room?</td>
+          </tr>
+          <tr>
+            <td class="key">One broken receiver</td><td>one receiver misbehaving</td>
+            <td><em>that receiver is broken</em></td><td class="n">60 / 60</td>
+            <td class="why"><b>Positive.</b> The single-source fault</td>
+          </tr>
+          <tr>
+            <td class="key">Interference</td><td>several receivers together</td>
+            <td><em>something is interfering</em></td><td class="n">60 / 60</td>
+            <td class="why"><b>Positive.</b> The incident the system exists to report</td>
+          </tr>
+          <tr>
+            <td class="key">Mixed evidence</td><td>one receiver <b>and</b> five aircraft removed</td>
+            <td><em>that receiver is broken</em></td><td class="n">60 / 60</td>
+            <td class="why"><b>Positive with a negative built into it.</b> See below</td>
+          </tr>
+          <tr>
+            <td class="key">Aircraft coverage gap</td><td>five aircraft removed, radio untouched</td>
+            <td>silence</td><td class="n">60 / 60</td>
+            <td class="why"><b>Discriminating negative.</b> Something real is happening and no radio
+              claim may be made about it</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="caption">
+      Three kinds of hour produce a finding; two produce a silence. Every catch rate this page quotes
+      is therefore computed over three kinds, not five — and it says so.
+    </p>
+    <p>
+      <b>This is why the coverage-gap hours are not wasted, and not a duplicate of the quiet ones.</b>
+      The quiet hours prove the system stays silent when nothing happens. The coverage-gap hours prove
+      it stays silent when something real happens on the aircraft side that no radio test should
+      claim. That is a test for the specific failure of evidence from one kind of sensing leaking into
+      a conclusion about another, and the quiet hours cannot test it, because they contain nothing to
+      leak. These hours were written into the project's scope as a deliberately discriminating case
+      before any detector existed, and they still perform that job perfectly. What they no longer
+      offer is a claim of their own.
+    </p>
+    <div class="panel">
+      <p class="lede"><b>The mixed hour is a controlled comparison, and its result is a real one.</b></p>
+      <p>
+        At first glance it looks redundant: it produces exactly the same answer as the
+        broken-receiver hour, on all sixty. But compare the two properly. For every shared starting
+        number, the mixed hour and the broken-receiver hour stage the <em>same</em> receiver, the
+        <em>same</em> size of fault, on the <em>same</em> channel, over the <em>same</em> window —
+        and the radio measurements they produce are <b>identical, to the byte, in 60 of 60 pairs</b>.
+        The single difference is that the mixed hour also removes five aircraft.
+      </p>
+      <p>
+        So the pair differs in exactly one variable, and the answer not changing is the finding, not
+        the absence of one: <b>a simultaneous disturbance to the aircraft picture does not corrupt the
+        radio verdict</b>, sixty times out of sixty. The broken-receiver hours alone cannot show that,
+        because they have no disturbance to be immune to. That is a negative control living inside a
+        positive one, and it is worth keeping and worth reporting as such.
+      </p>
+    </div>
+    <div class="panel panel--warn">
+      <p class="lede"><b>What the mixed hour cannot do yet, and what that costs elsewhere.</b></p>
+      <p>
+        It was also meant to be the hour that forces the system to <em>choose</em> — two kinds of
+        evidence pointing two ways, and a declared order deciding which wins. It cannot do that today,
+        because the aircraft half of its evidence is exactly the half the abandoned third test would
+        have read. The radio half arrives; the aircraft half is staged, is real, and reaches no
+        conclusion.
+      </p>
+      <p>
+        That has a consequence for a figure stated earlier on this page, and it should be read
+        carefully. <b>"No place was ever given two different answers"</b> is true, and it is not
+        evidence that the ordering works — because on every kind of hour, exactly <em>one</em> test
+        ever speaks. The ordering is proved by tests written against it directly, and by deliberately
+        breaking it to confirm those tests notice. But the hours themselves have never once put two
+        claims on the same place and made the order do its job. That is a gap in the evidence for the
+        <em>ordering</em>, not only for the abandoned test, and it is stated separately for that
+        reason.
       </p>
     </div>
 
@@ -5345,6 +5536,15 @@ second pass   <b>5.060000171975998</b></div>
         same command, and it holds pseudonyms rather than real aircraft addresses so it can be kept
         in the repository at all.
       </p>
+      <p>
+        <b>This threat is now dormant rather than retired, and the distinction is worth keeping.</b>
+        It was a threat to the false-alarm rate for coverage-gap incidents, and there is no such rate
+        any more, because the test that would have produced one was closed. It comes straight back
+        the moment the hours are made a third time to give coverage gaps a place of their own — which
+        is the one change that would make that test work. The mitigation is built and the list exists;
+        it is simply not currently doing anything. Recorded so that a later attempt inherits the
+        finished work rather than rediscovering the problem.
+      </p>
     </div>
   </section>
 
@@ -5354,17 +5554,27 @@ second pass   <b>5.060000171975998</b></div>
       <div class="tier">
         <div class="tier__name">Next</div>
         <div class="tier__what">
-          <b>The third test — are we simply not hearing aircraft here?</b> It was abandoned last
-          time as unbuildable and the regenerated hours have reopened it. The first job is not to
-          build it but to measure the one thing the encouraging figure does not establish: whether a
-          fixed bar can separate a staged place from an unstaged one when you only get to see one
-          hour, with no control to compare it against. If that measurement disappoints, the honest
-          outcome is to say so again — the point of reopening it is that the question became
-          answerable, not that the answer is known.
+          <b>Evidence bundles</b> — gathering what the tests found into one package with its
+          uncertainties listed beside it, and then the part the project is actually about: an
+          explanation proposed by a model, checked line by line against the evidence it was given,
+          and put in front of a person who decides. This moved from third to first when the third
+          test closed. It is the natural next thing to build because it is the one piece of remaining
+          work the shape of the data cannot invalidate — a bundle groups what the tests already
+          produce, and its shape does not depend on what the hours contain.
         </div>
       </div>
       <div class="tier">
         <div class="tier__name">Then</div>
+        <div class="tier__what">
+          <b>A third way of noticing an abnormal reading</b>, measuring how far a value sits from its
+          own recent history rather than against a fixed threshold. It carries a prediction made
+          earlier and never properly scored: that adding a new kind of test should touch almost
+          nothing outside itself. The hours are now stable enough for that claim to be measured
+          rather than asserted.
+        </div>
+      </div>
+      <div class="tier">
+        <div class="tier__name">After</div>
         <div class="tier__what">
           Telling somebody when a batch fails, and letting one be stopped — the two things the
           scenario screen still cannot do. Both are small beside detection, and both are honesty
@@ -5372,13 +5582,14 @@ second pass   <b>5.060000171975998</b></div>
         </div>
       </div>
       <div class="tier">
-        <div class="tier__name">After</div>
+        <div class="tier__name">Not planned</div>
         <div class="tier__what">
-          Evidence bundles — gathering what the three tests found into one package with its
-          uncertainties listed beside it — and then the part the project is actually about: an
-          explanation proposed by a model, checked line by line against the evidence it was given,
-          and put in front of a person who decides. Bundles are the natural next thing to build
-          because they are the one piece of remaining work the shape of the data cannot invalidate.
+          <b>Making the third test work.</b> It would need the hours made a third time, so that a
+          coverage gap becomes an event with a place rather than five aircraft scattered across one.
+          That is the change that would work, and it is declined on cost: every figure in the
+          detection sections would have to be measured again. Recorded here rather than left as an
+          open question, because an unstated "we could have" is worth less than a stated "we chose
+          not to, and here is what it would have taken".
         </div>
       </div>
     </div>
@@ -5397,7 +5608,7 @@ second pass   <b>5.060000171975998</b></div>
     </div>
     <div>
       EM Fusion · a human-in-the-loop AI prototype for explainable electromagnetic situational
-      awareness · progress note, 17 September 2026
+      awareness · progress note, 18 September 2026
     </div>
   </footer>
 
