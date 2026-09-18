@@ -1,6 +1,10 @@
 # Phase 8 — Baseline, Detection, and Evidence Bundles
 
-*Written 2026-09-14, on picking the phase up. This is the reasoning behind the phase, in one place:
+*Written 2026-09-14, on picking the phase up, and **written before the phase was built** — several
+specifics here were overtaken by measurement. For where the detection layer actually stands, read
+`docs/detection_layer.md` first; this remains the record of why the phase was shaped this way.*
+
+*This is the reasoning behind the phase, in one place:
 what it is, what it is for, and why it is built the way it is. It is reference and drafting material
 — `docs/thesis_notes.md` holds the decisions and their rejected alternatives, `docs/qa.md` explains
 what individual terms mean, `docs/spec.jsonl` is the binding backlog, and the published progress note
