@@ -413,3 +413,68 @@ def test_downgrading_the_completion_revision_drops_the_column(
 # The pair is deliberate. A default and a backfill are the two ways the column
 # acquires a value nobody asked for, they fail differently, and each is caught
 # by a test that does not catch the other.
+
+
+# ---------------------------------------------------------------------------
+# db-010: observations indexed by the run that produced them.
+#
+# `observations` carried a primary key and a GiST index on location and
+# nothing else, so `scenario_run_id` -- the column nearly every detection
+# measurement filters on, and a foreign key declared ON DELETE CASCADE --
+# had nothing behind it. At 20.7 million rows in 12 GB that made a single
+# pass over the corpus three hundred sequential scans of the whole table.
+#
+# An unindexed column still returns correct answers, which is exactly why
+# this is asserted rather than left to be noticed: nothing fails, it is
+# merely slow enough to change what work is practical.
+# ---------------------------------------------------------------------------
+
+
+def test_observations_are_indexed_by_scenario_run(empty_database: Engine) -> None:
+    # spec: db-010, db-001
+    _upgrade(empty_database)
+
+    with empty_database.connect() as connection:
+        definitions = (
+            connection.execute(
+                text(
+                    "SELECT indexdef FROM pg_indexes "
+                    "WHERE tablename = 'observations'"
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+    assert any(
+        "scenario_run_id" in definition and "USING btree" in definition
+        for definition in definitions
+    ), f"no btree index on observations.scenario_run_id: {definitions}"
+
+
+def test_selecting_one_runs_observations_does_not_scan_the_table(
+    empty_database: Engine,
+) -> None:
+    """The index is only worth having if the planner will use it, and that is
+    a different claim from its existence -- a planner that still chooses a
+    sequential scan leaves the measurement exactly as slow as before."""
+    # spec: db-010, NFR-602
+    _upgrade(empty_database)
+
+    with empty_database.connect() as connection:
+        # The planner prefers a sequential scan on a tiny table whatever the
+        # indexes say, and the test database is tiny. Disabling the choice is
+        # what makes this a test of the index rather than of the row count.
+        connection.execute(text("SET enable_seqscan = off"))
+        plan = "\n".join(
+            connection.execute(
+                text(
+                    "EXPLAIN SELECT id FROM observations "
+                    "WHERE scenario_run_id = 1"
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+    assert "Index" in plan, f"planner will not use an index on one run: {plan}"
