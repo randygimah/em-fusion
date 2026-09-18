@@ -57,6 +57,23 @@ Three practical things, each learned the hard way:
 
 ## `corpus/` — measurements over stored runs
 
+**The database holds two corpora, and every script here must say which one it means.**
+`corpus/_corpus.py` is the selector: import it rather than hardcoding an id range.
+
+| | Runs | What it is |
+|---|---|---|
+| **v1** | ids 1–240 | **Three generator versions.** Runs 1–20 are 600 s where everything later is 900 s; runs 1–100 predate `scn-006`'s airborne gate and name ~5 staged aircraft against <2 afterwards, mostly parked ones `anom-010` refuses. |
+| **v2** | ids 241 on | One generator, 900 s throughout, `anom-014` and `scn-007` active from run one. Base seeds recorded in `CORPUS_V2_PLAN.md` and on every run row. |
+
+The discriminator is **the base seed, not the id**: `scn-008` records it and nothing before it did, so
+`parameters->>'base_seed' IS NOT NULL` names v2 exactly — and keeps naming it correctly if ids shift,
+a batch is re-run, or a third corpus appears, none of which an id range survives. Default is v2;
+`CORPUS=v1` overrides.
+
+Mixing them is not theoretical. `scn-007`'s floor was first measured across the `scn-006` boundary
+and the figure had to be withdrawn, on a corpus spanning only *two* generators.
+
+
 Each needs the database and a generated corpus. **The figure of record is what the committed `.log`
 said**; a script with no log is marked, and its figure lives in `docs/thesis_notes.md`.
 
