@@ -1,0 +1,17 @@
+corpus v2 -- one generator, 900 s runs, anom-014 and scn-007 active; base seeds 1412660662, 965530111, 655209063
+baseline from 60 quiet runs of this corpus
+
+scenario                     runs  claims bid  suppressed
+aircraft-coverage-gap          60           0           0
+ambiguous-mixed-evidence       60          64           0
+gnss-degradation               60          60           0
+normal-baseline                60           0           0
+rf-sensor-fault                60          64           0
+
+total claims bid: 188   total suppressed: 0
+
+FINDING: suppression never fires. Exactly one rule bids per run, so
+`anom-013`'s ordering is proved by unit tests and by its mutation pass and
+has never been exercised by data. The `evb-001` decision about suppressed
+claims is therefore DORMANT: correct to make now, untestable on this
+corpus, and live the moment a second producer exists.

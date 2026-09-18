@@ -338,13 +338,17 @@ compares two independently computed numbers that must agree.
 | ~~Whether the coordinate is unique~~ | **Measured: unique, 0 collisions in 20.7M rows.** See section 8 |
 | Whether the evidence list is small enough that 64.7 ms a lookup is acceptable | Follows from the composition decision below. Sets whether a composite index is owed before `evb-002` or after |
 | ~~The bundle's unit: one reported claim~~ | **Settled 2026-09-19.** Amended onto `evb-001` |
-| Whether `suppressed` claims appear in the bundle they were suppressed by | An analyst may want to know a second rule bid and lost; a model given it may treat it as corroboration. Decide deliberately |
-| What a bundle for a `SENSOR-FAULT` claim carries on the track side | Probably nothing, since that verdict never reaches `anom-012` — but "nothing" must be *stated* as not-applicable rather than left absent, or it reads as not-measurable |
+| ~~Whether `suppressed` claims appear in the bundle~~ | **Settled 2026-09-19: yes, in their own `superseded` field, never in the evidence list.** A suppressed claim is a *competing* conclusion, so the likeliest misreading is that co-occurrence is concurrence. Dropping it would overclaim; listing it as evidence would invert the truth. Consequence amended onto `ai-008`: grounding verifies existence, not appropriateness, so it must distinguish citable evidence from context or it certifies the error it exists to catch. **Measured dormant** — 188 claims bid, 0 suppressed |
+| ~~What a `SENSOR-FAULT` bundle carries on the track side~~ | **Settled: explicitly not-applicable, and stated.** That verdict never reaches `anom-005`, so the absence is by design; left absent it reads as `not_measurable`, which is a false uncertainty claim |
 
 ## 14. Build order
 
 `evb-001` → `evb-002`, and not in parallel: traceability is a constraint on a shape that does not
 exist yet, and building both at once means discovering the shape twice.
+
+**All of it is done as of 2026-09-19**, composition included — `evb-001` now carries both bundle
+compositions, the `superseded` field and the typed-absence principle; `ai-008` carries the grounding
+consequence. Nothing further gates tests.
 
 **Both are done as of 2026-09-19.** The section 9 amendments are on `evb-001`, the measurement is on
 `evb-002`, and what remains owed before tests is the evidence-list composition — what a bundle for
