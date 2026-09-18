@@ -56,6 +56,7 @@ from app.scenario.tracks import (
     TrackPerturber,
     load_exclusions,
     plan_track_perturbation,
+    select_targets,
 )
 
 PSEUDONYMISER = Pseudonymiser(seed="a-test-seed-not-the-real-one")
@@ -550,3 +551,230 @@ def test_suppression_does_not_remove_a_grounded_record() -> None:
 
     assert perturber.apply(_record(icao24=icao, on_ground=True)) is not None
     assert perturber.apply(_record(icao24=icao, on_ground=False)) is None
+
+
+# ---------------------------------------------------------------------------
+# scn-007: a run that stages on nothing has no answer key.
+#
+# Once scn-006 restricted staging to aircraft in flight, the eligible pool
+# shrank and the 8 per cent draw began yielding a mean of 1.7 aircraft per
+# run, with 11 of 40 drawing none at all. A run with an empty answer key is
+# indistinguishable from its own control by construction, so a quarter of the
+# coverage-gap arm could not be scored on.
+#
+# The floor cannot be applied where selection happens. scn-002's seam is a
+# per-record transform on a stream, and ranking a pool needs the pool -- so
+# the run surveys its window first, ranks what it finds, and hands the chosen
+# set to the perturber. These tests fix that split: the survey decides, the
+# perturber obeys, and the two agree on what "eligible" means because they
+# ask the same object.
+#
+# The floor's value is not asserted here. It is measured by
+# backend/measurements/corpus/scn007_floor.py.
+# ---------------------------------------------------------------------------
+
+
+def _pool(count: int, **kwargs: Any) -> list[dict[str, Any]]:
+    """`count` distinct aircraft, each with one eligible record."""
+    return [
+        _record(icao24=f"{0x400000 + i:06x}", **kwargs)  # noqa: E231
+        for i in range(count)
+    ]
+
+
+def _selection(records: list[dict[str, Any]], *, minimum: int, seed: int = SEED):
+    perturbation = plan_track_perturbation(LAYOUT, _spec(seed=seed))
+    assert perturbation is not None
+    return select_targets(
+        perturbation, records, pseudonymiser=PSEUDONYMISER, minimum=minimum
+    )
+
+
+def test_a_large_pool_takes_the_fractions_count_and_the_floor_does_nothing() -> None:
+    # spec: scn-007
+    # 8 per cent of 200 is 16, comfortably past a floor of 3, so the floor
+    # must not alter what the fraction would have done.
+    selection = _selection(_pool(200), minimum=3)
+    assert selection.eligible == 200
+    assert selection.requested == 16
+    assert len(selection.chosen) == 16
+    assert selection.floor_reached is True
+
+
+def test_a_pool_the_fraction_would_underfill_is_raised_to_the_floor() -> None:
+    # spec: scn-007
+    # 8 per cent of 20 is 1.6 -- the case that produced a mean of 1.7.
+    selection = _selection(_pool(20), minimum=4)
+    assert selection.requested == 4
+    assert len(selection.chosen) == 4
+    assert selection.floor_reached is True
+
+
+def test_a_pool_smaller_than_the_floor_stages_all_of_it_and_says_so() -> None:
+    # spec: scn-007
+    # The item's own failure case inverted: staging fewer silently would
+    # reintroduce the empty answer key this item exists to remove, so the
+    # shortfall is recorded rather than hidden.
+    selection = _selection(_pool(2), minimum=5)
+    assert selection.eligible == 2
+    assert len(selection.chosen) == 2
+    assert selection.floor_reached is False
+
+
+def test_an_empty_pool_stages_nothing_and_reports_the_floor_unreached() -> None:
+    # spec: scn-007
+    selection = _selection([], minimum=5)
+    assert selection.chosen == frozenset()
+    assert selection.eligible == 0
+    assert selection.floor_reached is False
+
+
+def test_the_selection_does_not_depend_on_the_order_records_arrive_in() -> None:
+    # spec: scn-007, scn-001, NFR-601
+    # The property the original per-aircraft draw had for free and a
+    # draw-until-N loop would have destroyed.
+    records = _pool(60)
+    forwards = _selection(records, minimum=3)
+    backwards = _selection(list(reversed(records)), minimum=3)
+    assert forwards.chosen == backwards.chosen
+
+
+def test_the_selection_is_reproducible_from_the_seed_alone() -> None:
+    # spec: scn-007, scn-001
+    records = _pool(60)
+    assert _selection(records, minimum=3).chosen == _selection(
+        records, minimum=3
+    ).chosen
+
+
+def test_a_different_seed_chooses_a_different_set() -> None:
+    # spec: scn-007
+    # Otherwise the floor would stage the same aircraft every run, and the
+    # arm would carry one repeated experiment rather than forty.
+    records = _pool(60)
+    assert _selection(records, minimum=3).chosen != _selection(
+        records, minimum=3, seed=SEED + 1
+    ).chosen
+
+
+def test_an_aircraft_on_the_ground_is_not_eligible() -> None:
+    # spec: scn-007, scn-006
+    # The survey has to agree with the perturber about what may be staged
+    # on, or the answer key names aircraft nothing was done to.
+    selection = _selection(_pool(20, on_ground=True), minimum=5)
+    assert selection.eligible == 0
+    assert selection.chosen == frozenset()
+
+
+def test_an_aircraft_outside_the_window_is_not_eligible() -> None:
+    # spec: scn-007, scn-002
+    selection = _selection(_pool(20, at=BEFORE), minimum=5)
+    assert selection.eligible == 0
+
+
+def test_an_aircraft_outside_the_zone_is_not_eligible() -> None:
+    # spec: scn-007, scn-002
+    selection = _selection(_pool(20, lat=0.0, lon=0.0), minimum=5)
+    assert selection.eligible == 0
+
+
+def test_an_excluded_aircraft_is_not_eligible() -> None:
+    # spec: scn-007, adp-008
+    # Refused before the ranking, not after: an exclusion applied afterwards
+    # would let the floor pull in a track adp-008 removed.
+    records = _pool(20)
+    perturbation = plan_track_perturbation(LAYOUT, _spec())
+    assert perturbation is not None
+    every = frozenset(
+        PSEUDONYMISER.aircraft(r["payload"]["icao24"]) or "" for r in records
+    )
+    selection = select_targets(
+        perturbation,
+        records,
+        pseudonymiser=PSEUDONYMISER,
+        excluded=every,
+        minimum=5,
+    )
+    assert selection.eligible == 0
+
+
+def test_one_aircraft_with_many_records_is_counted_once() -> None:
+    # spec: scn-007
+    # Eligibility is per record and selection is per aircraft; counting
+    # records would let a frequently-reported aircraft fill the floor alone.
+    records = [_record(icao24="4d22ec") for _ in range(30)]
+    selection = _selection(records, minimum=2)
+    assert selection.eligible == 1
+    assert len(selection.chosen) == 1
+
+
+def test_a_perturber_given_a_selection_stages_on_exactly_that_set() -> None:
+    # spec: scn-007
+    records = _pool(60)
+    perturbation = plan_track_perturbation(LAYOUT, _spec())
+    assert perturbation is not None
+    selection = select_targets(
+        perturbation, records, pseudonymiser=PSEUDONYMISER, minimum=6
+    )
+    perturber = TrackPerturber(
+        perturbation, pseudonymiser=PSEUDONYMISER, selection=selection
+    )
+    for record in records:
+        perturber.apply(record)
+    assert perturber.affected == selection.chosen
+
+
+def test_a_perturber_with_no_selection_keeps_the_unbounded_behaviour() -> None:
+    # spec: scn-007
+    # Not a fallback pretending to be the new rule: it is the fraction with
+    # no floor, which is what the perturber did before this item and what it
+    # still means when no pool has been surveyed.
+    records = _pool(60)
+    perturbation = plan_track_perturbation(LAYOUT, _spec())
+    assert perturbation is not None
+    perturber = TrackPerturber(perturbation, pseudonymiser=PSEUDONYMISER)
+    for record in records:
+        perturber.apply(record)
+    expected = {
+        p
+        for record in records
+        if (p := PSEUDONYMISER.aircraft(record["payload"]["icao24"])) is not None
+        and perturber.targets(record["payload"]["icao24"])
+    }
+    assert perturber.affected == expected
+
+
+def test_a_floor_of_zero_is_legal_and_is_the_pre_scn_007_behaviour() -> None:
+    # spec: scn-007
+    selection = _selection(_pool(20), minimum=0)
+    assert selection.requested == 2  # 8 per cent of 20, rounded
+    assert selection.floor_reached is True
+
+
+def test_a_negative_floor_is_refused() -> None:
+    # spec: scn-007
+    with pytest.raises(ValueError, match="minimum"):
+        _selection(_pool(20), minimum=-1)
+
+
+def test_the_answer_key_records_what_the_survey_found() -> None:
+    # spec: scn-007, eval-002
+    # A run that staged two because only two were there is a different fact
+    # from one that staged two because two were asked for, and the aircraft
+    # list alone cannot tell them apart.
+    records = _pool(2)
+    spec = _spec()
+    perturbation = plan_track_perturbation(LAYOUT, spec)
+    assert perturbation is not None
+    selection = select_targets(
+        perturbation, records, pseudonymiser=PSEUDONYMISER, minimum=5
+    )
+    perturber = TrackPerturber(
+        perturbation, pseudonymiser=PSEUDONYMISER, selection=selection
+    )
+    for record in records:
+        perturber.apply(record)
+    truth = ground_truth(spec, None, perturber)
+    assert truth["aircraft_eligible"] == 2
+    assert truth["aircraft_requested"] == 5
+    assert truth["aircraft_floor_reached"] is False
