@@ -33,6 +33,29 @@ later test is offered it.
 
 Over all 300 staged hours, **no event anywhere received two different answers** — and every arm is now decided correctly 60 times out of 60, with no spurious firing anywhere at all.
 
+**Read that precisely.** It is not evidence that the ordering resolves conflicts, because on every
+arm of this corpus **exactly one test bids**. The broken-receiver test answers the single-receiver
+hours, the interference test answers the multi-receiver ones, and they never contest the same event.
+The hour-type built to create a real conflict — one receiver *and* an aircraft gap together — has its
+aircraft half invisible, because test 2 was never built. The ordering is proved by unit tests; the
+corpus has never exercised it.
+
+### What the five hour-types actually give you
+
+| Hour type | What is staged | What the system says | Role |
+|---|---|---|---|
+| Quiet baseline | nothing | silence, 60/60 | Negative control |
+| One broken receiver | one receiver | *that receiver is broken*, 60/60 | **Positive** |
+| Interference | several receivers | *something is interfering*, 60/60 | **Positive** |
+| Mixed evidence | one receiver **+ an aircraft gap** | *that receiver is broken*, 60/60 | **Positive** — indistinguishable from the row above |
+| Aircraft coverage gap | an aircraft gap only | silence, 60/60 | Negative control, **discriminating** |
+
+So **three hour-types produce a finding and two produce silence.** The coverage-gap hours are not a
+duplicate of the quiet ones: quiet hours prove the system stays silent when *nothing happens*, and
+coverage-gap hours prove it stays silent when *something real happens that no radio test should
+claim*. That is the stronger of the two guarantees, and it is the job this hour-type was scoped for
+from the beginning.
+
 ## The one fact almost every decision descends from
 
 > **The radio evidence is very strong. The aircraft evidence is weak.**

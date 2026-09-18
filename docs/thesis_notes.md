@@ -5459,3 +5459,98 @@ is generated, because changing either afterwards invalidates every run already s
 campaign makes that cost visible rather than hiding it, which is the point of recording the reasoning
 now.
 
+### Limitation: the aircraft-coverage-gap arm has no positive rule
+
+Stated in full, in the order a write-up needs it, because this is the project's largest single
+limitation and the one most likely to be challenged.
+
+**Why the scenario was chosen.** `docs/research_scope.md` lists five scenario types and says of this
+one and the sensor-fault one that they "are deliberately negative/discriminating cases — correctly
+*not* claiming interference is a first-class evaluation result, not a non-event". The coverage gap
+exists because the failure mode that matters operationally is not missing an incident but *inventing*
+one: an analyst told that an area is being jammed, when in truth the receivers simply stopped hearing
+aircraft there, has been actively misled. The arm was scoped to prove the system does not make that
+mistake. `anom-006` was specified later, as the positive counterpart — the rule that would say *we
+have stopped hearing aircraft here, and nobody is jamming* — giving the arm a claim of its own rather
+than only a silence.
+
+**What was done to test whether it would work.** Three measurements, in sequence, each answering the
+objection to the last.
+
+1. *Run-level counting* (`source_gap_ceiling.py`). Over 40 seed-matched pairs a coverage-gap run held
+   a mean of 16.1 track discontinuities against its control's 15.1, and **never fewer** — 23 greater,
+   17 tied, 0 lower. Zero discordant losses is overwhelming evidence the effect is real. It is also
+   one finding in fifteen, and a detector has no control, so it cannot tell 16 from 15. The root
+   cause was diagnosed as staging yield: 1.7 aircraft per run, with 11 of 40 staging none at all.
+2. *Zone-level scoring* (`source_gap_zone_scoring.py`). If the staged dropouts sit *together*,
+   clustering should concentrate them. Before the corpus was regenerated this scored at chance —
+   7:3, 5:4, 4:2 at 20, 40 and 60 km. After `scn-007` put a floor of five staged aircraft under every
+   run it scored **20 wins to 7** at 20 km, about one in fifty by sign test. That reopened the item.
+3. *Single-run thresholding* (`source_gap_threshold_sweep.py`). The reopening amendment recorded, in
+   advance, that a paired result is not the detector's question, and demanded this measurement before
+   any threshold was chosen. Pre-registered populations, operating-point rule and failure bar; fitted
+   on two base seeds; scored once on a third the threshold never saw.
+
+**Why it does not work, and what proved it.** The third measurement. The best operating point leaving
+`anom-008`'s quiet arm silent — 60 km cluster radius, minimum zone size four, excess threshold 11.53
+— catches 7 of 40 coverage gaps on the development seeds and **3 of 20 on the holdout**, against a
+pre-registered bar of one in four. Two further facts make this a closure rather than a near miss.
+
+*It points the wrong way.* At that operating point the rule fires on **6 of 20 `gnss-degradation`
+runs against 3 of 20 coverage gaps** — twice as often on the arm it is not for as on the arm it is.
+That arm freezes reported staleness where this one suppresses rows; both are genuine track-side
+perturbations and the statistic cannot tell them apart. Because `anom-013` orders `SENSOR-FAULT`,
+`SOURCE-GAP`, `FUSION-SPATIAL`, the data-source rule *outranks* the interference rule, so a wrong
+firing need not merely add a finding — it can claim the zone before the interference rule is offered
+it. Building this would put the one arm the ladder decides correctly 60 times in 60 at risk in order
+to catch a seventh of an arm nothing currently judges. Whether those zones would actually overlap was
+not measured; the hazard is established and its magnitude is not.
+
+*The ceiling is low everywhere, not only at the constraint.* The best Youden's J anywhere on the
+development sweep is 0.275, and it occurs at a 0.38 quiet-arm false-alarm rate `anom-008` forbids
+outright. `anom-012` reported 0.23 to 0.40 on a curve this project already calls weak.
+
+*And the mechanism is visible.* The statistic saturates. At a minimum zone size of one, every arm
+reaches the same maximum ratio of 198.78 with medians differing by 0.6, because taking the maximum
+across a run's zones selects whichever zone had the fewest findings to average over — `anom-012`'s
+smoothing constant dominating a small sample. Separation appears only at a size floor of four, by
+which point a third of runs produce no qualifying zone at all.
+
+Development and holdout sensitivities agree closely, 0.17 against 0.15, which is what makes the
+conclusion strong rather than merely negative: this is a **reliable measurement of a weak effect**,
+not a noisy measurement that more data would resolve. Re-running it over more of the same corpus
+cannot change the answer.
+
+**What could have been done to make it work, and why it was not done.** Five options were available.
+None is impossible; each was declined for a stated reason, and the reasons are mostly cost and scope
+rather than impossibility — which is the honest position for a prototype of this size.
+
+| Option | Why not |
+|---|---|
+| Build it at a more sensitive operating point and accept the false alarms | Breaks `anom-008`, a passing item, and the arm it would falsely fire on is the one the system currently gets right. A rule with an adverse likelihood ratio is worse than no rule |
+| Use the specification's own design — fire on dropouts wherever there is no co-located RF anomaly | Measured at the first closure: a quiet run genuinely holds about 15 discontinuities and no RF anomaly, so the rule would fire on **every** baseline run. The RF side is a *veto*, not a discriminator |
+| Change the statistic — sum or count qualifying zones rather than take the maximum | The two ends of this family were both measured and both failed: the run-level aggregate at 0.8 standard deviations, the zone-level maximum here. Intermediate forms were not tried, and this is the cheapest untried option |
+| Raise the staged fraction so a gap removes most aircraft in an area | With a mean eligible pool of 23.4 this is possible, and it changes what the scenario *means*: removing most aircraft over a region is an outage, not a coverage gap, and an easier problem than the one scoped. It would also require a third corpus generation and invalidate every detection figure measured on v2 |
+| Change the generator so a coverage gap is a zone-level event by construction — suppress a contiguous area rather than a selected set of aircraft | **This is the option both closures identify as the one that would actually work**, and it is declined on cost, not on merit: a third regeneration, every figure in the detection chapter re-measured, and the `scn-007` floor re-derived. It is recorded as future work rather than attempted |
+
+**What the limitation does and does not cost.** It does not cost the scenario. The arm still performs
+the role `research_scope.md` assigned it: a discriminating negative case, scoring 60 of 60 correct
+non-detections, and a *stronger* negative control than `normal-baseline` because it proves the RF
+rules stay silent when something real is happening on the track side — a specificity test against
+cross-modal leakage that a baseline with no disturbance at all cannot provide. What it costs is the
+positive claim, and honesty about it: **the arm contributes no true positives to `eval-002`, its
+correct non-detections are correct only because nothing judges it, and it must never be reported as
+though the system had been tested on it.**
+
+**A consequence that is easy to miss.** With `anom-006` absent, `ambiguous-mixed-evidence` and
+`rf-sensor-fault` are **indistinguishable in the detection layer's reportable output** — both are
+decided `possible_sensor_fault` on all 60 runs. The only staged difference between them is the track
+gap, `tracks.py` gives the ambiguous arm the same `SUPPRESS` mode as the coverage-gap arm, and
+`fusion.py` consumes only `anom-007`'s *environmental* verdict, so on a single-receiver run the track
+evidence never reaches a claim. The arm built to present `anom-013` with genuinely conflicting
+evidence therefore cannot currently produce a second bid. The ladder's "no zone received two answers"
+is a real result and must be read precisely: the ordering is proved by unit tests and a mutation
+pass, but the corpus has never presented it with two rules bidding for one zone, because on every arm
+exactly one rule bids. That is a limitation of the **ladder's** corpus evidence, not only of
+`anom-006`.
+

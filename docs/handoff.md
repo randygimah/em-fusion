@@ -137,7 +137,26 @@ the near-term detection work. The order is a recommendation, not a constraint.
   60 of 60 correct non-detections are correct only because nothing judges that arm. It must not be
   reported as though the system had been tested on it. **What would change it is a generator change,
   not a detector one** — a coverage gap must become a zone-level event separable from a staleness
-  freeze. Both closures of `anom-006` reached that conclusion independently.
+  freeze. Both closures of `anom-006` reached that conclusion independently. The full limitation —
+  why the scenario was chosen, the three measurements taken, what closed it, and the five options
+  for making it work with the reason each was declined — is written up in `docs/thesis_notes.md`
+  under *Limitation: the aircraft-coverage-gap arm has no positive rule*, with the reporting
+  constraints on `eval-002` and the plain-English version in `docs/qa.md` §80.
+- **Three arms produce positive detections, not five.** `rf-sensor-fault`, `gnss-degradation` and
+  `ambiguous-mixed-evidence` are decided 60/60; `normal-baseline` and `aircraft-coverage-gap` are
+  silent 60/60. Every recall/precision/F1 figure is therefore computed over three arms and must say
+  so. The coverage-gap arm is **not** redundant with the baseline — it is a discriminating negative
+  testing specificity against cross-modal leakage, which is the role `research_scope.md` scoped it
+  for from the outset.
+- **`ambiguous-mixed-evidence` is indistinguishable from `rf-sensor-fault` in reportable output.**
+  Both are decided `possible_sensor_fault` 60/60. `tracks.py` gives the ambiguous arm the same
+  `SUPPRESS` mode as the coverage-gap arm, and `fusion.py` consumes only `anom-007`'s *environmental*
+  verdict, so on a single-receiver run the staged track gap never reaches a claim. Recorded on
+  `anom-006`, `eval-002` and `anom-013`.
+- **`anom-013`'s ordering has never arbitrated a real conflict on this corpus.** Exactly one rule
+  bids per arm, so "0 zones given two answers" is not evidence the suppression path works — it is
+  proved by unit tests and a mutation pass, and never reached by the corpus. The arm meant to create
+  the conflict is the ambiguous one, whose second bid `anom-006` would have supplied.
 - **Unmeasured, and recorded rather than assumed:** whether a wrongly-claimed `SOURCE-GAP` zone on
   an interference run would actually overlap the `FUSION-SPATIAL` zone. The sweep kept no centroids.
 - **Fusion is still the radio evidence with an occasional corroborating note.** 41 of 60 reported

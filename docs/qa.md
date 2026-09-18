@@ -5513,6 +5513,80 @@ before any threshold here is worth choosing. Also unmeasured, and recorded rathe
 whether the wrongly-claimed zones on interference runs actually overlap the interference zones. The
 hazard is established; its size is not.
 
+## 80. Does this mean we now only have 4 scenarios instead of 5 to work with?
+
+**No — you still have five, and the fourth is doing the job it was originally scoped for.** The wrong
+assumption worth naming is that `anom-006` was what made the coverage-gap arm useful. It was not.
+`docs/research_scope.md` says of that arm and the sensor-fault arm that they **"are deliberately
+negative/discriminating cases — correctly *not* claiming interference is a first-class evaluation
+result, not a non-event."** That was written before any detector existed, and it is still satisfied:
+the arm scores **60 of 60**. `anom-006` would have added a *positive* claim on top of a role the arm
+already performs; losing it narrows what the arm proves, it does not remove the arm.
+
+### What the five arms actually do now
+
+| Arm | What is staged | Reportable outcome | Role |
+|---|---|---|---|
+| `normal-baseline` | nothing | silent, 60/60 | Negative control |
+| `rf-sensor-fault` | one receiver | `possible_sensor_fault`, 60/60 | **Positive** |
+| `gnss-degradation` | several receivers | `possible_interference_zone`, 60/60 | **Positive** |
+| `ambiguous-mixed-evidence` | one receiver **+ a track gap** | `possible_sensor_fault`, 60/60 | **Positive** — but see below |
+| `aircraft-coverage-gap` | a track gap only | silent, 60/60 | Negative control, **discriminating** |
+
+So the honest count is **three arms producing positive detections and two producing silence**, from
+five generated scenarios.
+
+### The coverage-gap arm is not a duplicate of the baseline
+
+This matters, because "it only produces silence" invites the objection that it is redundant. It is
+not, and the difference is worth stating in the write-up:
+
+- `normal-baseline` proves the rules stay quiet when **nothing happens**.
+- `aircraft-coverage-gap` proves the rules stay quiet when **something real happens on the track side
+  that no RF rule should claim**.
+
+The second is a stronger guarantee than the first. It is a specificity test against *cross-modal
+leakage* — evidence on one sensing modality wrongly producing a claim about another — and a baseline
+with no disturbance in it cannot test that at all. Keep it, and report it as a discriminating
+negative rather than as a missing positive.
+
+### The sharper consequence, which is easy to miss
+
+**With `anom-006` absent, `ambiguous-mixed-evidence` and `rf-sensor-fault` are indistinguishable in
+the detection layer's output.** Both are decided `possible_sensor_fault` on all 60 runs. The chain:
+
+```
+ambiguous-mixed-evidence stages one receiver  → anom-007 verdict = FAULT
+                         + a track gap        → TRACK-GAP findings raised …
+fusion.py consumes only ENVIRONMENTAL verdicts → … and they never reach a claim
+```
+
+`tracks.py` gives the ambiguous arm the **same** `SUPPRESS` mode as the coverage-gap arm — their
+track findings are identical at a shared seed, verified exactly — and `anom-006` was to be what read
+them. So the arm built specifically to give `anom-013` **two conflicting claims to arbitrate cannot
+currently produce a second one.**
+
+Read the ladder's headline result precisely, therefore. "No zone received two answers, 60/60 on all
+five arms" is true and is *not* evidence that the precedence ordering works, because on every arm
+exactly one rule bids. The ordering **is** proved — by unit tests and a mutation pass — but it has
+never been exercised on the corpus. That is a limitation of the ladder's evidence, not just of
+`anom-006`, and it should be stated separately from the detection results.
+
+### What to write in the thesis
+
+Three sentences, roughly:
+
+> The generator produces five scenario types. Three yield positive detections; two yield correct
+> silences, of which the aircraft-coverage-gap arm is a discriminating negative that tests
+> specificity against cross-modal leakage rather than a simple baseline. Because the data-source rule
+> was measured and not built, that arm contributes no true positives to the detection metrics, and
+> the ambiguous arm's track-side evidence is not visible to the detection layer — so the precedence
+> ladder's conflict resolution, while unit-tested, is not exercised by this corpus.
+
+See `docs/thesis_notes.md` for the full limitation — why the scenario was chosen, the three
+measurements taken, what closed it, and the five options for making it work with the reason each was
+declined. Related: [§79](#79-lets-look-at-anom-006-as-per-docshandoffmd).
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
