@@ -14,3 +14,7 @@ data/opensky/*.parquet
 docs/architecture/workspace.json
 docs/architecture/.structurizr/
 docs/architecture/exports/
+
+# Derived zone data cached by measurements/corpus/source_gap_threshold_sweep.py.
+# Regenerable from the corpus; never committed.
+backend/measurements/.zone_cache.json

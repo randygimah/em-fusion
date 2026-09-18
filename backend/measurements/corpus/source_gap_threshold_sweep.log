@@ -1,0 +1,92 @@
+corpus v2 -- one generator, 900 s runs, anom-014 and scn-007 active; base seeds 1412660662, 965530111, 655209063
+reusing cached zones from /app/measurements/.zone_cache.json
+
+development 200 runs (base seeds 1412660662, 965530111), holdout 100 runs (base seed 655209063)
+
+==============================================================================
+ARM IDENTITY -- checked before anything is counted
+==============================================================================
+  normal-baseline == rf-sensor-fault: True
+  aircraft-coverage-gap == ambiguous-mixed-evidence: True
+
+Both are exact, and both follow from `tracks.py`: neither the quiet arm nor
+the sensor-fault arm perturbs tracks, and the coverage-gap and ambiguous
+arms share one SUPPRESS mode. So the clean negative population is 60
+DISTINCT SEEDS and not 120 runs, and the ambiguous arm is not independent
+evidence about this rule. Any false-alarm rate quoted "of 120" here would
+be counting the same run twice.
+
+==============================================================================
+DEVELOPMENT -- the lowest threshold at which the quiet arm goes silent
+==============================================================================
+Zero quiet-arm alarms is the pre-registered constraint: that arm is
+`anom-008`'s control and a rule firing there breaks a passing item.
+
+  km floor  thresh       gap     QUIET     fault      gnss     ambig
+  20     2   16.05    2/40      0/40      0/40     6/40     2/40
+  20     3   15.84    1/40      0/40      0/40     4/40     1/40
+  40     2   16.05    1/40      0/40      0/40     4/40     1/40
+  40     3   15.84    1/40      0/40      0/40     4/40     1/40
+  60     3   11.88    6/40      0/40      0/40    14/40     6/40
+  60     4   11.53    7/40      0/40      0/40    15/40     7/40
+  60     5   11.53    3/40      0/40      0/40    11/40     3/40
+  60     6   11.64    2/40      0/40      0/40     6/40     2/40
+
+==============================================================================
+BEST TRADE-OFF ANYWHERE, ignoring the zero-quiet constraint
+==============================================================================
+Youden's J = sensitivity - false-alarm rate; 0 is a coin flip.
+`anom-012` reported 0.23 to 0.40 and this project already calls that
+weak. A J here no better than that is the ceiling, not the floor.
+
+  km floor  best J  thresh   sens    fpr
+  20     1   0.175   17.18   0.45   0.28
+  20     2   0.100   14.06   0.17   0.07
+  20     3   0.050   10.96   0.15   0.10
+  20     4   0.075    7.82   0.42   0.35
+  20     5   0.000    6.01   0.38   0.38
+  20     6   0.000    8.02   0.17   0.17
+  40     1   0.075    9.61   0.80   0.72
+  40     2   0.100    5.17   0.97   0.88
+  40     3   0.075    5.45   0.93   0.85
+  40     4   0.100    7.82   0.45   0.35
+  40     5   0.025    6.01   0.40   0.38
+  40     6   0.025    7.82   0.20   0.17
+  60     1   0.025    5.25   1.00   0.97
+  60     2   0.150   11.33   0.28   0.12
+  60     3   0.150   10.96   0.23   0.07
+  60     4   0.275    7.68   0.65   0.38
+  60     5   0.200    6.57   0.55   0.35
+  60     6   0.175    5.01   0.47   0.30
+
+Ceiling on development: J = 0.275 at 60 km, floor 4, threshold 7.68 (sensitivity 0.65 at a 0.38 quiet-arm rate, which `anom-008` forbids outright).
+
+==============================================================================
+OPERATING POINT chosen on development by the pre-registered rule
+==============================================================================
+  cluster radius    60 km
+  minimum zone size 4 findings
+  excess threshold  11.53
+  development       7/40 = 0.17 sensitivity, 0/40 quiet-arm alarms
+
+HOLDOUT -- base seed 655209063, scored once, not re-entered
+  aircraft-coverage-gap        3/20   (0.15)  POSITIVE -- what the rule is for
+  normal-baseline              0/20   (0.00)  decisive negative (anom-008)
+  rf-sensor-fault              0/20   (0.00)  same findings as the quiet arm, not independent
+  gnss-degradation             6/20   (0.30)  negative, unclean -- freezes tracks
+  ambiguous-mixed-evidence     3/20   (0.15)  same findings as the positive, not a negative
+
+Pre-registered bar: sensitivity >= 0.25 with ZERO quiet-arm alarms.
+Holdout: sensitivity 0.15, quiet-arm alarms 0.
+VERDICT: DOES NOT SEPARATE -- anom-006 closes again on this evidence
+
+AND THE RULE POINTS THE WRONG WAY. At this operating point it fires on
+6 of 20 `gnss-degradation` runs (0.30) against
+3 of 20 coverage gaps (0.15) -- more often on the arm it is not
+for than on the arm it is. `anom-013` orders SENSOR-FAULT, SOURCE-GAP,
+FUSION-SPATIAL, so SOURCE-GAP outranks the interference rule: a firing
+here does not merely add a wrong finding, it can take the zone before
+FUSION-SPATIAL is offered it, on the one arm the ladder currently gets
+right 60 of 60. Whether the zones actually overlap is NOT measured here
+-- this script kept no centroids -- so the hazard is established and its
+size is not.
