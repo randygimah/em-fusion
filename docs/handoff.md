@@ -8,12 +8,14 @@ detects deviations deterministically, and turns evidence bundles into schema-val
 grounding-checked AI hypotheses for an analyst to review. Decision support, never autonomous
 decision-making.
 
-This session did two things the previous one had left as open decisions. It moved **the measurement
-kit into the repo**, because every detection figure the project quotes was produced by a script
-living in a session-scoped temporary directory — the conclusions were committed and the reproduction
-was not. Then it built **`anom-014`** and **`scn-007`**, the two items that had been specified and
-deliberately left unbuilt because both require regenerating the corpus. Both are built, both
-parameters were measured rather than chosen, and the regeneration itself has **not** been run.
+This session cleared the decision the detection layer had been blocked on. It moved **the
+measurement kit into the repo**, because every detection figure the project quotes was produced by a
+script living in a session-scoped temporary directory — the conclusions were committed and the
+reproduction was not. It built **`anom-014`** and **`scn-007`**, the two items specified and
+deliberately left unbuilt because both change how the corpus is *made*; **`scn-008`**, so a run
+records the batch it came from, which the first corpus never did; and **`db-010`**, an index the
+`observations` table had been missing since its first migration. It then **regenerated the corpus**
+and **re-measured the whole detection layer** against it.
 
 ## Current state
 
@@ -100,6 +102,25 @@ are both at `passes: true`.
   `docs/detection_layer.md` (ladder row, vocabulary, blocking section rewritten)
 - Existing `anom-001` fixtures lengthened from one reading to two, so they exercise the shipped policy
   rather than pinning the minimum to zero
+- `d341e71` docs: detection layer, handoff, and the two measured parameters
+- `f7a4ec4` docs: register the two new measurements and their logs of record
+- `9d5ac83` feat(anom-014, scn-007): 925 passed on the database tier - both pass
+- `1a68b8d` / `5a55dfd` / `28764be` spec, tests and build for **`scn-008`**
+- `0d5d1ad` fix(scn-007): withdraw the floor's first measurement, re-measure cleanly
+- `2a3019d` docs: record the corpus v2 base seeds **before** generating
+- `424f90d` docs: a corpus selector, so two corpora cannot be mixed by accident
+- `046d898` fix(measurements): point the kit at corpus v2, **including the baseline**
+- `b9e28b7` / `10280ae` spec and build for **`db-010`**, with migration `0004`
+- `e48a8e1` / `4981fc3` the v2 re-measurement and its logs of record
+- `c17a393` spec: re-open `anom-006`; re-measure `anom-005`'s gate
+- `a7c7520` docs: the regeneration written up in `thesis_notes.md` and `detection_layer.md`
+- `8c04f8d` docs: handoff and **progress note v27**
+- New: `CORPUS_V2_PLAN.md`, `backend/measurements/corpus/_corpus.py`,
+  `backend/alembic/versions/0004_observations_run_index.py`,
+  `measurements/mutation/mutate_scn008_batch_provenance.py`
+- Changed: `app/scenario/emitter.py` (`BatchProvenance`, `with_batch`), `app/pipeline.py`
+  (supplies the batch), `docs/spec.jsonl` (`scn-008` and `db-010` added; `anom-005`, `anom-006`,
+  `anom-014` amended), `docs/qa.md` §78
 
 ## Failed attempts
 
@@ -144,37 +165,70 @@ are both at `passes: true`.
 - Measurement scripts print nothing until they finish. `python -u` does not help when every `print`
   is after the loop; a long run looks identical to a hung one. Worth adding progress output before
   the re-measurement.
+- **Four measurement scripts hardcoded `range(101, 121)` as the quiet runs** — v1's
+  `normal-baseline` block. Pointed at v2 they would have built the **baseline** from the old corpus
+  while measuring the new one, which is the most damaging place the two could be mixed because the
+  baseline is what "normal" means. Found by reading the scripts rather than by any failure. Now
+  `_corpus.quiet_runs()`.
+- **My own first patch to `fusion_gate_decision.py` made it worse**, writing
+  `WHERE <v2 filter> OR scenario_type='normal-baseline'` — the `OR` pulled in both corpora's quiet
+  runs. Caught on the next pass.
+- **The `0004` migration was written with `down_revision = "0003"`** where the convention is the full
+  stem `0003_detection_findings`. That left a broken chain and two heads, and **all 27 schema tests
+  failed at once**, which is the right way for it to fail. Revision ids are now noted in the repo map.
+- **`rf_noise_episode_duration.py` crashed on the v2 corpus** with `min() arg is an empty sequence`.
+  Not a regression: `anom-014` means the false-episode population it characterises is now empty by
+  construction. The script reports that as the finding instead of crashing.
+- **A figure that looked like the one regression was a broken metric.** "Centre error" moved from a
+  median of 0.0 km to 45.3 km with a max of 107.5 km. Those are **exactly this layout's minimum and
+  median receiver separations**: the metric compared the dismissed receiver against `sensors[0]`, an
+  arbitrary member of the staged set, so it was reporting the distance between two correct answers.
+  Measured against the *nearest* staged receiver it is 0.0 km on every run. **A figure matching a
+  constant of the apparatus is probably measuring the apparatus.**
 
 ## Next step
 
-**The regeneration has not been run, and one decision gates it: which base seeds.** The originals
-were never recorded, so full reuse is not available. The recommendation on the record is **fresh
-seeds throughout**, reported as a new corpus under stated conditions, rather than a partially-paired
-one where some runs are comparable and some are not.
+The regeneration is done and the detection layer is re-measured, so nothing is blocked on a corpus
+decision any more. Three items are buildable; the order below is a recommendation, not a constraint.
 
-1. **Regenerate the batches** with both items active. Record the base seed and run-id range per batch
-   this time — the absence of that record is what removed the option above.
-2. **Re-measure, in this order**, per `backend/measurements/README.md`: `sensor_fault_catch_rate` →
-   `rate_excess_window_source` → `fusion_gate_decision` + `fusion_excess_distribution` →
-   `source_gap_ceiling` → `ladder_end_to_end`. **Diff each new log against the committed one** and
-   report every figure that moved, including ones that moved favourably.
-3. **`anom-006`**, only after the re-measurement, repeating the seed-matched pair measurement before
-   any threshold in it is chosen. It may still not be buildable; that is an honest outcome.
-4. `anom-003` (z-score) — note that it is buildable now but **not measurable** before the
-   regeneration, since its figures would read through `anom-002`'s baselines.
-5. **`evb-001`**, evidence bundles — genuinely independent of the regeneration, because a bundle
-   groups what the rules already emit and its shape does not change when the corpus does.
+1. **`anom-006`'s threshold measurement — do this first, it is cheap and decisive either way.**
+   The regeneration moved zone-level scoring from chance to 20:7 at a 20 km cluster radius, which is
+   why the item was re-opened. That figure compares a staged run against *its own control*, and a
+   detector has no control: it sees one run and must decide. So the measurement to take is whether a
+   **fixed threshold separates a staged zone from an unstaged one on a single run** — sensitivity and
+   false-alarm rate across a sweep, on the v2 corpus, with the quiet arm as the negative population.
+   If it separates, build the rule against that curve. **If it does not, close the item again with
+   the evidence** — that is an honest outcome and it retires a stated threat to validity either way.
+   It is now minutes of work rather than hours, because of `db-010`.
+2. **`evb-001`, evidence bundles.** The natural consumer of what the ladder now produces, and the
+   gateway to Phase 9 — the AI hypothesis layer, which is the project's actual contribution. It is
+   also the one remaining item **no corpus change can invalidate**, because a bundle groups what the
+   rules already emit and its shape does not depend on the data. Build it whichever way `anom-006`
+   falls.
+3. **`anom-003`, the z-score detector.** Carries the `db-008` extensibility prediction, scored once
+   as a partial. Now genuinely measurable, since the corpus is stable and homogeneous — which it was
+   not when this was last listed as "buildable now".
 
 ### Open and unowned
 
-- **The progress note has not been updated** for `anom-014`, `scn-007`, or the measurement kit. It is
-  at version 26 and now understates what exists.
-- **The `aircraft-coverage-gap` arm still has no rule.** Its correct non-detections must not be
-  reported as though the system had been tested on that arm.
-- **Fusion is still the radio evidence with an occasional corroborating note.** Whether the
-  regeneration changes the 47-of-61 unmeasurable figure is the first thing to check after it.
+- **The `aircraft-coverage-gap` arm still has no rule.** Its 60 of 60 correct non-detections are
+  correct only because nothing judges that arm. Must not be reported as though the system had been
+  tested on it. Item 1 above is what retires this.
+- **Fusion is still the radio evidence with an occasional corroborating note.** 41 of 60 reported
+  zones have no measurable track side, improved from 47 of 61. Any write-up claiming multi-source
+  fusion must say so plainly.
+- **Corpus v1 is still in the database** and always will be (`db-007`). Every measurement must go
+  through `measurements/corpus/_corpus.py`. Three scripts still select runs by other means and were
+  not on the re-measurement path — `cluster_background.py`, `cluster_separation_after_scn006.py`,
+  `track_gap_hit_rate.py`, `track_gap_recall.py`, `staging_on_ground.py`, `cluster_leak_into_fusion.py`,
+  `rate_excess_two_forms.py`, `sensor_fault_fragmentation.py` and
+  `sensor_fault_neighbour_candidates.py` should be checked before any of them is quoted again.
+- **`DEFAULT_AFFECTED_FRACTION` is now inert.** With a mean eligible pool of 23.4, `round(0.08 x 23.4)`
+  is 2 and the floor of 5 always wins, so every v2 run stages exactly five aircraft. Good for
+  evaluation — no variance in difficulty between runs — but nobody should read the fraction as doing
+  work. Revisit if the pool ever grows.
 - A **broadband generation arm**, without which `anom-007`'s Medium and Low confidence bands have no
-  corpus behind them.
+  corpus behind them. All 300 v2 runs are narrowband, as all 240 v1 runs were.
 - The **frontend suite exits non-zero**: `TypeError: control.runs.map is not a function` at
   `scenarioControl.tsx:344`. Needs a spec item covering both the test stub and `useScenarioControl`'s
   missing array check.
