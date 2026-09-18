@@ -5164,6 +5164,83 @@ The consequence for the regeneration is a requirement rather than a caveat: **ge
 corpus with one generator, at one run length, and record the base seed and run count of every batch**
 - which is what `scn-008` now exists to make possible.
 
+### What the regeneration changed, reported in both directions
+
+Corpus v2 is 300 runs in twelve batches of twenty, three base seeds recorded before generation, one
+generator, one run length, every run carrying its batch provenance. Sixty seeds carry all five
+scenario types, so every staged run has a same-seed `normal-baseline` twin - the same hour, the same
+aircraft, nothing staged - which the first corpus never had and which its measurements had to
+approximate with `rf-sensor-fault` runs.
+
+**The two items did what they were specified to do, and the prediction matched the outcome exactly.**
+`anom-014` was justified on a measurement saying every one of the 80 false episodes was a single
+reading. On the regenerated corpus every one of the **17 spurious sensor faults** those episodes were
+promoting is gone, across all five arms, with the catch rate unchanged at 60 of 60 on both staged
+types. The false-episode population is now empty by construction, and no episode anywhere has zero
+length, so `anom-012`'s zero-length refusal guards a case that can no longer arise. `scn-007` removed
+the empty answer key entirely: 0 runs of 60 stage nothing, against 11 of 40 before.
+
+The ladder is clean on every arm: 60 of 60 on all five, no spurious fires anywhere, and still no zone
+receiving two answers. The `aircraft-coverage-gap` and `normal-baseline` arms are now **wholly**
+silent rather than 75 of 80 and 19 of 20, and that difference is entirely the 17 spurious faults.
+
+The track side strengthened substantially. The rate excess median went from 3.87 to **9.61** and the
+proportion clearing the pre-registered threshold from 26 of 40 to **58 of 60**, with no unusable
+windows where there had been seven. Corroboration improved from 7 zones of 61 to **18 of 60**.
+
+**What did not change is the honest limitation.** Forty-one of sixty reported zones still have no
+measurable track side. Two thirds is better than three quarters and it is the same statement: fusion
+remains the radio evidence with an occasional corroborating note, and any write-up claiming
+multi-source fusion must say so.
+
+### A decision reversed by measurement, and the care the reversal needs
+
+`anom-006` was closed as unbuildable on two findings, and the regeneration overturns one of them
+while confirming the other.
+
+The run-level finding held exactly as predicted. Staged runs now hold 16.9 track-gap findings against
+their controls' 14.2, winning 57 of 60 pairs with 3 ties and no losses, and detected staged dropouts
+rose from 1.07 to 3.05 per run. But the excess of 2.7 sits against a control spread of 3.3 - 0.8 of a
+standard deviation - and a detector sees one run without its control, so it still cannot tell 17 from
+14. That was written on the item *before* the regeneration, with the arithmetic that produced it, and
+it is worth noting that a prediction recorded in advance and then confirmed is the only reason this
+half can be reported without suspicion of hindsight.
+
+The zone-level finding reversed. Scoring the best zone on a staged run against the best zone on its
+own control was previously indistinguishable from a coin at every radius - 7:3, 5:4 and 4:2 at 20, 40
+and 60 km. It is now **20:7, 14:8 and 10:5**, and at 20 km twenty wins against seven losses is about
+one in fifty by sign test. The mechanism is visible in the other figures: five staged aircraft put
+enough co-located dropouts in one place for a cluster to form, where 1.7 could not.
+
+The care this needs is in what it does *not* establish, and it is the same distinction that has
+caught this project before. A sign test over matched pairs says the staged zone **tends to** beat its
+control. A detector has no control: it sees one run and must decide. Whether a threshold exists that
+separates a staged zone from an unstaged one on a single run is a different question, and the figures
+above are not evidence for it. The item is therefore recorded as *buildable to try*, not as *known
+buildable*, with the instruction that the threshold measurement comes before any threshold is chosen.
+Treating a matched-pair result as though it licensed a single-run threshold would be the same error
+as reading `anom-012`'s truth-seeded curve as a production curve.
+
+### A metric that was measuring the layout rather than the system
+
+Recorded because it looked like the one regression in the regeneration and was not.
+
+`rate_excess_window_source.py` reported a "centre error" - how far the detected zone centre sat from
+the staged one - and it moved from a median of 0.0 km on v1 to 45.3 km on v2, with a maximum of
+107.5 km. Those two numbers are exactly this layout's **minimum and median receiver separations**,
+which is what gave it away. The metric compared the dismissed receiver against `sensors[0]`, the
+first entry in the answer key's list, when an interference incident is staged on two or three
+receivers and any of them is a correct centre. It was measuring which staged receiver happened to be
+dismissed first, and v1's 0.0 was luck in list ordering rather than accuracy.
+
+Measured as the distance to the *nearest* staged receiver - which is the question the label claims to
+ask - it is **0.0 km on every run**, maximum 0.0. The detected centre always lands on a receiver the
+answer key names.
+
+The general form is worth keeping: a figure that is stable at a suspiciously round value, or that
+matches a constant of the apparatus, should be checked against that constant before it is believed.
+Here the "error" was a distance between two correct answers.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;

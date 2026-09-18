@@ -2,7 +2,7 @@
 
 *A standing orientation page. **Edited, never appended to** — unlike `docs/qa.md` (a growing record of
 questions) and `docs/thesis_notes.md` (a growing record of decisions). If something here is out of
-date, change it. Last true as of 18 September 2026, after `anom-014` and `scn-007` were built.*
+date, change it. Last true as of 18 September 2026, after the corpus was regenerated (300 runs, corpus v2).*
 
 ---
 
@@ -27,11 +27,11 @@ later test is offered it.
 
 | | Question | Answer | State |
 |---|---|---|---|
-| 1 | One receiver off-normal, neighbours normal? | that receiver is broken | **Built** — 60 of 60 |
-| 2 | Aircraft dropouts, no radio anomaly nearby? | we are not hearing aircraft here | **Blocked** — both blockers now built, awaiting regeneration |
+| 1 | One receiver off-normal, neighbours normal? | that receiver is broken | **Built** — 60 of 60, and no longer fires anywhere it shouldn't |
+| 2 | Aircraft dropouts, no radio anomaly nearby? | we are not hearing aircraft here | **Worth trying** — was ruled out, the regeneration reopened it |
 | 3 | Several receivers off-normal together? | something is interfering | **Built** — 60 of 60 |
 
-Over all 240 staged hours, **no event anywhere received two different answers.**
+Over all 300 staged hours, **no event anywhere received two different answers** — and every arm is now decided correctly 60 times out of 60, with no spurious firing anywhere at all.
 
 ## The one fact almost every decision descends from
 
@@ -45,7 +45,7 @@ Over all 240 staged hours, **no event anywhere received two different answers.**
 | The rate excess replaced it | An attempt to get more out of the weak side |
 | The broken-receiver test goes **first** | So the weak signal never arbitrates what the strong one settles |
 | Interference does **not** require aircraft agreement | So the weak signal cannot veto the strong one |
-| The coverage test cannot be built | It has **only** the weak signal |
+| The coverage test was ruled out | It has **only** the weak signal — though see below: more aircraft per hour has changed this |
 
 The radio side has been comparatively simple throughout and has essentially just worked. Nearly all
 the complexity is the aircraft side, and it is the complexity of extracting a reliable decision from
@@ -76,22 +76,27 @@ aircraft**, and **11 of 40 affect none at all**. That single number is why:
 - the coverage test cannot be built — its signal is 1 extra dropout against a background of 15;
 - the aircraft evidence is unmeasurable in **47 of 61** reported zones.
 
-**Both fixes are now built and waiting on the regeneration.**
+**Both fixes are built, and the hours have been regenerated.** The corpus is now 300 hours made by
+one generator, all the same length, with the seeds that produced them written down.
 
-| Fix | What it does | Measured value |
+| Fix | What it does | What it actually changed |
 |---|---|---|
-| `anom-014` | A radio blip lasting one reading is not an event | **10 s** — removes 80 of 80 spurious episodes, keeps 140 of 140 real ones |
-| `scn-007` | A floor under how many aircraft an hour affects | **5** — the extra dropouts rise steadily with the number affected, and at 3–5 a staged hour beats its own control 10 times out of 10 |
+| `anom-014` | A radio blip lasting one reading is not an event | **17 false alarms → 0**, across every arm, with real catches untouched |
+| `scn-007` | At least five aircraft affected per hour | **0 hours now affect nobody**, against 11 in 40 before |
 
-Neither takes effect until the staged hours are regenerated, and regenerating invalidates every
-detection figure at once — which is why they were built **together**, so there is one invalidation
-and one set of conditions rather than two.
+The aircraft side got materially stronger: the dropout-rate signal roughly doubled (median 3.87 →
+9.61), and 58 of 60 interference hours now clear the bar where 26 of 40 did.
 
-**What the floor does not fix**, so it is not over-sold: an ordinary hour holds 14.4 dropouts with a
-spread of 3.5, and the one hour in the corpus that affected twelve aircraft beat its control by only
-4.0 — about one spread. No reachable floor makes the coverage test work by *counting dropouts per
-hour*. It removes the hours that could not be scored at all, and gives a place-based test enough
-dropouts close together to work with. Whether that is enough is for re-measurement to say.
+**The limitation that did not go away.** 41 of 60 reported places still have *no measurable aircraft
+evidence at all* — better than 47 of 61, and the same sentence: this is the radio evidence with an
+occasional corroborating note, not two sources agreeing.
+
+**The coverage test is worth trying again.** It was ruled out because scoring a place on a staged
+hour against the same place on its control was a coin flip. With five aircraft affected instead of
+1.7, that scoring now wins 20 times against 7 losses. **But it is not proven buildable**: that test
+compares an hour against its own control, and a real detector never has the control — it sees one
+hour and must decide. Whether a fixed bar can separate them on a single hour is a different question
+and has not been measured.
 
 ## The RF knowledge this project actually needs
 
