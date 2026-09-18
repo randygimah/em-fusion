@@ -75,7 +75,8 @@ for seed, arms in by_seed.items():
     if staged and control:
         pairs.append((staged, control))
 
-print(f"seed-matched pairs: {len(pairs)}")
+print(f"seed-matched pairs: {len(pairs)} over all 240 runs "
+      f"(source_gap_ceiling.py restricts to runs 121-240 and gets 40)")
 
 by_count = defaultdict(list)
 staged_counts = []
@@ -84,8 +85,8 @@ control_totals = []
 for staged, control in pairs:
     n = len((staged["ground_truth"] or {}).get("aircraft") or [])
     staged_counts.append(n)
-    s_findings, _ = detect_track_gaps(tracks_for(staged["id"]), POLICY)
-    c_findings, _ = detect_track_gaps(tracks_for(control["id"]), POLICY)
+    s_findings = detect_track_gaps(tracks_for(staged["id"]), POLICY)
+    c_findings = detect_track_gaps(tracks_for(control["id"]), POLICY)
     by_count[n].append((len(s_findings), len(c_findings)))
     control_totals.append(len(c_findings))
 

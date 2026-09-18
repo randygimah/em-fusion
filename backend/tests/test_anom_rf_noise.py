@@ -46,6 +46,7 @@ from app.detection.baseline import (
 )
 from app.detection.rf_noise import (
     ANOMALY_TYPE,
+    DEFAULT_MINIMUM_DURATION,
     RULE_ID,
     Direction,
     RfNoiseAnomaly,
@@ -169,7 +170,7 @@ def test_a_reading_exactly_at_the_threshold_raises_nothing() -> None:
 def test_a_reading_one_unit_past_the_threshold_raises_exactly_one() -> None:
     """The item's second named failure case."""
     # spec: anom-001, FR-303
-    findings = detect_rf_noise(run_of([JUST_OVER]), baseline_of(CELL), POLICY)
+    findings = detect_rf_noise(run_of([JUST_OVER] * 2), baseline_of(CELL), POLICY)
 
     assert len(findings.anomalies) == 1
 
@@ -178,7 +179,7 @@ def test_the_threshold_comes_from_the_policy_and_not_from_the_rule() -> None:
     """Same readings, two thresholds, two answers. The item's first
     constraint is that the threshold is configuration."""
     # spec: anom-001
-    readings = run_of([JUST_OVER])
+    readings = run_of([JUST_OVER] * 2)
     permissive = ThresholdPolicy(
         metric=RfMetric.POWER_DBM,
         direction=Direction.ABOVE,
@@ -231,7 +232,7 @@ def test_a_policy_and_a_baseline_for_different_metrics_are_refused() -> None:
     # spec: anom-001
     with pytest.raises(RuleError, match="metric"):
         detect_rf_noise(
-            run_of([JUST_OVER]),
+            run_of([JUST_OVER] * 2),
             baseline_of(CELL, mean=20.0, metric=RfMetric.SNR_DB),
             POLICY,
         )
@@ -312,7 +313,7 @@ def test_severity_comes_from_the_configured_bands(
     power: float, expected: Severity
 ) -> None:
     # spec: anom-001, ui-001
-    (anomaly,) = detect_rf_noise(run_of([power]), baseline_of(CELL), POLICY).anomalies
+    (anomaly,) = detect_rf_noise(run_of([power] * 2), baseline_of(CELL), POLICY).anomalies
 
     assert anomaly.severity is expected
 
@@ -333,7 +334,7 @@ def test_the_measured_deviation_is_carried_but_severity_stays_a_word() -> None:
     traceability, in the same arrangement anom-003 makes for its z."""
     # spec: anom-001, ui-001
     (anomaly,) = detect_rf_noise(
-        run_of([HIGH_POWER]), baseline_of(CELL), POLICY
+        run_of([HIGH_POWER] * 2), baseline_of(CELL), POLICY
     ).anomalies
 
     assert anomaly.peak_deviation == pytest.approx(16.0)
@@ -426,7 +427,7 @@ def test_the_anomaly_carries_the_type_and_rule_the_spec_names() -> None:
     makes an explanation checkable."""
     # spec: anom-001, FR-402
     (anomaly,) = detect_rf_noise(
-        run_of([JUST_OVER]), baseline_of(CELL), POLICY
+        run_of([JUST_OVER] * 2), baseline_of(CELL), POLICY
     ).anomalies
 
     assert (anomaly.anomaly_type, anomaly.rule_id) == (ANOMALY_TYPE, RULE_ID)
@@ -478,7 +479,7 @@ def test_a_track_observation_is_refused() -> None:
     )
 
     with pytest.raises(RuleError):
-        detect_rf_noise([*run_of([JUST_OVER]), track], baseline_of(CELL), POLICY)
+        detect_rf_noise([*run_of([JUST_OVER] * 2), track], baseline_of(CELL), POLICY)
 
 
 def test_the_order_readings_arrive_in_is_not_an_input() -> None:
@@ -486,7 +487,9 @@ def test_the_order_readings_arrive_in_is_not_an_input() -> None:
     same requirement here: a finding that depends on traversal order is not
     reproducible from a seed."""
     # spec: anom-001, FR-301, NFR-601
-    powers = [QUIET_DBM, JUST_OVER, HIGH_POWER, QUIET_DBM, MEDIUM_POWER]
+    # Each episode is two readings long, so both clear the shipped minimum
+    # duration (`anom-014`) and the cell ordering is still what is under test.
+    powers = [QUIET_DBM, JUST_OVER, HIGH_POWER, QUIET_DBM, MEDIUM_POWER, MEDIUM_POWER]
     other = RfCell(SENSOR, 3)
     # Two cells, because with one there is no cell ordering to get wrong --
     # found by mutation: emitting cells in arrival order passed a
@@ -533,7 +536,7 @@ def test_an_anomaly_is_immutable() -> None:
     dal-001's argument applied one layer along."""
     # spec: anom-001
     (anomaly,) = detect_rf_noise(
-        run_of([JUST_OVER]), baseline_of(CELL), POLICY
+        run_of([JUST_OVER] * 2), baseline_of(CELL), POLICY
     ).anomalies
 
     assert isinstance(anomaly, RfNoiseAnomaly)
@@ -703,3 +706,19 @@ def test_a_suppressed_episode_does_not_disturb_an_unjudged_cell() -> None:
     found = detect_rf_noise(observations, baseline_of(CELL), policy_with(10))
     assert len(found.suppressed) == 1
     assert [u.cell for u in found.unjudged] == [RfCell(SENSOR, 7)]
+
+
+def test_the_shipped_minimum_is_one_reading_interval() -> None:
+    # spec: anom-014
+    # Pinned because the number is measured and a change to it must be a
+    # deliberate act with a new measurement behind it, not a silent edit.
+    # Over 240 stored runs every one of the 80 episodes falling outside a
+    # staged cell or window was exactly one reading long, so 10 s removes
+    # all 80 while still catching 140 of 140 runs that stage any RF.
+    assert DEFAULT_MINIMUM_DURATION == timedelta(seconds=10)
+
+    # And the default is what an unconfigured policy actually gets. Without
+    # this the constant could be correct and unused.
+    assert POLICY.minimum_duration == DEFAULT_MINIMUM_DURATION
+    observations = run_of([QUIET_DBM, JUST_OVER, QUIET_DBM])
+    assert detect_rf_noise(observations, baseline_of(CELL), POLICY).anomalies == ()
