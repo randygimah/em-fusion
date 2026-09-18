@@ -28,6 +28,7 @@ import os
 from collections import Counter
 from datetime import timedelta
 
+import _corpus
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
@@ -38,6 +39,8 @@ from app.detection.rf_noise import Direction, ThresholdPolicy, detect_rf_noise
 
 POLICY = ThresholdPolicy(metric=RfMetric.POWER_DBM, direction=Direction.ABOVE,
                          threshold=6.0, medium_at=10.0, high_at=15.0)
+
+print(_corpus.describe())
 
 engine = create_engine(os.environ["DATABASE_URL"], pool_pre_ping=True)
 factory = sessionmaker(bind=engine, autoflush=False)
@@ -70,7 +73,8 @@ def pct(values, p):
 
 with factory.begin() as s:
     runs = s.execute(text(
-        "SELECT id, scenario_type, ground_truth FROM scenario_runs ORDER BY id"
+        "SELECT id, scenario_type, ground_truth FROM scenario_runs "
+        f"WHERE {_corpus.run_filter()} ORDER BY id"
     )).mappings().all()
 
 quiet = [r["id"] for r in runs if r["scenario_type"] == "normal-baseline"]

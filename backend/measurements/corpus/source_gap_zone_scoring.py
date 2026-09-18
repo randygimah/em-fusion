@@ -17,6 +17,7 @@ import os
 from collections import defaultdict
 from datetime import timedelta
 
+import _corpus
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
@@ -32,6 +33,8 @@ GAP = GapPolicy(threshold=timedelta(seconds=100),
                 contact_fresh_within=timedelta(seconds=30), box=BOX)
 CLUSTER_RADII = [20.0, 40.0, 60.0]
 EXCESS_RADIUS = 60.0
+
+print(_corpus.describe())
 
 engine = create_engine(os.environ["DATABASE_URL"], pool_pre_ping=True)
 factory = sessionmaker(bind=engine, autoflush=False)
@@ -90,7 +93,7 @@ def best_zone_excess(run_id, cluster_km):
 with factory.begin() as s:
     runs = s.execute(text(
         "SELECT id, seed, scenario_type, ground_truth FROM scenario_runs "
-        "WHERE id BETWEEN 121 AND 240 AND scenario_type IN "
+        f"WHERE {_corpus.run_filter()} AND scenario_type IN "
         "('aircraft-coverage-gap','rf-sensor-fault') ORDER BY id")).mappings().all()
 
 pairs = defaultdict(dict)

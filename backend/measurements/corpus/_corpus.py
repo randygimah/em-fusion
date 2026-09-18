@@ -64,3 +64,26 @@ def describe() -> str:
         "corpus v1 -- ids 1-240, THREE generator versions (600 s runs 1-20, "
         "pre-scn-006 runs 1-100). Figures from it are not comparable with v2."
     )
+
+
+def quiet_runs(conn) -> list[int]:
+    """The `normal-baseline` run ids of the current corpus.
+
+    A helper rather than a range because the baseline is what "normal"
+    *means*, and building it from the other corpus's quiet runs would
+    poison every figure downstream while leaving the measurement looking
+    like it worked. Four scripts had `range(101, 121)` hardcoded -- v1's
+    quiet block -- which was correct exactly until a second corpus existed.
+    """
+    from sqlalchemy import text
+
+    rows = conn.execute(text(
+        f"SELECT id FROM scenario_runs WHERE {run_filter()} "
+        "AND scenario_type = 'normal-baseline' ORDER BY id")).all()
+    if not rows:
+        raise SystemExit(
+            f"no normal-baseline runs in {which()}. anom-002 refuses to build "
+            "a baseline from anything else, so there is nothing to measure "
+            "against."
+        )
+    return [r[0] for r in rows]

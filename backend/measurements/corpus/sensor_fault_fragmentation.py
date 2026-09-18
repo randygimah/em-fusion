@@ -18,6 +18,7 @@ import statistics
 from collections import Counter
 from datetime import datetime, timedelta
 
+import _corpus
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
@@ -31,6 +32,8 @@ from app.scenario.layout import load_layout
 POLICY = ThresholdPolicy(metric=RfMetric.POWER_DBM, direction=Direction.ABOVE,
                          threshold=6.0, medium_at=10.0, high_at=15.0)
 FAULT = FaultPolicy()
+print(_corpus.describe())
+
 engine = create_engine(os.environ["DATABASE_URL"], pool_pre_ping=True)
 factory = sessionmaker(bind=engine, autoflush=False)
 layout = load_layout()
@@ -63,7 +66,9 @@ with factory.begin() as s:
         "SELECT id FROM scenario_runs WHERE scenario_type='normal-baseline'"
     )).scalars()] if False else None
 
-quiet = [r for r in range(101, 121)]
+with factory.begin() as _s:
+    quiet = _corpus.quiet_runs(_s)
+print(f"baseline from {len(quiet)} quiet runs of this corpus", flush=True)
 table = compute_rf_baselines(rf_for(quiet), RfMetric.POWER_DBM,
                              baseline_run_ids=quiet, window=timedelta(hours=2))
 

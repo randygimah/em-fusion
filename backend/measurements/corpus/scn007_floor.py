@@ -38,6 +38,7 @@ import statistics
 from collections import defaultdict
 from datetime import timedelta
 
+import _corpus
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
@@ -69,14 +70,12 @@ def tracks_for(run_id):
         payload=TrackPayload(**r["payload"])) for r in rows]
 
 
-LO = int(os.environ.get("RUN_LO", "121"))
-HI = int(os.environ.get("RUN_HI", "240"))
 
 with factory.begin() as s:
     runs = s.execute(text(
-        "SELECT id, scenario_type, seed, ground_truth FROM scenario_runs "
-        "WHERE id BETWEEN :lo AND :hi ORDER BY id"), {"lo": LO, "hi": HI}).mappings().all()
-print(f"runs {LO}-{HI} (post-scn-006 by default; 1-100 used the pre-gate generator)")
+        f"SELECT id, scenario_type, seed, ground_truth FROM scenario_runs "
+        f"WHERE {_corpus.run_filter()} ORDER BY id")).mappings().all()
+print(_corpus.describe())
 
 # Pair a coverage-gap run with the run sharing its seed that staged nothing
 # on the tracks -- the same corpus window and the same aircraft.

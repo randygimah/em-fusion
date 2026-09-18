@@ -25,6 +25,7 @@ import statistics
 from collections import Counter
 from datetime import datetime, timedelta
 
+import _corpus
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
@@ -41,6 +42,8 @@ FAULT = FaultPolicy()
 RADIUS = 70.0
 TOLERANCES = [timedelta(seconds=s) for s in (10, 30, 60, 120)]
 BARS = [1.0, 1.5, 2.0, 3.0, 4.0]
+
+print(_corpus.describe())
 
 engine = create_engine(os.environ["DATABASE_URL"], pool_pre_ping=True)
 factory = sessionmaker(bind=engine, autoflush=False)
@@ -65,7 +68,9 @@ def rf_for(run_ids):
         payload=RfPayload(**r["payload"])) for r in rows]
 
 
-quiet = list(range(101, 121))
+with factory.begin() as _s:
+    quiet = _corpus.quiet_runs(_s)
+print(f"baseline from {len(quiet)} quiet runs of this corpus", flush=True)
 table = compute_rf_baselines(rf_for(quiet), RfMetric.POWER_DBM,
                              baseline_run_ids=quiet, window=timedelta(hours=2))
 

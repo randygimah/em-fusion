@@ -3,6 +3,7 @@ from __future__ import annotations
 import os, statistics
 from collections import Counter
 from datetime import timedelta
+import _corpus
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from app.dal.models import (CanonicalObservation, DataMode, Location, ObservationType,
@@ -23,6 +24,8 @@ BOX = BoundingBox(lat_min=49.0, lat_max=54.0, lon_min=3.0, lon_max=11.0)
 GAP = GapPolicy(threshold=timedelta(seconds=100),
                 contact_fresh_within=timedelta(seconds=30), box=BOX)
 THRESHOLD = 1.58
+print(_corpus.describe())
+
 engine = create_engine(os.environ["DATABASE_URL"], pool_pre_ping=True)
 factory = sessionmaker(bind=engine, autoflush=False)
 layout = load_layout()
@@ -45,12 +48,14 @@ def obs_for(run_id, kind):
                               scenario_run_id=run_id),
         payload=pl(**r["payload"])) for r in rows]
 
-quiet = list(range(101, 121))
+with factory.begin() as _s:
+    quiet = _corpus.quiet_runs(_s)
+print(f"baseline from {len(quiet)} quiet runs of this corpus", flush=True)
 table = compute_rf_baselines([o for q in quiet for o in obs_for(q, "rf")],
                              RfMetric.POWER_DBM, baseline_run_ids=quiet,
                              window=timedelta(hours=2))
 with factory.begin() as s:
-    runs = s.execute(text("SELECT id FROM scenario_runs WHERE id BETWEEN 121 AND 240 "
+    runs = s.execute(text(f"SELECT id FROM scenario_runs WHERE {_corpus.run_filter()} "
                           "AND scenario_type='gnss-degradation' ORDER BY id")).scalars().all()
 
 vals = []

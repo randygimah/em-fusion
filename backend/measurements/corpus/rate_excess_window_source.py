@@ -26,6 +26,7 @@ import statistics
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta
 
+import _corpus
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
@@ -50,6 +51,8 @@ GAP = GapPolicy(threshold=timedelta(seconds=100),
 RADII = [30.0, 45.0, 60.0]
 #: The thresholds batch 2 chose, which batch 3 was scored at out of sample.
 THRESHOLD = {30.0: 1.79, 45.0: 1.79, 60.0: 1.58}
+
+print(_corpus.describe())
 
 engine = create_engine(os.environ["DATABASE_URL"], pool_pre_ping=True)
 factory = sessionmaker(bind=engine, autoflush=False)
@@ -76,7 +79,9 @@ def obs_for(run_id, kind):
         payload=payload(**r["payload"])) for r in rows]
 
 
-quiet = list(range(101, 121))
+with factory.begin() as _s:
+    quiet = _corpus.quiet_runs(_s)
+print(f"baseline from {len(quiet)} quiet runs of this corpus", flush=True)
 table = compute_rf_baselines(obs_for_quiet := [o for q in quiet for o in obs_for(q, "rf")],
                              RfMetric.POWER_DBM, baseline_run_ids=quiet,
                              window=timedelta(hours=2))
@@ -85,7 +90,7 @@ print(f"baseline over {len(table.baselines)} cells", flush=True)
 with factory.begin() as s:
     runs = s.execute(text(
         "SELECT id, seed, scenario_type, ground_truth FROM scenario_runs "
-        "WHERE id BETWEEN 121 AND 240 ORDER BY id")).mappings().all()
+        f"WHERE {_corpus.run_filter()} ORDER BY id")).mappings().all()
 
 by_seed = defaultdict(dict)
 for r in runs:
