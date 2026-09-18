@@ -17,101 +17,62 @@ parameters were measured rather than chosen, and the regeneration itself has **n
 
 ## Current state
 
-**`anom-014` and `scn-007` are built, measured and green.** Both parameters were read off
-measurements taken before the number was written down. **98 spec items** (no new ids; both existing
-items amended).
+**The corpus has been regenerated and the whole detection layer re-measured.** Corpus v2 is 300 runs
+in twelve batches of twenty, from three base seeds recorded *before* generation, one generator, one
+run length, every run carrying its batch provenance. **45 spec items passing of 98.** Unit tier 748
+passed; database tier 934 passed; ruff and mypy clean.
 
-| Item | Tests | Mutants | Parameter | Measured on |
-|---|---|---|---|---|
-| `anom-014` | 12 new | **13 of 13 killed** | minimum episode duration **10 s** | 240 runs, 1,337 episodes |
-| `scn-007` | 21 new | **17 of 19**, 2 provably equivalent | staged-aircraft floor **5** | 60 seed-matched pairs |
+### Corpus v2
 
-Unit tier: **739 passed**, ruff and mypy clean. Database tier: **925 passed, zero failures**
-(`make test-backend`). **43 spec items passing of 96.**
-
-### The measurement kit is in the repo — `backend/measurements/`
-
-45 files. `corpus/` holds 20 measurements needing the database and a generated corpus; `mutation/`
-holds 9 harnesses needing neither; `superseded/` keeps 7 earlier iterations, two of which the
-write-up cites as the step that exposed a defect. **The committed `.log` beside each script is the
-figure of record** — re-run it and diff, which is also the re-measurement protocol after a
-regeneration.
-
-Deliberately outside `app/` and `tests/`, so `make lint`, `make type-check`, `make test` and the
-coverage gate never see it. The cost is real and stated in its README: nothing there is linted, and
-the guard against rot is the diff.
-
-Checked before committing: **no aircraft identifier appears in any log**, and every script handles
-`aircraft_id` by set membership and counting, never printing one — and by that point it is already
-`dal-004`'s pseudonym. Recorded in the README as a standing constraint on anything added.
-
-Two things found while doing it. The eight long-form measurement notes in the same directory were
-**already in `thesis_notes.md` verbatim** — the reasoning had been captured and only the instruments
-had not. And the base seed each batch was derived from is **recorded nowhere**: `scenario_runs` holds
-the per-run seed, and only batch 3's `20260917` survives, in the pre-registration.
-
-### `anom-014`: the separation is total, not a trade-off
-
-Measured over 240 runs at the shipped bands, on the two populations the minimum must separate:
-
-| | n | duration |
+| | v1 (240 runs, ids 1-240) | v2 (300 runs, ids 241-540) |
 |---|---|---|
-| **False** — episodes outside any staged cell or window | 80 | **every one exactly 1 reading, 0 s** |
-| **True** — on a staged cell inside its window | 1,257 | median 20 s, max 210 s |
+| Generator versions | **three** | one |
+| Run length | 600 s and 900 s | 900 s throughout |
+| Base seeds recorded | one, by accident | **all three, on every row, re-derivable** |
+| Runs staging no aircraft | 11 of 40 | **0 of 60** |
+| Seeds carrying all five arms | none | **60 of 60** |
 
-A minimum of **10 s** removes **80 of 80** false episodes and still catches **140 of the 140 runs
-that stage any RF**. 10, 20 and 30 s are indistinguishable on both populations; the **bottom** of
-that plateau is taken because every larger value discards more true episodes for no gain — 24 per
-cent at 10 s against 56 per cent at 30 s. Tied to the corpus's 10 s sampling interval: it encodes a
-count of readings, not a span of time.
+Base seeds: `1412660662`, `965530111`, `655209063`, recorded in `CORPUS_V2_PLAN.md`. Every staged run
+now has a same-seed `normal-baseline` twin, which v1 never had.
 
-A suppressed episode is reported in **its own field**, not among the unjudged cells. "I looked and it
-was too brief" is a different claim from "I had no baseline, so I did not look", and folding them
-together discards the episode's window — the only thing that makes a suppression checkable.
+**Both corpora are in the database** (`db-007` forbids deleting). `measurements/corpus/_corpus.py`
+selects between them **on the recorded base seed, not an id range** — `parameters->>'base_seed' IS
+NOT NULL` names v2 exactly and survives re-runs and shifted ids. Default v2, `CORPUS=v1` overrides.
 
-### `scn-007`: the floor is 5, and the spec's own implementation was impossible
+### What the re-measurement said, in both directions
 
-Over the **40 seed-matched pairs generated after `scn-006`** — the restriction matters, see Failed
-attempts — grouped by how many aircraft the run actually staged on:
+| Measurement | v1 | v2 |
+|---|---|---|
+| Spurious sensor faults, all arms | 17 | **0** |
+| False `anom-001` episodes | 80 | **0** — population empty by construction |
+| Zero-length episodes | 300 of 1257 | **0 of 1137** |
+| Ladder, all five arms | 60/60, 60/60, 20/20, 75/80, 19/20 | **60/60 on all five** |
+| Zones given two answers | 0 | **0** |
+| Rate excess, median | 3.87 | **9.61** |
+| Runs clearing the threshold | 26 of 40 | **58 of 60** |
+| Unusable windows | 7 | **0** |
+| Corroborated zones | 7 of 61 | **18 of 60** |
+| **Not measurable** | 47 of 61 | **41 of 60** |
+| `anom-006` run-level excess | +1.0 | +2.7 (against sd 3.3 — still 0.8 sd) |
+| `anom-006` zone-level, 20 km | 7:3 (chance) | **20:7** |
 
-| staged | pairs | excess over its own control | staged beats control |
-|---|---|---|---|
-| 0 | 11 | +0.0 | 0/11 |
-| 1 | 10 | +0.7 | 7/10 |
-| 2 | 9 | +1.0 | 6/9 |
-| 3 | 4 | +2.0 | **4/4** |
-| 4 | 2 | +2.5 | **2/2** |
-| 5 | 4 | +3.0 | **4/4** |
+**`anom-006` is re-opened, as buildable-to-try and not as known-buildable.** The zone-level signal is
+real, but a sign test over matched pairs says the staged zone *tends to* beat its control and says
+nothing about whether a single-run threshold separates them — which is the question a detector faces.
+The threshold measurement comes before any threshold. Recorded on the item.
 
-The excess rises **monotonically**, and the win rate goes from 13 of 19 below three to **10 of 10** at
-three to five. The floor is 5 — the top of that band, and also the most any clean run stages, so the
-curve cannot be read further. Extrapolating, a one-sd excess needs ~6 staged and two-sd ~12; twelve is
-a third of a typical pool, which is an outage rather than an incident. Six is defensible and
-unmeasured, five is measured.
+**The fusion limitation stands.** 41 of 60 reported zones still have no measurable track side. Better
+than 47 of 61; the same sentence.
 
-**The two parameters were read from opposite ends of their bands, deliberately.** `anom-014` took the
-bottom of its plateau because every larger value had a measured cost; `scn-007` took the top of its
-band because a larger value there costs nothing measured and buys margin. The rule as recorded: *read
-a parameter from the end of its range where the cost lies.*
+### Also built this session
 
-**The item's stated implementation could not be done where it assumed.** It says to rank the eligible
-aircraft and take the lowest n — but ranking needs a pool, and `scn-002`'s staging seam is a
-per-record transform on a stream, which is exactly why selection was made a pure function of seed and
-pseudonym. So the run now **surveys its window first**: one read through `adp-001`'s reader with no
-ingest, ranking the eligible set and handing the chosen subset to the perturber. Eligibility is asked
-of the perturbation object rather than implemented twice, so the survey and the perturber cannot
-drift and name aircraft nothing was done to. The answer key gained `aircraft_eligible`,
-`aircraft_requested` and `aircraft_floor_reached`.
-
-### What `scn-007` will not fix — stated in advance
-
-The control background is **14.4 findings per run, standard deviation 3.5**, and a detector sees one
-run without its control. The single run staging twelve aircraft cleared its control by **4.0** —
-about 1.1 standard deviations. Extrapolating the measured yield, a one-sd excess needs roughly seven
-staged aircraft and two sd roughly fourteen. **No reachable floor makes `anom-006` work by counting
-findings per run.** The floor removes the empty answer key and gives a zone-level rule enough
-co-located dropouts to concentrate; whether that is enough is for re-measurement, and it is written
-into the spec item, the thesis notes and `detection_layer.md` so it cannot quietly become a claim.
+- **`scn-008`** — batch provenance on every run row, verified against real data: every run re-derives
+  its own seed from what its row records. 10 of 11 mutants killed, survivor unreachable.
+- **`db-010`** — `observations` had **no index on `scenario_run_id`**, a foreign key with
+  `ON DELETE CASCADE`, on a 20.7M-row 12 GB table. Every measurement was running one sequential scan
+  of the whole table *per run*. Migration `0004`. Index scan now, 135 ms.
+- **The measurement kit** is in the repo at `backend/measurements/` — 47 files, each with its
+  committed log of record, plus a README carrying the run commands and the re-measurement protocol.
 
 ## Files in flight
 
