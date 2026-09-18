@@ -5257,6 +5257,81 @@ the system is silent on that arm because it has no rule for it, not because it j
 Reporting it as a success would be precisely the error the zero-anomalies control exists to prevent,
 one level up. See §72, §75, [[thesis_notes]].
 
+## 77. I feel like I have lost a bit of understanding of the detection layer
+
+**Your high-level model is not too high-level — it is the actual architecture, stated correctly.**
+
+> given these datasets passed through a common model, if we inject disruptions based on specific
+> scenarios, the detection layer should establish what normal looks like, tell us what deviated from
+> it, and why
+
+That is the three boxes. Everything built sits in one of them. Nothing in the detection layer is
+outside that sentence.
+
+### The rate excess, since it was never introduced properly
+
+Aircraft stop reporting all the time. A quiet hour with nothing staged holds about **15 dropouts**. So
+*"aircraft stopped reporting here"* means nothing on its own.
+
+The first attempt asked: **are there lots of dropouts close together?** That failed, and in hindsight
+obviously — busy airspace always has lots of dropouts close together. Comparing a place against
+*other places* just measures how busy it is.
+
+The rate excess changes the comparison to: **in this place, during this window, did dropouts happen
+more often than they normally do in that same place?** Each location becomes its own control, which
+removes "some places are always busy" as an explanation.
+
+### Youden's J, likewise
+
+**Catch rate minus false-alarm rate.** 0 = coin flip, 1 = perfect.
+
+It exists to stop a good-sounding number hiding a bad one. A test catching 80% of real events sounds
+strong — but if it also fires on 80% of hours where nothing happened, it has told you nothing, and
+J = 0 says so in one figure. The aircraft side scores about 0.3: real, and far from something to act
+on alone.
+
+### Why there were so many decisions
+
+Almost every one descends from a single measured fact: **the radio evidence is very strong and the
+aircraft evidence is weak.** 8 dB against a 1.5 dB normal wobble, versus a J of 0.3.
+
+| Decision | Descends from |
+|---|---|
+| Clustering abandoned | Aircraft evidence too weak to beat background |
+| Rate excess invented | An attempt to get more out of the weak side |
+| Broken-receiver test goes **first** | So the weak signal does not arbitrate what the strong one settles |
+| Interference does not **require** aircraft agreement | So the weak signal cannot veto the strong one |
+| Coverage test **cannot be built** | It has *only* the weak signal |
+
+Five decisions, one fact. And the radio side has been comparatively simple throughout and has
+essentially just worked — **all the complexity is the aircraft side**, and it is the complexity of
+extracting a reliable decision from genuinely marginal evidence.
+
+### On whether this is too ambitious for someone new to RF
+
+Worth pushing back on. The things that actually went wrong: an injected signal dipping below a
+threshold and fragmenting an event; a measurement taken with the answer key then used to choose a
+parameter; one event reported once per receiver; a control arm the ordering removes before the rule
+sees it.
+
+**None of those are RF problems.** They are measurement-discipline problems — *is this number
+measuring what I think, is this the right control, does this test exercise what production does.*
+That is research method, and it transfers.
+
+The RF knowledge the project has actually needed is four lines, and they are all in
+`docs/detection_layer.md`.
+
+### What came out of this
+
+Two things. **A standing one-page orientation doc** (`docs/detection_layer.md`) — the three boxes, the
+ladder and its state, the one-fact table, the vocabulary, what is blocking the rest, and where to look
+next. It is **edited, never appended to**, which is what separates it from this file and from
+`thesis_notes.md`.
+
+And a correction to how I write: **"Youden's J" reached these conversations without ever being
+introduced.** The progress note deliberately never uses the term at all, because it is written for
+someone outside the project — that discipline should have applied in chat too. See §72, §75, §76.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -5426,3 +5501,5 @@ one level up. See §72, §75, [[thesis_notes]].
 | **Empty answer key** | A run labelled as staging an incident whose ground truth names no aircraft — 11 of 40 coverage-gap runs. Indistinguishable from its control by construction, so it silently dilutes any recall measured over the arm. See §75. |
 | **Corroboration** | What the aircraft side contributed to a claim the radio side already established — corroborated, not corroborated, or not measurable. Kept separate from confidence so a weak signal can raise a claim and never lower it. See §76. |
 | **Unit of report** | The thing a rule announces, as against the evidence it announces it from. Corrected upward three times in this project: readings to episodes, episodes to receivers, receivers to events. See §76. |
+| **Rate excess** | In this place, did dropouts happen more often during the window than they normally do *in that same place*? A location compared against itself, which removes "some places are always busy" as an explanation. See §77. |
+| **Youden's J** | Catch rate minus false-alarm rate; 0 is a coin flip and 1 is perfect. Stops a strong-sounding catch rate hiding an equally high false-alarm rate. The aircraft side scores about 0.3. See §77. |
