@@ -4962,6 +4962,147 @@ are correct only because `anom-006` is unbuilt: the system is silent on that arm
 rule for it, not because it judged and declined. Reporting 75 of 80 as a success would be exactly the
 error `anom-008` exists to prevent, one level up.
 
+### A threshold that says what crossing it means and nothing about not crossing it
+
+`anom-001` reports an episode: a run of consecutive readings sitting past a configured bar. Nothing
+in the original item stopped an episode being one reading long, and the consequence was measured
+twice before it was fixed. At least one episode was raised on 14 of 100 runs that staged nothing at
+all on the RF grid, and a one-reading episode has a start equal to its end, so it presents a window
+of no length to `anom-012`, which divides by it. Both symptoms were contained downstream —
+`anom-007` refuses an episode its own readings do not sustain, and `anom-012` refuses a zero-length
+window outright — and the item was therefore specified and deliberately left unbuilt, on the grounds
+that removing the cause would invalidate every figure measured through `anom-001` for the sake of
+tidiness at a harm already caught. It was built when a corpus regeneration became necessary for
+other reasons, so that one invalidation covered both.
+
+The value of the minimum was not chosen. It was measured on the two populations it has to separate,
+over all 240 stored runs at the shipped bands: episodes on a cell the answer key names inside the
+staged window, against every other episode raised anywhere. The separation is complete. Of the 80
+episodes in the second population, **every single one is exactly one reading long**, while the 1,257
+in the first run to a median of 20 seconds and a maximum of 210. A minimum of 10 seconds — one
+sampling interval, which is to say *at least two readings* — removes 80 of 80 false episodes and
+still catches **140 of the 140 runs that stage any RF at all**. It is not a trade-off; at that value
+nothing measured is lost.
+
+Ten, twenty and thirty seconds are indistinguishable on both populations, and the bottom of that
+plateau was taken deliberately. Each larger value discards more true episodes for no measured gain —
+24 per cent of them at 10 s against 56 per cent at 30 s — and 10 s claims no more than the sentence
+the item exists to enforce, that one reading is not an event. The number is tied to the corpus's 10 s
+sampling interval and is recorded as such: the quantity it encodes is a count of readings, not a span
+of time, and a change of interval requires re-deriving it rather than carrying it across.
+
+The design decision worth recording is where a suppressed episode is reported. The item as first
+written said it should go "in the same channel `anom-001` already uses for cells it could not judge",
+which reads as though it should join the unjudged cells. It should not, and the reason is the
+distinction this project has now made three times in three rules. An unjudged cell is the statement
+*I had no baseline, so I did not look*; a suppressed episode is the statement *I looked, I saw the
+bar crossed, and it did not last*. Those are the same separation of silence from evidence of absence
+that `anom-007`'s three-valued verdict and `anom-005`'s three-valued corroboration are built on, and
+folding the second into the first would discard the episode's own window — the only thing that makes
+a suppression checkable afterwards. It gets its own field, carrying the cell, the window, the
+reading count, and the minimum it failed.
+
+The wrong assumption underneath the original defect is worth stating plainly, because it is the same
+one that produced `anom-007`'s misattribution a day earlier: *a threshold tuned so that crossing it
+means something says nothing about what not crossing it means.* There it was a neighbour with no
+reported anomaly being read as a neighbour reading normally. Here it is a single crossing being read
+as an event. In both cases the rule was treating the absence of a threshold crossing as positive
+evidence, and in both cases the fix was to go back to the readings.
+
+### A specification that could not be implemented where it assumed
+
+`scn-007` puts a floor under the number of aircraft a run stages on, and the item named its own
+implementation: rank the eligible aircraft by their derived value and take the lowest *n*, where *n*
+is the greater of the floor and the fraction's expected count. Building it revealed that the
+implementation cannot be done where the item assumed it would be, and the reason is a property the
+generator acquired deliberately two items earlier.
+
+Ranking needs the pool. `scn-002`'s staging seam is a per-record transform over a stream the replay
+processes one window at a time, and it never holds a pool — which is precisely why selection was made
+a pure function of the seed and one aircraft's own pseudonym in the first place, so that nothing
+depended on arrival order, batch size, or how many aircraft had been seen so far. A floor cannot be
+expressed that way, because "the lowest *n*" is a statement about a set rather than about a member.
+The two requirements are not in conflict but they cannot be met in the same pass.
+
+The resolution was to add a pass rather than weaken either. The run now reads its corpus window once
+through the replay adapter's reader without ingesting anything, collects the pseudonyms eligible
+under the same three gates the perturber applies — inside the window, inside the zone, airborne, and
+not on `adp-008`'s exclusion list — ranks that set, and hands the chosen subset to the perturber
+before the replay begins. The cost is one additional scan of a 133,634-row extract per run, against a
+run that already ingests tens of thousands of observations. What it buys is the original property
+intact: the selection is still a pure function of the seed and the pool, still independent of order,
+and still reproducible without replaying the run.
+
+One guard was added to stop the survey and the perturber drifting apart. Eligibility is asked of the
+perturbation object itself rather than implemented twice, because a survey that disagreed with the
+perturber about what may be staged on would rank aircraft the perturber then refused — and the answer
+key would name aircraft nothing was done to, which is the empty-answer-key failure this item exists
+to remove, arriving by a different door.
+
+A second decision followed from running it. The run records what the survey *found* and not only what
+it staged: how many aircraft were eligible, how many were asked for, and whether the floor was
+reached. A run that staged two aircraft because only two were there is a different fact from a run
+that staged two because two were asked for, and the aircraft list alone cannot distinguish them —
+which would leave an evaluation unable to say whether a miss belonged to the detector or to the
+corpus.
+
+### A default that made the behaviour worse before the measurement was in
+
+Worth recording because it was caught by the existing suite rather than by inspection, and because
+the mechanism is easy to reproduce. The floor was committed with a placeholder default of zero while
+its value was being measured, on the assumption that zero would be a no-op that restored the previous
+behaviour. It is not, and three database-backed tests failed immediately.
+
+The old rule thresholded each aircraft's own derived value at the fraction, which on a small pool
+sometimes drew one aircraft and sometimes none. The new rule takes `round(fraction × pool)`, which on
+a small pool is deterministically **zero**. So a floor of zero is strictly worse than what came
+before: it converts an occasional empty answer key into a guaranteed one on exactly the runs the item
+was written to protect. The tests that caught it were asserting that a coverage-gap run withholds
+rows and that its answer key names aircraft — both true before, both false with the placeholder in
+place.
+
+The lesson is not about the placeholder. It is that an "expected count" and a "draw" are different
+estimators with the same mean, and substituting one for the other is a behavioural change even when
+the parameter is unchanged. A test asserting the two are equivalent at zero would have been wrong;
+the test now in place asserts the opposite, with the reason attached.
+
+### Where the floor was set, and what it does not fix
+
+The floor's value was measured the same way the minimum duration was: on the populations it has to
+separate, and before the number was written down. The existing corpus already contains the
+experiment, in 60 seed-matched pairs — a coverage-gap run and a run on the same seed staging nothing
+on the tracks, so the same corpus window and the same aircraft. Grouping those pairs by how many
+aircraft the run actually staged on gives the excess in track-gap findings as a function of the
+count.
+
+The result breaks sharply and not where the smooth story would put it. With zero staged the excess is
+exactly zero, as it must be. With one or two, a staged run beats its own control on **16 of 26**
+pairs, which is barely better than a coin. With three, four or five it beats it on **15 of 15** — at
+even odds a result of about one in thirty thousand. The floor is set at five: the top of that band
+and its best-evidenced cell, eight pairs all won, with the largest measured excess at +2.2 findings.
+
+Five aircraft at the measured detection yield give roughly two or three detected staged dropouts,
+which is the least that can form a zone rather than a pair of points, and that is the property the
+rule downstream needs rather than a larger run-level count.
+
+The choice took the *top* of its band where `anom-014` took the *bottom* of its plateau, and the
+asymmetry is deliberate rather than inconsistent. For the minimum duration every larger value on the
+plateau had a measured cost — more true episodes discarded for no gain, since the false population
+was already empty. For the floor a larger value inside the reliable band costs nothing measured and
+buys margin toward the spread the detector actually has to clear. A parameter should be read from the
+end of its range where the cost lies, and the two ends differ because the costs do.
+
+**What the floor does not fix**, recorded so that the regeneration is not over-sold. The control
+background is 14.4 findings per run with a standard deviation of 3.5, and a detector sees one run
+without its control. The single run in the corpus that staged twelve aircraft cleared its control by
+4.0 findings — about 1.1 standard deviations. Extrapolating the measured yield, an excess of one
+standard deviation needs roughly seven staged aircraft and two standard deviations roughly fourteen.
+**No reachable floor makes `anom-006` work by counting findings per run.** What `scn-007` does is
+remove the empty answer key, which was making a fifth of the arm unscoreable by construction, and
+give a zone-level rule enough co-located dropouts to concentrate. Whether that is enough for
+`anom-006` to be built at all is a question for re-measurement after the regeneration, and it is
+explicitly not settled by this item.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;

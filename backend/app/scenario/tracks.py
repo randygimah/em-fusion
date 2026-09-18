@@ -91,8 +91,31 @@ DEFAULT_AFFECTED_FRACTION = 0.08
 #: a share of a pool, and once `scn-006` restricted the pool to aircraft in
 #: flight the share began rounding to nothing: a mean of 1.7 per run, with 11
 #: of 40 staging none at all and therefore carrying an empty answer key.
-#: MEASURED_PLACEHOLDER
-DEFAULT_MINIMUM_AIRCRAFT = 0
+#:
+#: Measured over 60 seed-matched pairs, grouping each pair by how many
+#: aircraft the run actually staged on. Below three, a staged run beats its
+#: own control on 16 of 26 pairs -- barely better than a coin. At three,
+#: four and five it beats it on **15 of 15**, which at even odds is a one in
+#: thirty thousand result. Five is the top of that band and its
+#: best-evidenced cell (8 pairs, all won, the largest excess at +2.2
+#: findings), so five is taken.
+#:
+#: The top of the band here, where `anom-014` took the bottom of its
+#: plateau, and the asymmetry is deliberate: there every larger value had a
+#: measured cost in true episodes, and here a larger value costs nothing and
+#: buys margin toward the spread a detector actually has to clear. Five
+#: aircraft at the measured yield give roughly two or three detected
+#: dropouts, which is the least that can form a zone rather than a pair of
+#: points.
+#:
+#: **What this does not do**, recorded so it is not over-claimed: the
+#: control background is 14.4 findings per run with a standard deviation of
+#: 3.5, and even the single run that staged twelve aircraft cleared its
+#: control by only 4.0 -- about 1.1 standard deviations. No reachable floor
+#: makes `anom-006` work by counting findings per run. This removes the
+#: empty answer key and gives a zone-level rule something to concentrate;
+#: whether that is enough is for re-measurement after the regeneration.
+DEFAULT_MINIMUM_AIRCRAFT = 5
 
 
 @dataclass(frozen=True)

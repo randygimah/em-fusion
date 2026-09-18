@@ -313,7 +313,8 @@ def test_severity_comes_from_the_configured_bands(
     power: float, expected: Severity
 ) -> None:
     # spec: anom-001, ui-001
-    (anomaly,) = detect_rf_noise(run_of([power] * 2), baseline_of(CELL), POLICY).anomalies
+    findings = detect_rf_noise(run_of([power] * 2), baseline_of(CELL), POLICY)
+    (anomaly,) = findings.anomalies
 
     assert anomaly.severity is expected
 

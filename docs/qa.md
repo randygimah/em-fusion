@@ -5332,6 +5332,99 @@ And a correction to how I write: **"Youden's J" reached these conversations with
 introduced.** The progress note deliberately never uses the term at all, because it is written for
 someone outside the project — that discipline should have applied in chat too. See §72, §75, §76.
 
+## 78. Move all measurements into the repo, and regenerate if that allows us to move forward
+
+**Both were right, and the first one was more urgent than it looked.**
+
+### Why the measurement scripts mattered more than they seemed to
+
+Every detection figure the project quotes — the sensor-fault rule catching 60 of 60, the rate
+excess's trade-off curve, the fusion gating decision, the ceiling on the source-gap rule — was
+produced by a script that lived in a session-scoped temporary directory. The *conclusions* were
+committed, in `thesis_notes.md` and on the spec items. The *reproduction* was not.
+
+That is a specific kind of gap and worth naming. A dissertation figure that cannot be re-derived is
+not wrong, but it cannot be defended against the obvious question — *how do you know?* — with
+anything better than "I measured it and wrote down what it said". The scripts are the answer to that
+question, and they were one `rm -rf /tmp` away from not existing.
+
+It mattered *now* rather than later because the regeneration was about to invalidate every one of
+those figures. Re-measuring means re-running those exact scripts; if they had been lost first, the
+re-measurement would have been a rewrite from the prose describing what the original had done.
+
+The one thing that did **not** need moving: eight long-form measurement notes in the same directory
+turned out to already be in `thesis_notes.md` verbatim. The reasoning had been captured and only the
+instruments had not — which is the same split, seen from the other side.
+
+### The correction to the handoff's own ordering
+
+The handoff listed `anom-003` (the z-score detector) as *"independent of the regeneration question,
+so buildable now"*. That is true of the **build** and false of the **figures**. `anom-003` is a
+detection rule reading `anom-002`'s baselines, so anything measured through it before a regeneration
+is invalidated by that regeneration exactly as `anom-001`'s figures are — building it first would
+have added an eighth item to the re-measurement list rather than dodging it.
+
+`evb-001` genuinely is independent, and the difference is instructive: evidence bundles are
+*structural*. A bundle groups what the rules already emit, and its shape does not change when the
+corpus does. **"Buildable without the regeneration" and "measurable without the regeneration" are
+different properties**, and only the second one is what "independent" was being used to mean.
+
+### Why regenerate at all, when three rules are already green
+
+The case is not that detection is broken. It is that the project's central claim currently cannot be
+made. The system is described as fusing replayed aviation telemetry *and* synthetic RF, and what has
+been measured is the radio evidence with a corroborating note in 7 cases out of 61 — because three
+quarters of zones have no measurable track side at all. That is not a detector problem; it is a
+corpus problem, with a single cause: a mean of 1.7 staged aircraft per run and a fifth of one arm
+staging none at all.
+
+### A floor of zero is worse than no floor — which is not obvious
+
+Worth recording because it was a genuine surprise, caught by the existing test suite rather than by
+reading the code.
+
+The staged-aircraft floor was committed with a placeholder default of zero while its real value was
+being measured, on the assumption that zero is a no-op. It is not. The two rules are different
+estimators:
+
+| | how it picks | on a pool of 20, 8 per cent |
+|---|---|---|
+| Before (a **draw**) | each aircraft's own derived value is tested against 0.08 | sometimes 2, sometimes 1, sometimes 0 |
+| After (an **expected count**) | take the lowest `round(0.08 x 20)` by derived value | **always 1** |
+| On a pool of 5 | | draw: sometimes 1 — count: **always 0** |
+
+They have the same mean and different behaviour at the bottom. On a small pool the draw occasionally
+produces one aircraft and the rounded count produces none *every time*, so a floor of zero converts
+an occasional empty answer key into a guaranteed one — on exactly the runs the item exists to
+protect. Three database-backed tests failed immediately, which is the system working as intended.
+
+The general lesson: **substituting an expected count for a draw is a behavioural change even when the
+parameter is unchanged.** It is invisible where the pool is large and decisive where it is small.
+
+### Why the two new parameters were read from opposite ends of their ranges
+
+Both `anom-014`'s minimum episode duration and `scn-007`'s aircraft floor were measured rather than
+chosen, and both measurements produced a *band* of values that perform identically rather than a
+single peak. They were then resolved in opposite directions, which looks inconsistent and is not.
+
+| | the band | taken | why that end |
+|---|---|---|---|
+| Minimum episode duration | 10, 20, 30 s all give 140/140 runs caught and 0/80 false episodes kept | **10 s**, the bottom | Every larger value discards more true episodes — 24 per cent at 10 s against 56 per cent at 30 s — for no measured gain, because the false population is already empty |
+| Staged-aircraft floor | 3, 4, 5 all give 15 of 15 staged runs beating their own control | **5**, the top | A larger value inside the band costs nothing measured and buys margin toward the background spread a detector has to clear |
+
+**Read a parameter from the end of its range where the cost lies.** The ends differ because the costs
+do: one band has a measured price for going higher and the other does not.
+
+### What the regeneration will and will not fix
+
+Stated in advance, so it is not over-claimed afterwards. The floor removes the empty answer key and
+gives a zone-level rule enough co-located dropouts to work with. It does **not** make the source-gap
+rule work by counting findings per run: the control background is 14.4 findings with a standard
+deviation of 3.5, and the single run that staged twelve aircraft cleared its control by 4.0 — about
+1.1 standard deviations. An excess of one standard deviation would need roughly seven staged
+aircraft, two would need roughly fourteen. Whether `anom-006` can be built at all remains open, and
+the regeneration is what makes it *askable* rather than what answers it.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |

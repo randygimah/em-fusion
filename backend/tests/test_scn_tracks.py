@@ -53,6 +53,7 @@ from app.scenario.incident import (
 from app.scenario.layout import load_layout
 from app.scenario.seeding import derive_unit
 from app.scenario.tracks import (
+    DEFAULT_MINIMUM_AIRCRAFT,
     TrackMode,
     TrackPerturber,
     load_exclusions,
@@ -877,3 +878,23 @@ def test_the_floor_does_not_lower_what_the_fraction_asked_for() -> None:
     selection = _selection(_pool(400), minimum=5)
     assert selection.requested == 32
     assert len(selection.chosen) == 32
+
+
+def test_the_shipped_floor_is_five_aircraft() -> None:
+    # spec: scn-007
+    # Pinned because the number is measured and changing it must be a
+    # deliberate act with a new measurement behind it. Below three staged
+    # aircraft a run beats its own seed-matched control on 16 of 26 pairs;
+    # at three to five it beats it on 15 of 15.
+    assert DEFAULT_MINIMUM_AIRCRAFT == 5
+
+    # And the default is what an unconfigured survey actually uses. A floor
+    # that were correct and unused is the failure this second half catches:
+    # a pool of 20 draws 2 on the fraction alone and must yield 5.
+    perturbation = plan_track_perturbation(LAYOUT, _spec())
+    assert perturbation is not None
+    selection = select_targets(
+        perturbation, _pool(20), pseudonymiser=PSEUDONYMISER
+    )
+    assert selection.requested == 5
+    assert len(selection.chosen) == 5
