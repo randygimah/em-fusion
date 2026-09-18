@@ -8,230 +8,154 @@ detects deviations deterministically, and turns evidence bundles into schema-val
 grounding-checked AI hypotheses for an analyst to review. Decision support, never autonomous
 decision-making.
 
-This session cleared the decision the detection layer had been blocked on. It moved **the
-measurement kit into the repo**, because every detection figure the project quotes was produced by a
-script living in a session-scoped temporary directory — the conclusions were committed and the
-reproduction was not. It built **`anom-014`** and **`scn-007`**, the two items specified and
-deliberately left unbuilt because both change how the corpus is *made*; **`scn-008`**, so a run
-records the batch it came from, which the first corpus never did; and **`db-010`**, an index the
-`observations` table had been missing since its first migration. It then **regenerated the corpus**
-and **re-measured the whole detection layer** against it.
+This session took **`anom-006`'s threshold measurement** — the first item the previous handoff
+listed, chosen because it was cheap and decisive either way. It was decisive. **`anom-006` is closed
+again**, on stronger evidence than the first closure, and the detection layer's remaining work no
+longer has a measurement blocking it.
 
 ## Current state
 
-**The corpus has been regenerated and the whole detection layer re-measured.** Corpus v2 is 300 runs
-in twelve batches of twenty, from three base seeds recorded *before* generation, one generator, one
-run length, every run carrying its batch provenance. **45 spec items passing of 98.** Unit tier 748
-passed; database tier 934 passed; ruff and mypy clean.
+**45 spec items passing of 98** — unchanged, because this session closed an item rather than
+building one. That is the intended outcome of a measurement whose pre-registered failure branch
+fired.
 
-### Corpus v2
+### What `anom-006` asked, and what it got
 
-| | v1 (240 runs, ids 1-240) | v2 (300 runs, ids 241-540) |
+The regeneration reopened the item on a **paired** result: scoring a staged coverage-gap zone
+against its own same-seed control gives **20 wins to 7** at a 20 km cluster radius. The amendment
+reopening it recorded that this says nothing about whether a **fixed threshold separates a staged
+run from an unstaged one on a single run**, which is the question a detector faces, and demanded
+that measurement before any threshold. It has now been taken.
+
+Pre-registered in `backend/measurements/corpus/source_gap_threshold_prereg.md` — populations,
+operating-point rule and failure bar fixed in advance — fitted on two base seeds and scored **once**
+on the third.
+
+| | Development (2 seeds) | Holdout (1 seed) |
 |---|---|---|
-| Generator versions | **three** | one |
-| Run length | 600 s and 900 s | 900 s throughout |
-| Base seeds recorded | one, by accident | **all three, on every row, re-derivable** |
-| Runs staging no aircraft | 11 of 40 | **0 of 60** |
-| Seeds carrying all five arms | none | **60 of 60** |
+| Coverage gaps caught | 7/40 (0.17) | **3/20 (0.15)** — pre-registered bar was 0.25 |
+| Quiet runs falsely alarmed | 0/40 | **0/20** |
+| **`gnss-degradation` falsely alarmed** | 15/40 | **6/20 (0.30)** |
 
-Base seeds: `1412660662`, `965530111`, `655209063`, recorded in `CORPUS_V2_PLAN.md`. Every staged run
-now has a same-seed `normal-baseline` twin, which v1 never had.
+Operating point: 60 km cluster radius, minimum zone size 4, excess threshold 11.53.
 
-**Both corpora are in the database** (`db-007` forbids deleting). `measurements/corpus/_corpus.py`
-selects between them **on the recorded base seed, not an id range** — `parameters->>'base_seed' IS
-NOT NULL` names v2 exactly and survives re-runs and shifted ids. Default v2, `CORPUS=v1` overrides.
+**What closes the item is the third row, not the first.** The rule fires twice as often on the
+interference arm as on the coverage gaps it exists to find. `anom-013` orders `SENSOR-FAULT`,
+`SOURCE-GAP`, `FUSION-SPATIAL`, so `SOURCE-GAP` **outranks** the interference rule: a wrong firing
+can claim the zone before `FUSION-SPATIAL` is offered it. Building it would risk the one arm the
+ladder decides correctly 60 of 60 to catch a seventh of an arm nothing judges. Whether those zones
+actually overlap was **not measured** — the hazard is established, its size is not.
 
-### What the re-measurement said, in both directions
+**Development and holdout agree closely (0.17 / 0.15).** This is a reliable measurement of a weak
+effect, not a noisy one. More runs of the same corpus will not change it.
 
-| Measurement | v1 | v2 |
-|---|---|---|
-| Spurious sensor faults, all arms | 17 | **0** |
-| False `anom-001` episodes | 80 | **0** — population empty by construction |
-| Zero-length episodes | 300 of 1257 | **0 of 1137** |
-| Ladder, all five arms | 60/60, 60/60, 20/20, 75/80, 19/20 | **60/60 on all five** |
-| Zones given two answers | 0 | **0** |
-| Rate excess, median | 3.87 | **9.61** |
-| Runs clearing the threshold | 26 of 40 | **58 of 60** |
-| Unusable windows | 7 | **0** |
-| Corroborated zones | 7 of 61 | **18 of 60** |
-| **Not measurable** | 47 of 61 | **41 of 60** |
-| `anom-006` run-level excess | +1.0 | +2.7 (against sd 3.3 — still 0.8 sd) |
-| `anom-006` zone-level, 20 km | 7:3 (chance) | **20:7** |
+**Ceiling, ignoring the false-alarm constraint:** best Youden's J anywhere is **0.275**, at a 0.38
+quiet-arm rate `anom-008` forbids outright. `anom-012` reported 0.23–0.40 on a curve this project
+already calls weak.
 
-**`anom-006` is re-opened, as buildable-to-try and not as known-buildable.** The zone-level signal is
-real, but a sign test over matched pairs says the staged zone *tends to* beat its control and says
-nothing about whether a single-run threshold separates them — which is the question a detector faces.
-The threshold measurement comes before any threshold. Recorded on the item.
+**Mechanism, as predicted at the first closure:** the statistic saturates. At a size floor of 1
+every arm reaches the same maximum ratio (198.78) with medians differing by 0.6, because taking the
+maximum across zones selects whichever zone had the fewest findings — `anom-012`'s smoothing
+constant dominating a small sample. Separation only appears at a size floor of 4, where a third of
+runs no longer qualify.
 
-**The fusion limitation stands.** 41 of 60 reported zones still have no measurable track side. Better
-than 47 of 61; the same sentence.
+### A population fact that outlives the item
 
-### Also built this session
+Verified by **exact** comparison, not summary statistics:
 
-- **`scn-008`** — batch provenance on every run row, verified against real data: every run re-derives
-  its own seed from what its row records. 10 of 11 mutants killed, survivor unreachable.
-- **`db-010`** — `observations` had **no index on `scenario_run_id`**, a foreign key with
-  `ON DELETE CASCADE`, on a 20.7M-row 12 GB table. Every measurement was running one sequential scan
-  of the whole table *per run*. Migration `0004`. Index scan now, 135 ms.
-- **The measurement kit** is in the repo at `backend/measurements/` — 47 files, each with its
-  committed log of record, plus a README carrying the run commands and the re-measurement protocol.
+```
+normal-baseline        track findings ≡ rf-sensor-fault           (same seed)
+aircraft-coverage-gap  track findings ≡ ambiguous-mixed-evidence  (same seed)
+```
+
+`tracks.py` gives the coverage-gap and ambiguous arms one `SUPPRESS` mode, and neither the quiet arm
+nor the sensor-fault arm perturbs tracks at all. **Any track-side figure quoting 120 negatives is
+counting 60 seeds twice**, and the ambiguous arm is not independent evidence about a track-side
+rule. Check any figure before re-quoting it.
 
 ## Files in flight
 
-Tree is clean apart from the documentation commit this handoff belongs to. `anom-014` and `scn-007`
-are both at `passes: true`.
+Tree is clean. Nothing is part-built: this session added a measurement and closed a spec item.
 
 ## Changed
 
-- `bb08323` docs: move the measurement kit into the repo
-- `dff3756` spec: amend anom-014 — suppressed episodes are their own kind, not unjudged cells
-- `aa6a551` test: add tests for anom-014
-- `b8ad5c2` spec: amend scn-007 — the floor needs a survey pass the seam cannot do; tests for scn-007
-- `8599376` feat(anom-014, scn-007): the minimum duration and the staged-aircraft floor
-- `7088f3c` feat(anom-014): the minimum episode duration is 10 s - tests pass
-- `6cbe3fd` test: close four scn-007 gaps a mutation pass found
-- `eacb6fe` feat(scn-007): the staged-aircraft floor is 5 - tests pass
-- New: `backend/measurements/` (45 files incl. README), `measurements/corpus/rf_noise_episode_duration.py`,
-  `measurements/corpus/scn007_floor.py`, `measurements/mutation/mutate_anom014_minimum_duration.py`,
-  `measurements/mutation/mutate_scn007_floor.py`
-- Changed: `app/detection/rf_noise.py` (`SuppressedEpisode`, `minimum_duration`,
-  `DEFAULT_MINIMUM_DURATION`), `app/scenario/tracks.py` (`TargetSelection`, `select_targets`,
-  `TrackPerturbation.admits`, `DEFAULT_MINIMUM_AIRCRAFT`), `app/scenario/incident.py` (three answer-key
-  fields), `app/pipeline.py` (the survey pass), `CLAUDE.md` repo map and documents table,
-  `docs/thesis_notes.md` (four new Implementation subsections), `docs/qa.md` §78,
-  `docs/detection_layer.md` (ladder row, vocabulary, blocking section rewritten)
-- Existing `anom-001` fixtures lengthened from one reading to two, so they exercise the shipped policy
-  rather than pinning the minimum to zero
-- `d341e71` docs: detection layer, handoff, and the two measured parameters
-- `f7a4ec4` docs: register the two new measurements and their logs of record
-- `9d5ac83` feat(anom-014, scn-007): 925 passed on the database tier - both pass
-- `1a68b8d` / `5a55dfd` / `28764be` spec, tests and build for **`scn-008`**
-- `0d5d1ad` fix(scn-007): withdraw the floor's first measurement, re-measure cleanly
-- `2a3019d` docs: record the corpus v2 base seeds **before** generating
-- `424f90d` docs: a corpus selector, so two corpora cannot be mixed by accident
-- `046d898` fix(measurements): point the kit at corpus v2, **including the baseline**
-- `b9e28b7` / `10280ae` spec and build for **`db-010`**, with migration `0004`
-- `e48a8e1` / `4981fc3` the v2 re-measurement and its logs of record
-- `c17a393` spec: re-open `anom-006`; re-measure `anom-005`'s gate
-- `a7c7520` docs: the regeneration written up in `thesis_notes.md` and `detection_layer.md`
-- `8c04f8d` docs: handoff and **progress note v27**
-- New: `CORPUS_V2_PLAN.md`, `backend/measurements/corpus/_corpus.py`,
-  `backend/alembic/versions/0004_observations_run_index.py`,
-  `measurements/mutation/mutate_scn008_batch_provenance.py`
-- Changed: `app/scenario/emitter.py` (`BatchProvenance`, `with_batch`), `app/pipeline.py`
-  (supplies the batch), `docs/spec.jsonl` (`scn-008` and `db-010` added; `anom-005`, `anom-006`,
-  `anom-014` amended), `docs/qa.md` §78
+- `9584d74` spec: close `anom-006` again — the threshold measurement it asked for
+- `66896df` docs: the `anom-006` threshold measurement written up
+- New: `backend/measurements/corpus/source_gap_threshold_sweep.py` and its `.log`,
+  `backend/measurements/corpus/source_gap_threshold_prereg.md` (with its change log)
+- Changed: `docs/spec.jsonl` (`anom-006` amended, still `passes: false`),
+  `docs/detection_layer.md` (ladder row 2 and the coverage-test section rewritten),
+  `docs/thesis_notes.md` (Implementation subsection on paired vs single-run tests),
+  `docs/qa.md` §79, `backend/measurements/README.md`, `.gitignore` (the zone cache)
 
 ## Failed attempts
 
-- **The floor was first measured across two different generators, and the figure was withdrawn.**
-  `scn007_floor.py` was run over all 60 seed-matched pairs in the corpus without checking whether
-  those pairs came from the same generator. They do not: **runs 1-100 predate `scn-006`'s airborne
-  gate** and name a mean of 4.4-5.2 staged aircraft against 1.6-1.9 afterwards, most of the difference
-  being parked aircraft `anom-010` correctly refuses. The high-count cells of that curve — six, nine,
-  eleven, twelve staged — can only come from the pre-gate blocks, so they were populated by runs whose
-  staged aircraft were undetectable by construction. Re-measured on ids 121-240 the answer is still 5,
-  but the evidence is different and better: the excess rises monotonically and the honest win rate is
-  10 of 10, not 15 of 15. **The script now defaults to the clean range.**
-- **The corpus is not one corpus**, which is how the above was found. Runs 1-20 are **600 s** where
-  every later run is 900 s (22,470 track observations against 33,779 for the same seeds); runs 1-100
-  predate `scn-006`. Runs 41-60 are runs 1-20 regenerated at the corrected length, which is why 20
-  seed/type pairs look like duplicates — the `aircraft-coverage-gap` arm is **80 runs over 60 distinct
-  seeds**, and any figure quoted "of 80" weights twenty of them twice. The ladder's 75-of-80 row is
-  affected; `source_gap_ceiling.py` escaped it by restricting to ids 121-240.
-- **Two `make test-backend` runs were started concurrently against the same `test_em_fusion`
-  database**, producing 18 failures and 65 errors in the schema tests. Cause was a `;` where an `&&`
-  was meant: `ruff && mypy ; make test-backend` ran the suite even though ruff had failed, and a
-  second run was then launched on top of it. Nothing to do with the code. **Never run two database
-  tiers at once — they create and drop the same schema.**
-- **A floor of zero is not a no-op**, which was assumed when the placeholder was committed. The old
-  rule drew each aircraft's derived value against the fraction; the new rule takes
-  `round(fraction x pool)`, which on a small pool is deterministically **zero**. So the placeholder
-  converted an occasional empty answer key into a guaranteed one, and three database tests failed
-  immediately. An expected count and a draw have the same mean and different behaviour at the bottom.
-- **My own test claimed a floor of zero restored the previous behaviour.** It does not, for the
-  reason above. The test was renamed and now asserts the opposite, with the reason attached.
-- **Six mutants survived the first `scn-007` pass**, four of them genuine. The order-independence test
-  could not see an unranked selection, because a small set of strings iterates the same way however it
-  was built; and the different-seed test could not see an unseeded ranking, because changing the seed
-  *also moves the zone centre*, so the pool changed too and the sets differed for the wrong reason.
-  Four tests added; 17 of 19 now killed.
-- **`scn007_floor.py` failed twice before producing anything**: `BoundingBox` is exported from
-  `app.detection.track_gap`, not `app.dal.models`; and `detect_track_gaps` returns a plain tuple of
-  findings, not a two-tuple — an over-correction of a note in the previous handoff.
-- **Three measurement containers plus a test suite were left competing for one postgis**, which turned
-  10-minute jobs into 30-minute ones. The ladder re-run was killed as redundant once
-  `rf_noise_episode_duration.py` had proved the relocated kit runs.
-- Measurement scripts print nothing until they finish. `python -u` does not help when every `print`
-  is after the loop; a long run looks identical to a hung one. Worth adding progress output before
-  the re-measurement.
-- **Four measurement scripts hardcoded `range(101, 121)` as the quiet runs** — v1's
-  `normal-baseline` block. Pointed at v2 they would have built the **baseline** from the old corpus
-  while measuring the new one, which is the most damaging place the two could be mixed because the
-  baseline is what "normal" means. Found by reading the scripts rather than by any failure. Now
-  `_corpus.quiet_runs()`.
-- **My own first patch to `fusion_gate_decision.py` made it worse**, writing
-  `WHERE <v2 filter> OR scenario_type='normal-baseline'` — the `OR` pulled in both corpora's quiet
-  runs. Caught on the next pass.
-- **The `0004` migration was written with `down_revision = "0003"`** where the convention is the full
-  stem `0003_detection_findings`. That left a broken chain and two heads, and **all 27 schema tests
-  failed at once**, which is the right way for it to fail. Revision ids are now noted in the repo map.
-- **`rf_noise_episode_duration.py` crashed on the v2 corpus** with `min() arg is an empty sequence`.
-  Not a regression: `anom-014` means the false-episode population it characterises is now empty by
-  construction. The script reports that as the finding instead of crashing.
-- **A figure that looked like the one regression was a broken metric.** "Centre error" moved from a
-  median of 0.0 km to 45.3 km with a max of 107.5 km. Those are **exactly this layout's minimum and
-  median receiver separations**: the metric compared the dismissed receiver against `sensors[0]`, an
-  arbitrary member of the staged set, so it was reporting the distance between two correct answers.
-  Measured against the *nearest* staged receiver it is 0.0 km on every run. **A figure matching a
-  constant of the apparatus is probably measuring the apparatus.**
+- **My pre-registration named a scenario arm this project does not have.** It listed
+  `rf-interference` as a negative population; the five types are `normal-baseline`,
+  `gnss-degradation`, `rf-sensor-fault`, `aircraft-coverage-gap`, `ambiguous-mixed-evidence`. The
+  interference arm is `gnss-degradation` — several documents call it "the interference ones" in
+  prose, which is what I read it from instead of reading `app/scenario/incident.py`. The column came
+  out `0/0`.
+- **The same table omitted `ambiguous-mixed-evidence` entirely, and it is not a negative.** It
+  shares the positive arm's `SUPPRESS` track mode, so a firing there detects a real staged gap.
+  **The decision rule and the bar were unaffected** — both refer only to the coverage-gap and quiet
+  arms, both correctly identified — so the verdict stands, but the reporting had to be corrected.
+  Recorded in the prereg's change log rather than silently fixed.
+- **My first sweep's print filter hid the entire decisive region.** It printed thresholds 1.0, 2.0
+  and 3.0, where the statistic is saturated and every arm fires identically, and never printed the
+  region above 10 where the arms part. It had computed those rows and discarded them. The first
+  output therefore looked like a bug (`40/40  40/40  40/40` across every arm) when it was a real
+  property of the statistic shown at useless thresholds.
+- **My first operating-point search selected a rule that fires on nothing.** "Maximise sensitivity
+  subject to zero false alarms" is satisfied vacuously at a size floor of 8, where no run of any arm
+  produces a qualifying zone. It picked exactly that and printed the right verdict for the wrong
+  reason. The search now requires at least one true positive, and thresholds come from the observed
+  values rather than a fixed grid that can step over the only interesting point.
+- **The identical columns were nearly dismissed as an aliasing bug.** They were not: two arm-pairs
+  genuinely produce identical track findings. **Byte-identical columns are never a coincidence and
+  should always be chased** — this one turned into a standing correction to how negatives are
+  counted.
+- **Rebuilding the script by splicing dropped a module constant** (`CACHE`), which failed
+  immediately with a `NameError`. Cost one run; caught because the script fails at import rather
+  than silently.
 
 ## Next step
 
-The regeneration is done and the detection layer is re-measured, so nothing is blocked on a corpus
-decision any more. Three items are buildable; the order below is a recommendation, not a constraint.
+`anom-006` is settled, so the two items the previous handoff listed behind it are now the whole of
+the near-term detection work. The order is a recommendation, not a constraint.
 
-1. **`anom-006`'s threshold measurement — do this first, it is cheap and decisive either way.**
-   The regeneration moved zone-level scoring from chance to 20:7 at a 20 km cluster radius, which is
-   why the item was re-opened. That figure compares a staged run against *its own control*, and a
-   detector has no control: it sees one run and must decide. So the measurement to take is whether a
-   **fixed threshold separates a staged zone from an unstaged one on a single run** — sensitivity and
-   false-alarm rate across a sweep, on the v2 corpus, with the quiet arm as the negative population.
-   If it separates, build the rule against that curve. **If it does not, close the item again with
-   the evidence** — that is an honest outcome and it retires a stated threat to validity either way.
-   It is now minutes of work rather than hours, because of `db-010`.
-2. **`evb-001`, evidence bundles.** The natural consumer of what the ladder now produces, and the
-   gateway to Phase 9 — the AI hypothesis layer, which is the project's actual contribution. It is
-   also the one remaining item **no corpus change can invalidate**, because a bundle groups what the
-   rules already emit and its shape does not depend on the data. Build it whichever way `anom-006`
-   falls.
-3. **`anom-003`, the z-score detector.** Carries the `db-008` extensibility prediction, scored once
-   as a partial. Now genuinely measurable, since the corpus is stable and homogeneous — which it was
-   not when this was last listed as "buildable now".
+1. **`evb-001`, evidence bundles.** Now the clear first item. It is the natural consumer of what the
+   ladder produces, the gateway to Phase 9 — the AI hypothesis layer, which is the project's actual
+   contribution — and **the one remaining item no corpus change can invalidate**, because a bundle
+   groups what the rules already emit and its shape does not depend on the data.
+2. **`anom-003`, the z-score detector.** Carries the `db-008` extensibility prediction, scored once
+   as a partial. Genuinely measurable now that the corpus is stable and homogeneous.
 
 ### Open and unowned
 
-- **The `aircraft-coverage-gap` arm still has no rule.** Its 60 of 60 correct non-detections are
-  correct only because nothing judges that arm. Must not be reported as though the system had been
-  tested on it. Item 1 above is what retires this.
+- **The `aircraft-coverage-gap` arm has no rule, and this is now settled rather than pending.** Its
+  60 of 60 correct non-detections are correct only because nothing judges that arm. It must not be
+  reported as though the system had been tested on it. **What would change it is a generator change,
+  not a detector one** — a coverage gap must become a zone-level event separable from a staleness
+  freeze. Both closures of `anom-006` reached that conclusion independently.
+- **Unmeasured, and recorded rather than assumed:** whether a wrongly-claimed `SOURCE-GAP` zone on
+  an interference run would actually overlap the `FUSION-SPATIAL` zone. The sweep kept no centroids.
 - **Fusion is still the radio evidence with an occasional corroborating note.** 41 of 60 reported
-  zones have no measurable track side, improved from 47 of 61. Any write-up claiming multi-source
-  fusion must say so plainly.
+  zones have no measurable track side. Any write-up claiming multi-source fusion must say so plainly.
 - **Corpus v1 is still in the database** and always will be (`db-007`). Every measurement must go
-  through `measurements/corpus/_corpus.py`. Three scripts still select runs by other means and were
-  not on the re-measurement path — `cluster_background.py`, `cluster_separation_after_scn006.py`,
-  `track_gap_hit_rate.py`, `track_gap_recall.py`, `staging_on_ground.py`, `cluster_leak_into_fusion.py`,
-  `rate_excess_two_forms.py`, `sensor_fault_fragmentation.py` and
-  `sensor_fault_neighbour_candidates.py` should be checked before any of them is quoted again.
-- **`DEFAULT_AFFECTED_FRACTION` is now inert.** With a mean eligible pool of 23.4, `round(0.08 x 23.4)`
-  is 2 and the floor of 5 always wins, so every v2 run stages exactly five aircraft. Good for
-  evaluation — no variance in difficulty between runs — but nobody should read the fraction as doing
-  work. Revisit if the pool ever grows.
+  through `measurements/corpus/_corpus.py`. Still selecting runs by other means and unchecked since
+  the regeneration: `cluster_background.py`, `cluster_separation_after_scn006.py`,
+  `track_gap_hit_rate.py`, `track_gap_recall.py`, `staging_on_ground.py`,
+  `cluster_leak_into_fusion.py`, `rate_excess_two_forms.py`, `sensor_fault_fragmentation.py`,
+  `sensor_fault_neighbour_candidates.py`.
+- **`DEFAULT_AFFECTED_FRACTION` is inert.** With a mean eligible pool of 23.4, `round(0.08 × 23.4)`
+  is 2 and the floor of 5 always wins, so every v2 run stages exactly five aircraft. Nobody should
+  read the fraction as doing work.
 - A **broadband generation arm**, without which `anom-007`'s Medium and Low confidence bands have no
   corpus behind them. All 300 v2 runs are narrowband, as all 240 v1 runs were.
 - The **frontend suite exits non-zero**: `TypeError: control.runs.map is not a function` at
-  `scenarioControl.tsx:344`. Needs a spec item covering both the test stub and `useScenarioControl`'s
-  missing array check.
+  `scenarioControl.tsx:344`. Needs a spec item covering both the test stub and
+  `useScenarioControl`'s missing array check.
 - `adp-008` exclusion applied to baseline windows; a detection-latency definition (gates `anom-009`);
   `api-011`; `nav-002`; reset/replay endpoints; `ops-002` (CI); `docs/qa.md` duplicate §47 (fix by
   note, never renumber); frontend coverage tooling; `pnpm format`; root `make check` never run in
