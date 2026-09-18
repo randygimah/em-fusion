@@ -1,0 +1,20 @@
+time="2026-09-18T17:30:03+01:00" level=warning msg="The \"PSEUDONYM_SEED\" variable is not set. Defaulting to a blank string."
+time="2026-09-18T17:30:03+01:00" level=warning msg="The \"PSEUDONYM_SEED\" variable is not set. Defaulting to a blank string."
+ Container em-fusion-backend-run-c7a03d835641 Creating 
+ Container em-fusion-backend-run-c7a03d835641 Created 
+corpus v2 -- one generator, 900 s runs, anom-014 and scn-007 active; base seeds 1412660662, 965530111, 655209063
+scenario                    runs  claims staged  other fires  faults/run
+aircraft-coverage-gap         60              0            0        0.00
+ambiguous-mixed-evidence      60             60            0        1.07
+gnss-degradation              60              0            0        0.00
+normal-baseline               60              0            0        0.00
+rf-sensor-fault               60             60            0        1.07
+
+dismissals by verdict:
+  gnss-degradation           {'environmental': 159}
+
+confidence of the faults raised:
+  ambiguous-mixed-evidence   {'high': 64}
+  rf-sensor-fault            {'high': 64}
+
+on-target fault window: n=128 min=40s median=300s max=360s (the staged incident is 300 s)
