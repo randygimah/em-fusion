@@ -47,7 +47,12 @@ from typing import TextIO, TypeVar
 from pydantic import BaseModel, ConfigDict, ValidationError
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.adapters.opensky import Window, available_window, replay_window
+from app.adapters.opensky import (
+    Window,
+    available_window,
+    read_window,
+    replay_window,
+)
 from app.adapters.synthetic_rf import emit_run
 from app.dal.models import DataMode
 from app.dal.pseudonymise import Pseudonymiser, load_seed_environment
@@ -76,7 +81,12 @@ from app.scenario.incident import (
 )
 from app.scenario.layout import RfLayout, load_layout
 from app.scenario.seeding import SEED_MAX, derive_unit
-from app.scenario.tracks import TrackPerturber, load_exclusions, plan_track_perturbation
+from app.scenario.tracks import (
+    TrackPerturber,
+    load_exclusions,
+    plan_track_perturbation,
+    select_targets,
+)
 
 #: The run count a batch must fall within (`scn-003`, FR-205). A campaign
 #: smaller than this cannot carry a per-type rate worth quoting; larger is not
@@ -322,13 +332,30 @@ def execute_run(
     """
     incident = plan_incident(layout, spec)
     perturbation = plan_track_perturbation(layout, spec)
-    perturber = (
-        None
-        if perturbation is None
-        else TrackPerturber(
-            perturbation, pseudonymiser=pseudonymiser, excluded=excluded
-        )
+    window = Window(
+        start=spec.start,
+        end=spec.start + timedelta(seconds=spec.duration_seconds),
     )
+
+    # The survey pass (`scn-007`). The window is read once without ingesting
+    # anything, so the run knows its eligible pool before the replay starts
+    # -- the floor is a statement about a set, and the perturber only ever
+    # sees a stream. One extra scan of a 133,634-row extract, against a run
+    # that ingests tens of thousands of observations.
+    perturber = None
+    if perturbation is not None:
+        selection = select_targets(
+            perturbation,
+            read_window(extract, window),
+            pseudonymiser=pseudonymiser,
+            excluded=excluded,
+        )
+        perturber = TrackPerturber(
+            perturbation,
+            pseudonymiser=pseudonymiser,
+            excluded=excluded,
+            selection=selection,
+        )
 
     run_id = create_scenario_run(
         session_factory,
@@ -350,10 +377,7 @@ def execute_run(
         rf = emit_run(layout, spec, run_id, repository, pseudonymiser)
         tracks = replay_window(
             extract,
-            Window(
-                start=spec.start,
-                end=spec.start + timedelta(seconds=spec.duration_seconds),
-            ),
+            window,
             IngestContext(data_mode=DataMode.REPLAYED, scenario_run_id=run_id),
             repository,
             pseudonymiser,

@@ -744,11 +744,22 @@ def test_a_perturber_with_no_selection_keeps_the_unbounded_behaviour() -> None:
     assert perturber.affected == expected
 
 
-def test_a_floor_of_zero_is_legal_and_is_the_pre_scn_007_behaviour() -> None:
+def test_a_floor_of_zero_is_legal_but_is_not_the_old_behaviour() -> None:
     # spec: scn-007
+    # Worth stating because it caught me out: a floor of zero does NOT
+    # restore the pre-scn-007 rule. The old rule thresholded each aircraft's
+    # own derived value at the fraction, which on a small pool sometimes
+    # drew one; ranking takes `round(fraction * pool)`, which on a small
+    # pool is deterministically zero. So a floor of zero is strictly worse
+    # than what came before, and the floor must be at least one for this
+    # item to be an improvement in every case rather than on average.
     selection = _selection(_pool(20), minimum=0)
     assert selection.requested == 2  # 8 per cent of 20, rounded
     assert selection.floor_reached is True
+
+    tiny = _selection(_pool(5), minimum=0)
+    assert tiny.requested == 0
+    assert tiny.chosen == frozenset()
 
 
 def test_a_negative_floor_is_refused() -> None:

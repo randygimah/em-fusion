@@ -360,6 +360,46 @@ def test_the_answer_key_names_the_aircraft_actually_staged(
 
 @pytest.mark.database
 @requires_database
+def test_the_run_surveys_its_window_before_staging_on_it(
+    layout: RfLayout, extract: Path, factory: sessionmaker, migrated_database: Engine
+) -> None:
+    """The floor is a statement about a set, and the perturber only sees a
+    stream -- so the run reads its window once before the replay to find out
+    what it has. Without this the floor never takes effect, and the item
+    would pass its unit tests while changing nothing about generation."""
+    # spec: scn-007
+    outcome = _execute(layout, _spec(), extract, factory)
+
+    (row,) = _run_rows(migrated_database)
+    truth = row.ground_truth
+    assert truth["aircraft_eligible"] is not None
+    assert truth["aircraft_requested"] is not None
+    assert truth["aircraft_floor_reached"] is not None
+    # The survey bounds what was staged: a run cannot stage on an aircraft
+    # it never found, nor on more than it asked for.
+    assert outcome.aircraft_staged <= truth["aircraft_eligible"]
+    assert outcome.aircraft_staged <= truth["aircraft_requested"]
+
+
+@pytest.mark.database
+@requires_database
+def test_a_run_that_stages_no_tracks_records_no_survey(
+    layout: RfLayout, extract: Path, factory: sessionmaker, migrated_database: Engine
+) -> None:
+    """`rf-sensor-fault` touches no tracks, so there is no pool to survey and
+    the fields say so rather than claiming a survey found nothing."""
+    # spec: scn-007, anom-008
+    _execute(
+        layout, _spec(scenario_type=ScenarioType.RF_SENSOR_FAULT), extract, factory
+    )
+
+    (row,) = _run_rows(migrated_database)
+    assert row.ground_truth["aircraft_eligible"] is None
+    assert row.ground_truth["aircraft_floor_reached"] is None
+
+
+@pytest.mark.database
+@requires_database
 def test_the_run_row_records_its_window_and_is_marked_complete(
     layout: RfLayout, extract: Path, factory: sessionmaker, migrated_database: Engine
 ) -> None:

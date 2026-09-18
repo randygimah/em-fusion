@@ -48,7 +48,7 @@ the alternative costs determinism.
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
@@ -87,6 +87,13 @@ _MODES: dict[ScenarioType, TrackMode] = {
 #: compare with.
 DEFAULT_AFFECTED_FRACTION = 0.08
 
+#: The fewest aircraft a run may stage on (`scn-007`). The fraction above is
+#: a share of a pool, and once `scn-006` restricted the pool to aircraft in
+#: flight the share began rounding to nothing: a mean of 1.7 per run, with 11
+#: of 40 staging none at all and therefore carrying an empty answer key.
+#: MEASURED_PLACEHOLDER
+DEFAULT_MINIMUM_AIRCRAFT = 0
+
 
 @dataclass(frozen=True)
 class TrackPerturbation:
@@ -103,6 +110,25 @@ class TrackPerturbation:
 
     def covers(self, at: datetime) -> bool:
         return self.start <= at < self.end
+
+    def admits(self, record: Mapping[str, Any]) -> bool:
+        """Whether this record is one the run may stage on.
+
+        Window, zone and airborne, in that order. Both the survey
+        (`select_targets`) and the perturber ask *this* rather than each
+        applying the three gates themselves: a survey that disagreed with
+        the perturber about eligibility would rank aircraft the perturber
+        then refused, and the answer key would name aircraft nothing was
+        done to -- the empty-answer-key failure `scn-007` exists to remove,
+        arriving by a different door.
+        """
+        if not self.covers(record["timestamp"]):
+            return False
+        location = record.get("location") or {}
+        if not self.contains(location.get("lat"), location.get("lon")):
+            return False
+        # Airborne, or nothing happens (`scn-006`).
+        return not record["payload"].get("on_ground")
 
     def contains(self, lat: float | None, lon: float | None) -> bool:
         """Whether a reported position falls inside the staged zone.
@@ -157,6 +183,92 @@ def plan_track_perturbation(
     )
 
 
+@dataclass(frozen=True)
+class TargetSelection:
+    """What the survey found, and what it chose from it (`scn-007`)."""
+
+    #: The pseudonyms this run will stage on.
+    chosen: frozenset[str]
+    #: How many distinct aircraft were eligible at all.
+    eligible: int
+    #: How many were asked for -- the greater of the floor and the
+    #: fraction's expected count.
+    requested: int
+    #: Whether the pool could supply the floor. False means the run staged
+    #: everything it had and still fell short, which is a different fact
+    #: from a run that staged few because few were asked for.
+    floor_reached: bool
+
+
+def select_targets(
+    perturbation: TrackPerturbation,
+    records: Iterable[Mapping[str, Any]],
+    *,
+    pseudonymiser: Pseudonymiser,
+    excluded: frozenset[str] = frozenset(),
+    minimum: int = DEFAULT_MINIMUM_AIRCRAFT,
+) -> TargetSelection:
+    """Survey a run's window and choose what it will stage on.
+
+    **Why this exists as a separate pass.** `scn-002`'s seam is a per-record
+    transform over a stream the replay processes one window at a time, so the
+    perturber never holds the pool -- which is exactly why selection was made
+    a pure function of the seed and one aircraft's pseudonym. A floor cannot
+    be expressed that way: "the lowest n" is a statement about a set. So the
+    run reads its window once through `adp-001`'s reader without ingesting
+    anything, and what comes back is a set rather than a stream.
+
+    **Ranked, not drawn.** Each eligible aircraft keeps the same derived
+    value the unbounded rule thresholded on, and the lowest `n` are taken.
+    Where the pool is large that is the fraction's own behaviour, because
+    taking the lowest 8 per cent by a uniform derivation *is* thresholding at
+    0.08; where the pool is small the floor lifts `n` and the same ranking
+    answers a bigger question. A draw-until-n loop would have produced the
+    count and destroyed the property, since its result depends on the order
+    it visited candidates in.
+
+    **Ties broken by pseudonym**, so the ranking is total and two aircraft
+    that happened to derive the same value cannot swap between runs.
+
+    A run whose pool cannot supply the floor stages all of it and says so.
+    Staging fewer silently would reintroduce the empty answer key this item
+    exists to remove.
+    """
+    if minimum < 0:
+        raise ValueError(
+            f"the minimum is {minimum}, which is negative. A floor below zero "
+            "has no meaning, and clamping it would turn a configuration error "
+            "into a run that quietly staged on nothing."
+        )
+
+    eligible: set[str] = set()
+    for record in records:
+        if not perturbation.admits(record):
+            continue
+        identifier = record["payload"].get("icao24")
+        if not identifier:
+            continue
+        # Excluded before the ranking, never after: an exclusion applied to
+        # the result would let the floor pull back in a track `adp-008`
+        # removed, which is the confound that list exists to close.
+        pseudonym = pseudonymiser.aircraft(str(identifier))
+        if pseudonym is None or pseudonym in excluded:
+            continue
+        eligible.add(pseudonym)
+
+    requested = max(minimum, round(len(eligible) * perturbation.fraction))
+    ranked = sorted(
+        eligible,
+        key=lambda p: (derive_unit(perturbation.seed, "track-target", p), p),
+    )
+    return TargetSelection(
+        chosen=frozenset(ranked[:requested]),
+        eligible=len(eligible),
+        requested=requested,
+        floor_reached=len(eligible) >= minimum,
+    )
+
+
 class TrackPerturber:
     """Applies one run's track perturbation, record by record.
 
@@ -173,15 +285,27 @@ class TrackPerturber:
         *,
         pseudonymiser: Pseudonymiser,
         excluded: frozenset[str] = frozenset(),
+        selection: TargetSelection | None = None,
     ) -> None:
         self._perturbation = perturbation
         self._pseudonymiser = pseudonymiser
         self._excluded = excluded
+        self._selection = selection
         self._affected: set[str] = set()
 
     @property
     def mode(self) -> TrackMode:
         return self._perturbation.mode
+
+    @property
+    def selection(self) -> TargetSelection | None:
+        """What the survey chose, when one was run (`scn-007`).
+
+        None means no survey: the perturber is applying the fraction alone
+        with no floor, which is what it did before `scn-007` and remains an
+        honest description rather than a fallback pretending to be the rule.
+        """
+        return self._selection
 
     @property
     def affected(self) -> frozenset[str]:
@@ -200,10 +324,16 @@ class TrackPerturber:
         Excluded tracks are refused before the draw rather than after, so the
         exclusion cannot be undone by a later change to how selection works
         (`adp-008`).
+
+        With a survey (`scn-007`) the answer is membership of the set it
+        chose, which already applied the same exclusion over the same pool.
+        Without one it is the unbounded fraction.
         """
         pseudonym = self._pseudonymiser.aircraft(icao24)
         if pseudonym is None or pseudonym in self._excluded:
             return False
+        if self._selection is not None:
+            return pseudonym in self._selection.chosen
         return (
             derive_unit(self._perturbation.seed, "track-target", pseudonym)
             < self._perturbation.fraction
@@ -217,13 +347,6 @@ class TrackPerturber:
         alter a stream by accident.
         """
         timestamp = record["timestamp"]
-        if not self._perturbation.covers(timestamp):
-            return dict(record)
-
-        location = record.get("location") or {}
-        if not self._perturbation.contains(location.get("lat"), location.get("lon")):
-            return dict(record)
-
         # Airborne, or nothing happens. Spec: scn-006. This gate sits *above*
         # the answer key rather than beside the metrics, and the placement is
         # the whole point: a parked aircraft that were merely excused later
@@ -241,7 +364,10 @@ class TrackPerturber:
         # Per record, not per aircraft: one that takes off inside the window is
         # eligible for the part it was flying, and excluding it wholesale would
         # trade one bias for another.
-        if record["payload"].get("on_ground"):
+        #
+        # Window, zone and airborne are asked of the perturbation itself, so
+        # the survey in `select_targets` cannot drift from what happens here.
+        if not self._perturbation.admits(record):
             return dict(record)
 
         identifier = record["payload"].get("icao24")

@@ -107,6 +107,7 @@ for run in runs:
         we = datetime.fromisoformat(w["end"])
 
     hits = 0
+    longest_true = -1.0
     for a in found.anomalies:
         seconds = (a.ended_at - a.started_at).total_seconds()
         readings = len(a.triggering)
@@ -118,10 +119,11 @@ for run in runs:
         )
         if on_truth:
             true_s.append(seconds); true_n.append(readings); hits += 1
+            longest_true = max(longest_true, seconds)
         else:
             false_s.append(seconds); false_n.append(readings)
             false_runs_firing.add(run["id"])
-    per_run_true[run["id"]] = hits
+    per_run_true[run["id"]] = (hits, longest_true, stages_rf)
 
 print(f"reading intervals present in the corpus, seconds: {sorted(intervals)}")
 print(f"runs staging RF: {runs_with_rf}   staging none: {runs_without_rf}")
@@ -148,6 +150,12 @@ for minimum in (0, 10, 20, 30, 40, 60, 90, 120):
     fk = sum(1 for x in false_s if x >= minimum)
     print(f"  {minimum:>7}s  {tk:>5} / {len(true_s):<5}  {fk:>5} / {len(false_s):<5}")
 print()
-print("runs whose ONLY episodes are false, by minimum -- the anom-008 number:")
-clean_runs = [r["id"] for r in runs if not ((r["ground_truth"] or {}).get("sensors"))]
-print(f"  runs staging no RF at all: {len(clean_runs)}")
+print("THE NUMBER THAT DECIDES IT. The catch rate is per run, not per episode:")
+print("a run survives a minimum if ANY true episode of its own clears it.")
+staged_runs = [v for v in per_run_true.values() if v[2]]
+print(f"  runs staging RF, with at least one true episode: "
+      f"{sum(1 for h, _, _ in staged_runs if h)} of {len(staged_runs)}")
+print(f"  {'minimum':>9}  {'runs still caught':>18}")
+for minimum in (0, 10, 20, 30, 40, 60, 90, 120):
+    kept = sum(1 for _, longest, _ in staged_runs if longest >= minimum)
+    print(f"  {minimum:>7}s  {kept:>8} / {len(staged_runs):<6}")

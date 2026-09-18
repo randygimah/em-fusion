@@ -228,4 +228,25 @@ def ground_truth(
         ),
         "track_mode": perturber.mode.value if perturber else None,
         "aircraft": sorted(perturber.affected) if perturber else [],
+        # What the survey found, not only what it staged (`scn-007`). A run
+        # that staged two because only two were eligible is a different fact
+        # from one that staged two because two were asked for, and the
+        # aircraft list alone cannot tell them apart -- which would leave
+        # `eval-002` unable to say whether a miss was the detector's or the
+        # corpus's. None where no survey ran.
+        "aircraft_eligible": (
+            perturber.selection.eligible
+            if perturber and perturber.selection
+            else None
+        ),
+        "aircraft_requested": (
+            perturber.selection.requested
+            if perturber and perturber.selection
+            else None
+        ),
+        "aircraft_floor_reached": (
+            perturber.selection.floor_reached
+            if perturber and perturber.selection
+            else None
+        ),
     }

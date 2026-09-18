@@ -29,6 +29,16 @@ cannot measure would let "zero anomalies on a clean run" be satisfied by not
 having looked, and every false-positive rate computed from that would be
 meaningless.
 
+**An episode of one reading is not an event** (`anom-014`). A single
+reading past the bar is what the tail of a noise distribution does, and this
+rule raised at least one on 14 of 100 runs that staged nothing at all. Such
+an episode also has a start equal to its end, which is a window of no length
+that `anom-012` divides by. A configured minimum duration removes the cause;
+the suppressed episode is *reported* rather than dropped, for the same reason
+an unjudged cell is -- but in its own field, because "I looked and it was too
+brief" is a different claim from "I had no baseline, so I did not look", and
+only the first has a window worth carrying.
+
 **The affected area is a point.** A single sensor reporting noise locates the
 finding at that sensor and nowhere else; an *area* needs corroboration from
 more than one, which is `anom-004`'s clustering and `anom-005`'s fusion.
@@ -43,7 +53,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 
 from app.dal.models import CanonicalObservation, Location, RfPayload
@@ -57,6 +67,10 @@ RULE_ID = "RF-NOISE"
 #: The anomaly's own type, distinct from the rule that produced it: a later
 #: rule could raise the same type from different evidence.
 ANOMALY_TYPE = "rf_noise_deviation"
+
+#: The shortest episode this rule will call an event (`anom-014`).
+#: MEASURED_PLACEHOLDER
+DEFAULT_MINIMUM_DURATION = timedelta(seconds=0)
 
 
 class RuleError(ValueError):
@@ -99,8 +113,19 @@ class ThresholdPolicy:
     threshold: float
     medium_at: float
     high_at: float
+    #: The shortest episode that counts as an event (`anom-014`). An episode
+    #: exactly this long is kept: the boundary belongs to the configured
+    #: value rather than to the comparison.
+    minimum_duration: timedelta = DEFAULT_MINIMUM_DURATION
 
     def __post_init__(self) -> None:
+        if self.minimum_duration < timedelta(0):
+            raise RuleError(
+                f"the minimum duration is {self.minimum_duration}, which is "
+                "negative. Clamping it to zero would turn a configuration "
+                "error into a rule that had quietly stopped suppressing "
+                "anything, so it is refused instead."
+            )
         if not self.threshold < self.medium_at < self.high_at:
             raise RuleError(
                 f"bands must increase past the threshold, got threshold="
@@ -168,11 +193,35 @@ class UnjudgedCell:
 
 
 @dataclass(frozen=True, slots=True)
+class SuppressedEpisode:
+    """A crossing the rule saw and judged too brief to be an event.
+
+    Its own kind, not an `UnjudgedCell`. An unjudged cell says "I had no
+    baseline, so I did not look"; this says "I looked, I saw the bar
+    crossed, and it did not last". Conflating them would discard the window
+    below, which is the only thing that makes the suppression checkable --
+    and would leave `anom-008` unable to tell a quiet run from an
+    unexamined one, which is the failure that field exists to prevent.
+    """
+
+    cell: RfCell
+    started_at: datetime
+    ended_at: datetime
+    #: How many readings the episode held. One means the start equals the
+    #: end -- the zero-length window `anom-012` divides by.
+    readings: int
+    #: The minimum it failed, carried so the report is self-contained and a
+    #: reader need not know which policy produced it.
+    minimum: timedelta
+
+
+@dataclass(frozen=True, slots=True)
 class RfNoiseFindings:
     """What the rule concluded, including what it could not conclude."""
 
     anomalies: tuple[RfNoiseAnomaly, ...] = ()
     unjudged: tuple[UnjudgedCell, ...] = ()
+    suppressed: tuple[SuppressedEpisode, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -210,6 +259,7 @@ def detect_rf_noise(
 
     anomalies: list[RfNoiseAnomaly] = []
     unjudged: list[UnjudgedCell] = []
+    suppressed: list[SuppressedEpisode] = []
 
     # Sorted so the output does not depend on the order readings arrived in.
     for cell in sorted(per_cell, key=lambda c: (c.sensor_id, c.channel_index)):
@@ -219,13 +269,17 @@ def detect_rf_noise(
                 UnjudgedCell(cell=cell, reason=_why_unjudged(baselines, cell))
             )
             continue
-        anomalies.extend(
-            _episodes(
-                sorted(per_cell[cell], key=lambda r: r.timestamp), baseline.mean, policy
-            )
+        kept, brief = _episodes(
+            sorted(per_cell[cell], key=lambda r: r.timestamp), baseline.mean, policy
         )
+        anomalies.extend(kept)
+        suppressed.extend(brief)
 
-    return RfNoiseFindings(anomalies=tuple(anomalies), unjudged=tuple(unjudged))
+    return RfNoiseFindings(
+        anomalies=tuple(anomalies),
+        unjudged=tuple(unjudged),
+        suppressed=tuple(suppressed),
+    )
 
 
 def _readings(
@@ -264,10 +318,34 @@ def _why_unjudged(baselines: BaselineTable, cell: RfCell) -> str:
 
 def _episodes(
     readings: Sequence[_Reading], mean: float, policy: ThresholdPolicy
-) -> list[RfNoiseAnomaly]:
-    """Contiguous runs of exceeding readings, in time order, as anomalies."""
+) -> tuple[list[RfNoiseAnomaly], list[SuppressedEpisode]]:
+    """Contiguous runs of exceeding readings, split by whether they lasted.
+
+    Both halves are returned. The rule reports what it discarded as well as
+    what it kept (`anom-014`), because a detector that silently drops what
+    it has seen makes a quiet run and an unexamined one look the same.
+    """
     episodes: list[RfNoiseAnomaly] = []
+    suppressed: list[SuppressedEpisode] = []
     current: list[tuple[_Reading, float]] = []
+
+    def close() -> None:
+        # `>=`, not `>`: an episode exactly at the minimum is an event. The
+        # boundary belongs to the configured value, which is the item's own
+        # failure case.
+        span = current[-1][0].timestamp - current[0][0].timestamp
+        if span >= policy.minimum_duration:
+            episodes.append(_anomaly(current, policy))
+        else:
+            suppressed.append(
+                SuppressedEpisode(
+                    cell=current[0][0].cell,
+                    started_at=current[0][0].timestamp,
+                    ended_at=current[-1][0].timestamp,
+                    readings=len(current),
+                    minimum=policy.minimum_duration,
+                )
+            )
 
     for reading in readings:
         deviation = _deviation(reading.value, mean, policy.direction)
@@ -277,12 +355,12 @@ def _episodes(
         # A reading inside the threshold ends the episode: two events with
         # quiet between them must not become one spanning the quiet.
         if current:
-            episodes.append(_anomaly(current, policy))
+            close()
             current = []
 
     if current:
-        episodes.append(_anomaly(current, policy))
-    return episodes
+        close()
+    return episodes, suppressed
 
 
 def _deviation(value: float, mean: float, direction: Direction) -> float:

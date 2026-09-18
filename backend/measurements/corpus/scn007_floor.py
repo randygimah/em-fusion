@@ -29,10 +29,9 @@ from datetime import timedelta
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-from app.dal.models import (BoundingBox, CanonicalObservation, DataMode, Location,
-                            ObservationType, Provenance, SourceType, TrackPayload,
-                            ValidationStatus)
-from app.detection.track_gap import GapPolicy, detect_track_gaps
+from app.dal.models import (CanonicalObservation, DataMode, Location, ObservationType,
+                            Provenance, SourceType, TrackPayload, ValidationStatus)
+from app.detection.track_gap import BoundingBox, GapPolicy, detect_track_gaps
 
 BOX = BoundingBox(lat_min=49.0, lat_max=54.0, lon_min=3.0, lon_max=11.0)
 POLICY = GapPolicy(threshold=timedelta(seconds=100),
