@@ -1,0 +1,25 @@
+time="2026-09-17T22:21:20+01:00" level=warning msg="The \"PSEUDONYM_SEED\" variable is not set. Defaulting to a blank string."
+time="2026-09-17T22:21:20+01:00" level=warning msg="The \"PSEUDONYM_SEED\" variable is not set. Defaulting to a blank string."
+ Container em-fusion-backend-run-087acd4e837a Creating 
+ Container em-fusion-backend-run-087acd4e837a Created 
+n=40
+  min=0.17  p25=0.95  median=3.87  p75=11.47  max=17.69
+  >= 1.58: 26
+  no findings in the disc at all: 2
+  findings present but below 1.58: 12
+
+the 14 that would be lost to a gate, lowest first:
+    ratio= 0.17  findings during=  0 outside=  3
+    ratio= 0.18  findings during=  0 outside=  3
+    ratio= 0.39  findings during=  0 outside=  1
+    ratio= 0.58  findings during=  1 outside=  3
+    ratio= 0.60  findings during=  1 outside=  3
+    ratio= 0.60  findings during=  1 outside=  3
+    ratio= 0.60  findings during=  1 outside=  3
+    ratio= 0.62  findings during=  1 outside=  3
+    ratio= 0.67  findings during=  1 outside=  3
+    ratio= 0.82  findings during=  1 outside=  2
+    ratio= 0.95  findings during=  1 outside=  2
+    ratio= 1.00  findings during=  0 outside=  0
+    ratio= 1.00  findings during=  0 outside=  0
+    ratio= 1.53  findings during=  1 outside=  1

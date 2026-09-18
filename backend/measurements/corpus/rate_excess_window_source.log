@@ -1,0 +1,28 @@
+time="2026-09-17T16:58:20+01:00" level=warning msg="The \"PSEUDONYM_SEED\" variable is not set. Defaulting to a blank string."
+time="2026-09-17T16:58:20+01:00" level=warning msg="The \"PSEUDONYM_SEED\" variable is not set. Defaulting to a blank string."
+ Container em-fusion-backend-run-7ae0c0a6aaff Creating 
+ Container em-fusion-backend-run-7ae0c0a6aaff Created 
+baseline over 56 cells
+
+window length, seconds (staged incident is 300):
+  truth     n= 80 min=  300 median=  300 max=  300
+  episode   n= 86 min=    0 median=   90 max=  210
+  assessed  n= 41 min=    0 median=  320 max=  390
+
+centre error vs the staged centre, km: median=0.0 max=107.5
+
+runs producing a fusion candidate at all: {'gnss-degradation': 40, 'rf-sensor-fault': 1}
+windows unusable (zero length, divides by zero): {'episode': 6, 'assessed': 1}
+
+source      radius    gnss-degradati    aircraft-cover    rf-sensor-faul
+truth           30          15/40                    -           7/40   
+truth           45          20/40                    -          10/40   
+truth           60          28/40                    -          15/40   
+episode         30          14/40                    -           6/40   
+episode         45          20/40                    -           8/40   
+episode         60          29/40                    -          13/40   
+assessed        30          18/40                    -                 -
+assessed        45          21/40                    -                 -
+assessed        60          26/40                    -                 -
+
+(counts are runs whose excess reached the pre-registered threshold; a dash means no run of that arm reached fusion at all)

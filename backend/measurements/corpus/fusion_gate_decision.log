@@ -1,0 +1,18 @@
+time="2026-09-17T22:14:23+01:00" level=warning msg="The \"PSEUDONYM_SEED\" variable is not set. Defaulting to a blank string."
+time="2026-09-17T22:14:23+01:00" level=warning msg="The \"PSEUDONYM_SEED\" variable is not set. Defaulting to a blank string."
+ Container em-fusion-backend-run-ce664da4b61a Creating 
+ Container em-fusion-backend-run-ce664da4b61a Created 
+scenario                    runs  reach step 3  measurable
+aircraft-coverage-gap         40             0           0
+gnss-degradation              40            40          40
+normal-baseline               20             0           0
+rf-sensor-fault               40             1           0
+
+Among the zones that reach step three, at 60 km:
+scenario                      n   >= 1.58  no track evidence   median
+gnss-degradation             40        26                  2     3.87
+
+unusable windows: {'rf-sensor-fault': 1}
+
+What each design would report, over the zones reaching step three:
+  gnss-degradation           A(gate on excess)= 26  B(gate on any)= 38  C(no gate)= 40

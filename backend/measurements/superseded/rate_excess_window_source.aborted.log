@@ -1,0 +1,23 @@
+time="2026-09-17T16:51:27+01:00" level=warning msg="The \"PSEUDONYM_SEED\" variable is not set. Defaulting to a blank string."
+time="2026-09-17T16:51:27+01:00" level=warning msg="The \"PSEUDONYM_SEED\" variable is not set. Defaulting to a blank string."
+ Container em-fusion-backend-run-0e0b9b5fa515 Creating 
+ Container em-fusion-backend-run-0e0b9b5fa515 Created 
+baseline over 56 cells
+
+window length, seconds (staged incident is 300):
+  truth     n= 80 min=  300 median=  300 max=  300
+  episode   n= 80 min=   30 median=   90 max=  210
+  assessed  n= 41 min=    0 median=  320 max=  390
+
+centre error vs the staged centre, km: median=0.0 max=107.5
+
+runs producing a fusion candidate at all: {'gnss-degradation': 40, 'rf-sensor-fault': 1}
+windows unusable (zero length, divides by zero): {'assessed': 1}
+
+source      radius  staged fires  control fires  Youden J
+truth           30        15/40           7/40       0.20
+truth           45        20/40          10/40       0.25
+truth           60        28/40          15/40       0.32
+episode         30        14/40           6/40       0.20
+episode         45        20/40           8/40       0.30
+episode         60        29/40          13/40       0.40

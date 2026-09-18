@@ -1,0 +1,14 @@
+time="2026-09-17T22:58:40+01:00" level=warning msg="The \"PSEUDONYM_SEED\" variable is not set. Defaulting to a blank string."
+time="2026-09-17T22:58:40+01:00" level=warning msg="The \"PSEUDONYM_SEED\" variable is not set. Defaulting to a blank string."
+ Container em-fusion-backend-run-53d8d0cd4c66 Creating 
+ Container em-fusion-backend-run-53d8d0cd4c66 Created 
+receivers per zone: {2: 34, 3: 6}
+peak deviation in the zone, dB: min=11.9 median=13.4 max=15.9
+anom-001 severity of that peak: {'medium': 35, 'high': 5}
+
+corroboration state, with 'both periods must hold a finding':
+  corroborated       6
+  not corroborated   9
+  not measurable     25
+
+state by receiver count: {(2, 'corroborated'): 6, (2, 'not corroborated'): 8, (2, 'not measurable'): 20, (3, 'not corroborated'): 1, (3, 'not measurable'): 5}

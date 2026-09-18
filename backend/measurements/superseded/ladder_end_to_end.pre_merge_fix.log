@@ -1,0 +1,21 @@
+time="2026-09-17T23:28:32+01:00" level=warning msg="The \"PSEUDONYM_SEED\" variable is not set. Defaulting to a blank string."
+time="2026-09-17T23:28:32+01:00" level=warning msg="The \"PSEUDONYM_SEED\" variable is not set. Defaulting to a blank string."
+ Container em-fusion-backend-run-f0551158891a Creating 
+ Container em-fusion-backend-run-f0551158891a Created 
+scenario                    runs  decided correctly  silent  conflicting
+aircraft-coverage-gap         80                 75      75            0
+ambiguous-mixed-evidence      20                 20       0            0
+gnss-degradation              60                 60       0            5
+normal-baseline               20                 19      19            0
+rf-sensor-fault               60                 60       0            1
+
+what each arm was actually reported as:
+  aircraft-coverage-gap      {'possible_sensor_fault': 5}
+  ambiguous-mixed-evidence   {'possible_sensor_fault': 20}
+  gnss-degradation           {'possible_interference_zone': 60, 'possible_sensor_fault': 5}
+  normal-baseline            {'possible_sensor_fault': 1}
+  rf-sensor-fault            {'possible_sensor_fault': 60, 'possible_interference_zone': 1}
+
+corroboration across every interference zone raised: {'not_measurable': 120, 'not_corroborated': 14, 'corroborated': 26}
+
+NOTE: aircraft-coverage-gap can only be a correct non-detection here, because anom-006 is unbuilt (scn-007 blocks it).
