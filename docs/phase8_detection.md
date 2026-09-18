@@ -297,6 +297,13 @@ definition chosen after seeing the first results is a definition chosen to flatt
 
 ## 10. Evidence bundles
 
+*Superseded in detail by `docs/phase8_evidence_bundles.md`, written 2026-09-19 when the builder was
+picked up and the inputs were known rather than anticipated. That document supersedes this section on
+three points in particular: `data_mode` cannot be a single value on a fused bundle, the time-and-space
+grouping described below already exists in `anom-013` and must not be built twice, and the broadband
+fragmentation case named here cannot be provoked by any run in the corpus. This section remains the
+record of why the bundle was scoped this way.*
+
 The bundle is the phase's output and the boundary around everything after it.
 
 **It is the only input the AI layer ever receives.** Raw observations never reach a model. This is a
