@@ -5410,7 +5410,7 @@ single peak. They were then resolved in opposite directions, which looks inconsi
 | | the band | taken | why that end |
 |---|---|---|---|
 | Minimum episode duration | 10, 20, 30 s all give 140/140 runs caught and 0/80 false episodes kept | **10 s**, the bottom | Every larger value discards more true episodes — 24 per cent at 10 s against 56 per cent at 30 s — for no measured gain, because the false population is already empty |
-| Staged-aircraft floor | 3, 4, 5 all give 15 of 15 staged runs beating their own control | **5**, the top | A larger value inside the band costs nothing measured and buys margin toward the background spread a detector has to clear |
+| Staged-aircraft floor | 3, 4, 5 all give 10 of 10 staged runs beating their own control | **5**, the top | A larger value inside the band costs nothing measured and buys margin toward the background spread a detector has to clear |
 
 **Read a parameter from the end of its range where the cost lies.** The ends differ because the costs
 do: one band has a measured price for going higher and the other does not.

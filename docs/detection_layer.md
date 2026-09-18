@@ -81,7 +81,7 @@ aircraft**, and **11 of 40 affect none at all**. That single number is why:
 | Fix | What it does | Measured value |
 |---|---|---|
 | `anom-014` | A radio blip lasting one reading is not an event | **10 s** — removes 80 of 80 spurious episodes, keeps 140 of 140 real ones |
-| `scn-007` | A floor under how many aircraft an hour affects | **5** — below 3, a staged hour beats its own control 16 times in 26; at 3–5, 15 times in 15 |
+| `scn-007` | A floor under how many aircraft an hour affects | **5** — the extra dropouts rise steadily with the number affected, and at 3–5 a staged hour beats its own control 10 times out of 10 |
 
 Neither takes effect until the staged hours are regenerated, and regenerating invalidates every
 detection figure at once — which is why they were built **together**, so there is one invalidation

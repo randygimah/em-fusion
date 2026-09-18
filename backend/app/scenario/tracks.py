@@ -92,13 +92,28 @@ DEFAULT_AFFECTED_FRACTION = 0.08
 #: flight the share began rounding to nothing: a mean of 1.7 per run, with 11
 #: of 40 staging none at all and therefore carrying an empty answer key.
 #:
-#: Measured over 60 seed-matched pairs, grouping each pair by how many
-#: aircraft the run actually staged on. Below three, a staged run beats its
-#: own control on 16 of 26 pairs -- barely better than a coin. At three,
-#: four and five it beats it on **15 of 15**, which at even odds is a one in
-#: thirty thousand result. Five is the top of that band and its
-#: best-evidenced cell (8 pairs, all won, the largest excess at +2.2
-#: findings), so five is taken.
+#: Measured over the 40 seed-matched pairs generated *after* `scn-006`,
+#: grouping each pair by how many aircraft the run actually staged on. The
+#: restriction is not a detail: runs 1-100 predate the airborne gate and
+#: name a mean of about five aircraft where later runs name fewer than two,
+#: most of the difference being parked aircraft `anom-010` correctly
+#: refuses. Measured across that boundary the curve reads as though more
+#: staging buys nothing, and the first version of this constant was read
+#: off exactly that mistake.
+#:
+#: On the clean region the excess rises monotonically -- +0.7, +1.0, +2.0,
+#: +2.5, +3.0 findings at one through five staged -- and the win rate goes
+#: from 13 of 19 pairs below three to **10 of 10** at three, four and five.
+#: Five is the top of that band, at the largest measured excess.
+#:
+#: **Five is also the top of what the corpus can say anything about**: no
+#: run in the clean region stages more than five, so the curve cannot be
+#: read further. Extrapolating the slope, an excess of one standard
+#: deviation of the background would need about six staged aircraft and two
+#: would need about twelve -- and twelve is roughly a third of a typical
+#: eligible pool, which is an outage rather than an incident and would
+#: leave no unaffected traffic to judge against. Six is defensible and
+#: unmeasured; five is measured. Five is taken.
 #:
 #: The top of the band here, where `anom-014` took the bottom of its
 #: plateau, and the asymmetry is deliberate: there every larger value had a

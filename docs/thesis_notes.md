@@ -5075,15 +5075,24 @@ on the tracks, so the same corpus window and the same aircraft. Grouping those p
 aircraft the run actually staged on gives the excess in track-gap findings as a function of the
 count.
 
-The result breaks sharply and not where the smooth story would put it. With zero staged the excess is
-exactly zero, as it must be. With one or two, a staged run beats its own control on **16 of 26**
-pairs, which is barely better than a coin. With three, four or five it beats it on **15 of 15** — at
-even odds a result of about one in thirty thousand. The floor is set at five: the top of that band
-and its best-evidenced cell, eight pairs all won, with the largest measured excess at +2.2 findings.
+The first version of this measurement was taken over all 60 pairs in the corpus and had to be
+withdrawn; the reasons are in the subsection below on the corpus not being one corpus. Restricted to
+the 40 pairs generated after `scn-006`, the curve is both cleaner and more informative than the
+contaminated one had been.
 
-Five aircraft at the measured detection yield give roughly two or three detected staged dropouts,
-which is the least that can form a zone rather than a pair of points, and that is the property the
-rule downstream needs rather than a larger run-level count.
+The excess rises **monotonically** with the number staged — +0.7, +1.0, +2.0, +2.5 and +3.0 findings
+at one through five — and the win rate goes from 13 of 19 pairs below three to **10 of 10** at three,
+four and five. At even odds, ten of ten is about one in a thousand. The contaminated version had
+shown the excess flat and noisy above five, which is what a population of undetectable parked
+aircraft looks like when it is mixed in, and it had made the result look stronger (15 of 15) while
+hiding the monotonic relationship that actually matters: staging more aircraft does buy more signal.
+
+The floor is set at five, the top of the band and its largest measured excess. **Five is also the
+most that any run in the clean region stages**, so the curve cannot be read beyond it. Extrapolating
+the slope, an excess of one standard deviation of the background would need about six staged aircraft
+and two standard deviations about twelve — and twelve is roughly a third of a typical eligible pool,
+which is an outage rather than an incident and would leave no unaffected traffic to judge against.
+Six is defensible and unmeasured; five is measured, and measured is what the project takes.
 
 The choice took the *top* of its band where `anom-014` took the *bottom* of its plateau, and the
 asymmetry is deliberate rather than inconsistent. For the minimum duration every larger value on the

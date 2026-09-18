@@ -74,7 +74,9 @@ said**; a script with no log is marked, and its figure lives in `docs/thesis_not
 
 | Script | The question it answers | Figure of record |
 |---|---|---|
-| `scn007_floor.py` | How many staged aircraft does a coverage-gap run need before it is findable at all? | Below 3 staged, a run beats its own seed-matched control on **16 of 26** pairs; at 3-5 on **15 of 15**. Floor set at 5. Also prints the background the excess must clear: 14.4 findings per control run, sd 3.5 — which is why no reachable floor makes `anom-006` work by counting. |
+| `scn007_floor.py` | How many staged aircraft does a coverage-gap run need before it is findable at all? **Defaults to runs 121-240** — see below. | Over the 40 post-`scn-006` pairs the excess rises monotonically (+0.7, +1.0, +2.0, +2.5, +3.0 at one through five staged) and the win rate goes from **13 of 19** below three to **10 of 10** at three to five. Floor set at 5, which is also the most any clean run stages, so the curve cannot be read further. Background: 15.1 findings per control run, sd 3.5. |
+
+**This script must not be run over the whole corpus.** Its first version was, and the resulting figure had to be withdrawn. Runs 1-100 predate `scn-006`'s airborne gate and name a mean of about five staged aircraft against fewer than two afterwards, most of the difference being parked aircraft `anom-010` correctly refuses; runs 1-20 are also 600 s where everything later is 900 s. Measured across that boundary the high-count cells fill with runs whose staged aircraft were never detectable, and the curve flattens. The default range is the clean region and `RUN_LO`/`RUN_HI` override it only for deliberately looking at the old generator.
 
 ### The rate excess (`anom-012`)
 

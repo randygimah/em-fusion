@@ -883,9 +883,12 @@ def test_the_floor_does_not_lower_what_the_fraction_asked_for() -> None:
 def test_the_shipped_floor_is_five_aircraft() -> None:
     # spec: scn-007
     # Pinned because the number is measured and changing it must be a
-    # deliberate act with a new measurement behind it. Below three staged
-    # aircraft a run beats its own seed-matched control on 16 of 26 pairs;
-    # at three to five it beats it on 15 of 15.
+    # deliberate act with a new measurement behind it. Over the 40 pairs
+    # generated after scn-006: below three staged aircraft a run beats its
+    # own seed-matched control on 13 of 19 pairs, and at three to five on
+    # 10 of 10, with the excess rising monotonically across that range.
+    # The first version of this figure was measured across the scn-006
+    # boundary and had to be withdrawn -- see thesis_notes.md.
     assert DEFAULT_MINIMUM_AIRCRAFT == 5
 
     # And the default is what an unconfigured survey actually uses. A floor

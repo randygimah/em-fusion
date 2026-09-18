@@ -71,19 +71,23 @@ together discards the episode's window — the only thing that makes a suppressi
 
 ### `scn-007`: the floor is 5, and the spec's own implementation was impossible
 
-Over 60 seed-matched pairs, grouped by how many aircraft the run actually staged on:
+Over the **40 seed-matched pairs generated after `scn-006`** — the restriction matters, see Failed
+attempts — grouped by how many aircraft the run actually staged on:
 
 | staged | pairs | excess over its own control | staged beats control |
 |---|---|---|---|
-| 0 | 12 | +0.0 | 0/12 |
-| 1 | 12 | +0.8 | 9/12 |
-| 2 | 14 | +0.7 | 7/14 |
+| 0 | 11 | +0.0 | 0/11 |
+| 1 | 10 | +0.7 | 7/10 |
+| 2 | 9 | +1.0 | 6/9 |
 | 3 | 4 | +2.0 | **4/4** |
-| 4 | 3 | +2.0 | **3/3** |
-| 5 | 8 | +2.2 | **8/8** |
+| 4 | 2 | +2.5 | **2/2** |
+| 5 | 4 | +3.0 | **4/4** |
 
-Below three, 16 of 26 — barely better than a coin. At three to five, **15 of 15**. The floor is 5:
-the top of that band and its best-evidenced cell.
+The excess rises **monotonically**, and the win rate goes from 13 of 19 below three to **10 of 10** at
+three to five. The floor is 5 — the top of that band, and also the most any clean run stages, so the
+curve cannot be read further. Extrapolating, a one-sd excess needs ~6 staged and two-sd ~12; twelve is
+a third of a typical pool, which is an outage rather than an incident. Six is defensible and
+unmeasured, five is measured.
 
 **The two parameters were read from opposite ends of their bands, deliberately.** `anom-014` took the
 bottom of its plateau because every larger value had a measured cost; `scn-007` took the top of its
@@ -138,6 +142,21 @@ are both at `passes: true`.
 
 ## Failed attempts
 
+- **The floor was first measured across two different generators, and the figure was withdrawn.**
+  `scn007_floor.py` was run over all 60 seed-matched pairs in the corpus without checking whether
+  those pairs came from the same generator. They do not: **runs 1-100 predate `scn-006`'s airborne
+  gate** and name a mean of 4.4-5.2 staged aircraft against 1.6-1.9 afterwards, most of the difference
+  being parked aircraft `anom-010` correctly refuses. The high-count cells of that curve — six, nine,
+  eleven, twelve staged — can only come from the pre-gate blocks, so they were populated by runs whose
+  staged aircraft were undetectable by construction. Re-measured on ids 121-240 the answer is still 5,
+  but the evidence is different and better: the excess rises monotonically and the honest win rate is
+  10 of 10, not 15 of 15. **The script now defaults to the clean range.**
+- **The corpus is not one corpus**, which is how the above was found. Runs 1-20 are **600 s** where
+  every later run is 900 s (22,470 track observations against 33,779 for the same seeds); runs 1-100
+  predate `scn-006`. Runs 41-60 are runs 1-20 regenerated at the corrected length, which is why 20
+  seed/type pairs look like duplicates — the `aircraft-coverage-gap` arm is **80 runs over 60 distinct
+  seeds**, and any figure quoted "of 80" weights twenty of them twice. The ladder's 75-of-80 row is
+  affected; `source_gap_ceiling.py` escaped it by restricting to ids 121-240.
 - **Two `make test-backend` runs were started concurrently against the same `test_em_fusion`
   database**, producing 18 failures and 65 errors in the schema tests. Cause was a `;` where an `&&`
   was meant: `ruff && mypy ; make test-backend` ran the suite even though ruff had failed, and a
