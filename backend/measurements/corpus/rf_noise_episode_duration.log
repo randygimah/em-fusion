@@ -1,39 +1,40 @@
+corpus v2 -- one generator, 900 s runs, anom-014 and scn-007 active; base seeds 1412660662, 965530111, 655209063
 reading intervals present in the corpus, seconds: [10]
-runs staging RF: 140   staging none: 100
+runs staging RF: 180   staging none: 120
 
-TRUE  episodes (staged cell, inside staged window): n=1257
-  seconds  min=0 p5=0 p25=10 median=20 p75=40 max=210
-  readings min=1 p5=1 median=3 max=22
+TRUE  episodes (staged cell, inside staged window): n=1137
+  seconds  min=10 p5=10 p25=20 median=30 p75=60 max=220
+  readings min=2 p5=2 median=4 max=23
 
-FALSE episodes (everything else): n=80
-  seconds  min=0 p25=0 median=0 p75=0 p95=0 max=0
-  readings min=1 median=1 p95=1 max=1
+FALSE episodes (everything else): n=0
+  none. anom-014 suppresses them at the rule, so there is no
+  false population left to characterise -- which is the result.
 
 zero-length episodes (start == end, which anom-012 divides by):
-  among true:  300 of 1257
-  among false: 80 of 80
+  among true:  0 of 1137
+  among false: none, the population is empty
 
 the trade-off, at candidate minimums (an episode is kept when its
 duration is >= the minimum, so the boundary belongs to the value):
     minimum    true kept   false kept   runs still firing falsely
-        0s   1257 / 1257      80 / 80   
-       10s    957 / 1257       0 / 80   
-       20s    716 / 1257       0 / 80   
-       30s    549 / 1257       0 / 80   
-       40s    414 / 1257       0 / 80   
-       60s    232 / 1257       0 / 80   
-       90s    102 / 1257       0 / 80   
-      120s     44 / 1257       0 / 80   
+        0s   1137 / 1137       0 / 0    
+       10s   1137 / 1137       0 / 0    
+       20s    868 / 1137       0 / 0    
+       30s    669 / 1137       0 / 0    
+       40s    509 / 1137       0 / 0    
+       60s    304 / 1137       0 / 0    
+       90s    117 / 1137       0 / 0    
+      120s     56 / 1137       0 / 0    
 
 THE NUMBER THAT DECIDES IT. The catch rate is per run, not per episode:
 a run survives a minimum if ANY true episode of its own clears it.
-  runs staging RF, with at least one true episode: 140 of 140
+  runs staging RF, with at least one true episode: 180 of 180
     minimum   runs still caught
-        0s       140 / 140   
-       10s       140 / 140   
-       20s       140 / 140   
-       30s       140 / 140   
-       40s       139 / 140   
-       60s       120 / 140   
-       90s        78 / 140   
-      120s        41 / 140   
+        0s       180 / 180   
+       10s       180 / 180   
+       20s       180 / 180   
+       30s       176 / 180   
+       40s       170 / 180   
+       60s       150 / 180   
+       90s        92 / 180   
+      120s        51 / 180   

@@ -1,19 +1,14 @@
-runs 121-240 (post-scn-006 by default; 1-100 used the pre-gate generator)
-seed-matched pairs: 40
-staged aircraft per run: mean 1.70, max 5, zero on 11 of 40
+corpus v2 -- one generator, 900 s runs, anom-014 and scn-007 active; base seeds 1412660662, 965530111, 655209063
+seed-matched pairs: 60
+staged aircraft per run: mean 5.00, max 5, zero on 0 of 60
 
 the background a staged run has to clear, from the control arm:
-  findings per control run: mean 15.1, sd 3.5, min 9, max 21
+  findings per control run: mean 14.2, sd 3.3, min 8, max 22
 
   staged  pairs  staged mean  control mean   excess       wins
-       0     11         15.5          15.5     +0.0     0/11  
-       1     10         14.5          13.8     +0.7     7/10  
-       2      9         17.2          16.2     +1.0     6/9   
-       3      4         17.2          15.2     +2.0     4/4   
-       4      2         20.0          17.5     +2.5     2/2   
-       5      4         16.0          13.0     +3.0     4/4   
+       5     60         16.9          14.2     +2.7    57/60  
 
 the arithmetic, for when the curve is too thin to read:
   a staged aircraft yields ~1.0 detected dropout (source_gap_ceiling.py).
-  the control background has sd 3.5 findings per run, so an excess
+  the control background has sd 3.3 findings per run, so an excess
   of one sd needs about 3 staged aircraft and two sd about 7.

@@ -143,7 +143,17 @@ for seed, pair in sorted(by_seed.items()):
             sources["assessed"] = (POS[d.sensor_id], (d.started_at, d.ended_at))
             win_len["assessed"].append((d.ended_at - d.started_at).total_seconds())
             if staged_rf:
-                centre_err.append(great_circle_km(*POS[d.sensor_id], *POS[sensors[0]]))
+                # Distance to the NEAREST staged receiver, not to sensors[0].
+                # An interference incident is staged on two or three receivers
+                # and any of them is a correct centre, so comparing against an
+                # arbitrary member of the list measured receiver spacing rather
+                # than error: the figures it produced (median 45.3 km, max
+                # 107.5 km) are exactly this layout's minimum and median
+                # separations. Zero here means the detected centre sits on a
+                # receiver the answer key names, which is the actual question.
+                centre_err.append(min(
+                    great_circle_km(*POS[d.sensor_id], *POS[s]) for s in sensors
+                ))
 
         for src, (centre, window) in sources.items():
             if window[1] >= span[1] or window[0] <= span[0]:

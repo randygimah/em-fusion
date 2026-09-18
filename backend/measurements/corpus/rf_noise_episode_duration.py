@@ -138,13 +138,22 @@ print(f"  seconds  min={min(true_s):.0f} p5={pct(true_s,5):.0f} p25={pct(true_s,
 print(f"  readings min={min(true_n)} p5={pct(true_n,5)} median={pct(true_n,50)} max={max(true_n)}")
 print()
 print(f"FALSE episodes (everything else): n={len(false_s)}")
-print(f"  seconds  min={min(false_s):.0f} p25={pct(false_s,25):.0f} median={pct(false_s,50):.0f} "
-      f"p75={pct(false_s,75):.0f} p95={pct(false_s,95):.0f} max={max(false_s):.0f}")
-print(f"  readings min={min(false_n)} median={pct(false_n,50)} p95={pct(false_n,95)} max={max(false_n)}")
+if false_s:
+    print(f"  seconds  min={min(false_s):.0f} p25={pct(false_s,25):.0f} median={pct(false_s,50):.0f} "
+          f"p75={pct(false_s,75):.0f} p95={pct(false_s,95):.0f} max={max(false_s):.0f}")
+    print(f"  readings min={min(false_n)} median={pct(false_n,50)} p95={pct(false_n,95)} max={max(false_n)}")
+else:
+    # Not an error: on a corpus generated with anom-014 active the rule
+    # suppresses these before they are reported, so the population this
+    # script exists to characterise is empty by construction. That is the
+    # finding, and it is what the 10 s minimum was chosen to produce.
+    print("  none. anom-014 suppresses them at the rule, so there is no")
+    print("  false population left to characterise -- which is the result.")
 print()
 print("zero-length episodes (start == end, which anom-012 divides by):")
 print(f"  among true:  {sum(1 for x in true_s if x == 0)} of {len(true_s)}")
-print(f"  among false: {sum(1 for x in false_s if x == 0)} of {len(false_s)}")
+print(f"  among false: {sum(1 for x in false_s if x == 0)} of {len(false_s)}"
+      if false_s else "  among false: none, the population is empty")
 print()
 print("the trade-off, at candidate minimums (an episode is kept when its")
 print("duration is >= the minimum, so the boundary belongs to the value):")

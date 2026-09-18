@@ -1,7 +1,4 @@
-time="2026-09-17T22:34:23+01:00" level=warning msg="The \"PSEUDONYM_SEED\" variable is not set. Defaulting to a blank string."
-time="2026-09-17T22:34:23+01:00" level=warning msg="The \"PSEUDONYM_SEED\" variable is not set. Defaulting to a blank string."
- Container em-fusion-backend-run-196d60f0d5ab Creating 
- Container em-fusion-backend-run-196d60f0d5ab Created 
-cluster   20 km: staged beats control 7, ties 30, control beats staged 3 (skipped 0); among runs that staged anything, 7 of 29
-cluster   40 km: staged beats control 5, ties 31, control beats staged 4 (skipped 0); among runs that staged anything, 5 of 29
-cluster   60 km: staged beats control 4, ties 34, control beats staged 2 (skipped 0); among runs that staged anything, 4 of 29
+corpus v2 -- one generator, 900 s runs, anom-014 and scn-007 active; base seeds 1412660662, 965530111, 655209063
+cluster   20 km: staged beats control 20, ties 33, control beats staged 7 (skipped 0); among runs that staged anything, 20 of 60
+cluster   40 km: staged beats control 14, ties 38, control beats staged 8 (skipped 0); among runs that staged anything, 14 of 60
+cluster   60 km: staged beats control 10, ties 45, control beats staged 5 (skipped 0); among runs that staged anything, 10 of 60
