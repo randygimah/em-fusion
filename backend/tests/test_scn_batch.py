@@ -368,3 +368,118 @@ def test_the_batch_module_reads_no_clock_and_no_unseeded_randomness() -> None:
                 offences.append("hash()")
 
     assert offences == []
+
+
+# ---------------------------------------------------------------------------
+# scn-008: a run should name the batch it came from.
+#
+# BatchSummary has always carried the base seed and always printed it in the
+# batch report, and the value then reached nothing durable. Of the base seeds
+# behind the 240 stored runs exactly one survives anywhere, in a
+# pre-registration that happened to quote it -- which is why the regenerated
+# corpus has to be reported as a new corpus rather than a repeat.
+#
+# The point of these tests is not that three numbers are stored. It is that
+# storing them makes the run's own seed *checkable*: re-derive it from the
+# recorded batch and it must match. A recorded number nobody can check is
+# barely better than a lost one.
+# ---------------------------------------------------------------------------
+
+
+def test_a_run_records_the_batch_it_came_from() -> None:
+    # spec: scn-008
+    spec = _spec().with_batch(base_seed=BASE_SEED, index=7, runs=20)
+    parameters = spec.as_parameters()
+
+    assert parameters["base_seed"] == BASE_SEED
+    assert parameters["batch_index"] == 7
+    assert parameters["batch_runs"] == 20
+
+
+def test_the_recorded_batch_re_derives_the_runs_own_seed() -> None:
+    """The property the three values exist for. Without this they are three
+    numbers that cannot be wrong, which is not the same as being right."""
+    # spec: scn-008, scn-001
+    seeds = derive_seeds(BASE_SEED, 20)
+    spec = _spec(seed=seeds[7]).with_batch(base_seed=BASE_SEED, index=7, runs=20)
+    parameters = spec.as_parameters()
+
+    re_derived = derive_seeds(parameters["base_seed"], parameters["batch_runs"])
+    assert re_derived[parameters["batch_index"]] == spec.seed
+
+
+def test_a_run_generated_outside_a_batch_records_no_batch() -> None:
+    """Rather than inventing a batch of one. A synthetic value here would be
+    indistinguishable from a real one, and the field exists to be trusted."""
+    # spec: scn-008
+    spec = _spec()
+
+    assert spec.batch is None
+    parameters = spec.as_parameters()
+    assert "base_seed" not in parameters
+    assert "batch_index" not in parameters
+    assert "batch_runs" not in parameters
+
+
+def test_a_row_carrying_batch_provenance_still_rebuilds_its_run() -> None:
+    """Provenance, not a generation input: `from_record` refuses parameters it
+    does not recognise, and these must not trip that refusal."""
+    # spec: scn-008, scn-003
+    spec = _spec().with_batch(base_seed=BASE_SEED, index=3, runs=25)
+
+    rebuilt = RunSpec.from_record(
+        scenario_type=spec.scenario_type.value,
+        parameters=spec.as_parameters(),
+        seed=spec.seed,
+    )
+
+    assert rebuilt.seed == spec.seed
+    assert rebuilt.start == spec.start
+    assert rebuilt.duration_seconds == spec.duration_seconds
+
+
+def test_a_row_with_no_batch_still_rebuilds_its_run() -> None:
+    """Every one of the 240 runs generated before this item has no batch
+    recorded, and those rows stay readable."""
+    # spec: scn-008, scn-003
+    spec = _spec()
+
+    rebuilt = RunSpec.from_record(
+        scenario_type=spec.scenario_type.value,
+        parameters=spec.as_parameters(),
+        seed=spec.seed,
+    )
+
+    assert rebuilt == spec
+    assert rebuilt.batch is None
+
+
+def test_a_rebuilt_run_reproduces_its_stream_with_batch_recorded(
+    layout: RfLayout,
+) -> None:
+    """The batch fields are inert: adding them must not change a single
+    emitted reading, or they would be a generation input in disguise."""
+    # spec: scn-008, scn-001
+    spec = _spec(start=CORPUS.start + timedelta(seconds=1200))
+    original = stream_digest(emit_rf(layout, spec, plan_incident(layout, spec)))
+
+    with_batch = spec.with_batch(base_seed=BASE_SEED, index=2, runs=20)
+
+    assert (
+        stream_digest(emit_rf(layout, with_batch, plan_incident(layout, with_batch)))
+        == original
+    )
+
+
+def test_a_batch_index_outside_its_own_batch_is_refused() -> None:
+    """An index past the run count cannot name a run, so the provenance would
+    be unverifiable by construction -- the one thing it exists not to be."""
+    # spec: scn-008
+    with pytest.raises(ValueError, match="batch"):
+        _spec().with_batch(base_seed=BASE_SEED, index=20, runs=20)
+
+
+def test_a_negative_batch_index_is_refused() -> None:
+    # spec: scn-008
+    with pytest.raises(ValueError, match="batch"):
+        _spec().with_batch(base_seed=BASE_SEED, index=-1, runs=20)
