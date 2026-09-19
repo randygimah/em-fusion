@@ -325,7 +325,10 @@ def test_a_ref_in_neither_known_shape_is_refused_by_name():
     assembled from whatever keys happen to be present would build an empty
     predicate for an empty ref and match the whole run."""
     # spec: evb-002, db-008
-    with pytest.raises(ResolutionError, match="aircraft_id"):
+    # Matched on what only the shape refusal says. "aircraft_id" alone also
+    # appears in the not-found message, so the check could be deleted
+    # entirely and this test would still pass -- it was, and it did.
+    with pytest.raises(ResolutionError, match="neither"):
         resolve_bundles(_ExplodingFactory(),
                         [bundle(observed({"aircraft_id": AIRCRAFT}))])
 
@@ -566,6 +569,82 @@ def test_a_track_citation_resolves_on_its_own_coordinate(
 
 @pytest.mark.database
 @requires_database
+def test_track_resolution_is_scoped_to_the_run_as_well(
+    migrated_database: Engine, factory: sessionmaker
+) -> None:
+    """Asserted for both shapes rather than one. The scoping is written
+    twice, once per query, so a test covering only the RF side leaves the
+    other free to match every run in the corpus -- which is what a mutation
+    pass found when the RF clause was the only one under test."""
+    # spec: evb-002
+    mine = insert_track(migrated_database, run_id=RUN_ID)
+    insert_track(migrated_database, run_id=OTHER_RUN_ID)
+    item = EvidenceItem(
+        source=AIRCRAFT, finding="reporting broke during the window",
+        rule_id="TRACK-GAP", finding_type="track_discontinuity",
+        grounding=Grounding.OBSERVED, data_mode=DataMode.REPLAYED,
+        started_at=START, ended_at=END, refs=(track_ref(),))
+    resolved = resolve_bundles(factory, [bundle(item)])
+    assert resolved[0].evidence[0].observation_ids == (mine,)
+
+
+@pytest.mark.database
+@requires_database
+def test_a_track_coordinate_only_in_another_run_is_refused(
+    migrated_database: Engine, factory: sessionmaker
+) -> None:
+    # spec: evb-002
+    insert_track(migrated_database, run_id=OTHER_RUN_ID)
+    item = EvidenceItem(
+        source=AIRCRAFT, finding="reporting broke during the window",
+        rule_id="TRACK-GAP", finding_type="track_discontinuity",
+        grounding=Grounding.OBSERVED, data_mode=DataMode.REPLAYED,
+        started_at=START, ended_at=END, refs=(track_ref(),))
+    with pytest.raises(ResolutionError, match="no stored observation"):
+        resolve_bundles(factory, [bundle(item)])
+
+
+@pytest.mark.database
+@requires_database
+def test_an_rf_citation_does_not_match_a_row_of_another_type(
+    migrated_database: Engine, factory: sessionmaker
+) -> None:
+    """The resolver filters on `observation_type` as well as on the
+    coordinate, and does not rely on the adapters to keep the payload shapes
+    apart. The row below is one the DAL would refuse -- a track observation
+    carrying RF keys -- inserted directly, because the resolver is the last
+    line here and cannot see the guarantee upstream is making. Without the
+    type filter the coordinate matches it and the bundle cites an aircraft
+    report as proof of a radio deviation."""
+    # spec: evb-002, dal-002
+    with migrated_database.connect() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO observations (source_id, source_type, data_mode, "
+                " scenario_run_id, observation_type, timestamp, "
+                " validation_status, provenance, payload, location) "
+                "VALUES ('opensky-replay', 'opensky', 'replayed', :run, "
+                " 'track', :at, 'valid', '{}'::jsonb, CAST(:payload AS jsonb), "
+                " ST_GeomFromEWKT('SRID=4326;POINT(7.5473 51.0905)'))"
+            ),
+            {
+                "run": RUN_ID,
+                "at": START,
+                "payload": (
+                    f'{{"aircraft_id": "{AIRCRAFT}", "on_ground": false, '
+                    f'"position_staleness_s": 1.0, "contact_staleness_s": 0.0, '
+                    f'"sensor_id": "{SENSOR}", "channel_index": {CHANNEL}}}'
+                ),
+            },
+        )
+        connection.commit()
+
+    with pytest.raises(ResolutionError, match="no stored observation"):
+        resolve_bundles(factory, [bundle(observed(rf_ref()))])
+
+
+@pytest.mark.database
+@requires_database
 def test_a_bundle_spanning_both_shapes_resolves_both(
     migrated_database: Engine, factory: sessionmaker
 ) -> None:
@@ -650,6 +729,10 @@ def test_a_saved_bundle_comes_back_with_its_resolved_ids(
     assert len(read) == 1
     assert read[0].subject == SENSOR
     assert read[0].time_window == (START, END)
+    # Longitude is X and latitude is Y and both are the same kind of number,
+    # so a transposition stores valid geometry in the wrong place and raises
+    # nothing anywhere. HERE is distinct in both coordinates on purpose.
+    assert read[0].affected_area == HERE
     assert read[0].affected_channels == (CHANNEL,)
     assert read[0].evidence[0].observation_ids == (row_id,)
     assert read[0].evidence[1].grounding is Grounding.DERIVED
@@ -693,6 +776,26 @@ def test_a_failed_resolution_persists_nothing_at_all(
         save_bundles(factory, scenario_run_id=RUN_ID, bundles=[good, bad])
 
     assert _count(migrated_database) == 0
+
+
+@pytest.mark.database
+@requires_database
+def test_a_failed_resolution_leaves_the_previous_set_standing(
+    migrated_database: Engine, factory: sessionmaker
+) -> None:
+    """The other half, and the half an empty table cannot tell apart:
+    resolution happens *before* the replace, so a save that cannot resolve
+    does not first delete what was there and then fail to insert. Starting
+    from empty, deleting-then-resolving looks identical to this."""
+    # spec: evb-002
+    insert_rf(migrated_database)
+    save_bundles(factory, scenario_run_id=RUN_ID, bundles=[bundle(observed(rf_ref()))])
+
+    unresolvable = bundle(observed(rf_ref(at=START + timedelta(seconds=999))))
+    with pytest.raises(ResolutionError):
+        save_bundles(factory, scenario_run_id=RUN_ID, bundles=[unresolvable])
+
+    assert _count(migrated_database) == 1
 
 
 @pytest.mark.database
@@ -750,7 +853,9 @@ def test_a_bundle_from_another_run_is_refused(
     replace above would then delete it on the next generation."""
     # spec: evb-002
     insert_rf(migrated_database)
-    with pytest.raises(ResolutionError, match="run"):
+    # "run" appears in every resolution failure, including the one this
+    # bundle would cause anyway by citing a coordinate from the other run.
+    with pytest.raises(ResolutionError, match="was handed to a save"):
         save_bundles(factory, scenario_run_id=RUN_ID,
                      bundles=[bundle(observed(rf_ref()), run_id=OTHER_RUN_ID)])
 

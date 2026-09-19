@@ -1,0 +1,37 @@
+a citation matching nothing is accepted                    KILLED   1 failed, 13 passed in 4.41s
+a citation matching two rows is accepted                   KILLED   1 failed, 14 passed in 5.64s
+the first matching row is taken when several match         KILLED   1 failed, 14 passed in 5.49s
+the rf query is not scoped to the run                      KILLED   1 failed, 15 passed in 6.89s
+the track query is not scoped to the run                   KILLED   1 failed, 18 passed in 10.25s
+the rf query does not filter on observation type           KILLED   1 failed, 20 passed in 12.51s
+the read is not scoped to the run                          KILLED   1 failed, 30 passed in 25.91s
+the replace is not scoped to the run                       KILLED   1 failed, 30 passed in 25.60s
+the rf shape is matched as a subset rather than exactly    KILLED   1 failed, 8 passed in 0.65s
+the track shape is matched on one key                      KILLED   1 failed, 6 passed in 0.71s
+an unknown shape is skipped rather than refused            KILLED   1 failed, 6 passed in 0.65s
+the track shape is read as spelling its time `timestamp`   KILLED   1 failed, 9 passed in 0.64s
+a bundle of judgements still opens a transaction           KILLED   1 failed, 5 passed in 0.64s
+judgements are queried for rows they cannot have           SURVIVED 34 passed in 29.64s
+resolved ids are sorted rather than kept in citation order KILLED   1 failed, 12 passed in 3.23s
+resolved ids are not persisted                             KILLED   1 failed, 24 passed in 17.48s
+the grounding is not persisted                             KILLED   1 failed, 24 passed in 17.53s
+longitude and latitude are transposed                      KILLED   1 failed, 24 passed in 17.35s
+a bundle belonging to another run is written anyway        KILLED   1 failed, 31 passed in 27.03s
+the replace happens before resolution                      KILLED   1 failed, 27 passed in 21.75s
+an empty set of bundles leaves the old ones standing       KILLED   1 failed, 29 passed in 24.34s
+an observation claim citing nothing is accepted            KILLED   1 failed, 3 passed in 0.67s
+a judgement citing observations is accepted                KILLED   1 failed, 4 passed in 0.67s
+episodes are declared judgements                           KILLED   1 failed, 34 passed in 29.68s
+track findings are declared judgements                     KILLED   1 failed, 42 passed in 30.11s
+the frozen finding reports the reconstructed start as observed KILLED   1 failed in 0.68s
+the refs cite the window start again                       KILLED   1 failed, 2 passed in 0.68s
+the not-heard finding reports its reports in the wrong order KILLED   1 failed, 1 passed in 0.52s
+the refs cite the window end (equivalent)                  SURVIVED 80 passed in 32.46s
+
+restored
+
+27 killed of 29 valid mutants
+SURVIVED, and declared equivalent before the run:
+  - judgements are queried for rows they cannot have
+  - the refs cite the window end (equivalent)
+no unexpected survivors
