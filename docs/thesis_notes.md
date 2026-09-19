@@ -5318,6 +5318,103 @@ same conclusion about what would change it: a generator change rather than a det
 coverage gap has to become a zone-level event separable from a staleness freeze before any threshold
 here is worth choosing.
 
+### The first time every citation was checked, one in eleven pointed at nothing
+
+`evb-002` requires that every item in an evidence bundle resolve to a stored observation, checked
+against the database rather than asserted by the builder. It is the precondition for the grounding
+check in the AI layer: verifying that a generated hypothesis cites something real is a
+set-membership test against a resolved bundle, and has no computable answer against 20.7 million
+observations.
+
+The item was expected to be close to a formality. The detection layer had carried `evidence_refs`
+since `db-008`, every rule populated them, and the coordinates had already been measured unique
+across both corpora. Measuring what those references actually pointed at was therefore a
+confirmation step, and it did not confirm.
+
+Over 24 real bundles built from 40 runs, **91 of 1,021 cited coordinates resolved to zero rows** —
+one citation in eleven. The misses were not scattered, which is what made them diagnosable: every
+single one was the *start* of a `frozen_position` track finding, and every radio citation and every
+`not_heard` citation resolved cleanly. A focused re-check over three runs put it at 48 of 48.
+
+The cause is a distinction the finding model had collapsed. A detection finding carries two kinds of
+time, and they are not the same kind:
+
+| | What it is | Must a row exist at it? |
+|---|---|---|
+| The window (`started_at`, `ended_at`) | The rule's **conclusion** — when it believes the event began and ended | No |
+| The reference | The rule's **evidence** — the reports it actually read | Yes, or it is not a reference |
+
+The storable shape was built writing the window ends into the reference field, on the unexamined
+assumption that the moment an event began is a moment something was recorded. For the coverage-gap
+mechanism that holds, because its window ends *are* the reports either side of the silence. For the
+frozen-position mechanism it cannot hold: that finding is raised from a report which arrives
+carrying a stale position, and the rule reconstructs when the freeze began by subtracting the
+staleness the report declares from the report's own arrival time. That instant is an inference. It
+is also, by construction, the one moment in the entire window at which nothing was recorded — the
+position had stopped updating, which is the whole content of the finding. The citation pointed at
+the only place a citation could never land.
+
+The fix keeps the window and adds the observed report times beside it, so the finding cites the
+report that *showed* the stale position rather than the instant it infers from it. Moving the window
+instead was considered and rejected: "when the position went stale" is the right answer to the
+question the window asks, and replacing it with the first stale report's own timestamp would make
+every frozen finding shorter than the event it describes, which would quietly change the
+during-window counts the rate-excess rule computes.
+
+Two things about this are worth carrying into the write-up beyond the defect itself.
+
+**It was invisible to every check the project had.** The references were written, stored, covered by
+tests, and survived a mutation pass. Nothing read them. A field that is produced and never consumed
+is not tested by anything, however green the suite is, and this one sat that way across two corpora
+and 240 runs before the first consumer arrived.
+
+**A plausible test would have missed it.** A traceability test written over a coverage-gap finding
+passes, because both of its ends are real rows. Two mechanisms produce the same shape of output,
+only one of them can satisfy the constraint, and a fixture drawn from the wrong one proves nothing
+about the other. This is the second time in the project that a test could not have failed — the
+per-channel baseline test was rebuilt for the same reason — and the general form is now recorded:
+a check is only as strong as the variety in what it is run against.
+
+### Batching decided a deferred index question, and cost nothing to measure
+
+The same measurement settled the open performance question the specification had deliberately
+deferred. A single resolution had been measured at 64.7 ms, running as an index scan on the run and
+then discarding 38,424 rows by filter, and whether that mattered depended entirely on how many
+citations a bundle carries — which could not be known until the evidence list was composed.
+
+It carries 26 at the median and 105 at the worst. One query per citation costs 194.5 ms per bundle
+at the median and 748 ms at the worst; one query per coordinate shape costs **10.5 ms and 131.5 ms**,
+because the row filter is paid once instead of once per reference. That is 18.6× at the median, and
+it is the difference between a design decision and a schema change: the composite index that was
+being considered would have bought the same constant factor, and batching buys it without altering
+the schema at all. The index remains a candidate rather than a prerequisite.
+
+The general point is worth one sentence in the methodology chapter. The first instinct on seeing
+64.7 ms per lookup was to add an index, which is a change to stored structure that has to be
+migrated, reasoned about and kept. The cheaper fix was to stop issuing the query 26 times.
+
+### Two guards that make each other redundant, found by mutation rather than by reading
+
+The mutation pass over this item killed 27 of 29, with both survivors equivalent. One of the two is
+worth recording because of *why* it is equivalent rather than that it is.
+
+Evidence items now declare whether they cite observations or state a judgement, and the resolver
+skips the judgements. Removing that skip changes nothing — because the item constructor already
+refuses a judgement that carries references, so a judgement reaching the resolver has nothing to
+iterate. The two guards cover each other exactly.
+
+That is an equivalent mutant today and a latent defect tomorrow: delete the constructor check and
+the resolver's skip becomes load-bearing with no test on it, and nothing in the suite would say so.
+It is recorded in the harness rather than in a comment, because a note saying "this mutant is
+equivalent" is only useful where the next person is already looking.
+
+The other four survivors of the first pass were genuine gaps, and all four were the same shape as
+`evb-001`'s: the suite tested thoroughly what a correct lookup returns and barely tested what must
+be *excluded*. Run scoping was written twice, once per coordinate shape, and only one of the two was
+under test. Two refusals were asserted with a pattern that any failure message satisfies, so both
+guards could be deleted with the suite still green. A refusal test that does not pin *which* refusal
+it got is not testing the guard; it is testing that something went wrong.
+
 
 ## Evaluation
 

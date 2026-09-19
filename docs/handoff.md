@@ -2,200 +2,129 @@
 
 ## Goal
 
-EM Fusion is a human-in-the-loop AI prototype for explainable electromagnetic situational awareness:
-it fuses replayed aviation telemetry and synthetic RF observations through a Data Abstraction Layer,
-detects deviations deterministically, and turns evidence bundles into schema-validated,
-grounding-checked AI hypotheses for an analyst to review. Decision support, never autonomous
-decision-making.
+EM Fusion is a human-in-the-loop AI prototype for explainable electromagnetic situational
+awareness: replayed aviation telemetry and synthetic RF observations are fused through a Data
+Abstraction Layer, deviations are detected deterministically, and evidence bundles become
+schema-validated, grounding-checked AI hypotheses for an analyst to review. Decision support, not
+autonomous decision-making.
 
-This session took **`anom-006`'s threshold measurement** — the first item the previous handoff
-listed, chosen because it was cheap and decisive either way. It was decisive. **`anom-006` is closed
-again**, on stronger evidence than the first closure, and the detection layer's remaining work no
-longer has a measurement blocking it.
+This session set out to build `evb-002`, evidence traceability — the check that every statement in
+an evidence bundle resolves to a stored observation, so the grounding check in `ai-008` has a closed
+set to verify a model's citations against.
 
 ## Current state
 
-**45 spec items passing of 98** — unchanged, because this session closed an item rather than
-building one. That is the intended outcome of a measurement whose pre-registered failure branch
-fired.
+**`evb-002` is built and green. 47 of 98 spec items pass.**
 
-### What `anom-006` asked, and what it got
+- 999 tests pass on the full backend tier, **99.83% coverage**, 100% on the new module. Ruff and
+  mypy clean.
+- Mutation pass: **27 of 29 killed**, both survivors provably equivalent and declared in the harness.
+- Migration `0005_evidence_bundle_columns` is at head and reversible.
 
-The regeneration reopened the item on a **paired** result: scoring a staged coverage-gap zone
-against its own same-seed control gives **20 wins to 7** at a 20 km cluster radius. The amendment
-reopening it recorded that this says nothing about whether a **fixed threshold separates a staged
-run from an unstaged one on a single run**, which is the question a detector faces, and demanded
-that measurement before any threshold. It has now been taken.
+Measurements taken this session, so the next one need not re-derive them:
 
-Pre-registered in `backend/measurements/corpus/source_gap_threshold_prereg.md` — populations,
-operating-point rule and failure bar fixed in advance — fitted on two base seeds and scored **once**
-on the third.
+| Question | Answer |
+|---|---|
+| How many observations does a real bundle cite? | **26 at the median, 105 at the worst**, over 24 bundles from 40 runs. A zone bundle cites 79 at the median, a fault bundle 23. |
+| How many evidence items cite nothing? | **72 of 332** — verdicts, nominal neighbours, rate ratios. All genuine judgements. |
+| One query per citation, or one per shape? | **Per shape.** 10.5 ms against 194.5 ms at the median, **18.6x**. |
+| Is the composite index owed before this item? | **No.** Batching removes the cost the index would have removed. It stays a candidate. |
+| Did every citation resolve? | **No — 91 of 1,021 resolved to zero rows**, every one the start of a `frozen_position` finding. Fixed. |
 
-| | Development (2 seeds) | Holdout (1 seed) |
-|---|---|---|
-| Coverage gaps caught | 7/40 (0.17) | **3/20 (0.15)** — pre-registered bar was 0.25 |
-| Quiet runs falsely alarmed | 0/40 | **0/20** |
-| **`gnss-degradation` falsely alarmed** | 15/40 | **6/20 (0.30)** |
+What `evb-002` does, in one paragraph: resolution is by coordinate, batched one query per shape per
+bundle, always scoped to the scenario run, over a closed set of exactly two coordinate shapes
+matched by exact key set. Zero rows and more than one row both raise. Atomicity is per run — every
+bundle is resolved in full before anything is written — and the write replaces the run's bundles,
+following `db-008`. Resolved ids are persisted per item inside the evidence JSON, not in a join
+table.
 
-Operating point: 60 km cluster radius, minimum zone size 4, excess threshold 11.53.
-
-**What closes the item is the third row, not the first.** The rule fires twice as often on the
-interference arm as on the coverage gaps it exists to find. `anom-013` orders `SENSOR-FAULT`,
-`SOURCE-GAP`, `FUSION-SPATIAL`, so `SOURCE-GAP` **outranks** the interference rule: a wrong firing
-can claim the zone before `FUSION-SPATIAL` is offered it. Building it would risk the one arm the
-ladder decides correctly 60 of 60 to catch a seventh of an arm nothing judges. Whether those zones
-actually overlap was **not measured** — the hazard is established, its size is not.
-
-**Development and holdout agree closely (0.17 / 0.15).** This is a reliable measurement of a weak
-effect, not a noisy one. More runs of the same corpus will not change it.
-
-**Ceiling, ignoring the false-alarm constraint:** best Youden's J anywhere is **0.275**, at a 0.38
-quiet-arm rate `anom-008` forbids outright. `anom-012` reported 0.23–0.40 on a curve this project
-already calls weak.
-
-**Mechanism, as predicted at the first closure:** the statistic saturates. At a size floor of 1
-every arm reaches the same maximum ratio (198.78) with medians differing by 0.6, because taking the
-maximum across zones selects whichever zone had the fewest findings — `anom-012`'s smoothing
-constant dominating a small sample. Separation only appears at a size floor of 4, where a third of
-runs no longer qualify.
-
-### A population fact that outlives the item
-
-Verified by **exact** comparison, not summary statistics:
-
-```
-normal-baseline        track findings ≡ rf-sensor-fault           (same seed)
-aircraft-coverage-gap  track findings ≡ ambiguous-mixed-evidence  (same seed)
-```
-
-`tracks.py` gives the coverage-gap and ambiguous arms one `SUPPRESS` mode, and neither the quiet arm
-nor the sensor-fault arm perturbs tracks at all. **Any track-side figure quoting 120 negatives is
-counting 60 seeds twice**, and the ambiguous arm is not independent evidence about a track-side
-rule. Check any figure before re-quoting it.
+Unchanged and still open: the broadband generation arm (blocks `anom-007`'s confidence bands and
+`evb-001`'s frequency-adjacency corpus demonstration); the frontend suite exits non-zero
+(`control.runs.map is not a function` at `scenarioControl.tsx:344`); nine measurement scripts still
+select runs by means other than `_corpus`; `DEFAULT_AFFECTED_FRACTION` is inert.
 
 ## Files in flight
 
-Tree is clean. Nothing is part-built: this session added a measurement and closed a spec item.
+The tree is clean. Everything below is committed.
 
 ## Changed
 
-- `9584d74` spec: close `anom-006` again — the threshold measurement it asked for
-- `66896df` docs: the `anom-006` threshold measurement written up
-- `e3e3492` docs: state the coverage-gap limitation in full, and its consequences
-- `64c8f75` docs: progress note — controls, and the closed coverage-gap test
-- New: `backend/measurements/corpus/source_gap_threshold_sweep.py` and its `.log`,
-  `backend/measurements/corpus/source_gap_threshold_prereg.md` (with its change log),
-  `backend/measurements/corpus/arm_rf_identity.py` and its `.log`
-- `docs/progress_note.html`: new **positive/negative controls** section mapping all five arms, the
-  stale "worth trying again" section replaced with the closure, roadmap reordered (`evb-001` first),
-  coverage-gap confound marked **dormant rather than retired** — it returns if the generator is ever
-  changed to give coverage gaps a place
-- Changed: `docs/spec.jsonl` (`anom-006` amended, still `passes: false`),
-  `docs/detection_layer.md` (ladder row 2 and the coverage-test section rewritten),
-  `docs/thesis_notes.md` (Implementation subsection on paired vs single-run tests),
-  `docs/qa.md` §79, `backend/measurements/README.md`, `.gitignore` (the zone cache)
+| Commit | What |
+|---|---|
+| `b35c4bb` | `measure:` the bundle ref-cost measurement and its log |
+| `52e9f11` | `docs:` `qa.md` §83 and three glossary rows |
+| `8d14f11` | `spec:` `evb-002` composition, plus amendments to `anom-010`, `db-008`, `evb-001` |
+| `2496530` | `test:` 30 tests for `evb-002`, all red |
+| `61dbda6` | `feat(evb-002):` the resolver, the persistence, migration `0005` |
+| `650d5a0` | `test:` close 4 mutation survivors |
+
+New files: `backend/app/db/bundles.py`, `backend/alembic/versions/0005_evidence_bundle_columns.py`,
+`backend/tests/test_evb_traceability.py`, `backend/measurements/corpus/bundle_ref_cost.py` (+ log),
+`backend/measurements/mutation/mutate_evb002_traceability.py` (+ log).
+
+Modified: `app/detection/bundle.py` (the `Grounding` declaration and `observation_ids`),
+`app/detection/track_gap.py` (`observed_at`), `app/detection/findings.py` (cite `observed_at`),
+`tests/test_db_findings.py` (two constructions updated), `docs/spec.jsonl`, `docs/qa.md`,
+`docs/thesis_notes.md`, `backend/measurements/README.md`, `CLAUDE.md`.
+
+No new dependencies.
 
 ## Failed attempts
 
-- **My pre-registration named a scenario arm this project does not have.** It listed
-  `rf-interference` as a negative population; the five types are `normal-baseline`,
-  `gnss-degradation`, `rf-sensor-fault`, `aircraft-coverage-gap`, `ambiguous-mixed-evidence`. The
-  interference arm is `gnss-degradation` — several documents call it "the interference ones" in
-  prose, which is what I read it from instead of reading `app/scenario/incident.py`. The column came
-  out `0/0`.
-- **The same table omitted `ambiguous-mixed-evidence` entirely, and it is not a negative.** It
-  shares the positive arm's `SUPPRESS` track mode, so a firing there detects a real staged gap.
-  **The decision rule and the bar were unaffected** — both refer only to the coverage-gap and quiet
-  arms, both correctly identified — so the verdict stands, but the reporting had to be corrected.
-  Recorded in the prereg's change log rather than silently fixed.
-- **My first sweep's print filter hid the entire decisive region.** It printed thresholds 1.0, 2.0
-  and 3.0, where the statistic is saturated and every arm fires identically, and never printed the
-  region above 10 where the arms part. It had computed those rows and discarded them. The first
-  output therefore looked like a bug (`40/40  40/40  40/40` across every arm) when it was a real
-  property of the statistic shown at useless thresholds.
-- **My first operating-point search selected a rule that fires on nothing.** "Maximise sensitivity
-  subject to zero false alarms" is satisfied vacuously at a size floor of 8, where no run of any arm
-  produces a qualifying zone. It picked exactly that and printed the right verdict for the wrong
-  reason. The search now requires at least one true positive, and thresholds come from the observed
-  values rather than a fixed grid that can step over the only interesting point.
-- **The identical columns were nearly dismissed as an aliasing bug.** They were not: two arm-pairs
-  genuinely produce identical track findings. **Byte-identical columns are never a coincidence and
-  should always be chased** — this one turned into a standing correction to how negatives are
-  counted.
-- **A digest ordered by a payload key that does not exist reported false generator differences.**
-  Comparing the two sensor-fault-shaped arms, the first pass ordered rows by `payload->>'channel_hz'`
-  — no payload carries that key — so every row within a timestamp sorted equal and the order came
-  from the heap. 4 of 60 pairs looked like generator non-determinism, which would have been far more
-  serious than the question being asked. Diffing one showed the same values in a different channel
-  order; under a total order it is **60 of 60 identical**. **A non-existent sort key sorts everything
-  equal and raises no error** — the third unordered-partition fault in this project, and the
-  quietest, since `db-009`'s centroid at least moved a number.
-- **Rebuilding the script by splicing dropped a module constant** (`CACHE`), which failed
-  immediately with a `NameError`. Cost one run; caught because the script fails at import rather
-  than silently.
+**I assumed a finding's window start was a time something was observed. It is not, for half the
+track findings.** The storable shape wrote the window ends into the citation field. For the
+coverage-gap mechanism that is correct — its ends *are* the reports either side of the silence. For
+the frozen-position mechanism it cannot be: the start is reconstructed by subtracting the reported
+staleness, and that instant is by definition the one moment in the window at which nothing was
+recorded. 91 of 1,021 real citations landed there. It had been that way across two corpora and 240
+runs, invisible because nothing read the field until `evb-002` did. Written up as `qa.md` §83.
+
+**Two of my first-draft tests passed before any implementation existed**, which the workflow calls a
+wrong test. One asserted the coordinate shapes against this test file's own helper functions rather
+than against what the rules emit — proving only that the helpers agree with themselves. The other
+downgraded one revision from head and asserted a column was absent, which was true before the
+migration existed too. Both rewritten to assert positively first.
+
+**Two mutants I was about to write would have survived, which meant two tests were weak.** Writing
+the mutation sites before running them caught this: the atomicity test started from an empty table,
+where "resolve then delete" and "delete then resolve" are indistinguishable; and the round-trip test
+never asserted *where* the event was, so a latitude/longitude transposition in the EWKT would have
+passed. Both fixed before the pass ran.
+
+**The first mutation pass killed 22 of 28, and four of the six survivors were real gaps** — all the
+same shape as `evb-001`'s. Run scoping is written twice, once per coordinate shape, and only the RF
+clause had a test. The observation-type filter had none. And two refusals were asserted with a
+pattern that *any* failure message satisfies, so both guards could have been deleted with the suite
+still green. A refusal test that does not pin which refusal it got is testing that something went
+wrong.
+
+**One mutation anchor never matched** — I wrote it at 8 spaces of indentation where the line sits at
+12, and the harness reported it INVALID rather than silently scoring it. That is the harness working
+as intended; noted because an anchor that matches *zero* times is the failure mode a less careful
+harness would report as a survivor.
+
+**A `:param::type` cast in a test helper was read as a parameter named `payload:`.** SQLAlchemy's
+`text()` does this, and it is the second time this session's lineage has hit it — the uniqueness
+measurement hit it with `:ts::timestamptz`. `CAST(:payload AS jsonb)` is the form that works.
+
+**I ran `ruff check` over `measurements/` and got 332 errors.** Not a regression: that directory is
+deliberately outside linting, as `CLAUDE.md` records. My command was wrong, not the tree.
 
 ## Next step
 
-`anom-006` is settled, so the two items the previous handoff listed behind it are now the whole of
-the near-term detection work. The order is a recommendation, not a constraint.
+1. **Offer to update the progress note.** `evb-002` changes the story it tells: the pipeline now has
+   a checked boundary rather than an asserted one, and the 91-in-1,021 finding is exactly the kind
+   of worked example that note exists for. Not yet done.
+2. **`ai-008`'s rule-id ambiguity**, owed before that item and not before this one. `anom-012`
+   defines no rule id and borrows `anom-010`'s, so a rate-excess item and a discontinuity item carry
+   the same id while making different claims. Recommendation unchanged: ground on
+   `(rule_id, finding_type)`.
+3. **`evb-003` or the AI layer**, whichever the spec puts next — `evb-002` was the last of the
+   traceability prerequisites `ai-008` named.
 
-1. **`evb-001`, evidence bundles.** Now the clear first item. It is the natural consumer of what the
-   ladder produces, the gateway to Phase 9 — the AI hypothesis layer, which is the project's actual
-   contribution — and **the one remaining item no corpus change can invalidate**, because a bundle
-   groups what the rules already emit and its shape does not depend on the data.
-2. **`anom-003`, the z-score detector.** Carries the `db-008` extensibility prediction, scored once
-   as a partial. Genuinely measurable now that the corpus is stable and homogeneous.
+Open and unowned:
 
-### Open and unowned
-
-- **The `aircraft-coverage-gap` arm has no rule, and this is now settled rather than pending.** Its
-  60 of 60 correct non-detections are correct only because nothing judges that arm. It must not be
-  reported as though the system had been tested on it. **What would change it is a generator change,
-  not a detector one** — a coverage gap must become a zone-level event separable from a staleness
-  freeze. Both closures of `anom-006` reached that conclusion independently. The full limitation —
-  why the scenario was chosen, the three measurements taken, what closed it, and the five options
-  for making it work with the reason each was declined — is written up in `docs/thesis_notes.md`
-  under *Limitation: the aircraft-coverage-gap arm has no positive rule*, with the reporting
-  constraints on `eval-002` and the plain-English version in `docs/qa.md` §80.
-- **Three arms produce positive detections, not five.** `rf-sensor-fault`, `gnss-degradation` and
-  `ambiguous-mixed-evidence` are decided 60/60; `normal-baseline` and `aircraft-coverage-gap` are
-  silent 60/60. Every recall/precision/F1 figure is therefore computed over three arms and must say
-  so. The coverage-gap arm is **not** redundant with the baseline — it is a discriminating negative
-  testing specificity against cross-modal leakage, which is the role `research_scope.md` scoped it
-  for from the outset.
-- **`ambiguous-mixed-evidence` is indistinguishable from `rf-sensor-fault` in reportable output —
-  but it is NOT redundant, and must not be dropped.** Both are decided `possible_sensor_fault` 60/60,
-  because `fusion.py` consumes only `anom-007`'s *environmental* verdict, so on a single-receiver run
-  the staged track gap never reaches a claim. **Measured** (`arm_rf_identity.py`): across all 60
-  shared seeds the two arms stage the same receiver, elevation and window, and their RF streams are
-  **identical byte for byte 60/60** — the only difference is five removed aircraft. So the pair is a
-  controlled comparison differing in one variable, and the identical verdict is a measured immunity
-  result: a simultaneous track-side disturbance does not perturb the RF verdict. Report it as the
-  immunity check, not as a third independent positive arm. Recorded on `eval-002` and `anom-013`;
-  reasoning in `docs/qa.md` §81.
-- **`anom-013`'s ordering has never arbitrated a real conflict on this corpus.** Exactly one rule
-  bids per arm, so "0 zones given two answers" is not evidence the suppression path works — it is
-  proved by unit tests and a mutation pass, and never reached by the corpus. The arm meant to create
-  the conflict is the ambiguous one, whose second bid `anom-006` would have supplied.
-- **Unmeasured, and recorded rather than assumed:** whether a wrongly-claimed `SOURCE-GAP` zone on
-  an interference run would actually overlap the `FUSION-SPATIAL` zone. The sweep kept no centroids.
-- **Fusion is still the radio evidence with an occasional corroborating note.** 41 of 60 reported
-  zones have no measurable track side. Any write-up claiming multi-source fusion must say so plainly.
-- **Corpus v1 is still in the database** and always will be (`db-007`). Every measurement must go
-  through `measurements/corpus/_corpus.py`. Still selecting runs by other means and unchecked since
-  the regeneration: `cluster_background.py`, `cluster_separation_after_scn006.py`,
-  `track_gap_hit_rate.py`, `track_gap_recall.py`, `staging_on_ground.py`,
-  `cluster_leak_into_fusion.py`, `rate_excess_two_forms.py`, `sensor_fault_fragmentation.py`,
-  `sensor_fault_neighbour_candidates.py`.
-- **`DEFAULT_AFFECTED_FRACTION` is inert.** With a mean eligible pool of 23.4, `round(0.08 × 23.4)`
-  is 2 and the floor of 5 always wins, so every v2 run stages exactly five aircraft. Nobody should
-  read the fraction as doing work.
-- A **broadband generation arm**, without which `anom-007`'s Medium and Low confidence bands have no
-  corpus behind them. All 300 v2 runs are narrowband, as all 240 v1 runs were.
-- The **frontend suite exits non-zero**: `TypeError: control.runs.map is not a function` at
-  `scenarioControl.tsx:344`. Needs a spec item covering both the test stub and
-  `useScenarioControl`'s missing array check.
-- `adp-008` exclusion applied to baseline windows; a detection-latency definition (gates `anom-009`);
-  `api-011`; `nav-002`; reset/replay endpoints; `ops-002` (CI); `docs/qa.md` duplicate §47 (fix by
-  note, never renumber); frontend coverage tooling; `pnpm format`; root `make check` never run in
-  full; mypy does not check `tests/`.
+- The broadband generation arm. Blocks two things now, not one.
+- The frontend suite's failure at `scenarioControl.tsx:344`.
+- The composite index on `observations` — measured as *not* needed, kept as a candidate.
+- Nine measurement scripts that select runs by means other than `_corpus`.
