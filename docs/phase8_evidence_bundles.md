@@ -341,6 +341,24 @@ compares two independently computed numbers that must agree.
 | ~~Whether `suppressed` claims appear in the bundle~~ | **Settled 2026-09-19: yes, in their own `superseded` field, never in the evidence list.** A suppressed claim is a *competing* conclusion, so the likeliest misreading is that co-occurrence is concurrence. Dropping it would overclaim; listing it as evidence would invert the truth. Consequence amended onto `ai-008`: grounding verifies existence, not appropriateness, so it must distinguish citable evidence from context or it certifies the error it exists to catch. **Measured dormant** — 188 claims bid, 0 suppressed |
 | ~~What a `SENSOR-FAULT` bundle carries on the track side~~ | **Settled: explicitly not-applicable, and stated.** That verdict never reaches `anom-005`, so the absence is by design; left absent it reads as `not_measurable`, which is a false uncertainty claim |
 
+### Found while writing the tests: `anom-012` has no rule ID of its own
+
+`FR-402` requires every evidence item to carry a rule ID, and `ai-008` grounds a model's citations by
+resolving those IDs. But `anom-012` defines only `FINDING_TYPE = "track_rate_excess"` and imports
+`RULE_ID` from `anom-010` — it reads that rule's findings and borrows its identity.
+
+So a rate-excess item and a discontinuity item **carry the same rule ID while making different
+claims**: *the local dropout rate was elevated here* and *this aircraft's reporting broke here*. Only
+`finding_type` separates them. That is fine inside the detection layer, where the consumer knows what
+it asked for, and it is not fine at the grounding boundary, where a model citing `TRACK-GAP` is
+ambiguous between the two and the check cannot tell which was meant.
+
+Three ways out, none yet chosen: give `anom-012` a rule ID of its own; have the grounding check
+resolve on the pair `(rule_id, finding_type)` rather than on the rule ID alone; or accept the
+ambiguity and record it. The second is smallest and is probably right, since `finding_type` is
+already on every canonical finding. **Owed before `ai-008`, not before `evb-001`** — the bundle
+carries whatever identity the rules give it, so this does not gate the builder.
+
 ## 14. Build order
 
 `evb-001` → `evb-002`, and not in parallel: traceability is a constraint on a shape that does not
