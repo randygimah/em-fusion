@@ -27,17 +27,28 @@ import os
 #: before generation. A base seed is a value and not a secret.
 BASE_SEEDS = (1412660662, 965530111, 655209063)
 
+#: The development batch, drawn 2026-09-19 and recorded in DEV_BATCH_PLAN.md.
+#: Sixty runs generated to develop the AI layer against real evidence bundles
+#: after the corpus was lost. **No thesis figure may be measured from it**,
+#: which is why it is named here rather than left to look like corpus v2.
+DEV_SEEDS = (695081452,)
+
 #: Corpus v1: ids 1-240, no base seed recorded on any row.
 V1 = "v1"
 #: Corpus v2: every run carries its base seed (`scn-008`).
 V2 = "v2"
+#: The development batch. Selectable on its own so it can be used
+#: deliberately and never by accident.
+DEV = "dev"
 
 
 def which() -> str:
     """Which corpus this run of the script is about. Override with CORPUS=v1."""
     choice = os.environ.get("CORPUS", V2)
-    if choice not in (V1, V2):
-        raise SystemExit(f"CORPUS must be {V1!r} or {V2!r}, not {choice!r}")
+    if choice not in (V1, V2, DEV):
+        raise SystemExit(
+            f"CORPUS must be {V1!r}, {V2!r} or {DEV!r}, not {choice!r}"
+        )
     return choice
 
 
@@ -46,11 +57,22 @@ def run_filter(alias: str = "") -> str:
 
     `alias` is the table alias to qualify with, if the query needs one.
     Returns a bare predicate so it can be dropped into an existing WHERE.
+
+    **v2 is pinned to its three seeds by value.** This predicate used to read
+    "any run carrying a base seed", which was true of corpus v2 on the day it
+    was written and stops being true the moment a fourth batch is generated --
+    silently, with no error, by sweeping the new runs into every measurement.
+    The development batch of 2026-09-19 would have been the first, and the
+    mixing it would have caused is the exact hazard this module exists to
+    prevent: `scn-007`'s floor was first measured across a generator boundary
+    and the figure had to be withdrawn.
     """
     column = f"{alias}.parameters" if alias else "parameters"
-    if which() == V2:
-        return f"({column}->>'base_seed') IS NOT NULL"
-    return f"({column}->>'base_seed') IS NULL"
+    if which() == V1:
+        return f"({column}->>'base_seed') IS NULL"
+    seeds = DEV_SEEDS if which() == DEV else BASE_SEEDS
+    listed = ", ".join(str(seed) for seed in seeds)
+    return f"(({column}->>'base_seed')::bigint IN ({listed}))"
 
 
 def describe() -> str:
@@ -59,6 +81,14 @@ def describe() -> str:
         return (
             f"corpus v2 -- one generator, 900 s runs, anom-014 and scn-007 active; "
             f"base seeds {', '.join(str(s) for s in BASE_SEEDS)}"
+        )
+    if which() == DEV:
+        return (
+            f"DEVELOPMENT BATCH -- base seed "
+            f"{', '.join(str(s) for s in DEV_SEEDS)}, 60 runs over three types. "
+            "Generated to develop the AI layer against real bundles after the "
+            "corpus was lost. NOT a corpus: no thesis figure may be measured "
+            "from it. See DEV_BATCH_PLAN.md."
         )
     return (
         "corpus v1 -- ids 1-240, THREE generator versions (600 s runs 1-20, "
