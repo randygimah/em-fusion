@@ -141,6 +141,22 @@ said**; a script with no log is marked, and its figure lives in `docs/thesis_not
 | `track_gap_policy_sweep.py` | Is 21% recall a property of the system, or of the policy I guessed? | See `docs/thesis_notes.md`. *(no log survived)* |
 | `staging_on_ground.py` | Is 90% `on_ground` real, or an artefact of how the reasons were ranked? | Real. **55% of every injection was landing on a parked aircraft**, which is what `scn-006`'s airborne gate exists to fix. *(no log survived)* |
 
+## Running one
+
+```
+make measure SCRIPT=corpus/bundle_end_to_end.py CORPUS=dev
+```
+
+`SCRIPT` is the path under `backend/measurements`. `CORPUS` selects which runs the script is about —
+`v2` (the default), `v1`, or `dev` for the development batch. The target passes no database URL: the
+only one reachable is the application's own, which is the right target for a measurement and the
+wrong one for anything that drops schema. It also takes `--no-deps`, so a measurement can never
+start an empty database beside the one it meant to read.
+
+Added 2026-09-19 (`ops-003`). Before it, every figure here was produced by hand-writing a compose
+invocation — which is exactly where a wrong environment variable gets supplied, and how the corpus
+came to be destroyed. See `ops-004`.
+
 ## `mutation/` — are the tests load-bearing?
 
 A passing suite proves the tests run; a mutation pass proves they would notice. Each script edits one

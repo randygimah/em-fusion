@@ -53,6 +53,10 @@ REQUIRED_TARGETS = {
     "test",
     "test-backend",
     "test-frontend",
+    # spec: ops-003 -- added 2026-09-19. Every measurement had been run by
+    # hand-writing a compose invocation, which is precisely where the wrong
+    # environment variable gets supplied; see ops-004 and docs/qa.md 84.
+    "measure",
 }
 
 #: Tools that would mean the root Makefile needs a host toolchain beyond
@@ -280,3 +284,23 @@ def test_the_frontend_healthcheck_names_an_address_nginx_binds() -> None:
             f"nginx binds IPv4 only, so the healthcheck must name 127.0.0.1, "
             f"not {host!r}: a name resolving to ::1 is refused."
         )
+
+
+def test_measure_never_touches_the_test_database_url() -> None:
+    """The one variable a measurement must never carry.
+
+    `measure` reads the database that is already running, which is the
+    application's -- the correct target for a measurement and the
+    catastrophic one for a test. A command surface offering a second route
+    to `TEST_DATABASE_URL` would be a second way to make the mistake
+    `ops-004` exists to catch."""
+    # spec: ops-003, ops-004
+    recipe = " ".join(_recipes()["measure"])
+    assert "TEST_DATABASE_URL" not in recipe
+
+
+def test_measure_does_not_start_the_database() -> None:
+    """A measurement reads a corpus that is already there. Letting compose
+    bring dependencies up would start an empty database and measure it."""
+    # spec: ops-003
+    assert "--no-deps" in " ".join(_recipes()["measure"])

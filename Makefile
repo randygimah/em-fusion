@@ -5,7 +5,7 @@
 .DEFAULT_GOAL := help
 .PHONY: help build build-backend build-frontend-test up demo down restart \
         logs ps shell db-shell db-reset migrate db-test-create \
-        generate build-pipeline ensure-artifacts replay \
+        generate measure build-pipeline ensure-artifacts replay \
         test test-backend test-frontend lint format type-check check smoke clean
 
 COMPOSE ?= docker compose
@@ -151,6 +151,23 @@ generate: build-pipeline ## Run a scenario batch in a container, into the runnin
 	$(COMPOSE) --profile pipeline run --rm \
 		-v "$(abspath $(DATA_DIR)):/data" pipeline \
 		python -m app.pipeline --data-dir /data/opensky $(PIPELINE_ARGS)
+
+# Every figure this project quotes comes from a script under
+# backend/measurements, and until now every one of them was run by
+# hand-writing a compose invocation -- which is exactly where a wrong
+# environment variable gets supplied, and how the corpus came to be destroyed
+# (see `ops-004`). `--no-deps` because a measurement reads the database that is
+# already running and must never start an empty one beside it. No database URL
+# is passed: the only one reachable here is the application's own, which is the
+# right target for a measurement and the wrong one for anything that drops.
+measure: build-backend ## Run a measurement, e.g. make measure SCRIPT=corpus/bundle_end_to_end.py CORPUS=dev
+	@test -n "$(SCRIPT)" || { \
+		echo "SCRIPT is required, e.g. make measure SCRIPT=corpus/bundle_end_to_end.py"; \
+		echo "see backend/measurements/README.md for what each one asks"; \
+		exit 2; }
+	$(COMPOSE) run --rm --no-deps \
+		-e PYTHONPATH=/app -e CORPUS="$(CORPUS)" \
+		backend python measurements/$(SCRIPT)
 
 ensure-artifacts: ## Generate the demo dataset only if artefacts are missing
 	@if [ -z "$(strip $(ARTIFACTS))" ]; then \
