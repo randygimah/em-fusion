@@ -5657,6 +5657,118 @@ order, and it is worth asserting that the sort key is real.
 Supersedes the emphasis in [§80](#80-does-this-mean-we-now-only-have-4-scenarios-instead-of-5-to-work-with)
 — the table there is correct; the characterisation of the mixed arm as merely a limitation is not.
 
+## 82. Does corroboration literally mean supporting evidence? And what does the mutation pass actually test?
+
+Two separate questions, answered in turn.
+
+### 1. Corroboration
+
+**Essentially yes — but it is narrower than "supporting evidence", in three ways that matter here.**
+The word comes from the Latin *corroborare*, "to strengthen", and that is exactly its job in this
+codebase: it **strengthens a claim that already stands on its own**. It never creates one.
+
+**First: corroboration is a verdict, not the evidence itself.** Two different things sit next to
+each other and it is easy to conflate them:
+
+| | What it is | Where it lives |
+|---|---|---|
+| The **evidence** | `anom-012`'s rate excess — a ratio of dropout rates inside a disc during the window against outside it | `rate_excess.py` |
+| The **corroboration** | the three-valued judgement passed over that ratio | `fusion.py` |
+
+So the ratio is the witness's statement; corroboration is whether we accept that the witness agreed.
+The boundary between them is `DEFAULT_CORROBORATION_THRESHOLD = 1.58`.
+
+**Second, and the most important: it cannot establish the claim and it cannot veto it.** In ordinary
+speech "uncorroborated" carries a whiff of *doubtful*. Here it deliberately does not. The interference
+claim rests on the radio side — a deviation of about 8 dB against a spread of 1.5 dB, beyond five
+sigma. The aircraft side is asked afterwards, and:
+
+- confidence has a **floor of Medium that the track side cannot breach**;
+- corroboration can only raise it to **High**;
+- the rule never emits Low.
+
+That was a deliberate reversal. Letting a signal with a Youden's J near 0.3 grade a claim that an 8 dB
+deviation establishes would be asking the weaker evidence to arbitrate what the stronger evidence has
+already settled — the same error `anom-013` exists to prevent, and the one that produced a 70%
+misattribution rate when it was made once before.
+
+**Third: it is three-valued, and the third value is the majority.** Ordinary usage is binary. Here:
+
+| Value | Meaning | Count on corpus v2 |
+|---|---|---|
+| `CORROBORATED` | measured, and above the threshold | **18** of 60 |
+| `NOT_CORROBORATED` | measured over two populated periods, and below it | **1** of 60 |
+| `NOT_MEASURABLE` | **no measurement was possible at all** | **41** of 60 |
+
+`NOT_MEASURABLE` exists because a reference period holding no findings gives a rate composed of
+nothing but `anom-012`'s smoothing constant, so the ratio is not a comparison of two observed rates.
+Collapsing it into `NOT_CORROBORATED` would convert **41 absences of measurement into 41 findings of
+disagreement**, which is a straightforwardly false claim.
+
+Read the counts carefully, and this is worth a sentence in the write-up: **where the track side could
+speak at all, it agreed 18 times out of 19.** The problem is not that it disagrees — it is that it
+can rarely speak. And that 18-of-19 must not be quoted as a 95% agreement rate, because the
+measurable subset is not a random sample: a zone is measurable when enough aircraft are around, and
+the same condition makes an excess easier to detect. The conditioning is the confound.
+
+### 2. What the mutation pass tests
+
+**Close, but not quite — and the difference is the whole point. It does not mutate the tests. It
+mutates the production code, and asks whether any test notices.**
+
+```
+for each deliberate defect injected into the real code:
+    run the test suite
+    a test fails  -> KILLED   (some assertion depends on this behaviour)
+    all tests pass -> SURVIVED (nothing depends on it)
+```
+
+A survivor is one of two things, and telling them apart is manual work:
+
+- a **genuine gap** — the behaviour is real and untested;
+- an **equivalent mutant** — the change alters the code's text but not its behaviour, so nothing
+  *could* notice. `scn-007` sits at 17 of 19 for this reason, with both survivors provably
+  unreachable. A score below 100% is therefore not automatically a defect.
+
+**Why it is worth doing at all: coverage and mutation answer different questions.** Coverage asks
+*did this line run?* Mutation asks *if this line were wrong, would we find out?* Those come apart
+constantly, and this session produced a textbook example. The line
+
+```python
+if not _overlaps((finding.started_at, finding.ended_at), window):
+    continue
+```
+
+was executed by every single test — 100% covered. But no test supplied a track finding *outside* the
+window, so no assertion depended on the filter working. Replacing the condition with `False` changed
+nothing any test could see. **The suite reported 99.82% coverage while missing ten real defects**, all
+of them scoping rules.
+
+**In this project the mutants are hand-written, not generated.** Each one is a sentence from the spec
+item, negated — "the boundary excludes the minimum", "not-applicable rewritten as not-measurable",
+"superseded claims not scoped by window". So the pass is really asking: *is every claim this item
+makes actually enforced by something?* That is closer to auditing the specification than to fuzzing
+the code.
+
+**And the limit, which matters more than the score.** A mutation score is measured *against the
+tests*, and the tests can share the code's wrong assumption. If a rule and its tests are both built
+on the same misunderstanding, every mutant dies and the rule is still wrong. That is why
+`measurements/README.md` says only the corpus measurements can say a rule is *right* — mutation says
+the tests are **load-bearing**, and corpus measurement says the behaviour is **correct**. Two
+different claims, and the project needs both.
+
+### Worth recording as a limitation
+
+The instrument had a flaw of its own, found on 19 September 2026. CPython validates a cached `.pyc`
+on the source's `(mtime-in-whole-seconds, size)`; the fast harnesses re-run a test file in about
+0.1 s, so consecutive mutants land inside the same second, and two that change the file by the same
+number of bytes are indistinguishable to that check — the second then runs the **first's** compiled
+module. Two genuinely-killed mutants were scored as survivors this way. **The error has no preferred
+direction**, so it can equally score a real survivor as killed and overstate a result. Four harnesses
+were affected and fixed; the three with published figures were re-run and every score held
+(`anom-014` 13/13, `scn-007` 17/19, `scn-008` 10/11). A mutation score is only evidence if each
+mutant was the code that actually ran.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
