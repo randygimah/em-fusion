@@ -18,3 +18,9 @@ docs/architecture/exports/
 # Derived zone data cached by measurements/corpus/source_gap_threshold_sweep.py.
 # Regenerable from the corpus; never committed.
 backend/measurements/.zone_cache.json
+
+# Knowledge graph built by the graphify skill. Derived from the repo and
+# regenerable with one command, so committing it would store 16 MB of churn per
+# rebuild and leave a graph that still renders after the code beneath it moved.
+# .graphify_python holds an absolute path to one machine's interpreter.
+graphify-out/
