@@ -1,0 +1,172 @@
+DEVELOPMENT BATCH -- base seed 695081452, 60 runs over three types. Generated to develop the AI layer against real bundles after the corpus was lost. NOT a corpus: no thesis figure may be measured from it. See DEV_BATCH_PLAN.md.
+baseline from 20 quiet runs of this corpus
+60 runs, up to 60 per arm
+
+  25/60 runs through the whole path
+  50/60 runs through the whole path
+
+==============================================================================
+WHAT EACH ARM PRODUCED
+==============================================================================
+  scenario                    runs  bundles  silent runs  what they were
+  gnss-degradation              20       20            0  {'possible_interference_zone': 20}
+  normal-baseline               20        0           20  -
+  rf-sensor-fault               20       21            0  {'possible_sensor_fault': 21}
+
+  The two silent arms must produce ZERO bundles and not one empty bundle:
+    aircraft-coverage-gap      0 bundles from 0 runs   PASS
+    normal-baseline            0 bundles from 20 runs   PASS
+
+==============================================================================
+WHAT WAS CITED, AND WHETHER IT RESOLVED
+==============================================================================
+  bundles saved through the shipped resolver: 41
+  evidence items by kind: {'observed': 566, 'derived': 113}
+  citations resolved: 2,049 to 2,014 distinct rows
+  refused during the pass: 0
+  round trip exact: 60 of 60 runs   PASS
+
+  uncertainties carried, by kind:
+    measured_negative        83
+    not_applicable           21
+    not_measurable           16
+  data modes each kind of bundle spans:
+    possible_interference_zone   {'replayed + synthetic': 20}
+    possible_sensor_fault        {'synthetic': 21}
+
+==============================================================================
+NEGATIVE CONTROL -- one real citation moved by one second
+==============================================================================
+  run 61, one citation shifted from
+    {'sensor_id': 'RF-05', 'channel_index': 4, 'timestamp': '2022-06-27T12:38:06+00:00'}
+  to
+    {'sensor_id': 'RF-05', 'channel_index': 4, 'timestamp': '2022-06-27T12:38:07+00:00'}
+  RESULT: refused. run 61, FUSION-SPATIAL on 'RF-05, RF-06, RF-07': evidence item 'RF-05:4' cites {'sensor_id': 'RF-05', 'channel_index': 4, 'timestamp': '2022-06-27T12:38:07+00:00'}, and there is no stored observation at that coordinate. A bundle whose evidence cannot be looked up asserts something it cannot show, and the grounding check downstream would have nothing to resolve it against.
+  bundles stored for this run before 1, after 1   PASS -- nothing was disturbed
+
+==============================================================================
+ONE COMPLETE BUNDLE, AS THE AI LAYER WOULD RECEIVE IT
+==============================================================================
+  run 61   possible_interference_zone   claimed by FUSION-SPATIAL
+  subject          RF-05, RF-06, RF-07
+  window           2022-06-27 12:37:36+00:00 .. 2022-06-27 12:43:06+00:00
+  area             lat=51.2526 lon=6.6839
+  channels         (4,)
+  data modes       ['replayed', 'synthetic']
+  superseded       0
+
+  EVIDENCE (34 items)
+    [observed] RF-05:4                RF-NOISE / rf_noise_deviation
+               power_dbm deviated by 11.85 dB at its peak
+               cites rows 2249280, 2249336, 2249392, 2249448, 2249504
+    [observed] RF-05:4                RF-NOISE / rf_noise_deviation
+               power_dbm deviated by 11.18 dB at its peak
+               cites rows 2249728, 2249784
+    [observed] RF-05:4                RF-NOISE / rf_noise_deviation
+               power_dbm deviated by 13.17 dB at its peak
+               cites rows 2249896, 2249952, 2250008, 2250064
+    [observed] RF-05:4                RF-NOISE / rf_noise_deviation
+               power_dbm deviated by 10.78 dB at its peak
+               cites rows 2250288, 2250344
+    [observed] RF-05:4                RF-NOISE / rf_noise_deviation
+               power_dbm deviated by 10.21 dB at its peak
+               cites rows 2250456, 2250512
+    [observed] RF-05:4                RF-NOISE / rf_noise_deviation
+               power_dbm deviated by 9.57 dB at its peak
+               cites rows 2250680, 2250736, 2250792, 2250848
+    [observed] RF-06:4                RF-NOISE / rf_noise_deviation
+               power_dbm deviated by 10.20 dB at its peak
+               cites rows 2249232, 2249288
+    [observed] RF-06:4                RF-NOISE / rf_noise_deviation
+               power_dbm deviated by 10.55 dB at its peak
+               cites rows 2249400, 2249456, 2249512
+    [observed] RF-06:4                RF-NOISE / rf_noise_deviation
+               power_dbm deviated by 12.29 dB at its peak
+               cites rows 2249736, 2249792, 2249848
+    [observed] RF-06:4                RF-NOISE / rf_noise_deviation
+               power_dbm deviated by 11.65 dB at its peak
+               cites rows 2250016, 2250072
+    [observed] RF-06:4                RF-NOISE / rf_noise_deviation
+               power_dbm deviated by 14.50 dB at its peak
+               cites rows 2250296, 2250352, 2250408, 2250464
+    [observed] RF-06:4                RF-NOISE / rf_noise_deviation
+               power_dbm deviated by 13.42 dB at its peak
+               cites rows 2250576, 2250632, 2250688, 2250744, 2250800, 2250856
+    [observed] RF-07:4                RF-NOISE / rf_noise_deviation
+               power_dbm deviated by 6.50 dB at its peak
+               cites rows 2249240, 2249296
+    [observed] RF-07:4                RF-NOISE / rf_noise_deviation
+               power_dbm deviated by 11.23 dB at its peak
+               cites rows 2249464, 2249520, 2249576, 2249632, 2249688, 2249744 (+3 more)
+    [observed] RF-07:4                RF-NOISE / rf_noise_deviation
+               power_dbm deviated by 6.76 dB at its peak
+               cites rows 2250136, 2250192
+    [observed] RF-07:4                RF-NOISE / rf_noise_deviation
+               power_dbm deviated by 13.25 dB at its peak
+               cites rows 2250304, 2250360, 2250416, 2250472, 2250528, 2250584 (+5 more)
+    [derived ] RF-05, RF-06, RF-07    FUSION-SPATIAL / possible_interference_zone
+               the reference period holds no track findings, so its rate is nothing but the smoothing constant and the ratio compares one observed rate against an assumption. A disc with nothing in it is not a disc that showed no disruption.
+    [derived ] 60 km disc             TRACK-GAP / track_rate_excess
+               4 discontinuities during the window against 0 outside it, a rate ratio of 11.79
+    [observed] AC-<redacted>          TRACK-GAP / track_continuity_gap
+               reporting from this aircraft broke during the window
+               cites rows 2255990, 2257493
+    [observed] AC-<redacted>          TRACK-GAP / track_continuity_gap
+               reporting from this aircraft broke during the window
+               cites rows 2260118, 2260118
+    [observed] AC-<redacted>          TRACK-GAP / track_continuity_gap
+               reporting from this aircraft broke during the window
+               cites rows 2266630, 2269020
+    [observed] AC-<redacted>          TRACK-GAP / track_continuity_gap
+               reporting from this aircraft broke during the window
+               cites rows 2261776, 2268705
+    [observed] AC-<redacted>          TRACK-GAP / track_continuity_gap
+               reporting from this aircraft broke during the window
+               cites rows 2265205, 2265618
+    [observed] AC-<redacted>          TRACK-GAP / track_continuity_gap
+               reporting from this aircraft broke during the window
+               cites rows 2264420, 2265261
+    [observed] AC-<redacted>          TRACK-GAP / track_continuity_gap
+               reporting from this aircraft broke during the window
+               cites rows 2261930, 2268958
+    [observed] AC-<redacted>          TRACK-GAP / track_continuity_gap
+               reporting from this aircraft broke during the window
+               cites rows 2262926, 2263511
+    [observed] AC-<redacted>          TRACK-GAP / track_continuity_gap
+               reporting from this aircraft broke during the window
+               cites rows 2284613, 2286913
+    [observed] AC-<redacted>          TRACK-GAP / track_continuity_gap
+               reporting from this aircraft broke during the window
+               cites rows 2269676, 2269676
+    [observed] AC-<redacted>          TRACK-GAP / track_continuity_gap
+               reporting from this aircraft broke during the window
+               cites rows 2266538, 2267943
+    [observed] AC-<redacted>          TRACK-GAP / track_continuity_gap
+               reporting from this aircraft broke during the window
+               cites rows 2268788, 2268788
+    [observed] AC-<redacted>          TRACK-GAP / track_continuity_gap
+               reporting from this aircraft broke during the window
+               cites rows 2264947, 2268743
+    [observed] AC-<redacted>          TRACK-GAP / track_continuity_gap
+               reporting from this aircraft broke during the window
+               cites rows 2272674, 2273210
+    [observed] AC-<redacted>          TRACK-GAP / track_continuity_gap
+               reporting from this aircraft broke during the window
+               cites rows 2265588, 2265588
+    [observed] AC-<redacted>          TRACK-GAP / track_continuity_gap
+               reporting from this aircraft broke during the window
+               cites rows 2270714, 2270714
+
+  KNOWN UNCERTAINTIES (6)
+    [not_measurable  ] track
+      the local discontinuity rate could not be measured: the reference period outside this window held no track findings, so the ratio would consist of nothing but the smoothing constant and is not a comparison of two observed rates. This is the majority case, and it means the aircraft side neither supports nor contradicts the radio evidence here.
+    [measured_negative] RF-05:4
+      a deviation on channel 4 of RF-05 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
+    [measured_negative] RF-05:4
+      a deviation on channel 4 of RF-05 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
+    [measured_negative] RF-06:4
+      a deviation on channel 4 of RF-06 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
+    [measured_negative] RF-06:4
+      a deviation on channel 4 of RF-06 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
+    [measured_negative] RF-07:4
+      a deviation on channel 4 of RF-07 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.

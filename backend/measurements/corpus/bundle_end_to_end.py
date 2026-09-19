@@ -41,7 +41,7 @@ import os
 import re
 from collections import Counter
 from dataclasses import replace
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import _corpus
 from sqlalchemy import create_engine, text
@@ -78,7 +78,7 @@ PER_ARM = int(os.environ.get("PER_ARM", "60"))
 #: both are correct non-detections here.
 SILENT_ARMS = {"normal-baseline", "aircraft-coverage-gap"}
 
-AIRCRAFT_ID = re.compile(r"AC-[0-9a-fA-F]{6,}")
+AIRCRAFT_ID = re.compile(r"AC-[0-9a-fA-F]+")
 
 
 def redact(value: object) -> str:
@@ -256,14 +256,11 @@ else:
     item = bundle.evidence[item_index]
     ref = dict(item.refs[0])
     key = "timestamp" if "timestamp" in ref else "at"
-    from datetime import datetime
     ref[key] = (datetime.fromisoformat(ref[key]) + timedelta(seconds=1)).isoformat()
-    tampered = bundle.with_evidence([
-        replace(item, refs=(ref, *item.refs[1:]), observation_ids=())
-        if i == item_index else other
-        for i, other in enumerate(bundle.evidence)
-        for item in [other]
-    ])
+    evidence = list(bundle.evidence)
+    evidence[item_index] = replace(
+        item, refs=(ref, *item.refs[1:]), observation_ids=())
+    tampered = bundle.with_evidence(evidence)
     print(f"  run {run_id}, one citation shifted from")
     print(f"    {redact(item.refs[0])}")
     print(f"  to")
@@ -287,7 +284,7 @@ print("=" * 78)
 if specimen is not None:
     run_id, bundle = specimen
     print(f"  run {run_id}   {bundle.anomaly_type}   claimed by {bundle.rule_id}")
-    print(f"  subject          {bundle.subject}")
+    print(f"  subject          {redact(bundle.subject)}")
     print(f"  window           {bundle.time_window[0]} .. {bundle.time_window[1]}")
     print(f"  area             {bundle.affected_area}")
     print(f"  channels         {bundle.affected_channels}")
@@ -295,7 +292,11 @@ if specimen is not None:
     print(f"  superseded       {len(bundle.superseded)}")
     print(f"\n  EVIDENCE ({len(bundle.evidence)} items)")
     for item in bundle.evidence:
-        print(f"    [{item.grounding.value:8}] {item.source:22} {item.rule_id}"
+        # `source` is where an aircraft identifier lives, and the first
+        # version of this script redacted only `finding`. Pseudonyms or not,
+        # the rule in measurements/README.md is that no aircraft identifier
+        # of any kind reaches a committed log.
+        print(f"    [{item.grounding.value:8}] {redact(item.source):22} {item.rule_id}"
               f" / {item.finding_type}")
         print(f"               {redact(item.finding)}")
         if item.observation_ids:
@@ -305,5 +306,5 @@ if specimen is not None:
             print(f"               cites rows {shown}{more}")
     print(f"\n  KNOWN UNCERTAINTIES ({len(bundle.known_uncertainties)})")
     for uncertainty in bundle.known_uncertainties:
-        print(f"    [{uncertainty.kind.value:16}] {uncertainty.subject or '-'}")
+        print(f"    [{uncertainty.kind.value:16}] {redact(uncertainty.subject) or '-'}")
         print(f"      {redact(uncertainty.statement)}")
