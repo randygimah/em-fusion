@@ -5415,6 +5415,84 @@ under test. Two refusals were asserted with a pattern that any failure message s
 guards could be deleted with the suite still green. A refusal test that does not pin *which* refusal
 it got is not testing the guard; it is testing that something went wrong.
 
+### A safety property that was a convention, and the corpus it cost
+
+On 19 September 2026 I destroyed the project's generated corpus — 540 scenario runs and 20.7 million
+observations across two corpora — by supplying the application's own database as the test tier's
+`TEST_DATABASE_URL`, on a hand-written command issued to avoid waiting for the target that
+provisions a separate database. The database-tier fixture opens with `DROP SCHEMA public CASCADE`.
+Every targeted test run I issued that afternoon dropped the corpus and rebuilt it empty, silently,
+because from the fixture's point of view nothing unusual had happened.
+
+The incident belongs in the write-up for a reason beyond honesty, which is that the codebase had
+already identified this exact failure and written a defence against it. The test configuration
+states that its variable is deliberately not the application's, so that a fixture which drops schema
+can never be pointed at a live database, and concludes: *two variables make that impossible by
+construction rather than by care.*
+
+**That sentence is the finding.** Two variables do not make it impossible by construction. They make
+it inconvenient. A property enforced by construction holds whatever anybody types, because the code
+refuses; a property enforced by convention holds while everybody follows the convention, and the two
+are indistinguishable from the inside right up to the moment they are not. The distinguishing test
+is one question — *can I break this by typing something?* — and the defence had never been subjected
+to it. What the project had was a well-reasoned, well-documented convention that described itself as
+a construction.
+
+The replacement, specified as `ops-004`, performs two checks before any drop: an identity check on
+host, port and database, and a population count on the target. The second is the load-bearing one,
+because the first compares spellings, and one database reached as `localhost` and as a container
+hostname is two spellings of one disaster. The population check asks what the target is actually
+holding and refuses when that exceeds what a fixture could have created — which is indifferent to
+how the database was addressed.
+
+### A guard that passed every test it had and did not work
+
+The more useful half of the incident came afterwards. Having written the guard with ten unit tests,
+all green, I pointed it deliberately at the real database expecting to watch it refuse — and instead
+watched eighteen database-tier tests drop and rebuild the schema without a word.
+
+The cause was local and instructive. The test suite carries an autouse fixture that replaces
+`DATABASE_URL` with a deliberately unreachable address for every test, so that nothing can
+accidentally acquire a live connection. A guard that reads the environment *at the moment it runs*
+therefore compares its target against that placeholder, finds no match, and permits the drop. The
+guard's own unit tests could not see this, because they called the comparison directly with two
+URLs rather than exercising it through the fixture stack it actually lives in.
+
+The general statement, which generalises well beyond this project: **a guard verified only against
+its own unit tests has been verified against the author's model of the world, and that is the same
+model that produced the defect.** A safety interlock has to be fired at the real hazard at least
+once, deliberately, and watched. The fix — capturing the application's URL at import rather than at
+call time — is trivial; noticing that it was needed cost nothing only because I happened to re-run
+the fatal command as a check rather than trusting the green suite.
+
+This pairs with the traceability defect found the same day, and the pairing is the point. There, a
+field was written and stored and covered by tests for months and was wrong, because nothing read it.
+Here, a check was written and tested and was inert, because nothing had triggered it. Both are the
+same shape: **code that has never been exercised in the direction that matters is untested however
+green the suite is**, and coverage counts execution rather than consequence.
+
+### What a destroyed corpus does and does not do to a measurement
+
+Worth stating precisely, because the instinct runs the wrong way. A figure recorded in a committed
+log is a record of what was observed under stated conditions. The observation happened; deleting the
+data afterwards does not retract it. What is lost is narrower and should be named as such: the
+ability to **re-verify** a figure, and the ability to take any *new* measurement, until the corpus
+is regenerated.
+
+*No longer checkable* and *no longer true* are different claims, and only the first applies. Two
+specific claims move into that category. The coordinate-uniqueness result was measured across both
+corpora and v1 cannot be regenerated, so its "across two independently generated corpora" phrasing
+now rests on its log alone. And the superseded measurements kept deliberately for the write-up cite
+v1 runs by identifier, which will not resolve.
+
+The asymmetry between the two corpora is itself the argument for the work that made it: corpus v2 is
+recoverable because recording a batch's base seed on every run row was built as a specification item
+after discovering that v1's seeds had been printed to a screen and never stored. That item is the
+only reason 300 of the 540 lost runs can be reproduced, and the gap it was written to close is
+exactly why the other 240 cannot. Regeneration was also measured at roughly four seconds a run —
+about twenty minutes for the full corpus — a figure nobody had ever recorded, and one which changes
+the cost of the incident from an unknown to an afternoon.
+
 
 ## Evaluation
 
