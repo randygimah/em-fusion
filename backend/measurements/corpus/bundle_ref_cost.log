@@ -1,0 +1,28 @@
+corpus v2 -- one generator, 900 s runs, anom-014 and scn-007 active; base seeds 1412660662, 965530111, 655209063
+baseline from 60 quiet runs of this corpus
+40 runs sampled, 8 per arm
+
+==============================================================================
+HOW MANY OBSERVATIONS A BUNDLE CITES
+==============================================================================
+  bundles built: 24
+  refs per bundle                    n=  24  min=    18.0  median=    26.0  max=   105.0
+  refs per evidence item             n= 332  min=     0.0  median=     2.0  max=    19.0
+  evidence items by whether they cite anything: {'with refs': 260, 'no refs': 72}
+  refs by coordinate shape: {'rf': 823, 'track': 198}
+  refs per possible_interference_zone n=   8  min=    63.0  median=    79.0  max=   105.0
+  refs per possible_sensor_fault     n=  16  min=    18.0  median=    23.0  max=    27.0
+
+==============================================================================
+WHAT RESOLVING ONE BUNDLE COSTS
+==============================================================================
+  one query per ref                  n=  24  min=   126.4 ms  median=   194.5 ms  max=   748.0 ms
+  one query per coordinate shape     n=  24  min=     7.9 ms  median=    10.5 ms  max=   131.5 ms
+  batching is 18.6x faster at the median
+  every cited coordinate resolved: False
+
+==============================================================================
+WHAT DID NOT RESOLVE
+==============================================================================
+  coordinate finding shape           rows matched   count
+  track      frozen_position                    0      91
