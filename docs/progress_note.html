@@ -438,8 +438,10 @@
       now measures what normal looks like, has a rule for noticing when something is not, keeps what it
       finds, and can ask a map where those findings happened and which of them belong together. For
       the first time the screen could be shown something that was <em>found</em> rather than only
-      what was <em>ingested</em>. Three stages still separate that from an explanation anybody would
-      read.
+      what was <em>ingested</em>. Since then the findings have been gathered into packages, and each
+      package's evidence is checked against the store rather than taken on trust. <strong>Two stages
+      now separate that from an explanation anybody would read</strong>, and both of them are the
+      AI half.
     </p>
 
     <div class="spine">
@@ -516,11 +518,17 @@
           </div>
         </div>
       </div>
-      <div class="stage stage--todo">
+      <div class="stage">
         <div class="stage__rail"><div class="stage__dot"></div></div>
         <div class="stage__body">
-          <div class="stage__name">Evidence bundles <span class="chip chip--none">Not started</span></div>
-          <div class="stage__what">Related deviations gathered into one package, with its uncertainties listed alongside.</div>
+          <div class="stage__name">Evidence bundles <span class="chip chip--built">Built and checked</span></div>
+          <div class="stage__what">
+            One event gathered into one package, with every absence labelled by which kind of
+            absence it is — never asked, could not be measured, or measured and found nothing. Every
+            statement in it is now looked up in the store before the package is allowed to exist,
+            which is how it emerged that one citation in eleven had been pointing at a moment when
+            nothing was recorded.
+          </div>
         </div>
       </div>
       <div class="stage stage--todo">
@@ -549,10 +557,9 @@
     <p class="caption">
       The unbuilt stages are specified in detail, not merely intended — 98 numbered capabilities exist
       in the backlog, each with its inputs, outputs and at least one way it must be able to fail.
-      Forty-five of them are finished. Three were added this week because they had never been
-      written down at all — one of them a rule the detection requirements assumed existed, and
-      another a question two other capabilities both referred to as though somebody else was
-      answering it.
+      Forty-seven of them are finished. Several were added along the way because they had never been
+      written down at all — one a rule the detection requirements assumed existed, another a question
+      two capabilities both referred to as though somebody else was answering it.
     </p>
   </section>
 
@@ -1257,7 +1264,7 @@
           <tr><td class="key">observations</td><td class="why">Every accepted record, with its location and provenance</td><td class="n"><span class="chip chip--built">Yes</span></td></tr>
           <tr><td class="key">quarantined_records</td><td class="why">Every rejected record: which field failed, and why</td><td class="n"><span class="chip chip--built">Yes</span></td></tr>
           <tr><td class="key">anomalies</td><td class="why">A detected deviation, its severity, when and where</td><td class="n"><span class="chip chip--none">No</span></td></tr>
-          <tr><td class="key">evidence_bundles</td><td class="why">Related anomalies packaged with their known uncertainties</td><td class="n"><span class="chip chip--none">No</span></td></tr>
+          <tr><td class="key">evidence_bundles</td><td class="why">One event packaged with its known uncertainties, and every citation resolved to a stored reading</td><td class="n"><span class="chip chip--built">Yes</span></td></tr>
           <tr><td class="key">hypotheses</td><td class="why">A proposed explanation, plus exactly what produced it</td><td class="n"><span class="chip chip--none">No</span></td></tr>
           <tr><td class="key">analyst_feedback</td><td class="why">A person's verdict on a hypothesis</td><td class="n"><span class="chip chip--none">No</span></td></tr>
         </tbody>
@@ -5281,6 +5288,220 @@ second pass   <b>5.060000171975998</b></div>
   </section>
 
   <section>
+    <h2>The package the model is allowed to see</h2>
+    <p class="lede">
+      Everything up to here produces findings. Nothing up to here produces an <em>account</em>. The
+      piece that bridges them is a package: one event, everything known about it, and — this is the
+      part that took the work — everything <em>not</em> known about it, each absence labelled with
+      which kind of absence it is. It is the only thing the AI model ever receives.
+    </p>
+    <p>
+      That last sentence is a boundary rather than a convenience. Checking whether a generated
+      explanation cites something real has no practical answer against twenty million stored
+      readings. Against a fixed package of two dozen statements it is a list lookup. The package is
+      what makes the safety check downstream possible at all, so its contents are the safety check's
+      whole horizon.
+    </p>
+
+    <h3>One event, one package — not one hour</h3>
+    <p>
+      An hour that breaks two receivers is two events, and the ordering built earlier already refuses
+      to merge them. So the package follows the event rather than the hour, and it does not regroup
+      anything by time or place: that grouping exists one step upstream, and a second copy of it
+      would be a second opinion about the same question. What the package <em>does</em> own is the
+      frequency dimension, because nothing before it joins up a disturbance that appears on four
+      neighbouring channels of one receiver. Left alone, that would arrive at the model as four
+      separate events.
+    </p>
+
+    <h3>Three ways of not knowing something, kept apart on purpose</h3>
+    <p>
+      A package that stays silent about the aircraft side is telling the model something, whether it
+      means to or not. So every absence is labelled, and there are three of them:
+    </p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>The label</th><th>What it means</th><th>Where it comes up</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="key">Not applicable</td><td class="why">Never asked, by design</td><td class="why">A single broken receiver never reaches the rule that weighs the aircraft evidence, so there is no aircraft evidence <em>because none was sought</em></td></tr>
+          <tr><td class="key">Could not be measured</td><td class="why">Asked, and there was no basis to answer</td><td class="why">A stretch of sky with no reporting gaps at all in the comparison period, so the comparison has nothing on one side of it</td></tr>
+          <tr><td class="key">Measured, and found nothing</td><td class="why">Looked at, and it did not rise to anything</td><td class="why">A disturbance lasting one reading, seen and deliberately not called an event</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      Collapsing the first two is the dangerous one, and it is easy to do by accident: leave the
+      aircraft side out of a broken-receiver package and it reads as <em>we tried and could not
+      tell</em>, which claims an uncertainty the system does not have. The most consequential single
+      line any of these packages carries is the second label, because in
+      <span class="num">41</span> of <span class="num">60</span> reported interference zones the
+      aircraft side could not be measured at all. The project's fusion claim is weaker than the word
+      suggests, and the package is the object that has to say so to the thing writing the
+      explanation.
+    </p>
+    <p>
+      One more rule, for the same reason in reverse. When the ordering rejects a competing
+      explanation, that rejection is carried in its own compartment and never among the evidence. Two
+      rules <em>disagreeing</em> about an area, filed side by side, reads as two rules
+      <em>agreeing</em> about it — which inverts the truth exactly, and is the error a fluent model
+      makes without being prompted.
+    </p>
+
+    <h3>Then every citation was looked up, and one in eleven pointed at nothing</h3>
+    <p>
+      Each statement in a package carries a note saying which raw readings it came from. Those notes
+      had been written since the findings were first stored. Nothing had ever read them.
+    </p>
+    <p>
+      Reading them was expected to be a formality — the notes were already known to describe readings
+      precisely enough to be unambiguous. Over twenty-four real packages they cite
+      <span class="num">1,021</span> readings between them, and
+      <strong><span class="num">91</span> of those pointed at a moment when nothing was
+      recorded.</strong>
+    </p>
+    <p>
+      What made it diagnosable was that the failures were not scattered. Every radio citation
+      resolved. Every citation from one of the two kinds of aircraft finding resolved. All ninety-one
+      misses were the <em>start</em> of the other kind.
+    </p>
+
+    <div class="fig">
+      <div class="fig__art">
+        <svg width="640" height="212" viewBox="0 0 640 212" role="img"
+             aria-label="Two timelines. For a gap in reporting, the window start and end are both real reports. For a frozen position, the window start is reconstructed and there is no report at it; the two reports actually read arrive later.">
+          <line x1="40" y1="184" x2="608" y2="184" stroke="var(--line)" stroke-width="1" />
+          <g class="fig__tick">
+            <text x="120" y="202" text-anchor="middle">earlier</text>
+            <text x="560" y="202" text-anchor="middle">later</text>
+          </g>
+
+          <text class="fig__label" x="40" y="28">A gap in reporting — the window ends are reports</text>
+          <line x1="150" y1="54" x2="430" y2="54" stroke="var(--signal)" stroke-width="3" />
+          <circle cx="150" cy="54" r="5.5" fill="var(--signal)" />
+          <circle cx="430" cy="54" r="5.5" fill="var(--signal)" />
+          <text class="fig__val" x="150" y="76" text-anchor="middle">heard</text>
+          <text class="fig__val" x="430" y="76" text-anchor="middle">heard again</text>
+          <text class="fig__val" x="447" y="58">both cite a real row</text>
+
+          <text class="fig__label" x="40" y="118">A frozen position — the window start is worked out, not seen</text>
+          <line x1="120" y1="144" x2="500" y2="144" stroke="var(--line)" stroke-width="3" stroke-dasharray="5 4" />
+          <line x1="360" y1="144" x2="500" y2="144" stroke="var(--signal)" stroke-width="3" />
+          <circle cx="120" cy="144" r="5.5" fill="none" stroke="var(--bad)" stroke-width="2" />
+          <circle cx="360" cy="144" r="5.5" fill="var(--signal)" />
+          <circle cx="500" cy="144" r="5.5" fill="var(--signal)" />
+          <text class="fig__val" x="120" y="166" text-anchor="middle" fill="var(--bad)">nothing here</text>
+          <text class="fig__val" x="360" y="166" text-anchor="middle">first stale report</text>
+          <text class="fig__val" x="500" y="166" text-anchor="middle">last</text>
+          <text class="fig__val" x="130" y="134">window begins</text>
+        </svg>
+      </div>
+    </div>
+    <p class="caption">
+      Solid teal is a real stored reading. The dashed stretch is inference. The open red circle is
+      where the citation used to point: the moment the position stopped updating, worked out by
+      subtracting the staleness the report itself declares.
+    </p>
+
+    <p>
+      The cause is a distinction the design had quietly collapsed. A finding carries two kinds of
+      time: <strong>the window</strong>, which is what the rule concluded, and <strong>the
+      citation</strong>, which is what the rule read. For a gap in reporting those coincide, because
+      the window's ends <em>are</em> the two reports either side of the silence. For a frozen
+      position they cannot coincide. That finding is raised when an aircraft keeps transmitting while
+      its reported position stops advancing, and the rule works out when the freeze began by
+      subtracting the staleness the report declares from the report's own arrival time. That instant
+      is a reconstruction — and it is, by definition, the one moment in the whole window at which
+      nothing was recorded, because a position that has stopped updating is precisely what the
+      finding is about. <b>The citation pointed at the only place a citation can never land.</b>
+    </p>
+    <p>
+      The fix keeps the window, which is the right answer to the question the window asks, and adds
+      the two reports the rule actually read beside it. Moving the window instead was considered and
+      refused: it would make every such finding shorter than the event it describes, which would
+      quietly change counts elsewhere that depend on it.
+    </p>
+
+    <div class="panel panel--warn">
+      <p class="lede"><b>Two reasons this is worth more than the bug.</b></p>
+      <p>
+        <b>It was invisible to every check that existed.</b> The notes were produced, stored, covered
+        by tests, and survived a deliberate sabotage pass. None of that touches them, because nothing
+        consumed them. A field that is written and never read is untested no matter how green the
+        suite is, and this one sat that way across two complete rebuilds of the data and several
+        hundred simulated hours.
+      </p>
+      <p>
+        <b>The obvious test would have missed it.</b> Written against a gap-in-reporting finding, a
+        traceability test passes — both of its ends are real rows. Two mechanisms produce the same
+        shape of output, only one of them can satisfy the requirement, and a test built on the wrong
+        one proves nothing about the other while looking thorough. This is the second time on this
+        project that a test could not have failed. The general form is now written down: <b>a check
+        is only as strong as the variety in what it is run against.</b>
+      </p>
+    </div>
+
+    <h3>The cheaper fix was to stop asking twenty-six times</h3>
+    <p>
+      The same measurement settled a performance question that had been deliberately left open. One
+      lookup costs about <span class="num">65</span> milliseconds, because the store can narrow to
+      the right hour and no further and then discards some thirty-eight thousand rows by inspection.
+      Whether that mattered depended on how many citations a package carries, which could not be
+      known until packages existed.
+    </p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>Asking</th><th class="n">Typical package</th><th class="n">Worst seen</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="key">One question per citation</td><td class="n">194.5 ms</td><td class="n">748 ms</td></tr>
+          <tr><td class="key">One question for the whole package</td><td class="n">10.5 ms</td><td class="n">131.5 ms</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      A package cites <span class="num">26</span> readings at the median and
+      <span class="num">105</span> at the worst. Asked one at a time, the thirty-eight thousand rows
+      are inspected once per citation; asked together, once per package. That is roughly
+      <span class="num">19&times;</span>, and it is the difference between a design decision and a
+      permanent change to how the data is stored. The obvious response to sixty-five milliseconds a
+      lookup was to add another index — a structural change that has to be migrated, reasoned about
+      and maintained. The cheaper response was to stop issuing the question twenty-six times. The
+      index is still a sensible idea; it is no longer a prerequisite.
+    </p>
+
+    <h3>What the package now refuses</h3>
+    <p>
+      Three refusals, each of which nearly got written as a shrug:
+    </p>
+    <ul class="gaps">
+      <li><b>A citation matching nothing.</b> The package would be asserting something it cannot
+        show.</li>
+      <li><b>A citation matching two things.</b> Worse, and the one most likely to be waved
+        through. The package would carry whichever of the two the store happened to return first,
+        and nothing anywhere would record that the citation was ambiguous. This project has now been
+        caught three times by results whose order nobody specified.</li>
+      <li><b>A citation in a shape nothing recognises.</b> Refused by name rather than attempted. One
+        of the detection rules produces notes naming an aircraft with no time attached, which as a
+        question to the store matches <em>every</em> report that aircraft ever made — and a lookup
+        assembled from whatever fields happen to be present would take an empty note and match the
+        entire hour.</li>
+    </ul>
+    <p>
+      Not every statement cites a reading, and that had to be handled without leaving a hole. Of
+      <span class="num">332</span> statements across those packages,
+      <span class="num">72</span> cite nothing at all — a verdict, a neighbouring receiver confirmed
+      normal, a rate comparison. Those are judgements, and there is no stored row for a judgement.
+      But <em>carries no citations</em> must not be something a statement can drift into, or a check
+      that skips them passes by default on anything that merely forgot. So each statement declares
+      which kind it is, and both lies are refused: one claiming to cite a reading while citing
+      nothing, and one calling itself a judgement while carrying citations.
+    </p>
+  </section>
+
+  <section>
     <h2>The rules the build follows</h2>
     <ul class="rules">
       <li><b>Nothing is written before it is specified and proven to fail.</b> Every capability gets a
@@ -5309,15 +5530,15 @@ second pass   <b>5.060000171975998</b></div>
 
     <div class="outcomes">
       <div class="outcome">
-        <h3>889</h3>
+        <h3>999</h3>
         <p>Tests passing in containers against a real database, from a database that was deleted first to prove nothing was left over.</p>
       </div>
       <div class="outcome">
-        <h3>99.92%</h3>
+        <h3>99.83%</h3>
         <p>Of the back-end code is exercised by those tests. The screens measure nothing of the kind — see below.</p>
       </div>
       <div class="outcome">
-        <h3>41 / 96</h3>
+        <h3>47 / 98</h3>
         <p>Numbered capabilities finished. The rest are specified and waiting, not vague.</p>
       </div>
     </div>
@@ -5449,11 +5670,11 @@ second pass   <b>5.060000171975998</b></div>
           <tr><td class="key">Screens and map</td><td class="n">2</td><td class="n">16</td><td class="why">Three ways in, two of which lead to a screen; both read the real store, and the rail collapses to give the workspace its width back</td></tr>
           <tr><td class="key">Scenario generator</td><td class="n">8</td><td class="n">9</td><td class="why">Complete. Receiver positions fixed, an invented hour reproducible from one number, all five kinds of run staging what they should, twenty produced unattended from a single number by one command, the screen that will drive it, disruptions staged only on aircraft that are actually flying, a floor of five affected aircraft per hour so that no hour is unscoreable, and every hour now recording the number it was generated from so a batch can be reproduced rather than remembered</td></tr>
           <tr><td class="key">Anomaly detection</td><td class="n">9</td><td class="n">15</td><td class="why">What normal looks like, and a rule for each side of the picture — the radio and the aircraft. Findings are kept and grouped, and the evidence the final rules read has been settled: grouping alone could not separate a staged hour from a quiet one, so it was replaced by a local rate comparison — measured first, and chosen over turning up the scenario settings. The three answers the system may give are one decision asked in a fixed order; the order itself is now built and enforced, and two of the three tests with it. Marked against the answer key over three hundred regenerated hours: every one of the five kinds of hour decided correctly sixty times out of sixty, no event anywhere given two answers, and — since a blip lasting one reading stopped counting as an event — no false report anywhere at all. The third test, ruled out last time, is worth attempting again</td></tr>
-          <tr><td class="key">Evidence bundles</td><td class="n">0</td><td class="n">2</td><td class="why">Specified, unbuilt</td></tr>
+          <tr><td class="key">Evidence bundles</td><td class="n">2</td><td class="n">2</td><td class="why">Complete. One event becomes one package, with the frequency dimension joined up here because nothing upstream joins it, and with every absence labelled by which of the three kinds it is rather than left as silence. Every statement's citations are then resolved against the store before the package is allowed to exist — which found that one citation in eleven had been pointing at a reconstructed instant rather than a stored reading, in a field that had been written and never read since the findings were first kept</td></tr>
           <tr><td class="key">AI hypothesis layer</td><td class="n">0</td><td class="n">10</td><td class="why">Specified, unbuilt</td></tr>
           <tr><td class="key">Hypothesis screen and feedback</td><td class="n">0</td><td class="n">6</td><td class="why">Specified, unbuilt</td></tr>
           <tr><td class="key">Evaluation</td><td class="n">0</td><td class="n">6</td><td class="why">Scoring instrument written and locked; harness unbuilt</td></tr>
-          <tr class="total"><td class="key">Total</td><td class="n">45</td><td class="n">98</td><td class="why">&nbsp;</td></tr>
+          <tr class="total"><td class="key">Total</td><td class="n">47</td><td class="n">98</td><td class="why">&nbsp;</td></tr>
         </tbody>
       </table>
     </div>
@@ -5482,16 +5703,16 @@ second pass   <b>5.060000171975998</b></div>
           changed between batches. Varying them run by run would change how hard each run is to
           detect, which interacts directly with the spread described above, so it is a decision to
           take deliberately rather than by default.</li>
-        <li><b>Nothing has ever been marked.</b> The scoring described above is a shape, not a
-          result. Detection has begun, but a single rule watching the radio side cannot be scored
-          against an answer key on its own — the answer to every staged run is a <em>cause</em>, and
-          naming a cause needs the rules that weigh the radio evidence against the aircraft evidence.
-          With no hypothesis layer there is nothing to score either.</li>
-        <li><b>Nothing is explained yet.</b> One rule now raises findings, but a finding is not an
-          account of what happened. The system can say <em>this receiver is unusually noisy</em>; it
-          cannot yet say whether that is interference, a broken receiver, or a coincidence, because
-          the rules that tell those apart have to weigh one side of the picture against the other,
-          and those are the next thing to be built.</li>
+        <li><b>No explanation has ever been scored.</b> The detection half is now marked against
+          the answer key — every kind of hour decided correctly sixty times out of sixty. What has
+          never been scored is the half the project is actually about: the quality of a written
+          explanation, which needs a hypothesis layer to produce one and a second marker to judge
+          it. The instrument for that is written and locked; nothing has been put through it.</li>
+        <li><b>Nothing is explained yet, in the sense a person would mean.</b> The system can now
+          say <em>this is a broken receiver rather than interference, here is what that rests on, and
+          here is what could not be measured</em> — as a structured package, not as prose. Turning
+          that into an account somebody would read, and checking the account line by line against the
+          package it came from, is the whole of what remains.</li>
         <li><b>No hypothesis has ever been generated.</b> The AI layer, its two validation gates, and
           the deterministic template it will be compared against are all still ahead.</li>
         <li><b>One of the three screens does not exist</b>, and the picture is thinner than it
@@ -5554,13 +5775,13 @@ second pass   <b>5.060000171975998</b></div>
       <div class="tier">
         <div class="tier__name">Next</div>
         <div class="tier__what">
-          <b>Evidence bundles</b> — gathering what the tests found into one package with its
-          uncertainties listed beside it, and then the part the project is actually about: an
-          explanation proposed by a model, checked line by line against the evidence it was given,
-          and put in front of a person who decides. This moved from third to first when the third
-          test closed. It is the natural next thing to build because it is the one piece of remaining
-          work the shape of the data cannot invalidate — a bundle groups what the tests already
-          produce, and its shape does not depend on what the hours contain.
+          <b>The part the project is actually about</b> — an explanation proposed by a model,
+          checked line by line against the package it was given, and put in front of a person who
+          decides. The packages now exist and their contents are verified rather than asserted,
+          which is what makes that check a list lookup instead of an impossibility. One loose end is
+          owed first: two different kinds of statement currently share one rule name, so a citation
+          naming that rule is ambiguous between them, and the check has to be able to tell them
+          apart before it can be trusted.
         </div>
       </div>
       <div class="tier">
