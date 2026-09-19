@@ -326,7 +326,8 @@ def test_a_ref_in_neither_known_shape_is_refused_by_name():
     predicate for an empty ref and match the whole run."""
     # spec: evb-002, db-008
     with pytest.raises(ResolutionError, match="aircraft_id"):
-        resolve_bundles(_ExplodingFactory(), [bundle(observed({"aircraft_id": AIRCRAFT}))])
+        resolve_bundles(_ExplodingFactory(),
+                        [bundle(observed({"aircraft_id": AIRCRAFT}))])
 
 
 def test_an_empty_ref_is_refused_rather_than_matching_everything():
@@ -411,7 +412,7 @@ def insert_rf(engine: Engine, *, run_id: int = RUN_ID, sensor: str = SENSOR,
                 " scenario_run_id, observation_type, timestamp, "
                 " validation_status, provenance, payload, location) "
                 "VALUES ('synthetic-rf', 'synthetic_rf', 'synthetic', :run, "
-                " 'rf', :at, 'valid', '{}'::jsonb, :payload::jsonb, "
+                " 'rf', :at, 'valid', '{}'::jsonb, CAST(:payload AS jsonb), "
                 " ST_GeomFromEWKT('SRID=4326;POINT(7.5473 51.0905)')) "
                 "RETURNING id"
             ),
@@ -438,7 +439,7 @@ def insert_track(engine: Engine, *, run_id: int = RUN_ID,
                 " scenario_run_id, observation_type, timestamp, "
                 " validation_status, provenance, payload, location) "
                 "VALUES ('opensky-replay', 'opensky', 'replayed', :run, "
-                " 'track', :at, 'valid', '{}'::jsonb, :payload::jsonb, "
+                " 'track', :at, 'valid', '{}'::jsonb, CAST(:payload AS jsonb), "
                 " ST_GeomFromEWKT('SRID=4326;POINT(7.5473 51.0905)')) "
                 "RETURNING id"
             ),

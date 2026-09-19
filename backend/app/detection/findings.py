@@ -117,9 +117,16 @@ def from_rf_noise(anomaly: RfNoiseAnomaly, *, scenario_run_id: int) -> Detection
 def from_track_gap(gap: TrackGapFinding, *, scenario_run_id: int) -> DetectionFinding:
     """An `anom-010` discontinuity as a storable finding.
 
-    The window ends are the evidence: for a gap measured as an absence they
-    are the reports either side of it, which is what `anom-010` was asked to
-    carry and what an analyst would look up.
+    **The citation comes from `observed_at` and never from the window.**
+    `evidence_refs` is a citation field and a citation must name a row; the
+    window is what the rule *concluded*. For a not-heard gap the two agree,
+    because its ends are the reports either side of the silence. For a
+    frozen position they cannot: the window starts at the moment the
+    position went stale, reconstructed by subtracting the staleness the
+    report declares, and that is by definition the one instant in the window
+    at which nothing was recorded. Writing the window here cost 91 of 1,021
+    unresolvable citations in real bundles, every one of them that start,
+    and it was invisible until `evb-002` looked the rows up (`qa.md` 83).
     """
     return DetectionFinding(
         scenario_run_id=scenario_run_id,
@@ -130,8 +137,8 @@ def from_track_gap(gap: TrackGapFinding, *, scenario_run_id: int) -> DetectionFi
         ended_at=gap.ended_at,
         location=gap.location,
         evidence_refs=(
-            {"aircraft_id": gap.aircraft_id, "at": gap.started_at.isoformat()},
-            {"aircraft_id": gap.aircraft_id, "at": gap.ended_at.isoformat()},
+            {"aircraft_id": gap.aircraft_id, "at": gap.observed_at[0].isoformat()},
+            {"aircraft_id": gap.aircraft_id, "at": gap.observed_at[1].isoformat()},
         ),
         details={"shape": gap.shape.value, "duration_s": gap.duration.total_seconds()},
     )
@@ -167,6 +174,11 @@ def from_track_cluster(
         started_at=cluster.started_at,
         ended_at=cluster.ended_at,
         location=cluster.centroid,
+        # Deliberately not a resolvable coordinate, and recorded as such:
+        # an aircraft with no time matches every report it made rather than
+        # one. `anom-004` clusters are not reportable, so no bundle cites
+        # them, and `evb-002` refuses this shape by name rather than
+        # matching it loosely -- which is the safer failure of the two.
         evidence_refs=tuple({"aircraft_id": aircraft} for aircraft in cluster.members),
         details={
             "size": cluster.size,

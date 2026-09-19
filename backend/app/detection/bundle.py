@@ -77,6 +77,30 @@ class BundleError(ValueError):
     """A bundle that cannot be built. Never a partial bundle."""
 
 
+class Grounding(str, Enum):
+    """What kind of claim an evidence item is making.
+
+    The typed-absence principle this module already applies to
+    uncertainties, applied to citations. 72 of 332 items in real bundles
+    carry no refs at all -- a verdict, a nominal neighbour, a rate ratio --
+    and those are judgements a rule made over readings, for which there is
+    no row to cite. A nominal neighbour is in the bundle *precisely because*
+    no episode was raised for it.
+
+    Declaring it is what keeps "carries no refs" from being a state an item
+    can drift into. `evb-002` checks every item, and the only way one
+    escapes a database lookup is by saying it makes no observational claim
+    -- so a new item type that forgets cannot acquire the weaker treatment
+    by omission, because there is no default to acquire.
+    """
+
+    #: Cites raw observations. Every ref must resolve to exactly one row.
+    OBSERVED = "observed"
+    #: A judgement over readings, or over the other items in this bundle.
+    #: Carries no refs at all, and carrying one is refused.
+    DERIVED = "derived"
+
+
 class UncertaintyKind(str, Enum):
     """The three things an absence can mean, kept apart on purpose."""
 
@@ -116,8 +140,31 @@ class EvidenceItem:
     data_mode: DataMode
     started_at: datetime
     ended_at: datetime
+    #: No default, deliberately. See `Grounding`.
+    grounding: Grounding
     refs: tuple[dict[str, Any], ...] = ()
     details: dict[str, Any] = field(default_factory=dict)
+    #: Filled by `evb-002` at build time and never by this module: the rows
+    #: each ref resolved to, in the order the refs were cited. Empty until
+    #: the bundle has been resolved, and empty forever on a DERIVED item.
+    observation_ids: tuple[int, ...] = ()
+
+    def __post_init__(self) -> None:
+        # Both directions, so the declaration cannot be a lie either way.
+        if self.grounding is Grounding.OBSERVED and not self.refs:
+            raise BundleError(
+                f"evidence item {self.source!r} claims to be an observation and "
+                "cites nothing. An item carrying no refs is skipped by the "
+                "traceability check, so an item that merely *forgot* its refs "
+                "would pass by default -- which is why the kind is declared."
+            )
+        if self.grounding is Grounding.DERIVED and self.refs:
+            raise BundleError(
+                f"evidence item {self.source!r} is declared a judgement and "
+                f"cites {len(self.refs)} observation(s). A judgement has no row, "
+                "so refs here mean the declaration is wrong in the direction "
+                "that quietly exempts a real citation from being resolved."
+            )
 
     def without_rule_id(self) -> EvidenceItem:
         """An item stripped of its rule id, for proving the bundle refuses it."""
@@ -280,6 +327,7 @@ def _episode_items(
                      f"{episode.peak_deviation:.2f} dB at its peak"),
             rule_id=episode.rule_id,
             finding_type=episode.anomaly_type,
+            grounding=Grounding.OBSERVED,
             data_mode=DataMode.SYNTHETIC,
             started_at=episode.started_at,
             ended_at=episode.ended_at,
@@ -346,6 +394,10 @@ def _fault_bundle(
                      f"{spatial.nominal_within_db:.1f} dB of its baseline"),
             rule_id=producer.rule_id,
             finding_type="neighbour_nominal",
+            # A judgement, and an unusual one: this item exists precisely
+            # because no episode was raised for this neighbour, so there is
+            # nothing for it to cite by construction.
+            grounding=Grounding.DERIVED,
             data_mode=DataMode.SYNTHETIC,
             started_at=producer.started_at,
             ended_at=producer.ended_at,
@@ -361,6 +413,7 @@ def _fault_bundle(
                  f"{len(spectral.channels)} of {spectral.plan_size} channels"),
         rule_id=producer.rule_id,
         finding_type="channel_adjacency",
+        grounding=Grounding.DERIVED,
         data_mode=DataMode.SYNTHETIC,
         started_at=producer.started_at,
         ended_at=producer.ended_at,
@@ -374,6 +427,7 @@ def _fault_bundle(
                  "nominal, which attributes the deviation to the instrument"),
         rule_id=producer.rule_id,
         finding_type=producer.anomaly_type,
+        grounding=Grounding.DERIVED,
         data_mode=DataMode.SYNTHETIC,
         started_at=producer.started_at,
         ended_at=producer.ended_at,
@@ -433,6 +487,7 @@ def _zone_bundle(
         finding=producer.reason,
         rule_id=producer.rule_id,
         finding_type=producer.anomaly_type,
+        grounding=Grounding.DERIVED,
         data_mode=DataMode.SYNTHETIC,
         started_at=producer.started_at,
         ended_at=producer.ended_at,
@@ -454,6 +509,9 @@ def _zone_bundle(
                      f"{excess.ratio:.2f}"),
             rule_id=TRACK_RULE_ID,
             finding_type=RATE_EXCESS_FINDING_TYPE,
+            # A ratio over counts. The discontinuities it counted are their
+            # own OBSERVED items in this same bundle.
+            grounding=Grounding.DERIVED,
             data_mode=DataMode.REPLAYED,
             started_at=excess.window[0],
             ended_at=excess.window[1],
@@ -481,6 +539,7 @@ def _zone_bundle(
             finding=("reporting from this aircraft broke during the window"),
             rule_id=finding.rule_id,
             finding_type=finding.finding_type,
+            grounding=Grounding.OBSERVED,
             data_mode=DataMode.REPLAYED,
             started_at=finding.started_at,
             ended_at=finding.ended_at,
@@ -547,6 +606,6 @@ def _superseded_for(
 
 
 __all__ = [
-    "BundleError", "EvidenceBundle", "EvidenceItem", "SupersededClaim",
+    "BundleError", "EvidenceBundle", "EvidenceItem", "Grounding", "SupersededClaim",
     "Uncertainty", "UncertaintyKind", "build_bundles",
 ]

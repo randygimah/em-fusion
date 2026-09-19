@@ -183,6 +183,16 @@ class TrackGapFinding:
     ended_at: datetime
     #: Where the aircraft was last known to be.
     location: Location
+    #: The first and last report this finding was actually read from, as
+    #: against the window above, which is what the rule *concluded*. The two
+    #: are the same thing for `NOT_HEARD`, whose ends are the reports either
+    #: side of the silence, and are not for `FROZEN_POSITION`, whose start is
+    #: reconstructed from the reported staleness -- an instant at which, by
+    #: definition, nothing was recorded, because the position had stopped
+    #: updating. `evb-002` cites these and would refuse the window: 91 of
+    #: 1,021 real citations resolved to zero rows before this field existed.
+    #: No default, so a third mechanism cannot acquire the wrong one.
+    observed_at: tuple[datetime, datetime]
     finding_type: str = FINDING_TYPE
     rule_id: str = RULE_ID
 
@@ -266,6 +276,9 @@ def _not_heard(reports: Sequence[_Report], policy: GapPolicy) -> list[TrackGapFi
                 shape=GapShape.NOT_HEARD,
                 started_at=before.timestamp,
                 ended_at=after.timestamp,
+                # The window ends here ARE the reports either side of the
+                # silence, so the citation and the conclusion coincide.
+                observed_at=(before.timestamp, after.timestamp),
                 location=before.location,
             )
         )
@@ -344,6 +357,10 @@ def _frozen_finding(episode: Sequence[_Report]) -> TrackGapFinding:
         started_at=first.timestamp - first.position_staleness,
         ended_at=episode[-1].timestamp,
         location=first.location,
+        # What was read, as against what was concluded. The window starts
+        # before any of these reports arrived, and nothing was recorded at
+        # that instant -- it is the moment the position stopped updating.
+        observed_at=(first.timestamp, episode[-1].timestamp),
     )
 
 
