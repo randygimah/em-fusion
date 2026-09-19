@@ -118,6 +118,7 @@ said**; a script with no log is marked, and its figure lives in `docs/thesis_not
 |---|---|---|
 | `source_gap_ceiling.py` | **Can this rule be built on this corpus at all?** Measures the ceiling, not a design. | No. Over 40 seed-matched pairs: 16.1 findings against the control's 15.1 and **never fewer** (23 greater, 17 tied, **0 lower**) — real beyond doubt, and one in fifteen. Root cause: **1.7 staged aircraft per run, 11 of 40 staging nothing at all.** This is the measurement that forced `scn-007`. |
 | `source_gap_zone_scoring.py` | Does a staged gap **concentrate** anywhere a detector could find? | No — **at chance**: 7:3, 5:4, 4:2 at 20/40/60 km cluster radii. The machinery destroys a signal raw counting preserves. |
+| `mutation/mutate_evb001_bundle.py` | **Are `evb-001`'s tests load-bearing?** 34 mutants over the typed-absence boundary, the per-item data mode, the unit of a bundle, the frequency axis, and the scoping of superseded claims. | **34 of 34 killed** — after a first pass killed only 22. The 10 genuine survivors were **all scoping rules**: evidence from another receiver, another window, another zone. The suite had tested what goes *into* a bundle and barely what must stay *out*, which is the more dangerous half, because a bundle carrying a neighbouring event's evidence is not malformed — it is wrong. 7 tests added, 2 tightened. |
 | `ladder_suppression.py` | **Does `anom-013`'s suppression ever fire?** `ladder_end_to_end.py`'s "conflicting" counter records runs reporting two anomaly *types* and never inspects `Resolution.suppressed`, so its zero says nothing about suppression. | **Never. 188 claims bid, 0 suppressed.** `gnss-degradation` bids 60 over 60 runs; `rf-sensor-fault` and `ambiguous-mixed-evidence` bid **64** each, so four runs of each produce two claims — two claims in a run is not rare, two claims **for one zone** has never happened. Read the ladder's 60/60 as evidence it declines to merge separate events, **not** that it arbitrates competing ones. |
 | `evidence_ref_uniqueness.py` | **Does a finding's `evidence_refs` coordinate identify exactly one observation?** Decides whether `evb-002` resolves by coordinate or the `from_*` functions must record row ids. Also checks the ISO round trip and what one lookup costs. | **Unique, everywhere.** RF by `sensor_id + channel_index + timestamp` and track by `aircraft_id + timestamp` are unique within a run across **both** corpora — 20.7M rows, worst collision 1, **zero** colliding coordinates. ISO round trip exact on 2,000 sampled rows. So `evb-002` resolves by coordinate and no rule adapter changes. **Cost: 64.7 ms per lookup**, index scan on `ix_observations_scenario_run_id` with **38,424 rows removed by filter** — a composite index would be wanted if bundles carry many items. |
 | `arm_rf_identity.py` | Is `ambiguous-mixed-evidence` a duplicate of `rf-sensor-fault`, or a control? Digests both arms' RF streams at every shared seed. | **A control, and it must not be dropped.** Same receiver, window and elevation 60/60, and the RF stream is **identical byte for byte in 60 of 60 pairs** — the only staged difference is five removed aircraft. So both arms being decided `possible_sensor_fault` 60/60 is a measured immunity result: a simultaneous track-side disturbance does not perturb the RF verdict. Carries the ordering trap in its docstring — the first version digested rows ordered by a payload key that does not exist, so every row sorted equal and 4 of 60 pairs looked like generator differences. |
@@ -228,3 +229,27 @@ violation, not the query.
 
 **Never commit `PSEUDONYM_SEED`**, and never let a log capture it. The `"PSEUDONYM_SEED is not set"`
 warning at the head of several logs is Compose noise and carries no value.
+
+
+## A hazard in the mutation harnesses themselves, found 2026-09-19
+
+**A mutation harness that writes a source file and immediately re-runs pytest can score a mutant
+against the *previous* mutant's bytecode.** CPython validates a cached `.pyc` on the source's
+`(mtime-in-whole-seconds, size)`. The host-venv harnesses run a test file in about 0.1 s, so
+consecutive mutants land inside the same second — and two that change the file by the same number of
+bytes are then indistinguishable to that check, so the second silently executes the first's compiled
+module.
+
+Found on `evb-001`, where two genuinely-killed mutants (`REPLAYED` → `SYNTHETIC`, twice, +1 byte
+each) were scored SURVIVED and were killed the moment either was run alone. **The error has no
+preferred direction**: it can equally score a real survivor as killed, which overstates a score.
+
+Four harnesses used the vulnerable shape — `PY_BIN -m pytest` directly — and all four are now fixed
+with `shutil.rmtree(__pycache__)` before each run plus `PYTHONDONTWRITEBYTECODE=1`. **The three with
+published figures were re-run and every score held**: `anom-014` 13/13, `scn-007` 17/19,
+`scn-008` 10/11, with the same survivors as before. The remaining harnesses drive `make test-backend`,
+whose runs are minutes apart, so the same-second collision cannot occur — they are left alone rather
+than changed for symmetry.
+
+**Anything new here must clear the cache.** A mutation score is only evidence if each mutant was the
+code that actually ran.

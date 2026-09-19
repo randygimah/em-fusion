@@ -1,0 +1,38 @@
+empty evidence accepted                              KILLED   1 failed, 6 passed in 0.12s
+item without a rule id accepted                      KILLED   1 failed, 5 passed in 0.11s
+rate excess claims to be synthetic                   KILLED   1 failed, 9 passed in 0.11s
+track findings claim to be synthetic                 KILLED   1 failed, 9 passed in 0.11s
+the bundle reports one mode for everything           KILLED   1 failed, 8 passed in 0.11s
+not-applicable rewritten as not-measurable           KILLED   1 failed, 12 passed in 0.11s
+the fault bundle says nothing about the track side   KILLED   1 failed, 12 passed in 0.11s
+not-measurable corroboration goes unreported         KILLED   1 failed, 10 passed in 0.11s
+the reason is replaced by the bare flag              KILLED   1 error in 0.17s
+measured-and-found-nothing filed as not-measurable   KILLED   1 failed, 11 passed in 0.11s
+the rate excess never becomes evidence               KILLED   1 failed, 9 passed in 0.11s
+brief episodes folded in with the unjudged           KILLED   1 failed, 15 passed in 0.12s
+brief episodes dropped                               KILLED   1 failed, 15 passed in 0.11s
+unjudged cells dropped                               KILLED   1 failed, 14 passed in 0.11s
+unjudged neighbours dropped                          KILLED   1 failed, 14 passed in 0.12s
+unjudged channels dropped                            KILLED   1 failed, 14 passed in 0.11s
+nominal neighbours never become evidence             KILLED   1 failed, 13 passed in 0.12s
+abnormal neighbours counted as nominal               KILLED   1 failed, 22 passed in 0.12s
+the neighbour margin is lost                         KILLED   1 failed, 13 passed in 0.12s
+any producer will do                                 KILLED   1 failed, 1 passed in 0.11s
+a missing producer raises the wrong kind of error    KILLED   1 failed, 4 passed in 0.12s
+only the first claim becomes a bundle                KILLED   1 failed, 1 passed in 0.11s
+only one episode reaches a bundle                    KILLED   1 failed, 7 passed in 0.11s
+episodes from any receiver are collected             KILLED   1 failed, 23 passed in 0.11s
+affected channels are not reported                   KILLED   1 failed, 7 passed in 0.11s
+affected channels come from the rule rather than the evidence KILLED   1 failed, 26 passed in 0.12s
+superseded claims dropped                            KILLED   1 failed, 16 passed in 0.11s
+superseded claims not scoped by distance             KILLED   1 failed, 18 passed in 0.11s
+superseded claims not scoped by the winning rule     KILLED   1 failed, 27 passed in 0.12s
+superseded claims not scoped by window               KILLED   1 failed, 28 passed in 0.12s
+the superseded reason is lost                        KILLED   1 failed, 17 passed in 0.11s
+track findings are not window-filtered               KILLED   1 failed, 25 passed in 0.12s
+episodes are not window-filtered                     KILLED   1 failed, 24 passed in 0.11s
+overlap tested from one side only                    KILLED   1 failed, 24 passed in 0.12s
+
+restored
+
+34 killed of 34 valid mutants
