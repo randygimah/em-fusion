@@ -5769,6 +5769,67 @@ were affected and fixed; the three with published figures were re-run and every 
 (`anom-014` 13/13, `scn-007` 17/19, `scn-008` 10/11). A mutation score is only evidence if each
 mutant was the code that actually ran.
 
+## 83. If a finding records when something started, isn't that a time something was observed?
+
+**No — and for roughly half of this project's track findings it is not.** The assumption was made
+silently, by me, when the storable shape of a finding was designed, and it survived until the
+traceability work went looking for the rows those times point at. It does not survive that.
+
+A finding carries two kinds of time and they had been treated as one kind:
+
+| | What it is | Is there a row at that instant? |
+|---|---|---|
+| The **window** — `started_at`, `ended_at` | The rule's *conclusion*. When the rule believes the event began and ended. | Not necessarily |
+| The **citation** — what the refs point at | The rule's *evidence*. The reports it actually read to reach that conclusion. | It must be, or it is not a citation |
+
+The finding shape was built writing the window ends into the citation field, on the assumption that
+the moment an event began is a moment something was recorded. For one of the two track mechanisms
+that is true; for the other it is false by construction.
+
+### What the measurement found
+
+Twenty-four real bundles over forty runs cite **1,021 coordinates**. Of those, **91 resolve to zero
+rows**, and every single one is the start of a `frozen_position` finding. Nothing else fails: every
+radio coordinate resolves, and every `not_heard` coordinate resolves at both ends. A focused check
+over three runs put it beyond doubt — **48 of 48** frozen starts unresolvable, 3 of 3 coverage-gap
+findings clean on both ends.
+
+### Why that particular end, and why it could not have been otherwise
+
+The two mechanisms reach their window start differently:
+
+- A **not-heard** gap is an absence between two reports, so its ends *are* the reports either side of
+  the silence. Both are rows.
+- A **frozen-position** gap is detected from a report that arrives carrying a stale position, and the
+  rule works backwards: the moment the position went stale is the report's own timestamp *minus the
+  staleness it reports*. That is a reconstruction, not a reading.
+
+There is an irony in it worth keeping for the write-up. The reconstructed instant is exactly the
+moment the aircraft's position stopped being updated — so it is, by definition, the one moment in the
+whole window at which nothing was recorded. The citation pointed at the only place a citation could
+never land.
+
+### The trap this sat behind
+
+A test written over a coverage-gap finding would have passed. Both of its ends are real rows, so the
+resolver would have returned one row for each, and the suite would have reported traceability
+working. This is the same class as the baseline test that had to be rebuilt because the real quiet
+cells were indistinguishable and the test *could not fail* — a test whose fixture happens to avoid
+the only shape that breaks.
+
+The general form, now recorded twice: **a check is only as strong as the variety in what it is run
+against.** Two mechanisms produce the same shape of output and only one of them can satisfy the
+constraint, so a fixture drawn from either one alone proves nothing about the other.
+
+### Worth recording as a limitation
+
+The fix keeps the window as it is and adds the observed report times beside it, so a frozen finding
+cites the report that *showed* the stale position rather than the instant it infers. That is
+honest, but it means a frozen-position citation is evidence for the conclusion rather than evidence
+*of* the window: an analyst following the citation sees a report whose position was several minutes
+old, not a report at the moment of the freeze. The window remains an inference and the bundle should
+not be read as though the cited rows bracket it.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -5940,3 +6001,6 @@ mutant was the code that actually ran.
 | **Unit of report** | The thing a rule announces, as against the evidence it announces it from. Corrected upward three times in this project: readings to episodes, episodes to receivers, receivers to events. See §76. |
 | **Rate excess** | In this place, did dropouts happen more often during the window than they normally do *in that same place*? A location compared against itself, which removes "some places are always busy" as an explanation. See §77. |
 | **Youden's J** | Catch rate minus false-alarm rate; 0 is a coin flip and 1 is perfect. Stops a strong-sounding catch rate hiding an equally high false-alarm rate. The aircraft side scores about 0.3. See §77. |
+| **Coordinate (as against identifier)** | What a finding cites: a sensor and channel and time, or an aircraft and time. It describes a row well enough to find it, but resolving it is a *query*, and a query is a resolution only if it returns exactly one row. See §83. |
+| **Citation and conclusion** | The two kinds of time a finding carries. The window is what the rule concluded; the refs are what it read. Conflating them put 91 citations at an instant nothing was recorded at. See §83. |
+| **Traceability** | The requirement that every piece of evidence in a bundle resolve to a stored row, checked against the database rather than asserted — so the grounding check downstream has a closed set to verify citations against. See §83. |
