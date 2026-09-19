@@ -5830,6 +5830,86 @@ honest, but it means a frozen-position citation is evidence for the conclusion r
 old, not a report at the moment of the freeze. The window remains an inference and the bundle should
 not be read as though the cited rows bracket it.
 
+## 84. What actually happened to the corpus, and why didn't the two-variable rule stop it?
+
+**I destroyed it, by hand, in a way the codebase had explicitly anticipated and written a defence
+against.** The defence was a convention, and I am the person the convention depended on.
+
+The database-tier tests are gated on `TEST_DATABASE_URL`, and their first act is
+`DROP SCHEMA public CASCADE`. `conftest.py` explains why that variable exists and why it is
+deliberately **not** `DATABASE_URL`:
+
+> the tests gated on this create and drop schema, so keying them on the application's own variable
+> would eventually run a `DROP` against whatever database a developer happened to have configured.
+> Two variables make that impossible by construction rather than by care.
+
+To avoid waiting for `make test-backend` — which provisions a separate database for exactly this
+reason — I ran targeted test files with a hand-written command, and supplied the application's own
+database as `TEST_DATABASE_URL`. Every one of those runs dropped the corpus and rebuilt an empty
+schema. It was silent, because from the fixture's point of view nothing unusual happened.
+
+### What was lost, and what a lost corpus does to a measurement
+
+| | |
+|---|---|
+| Corpus v2, 300 runs | **Regenerable.** Its three base seeds are recorded in `CORPUS_V2_PLAN.md` and were written onto every run row, and no generator code has changed since |
+| Corpus v1, 240 runs | **Gone permanently.** Its base seeds were never recorded anywhere |
+| The source archive | **Untouched.** The licence-restricted, non-regenerable thing is fine |
+| Every measurement log | **Committed, and unaffected** |
+
+The v1 loss has a particular sting. Recording a batch's base seed was built *because* v1's seeds had
+been printed to a screen and never stored — of the base seeds behind the first 240 runs, exactly one
+survived anywhere. That work is the only reason v2 is recoverable, and the gap it was built to close
+is the reason v1 is not.
+
+**A measurement does not become invalid when its data is deleted.** This is worth stating carefully
+because the instinct runs the other way. A figure is a record of what was observed under stated
+conditions; the observation happened, and the log recording it is committed. What is lost is
+different and narrower: the ability to **re-verify** it, or to take a *new* measurement, until the
+corpus is regenerated. "No longer checkable" and "no longer true" are different claims, and only the
+first one applies.
+
+### The distinction worth keeping: construction against convention
+
+The comment said *impossible by construction rather than by care*. It was not. Two variables make
+the mistake **inconvenient**, not impossible, because a variable is a thing a person types and the
+person types it under time pressure to skip a slower command.
+
+A property enforced **by construction** is one that holds no matter what anybody types: the code
+refuses. A property enforced **by convention** holds while everybody follows the convention, and it
+looks exactly like the first one right up until it doesn't. The test for which kind you have is
+simple and I did not apply it: *can I break this by typing something?*
+
+`ops-004` converts it. Two checks now run before any drop — the test URL naming the same host, port
+and database as the application's, and a count of what the target is actually holding. The second is
+the one that matters, because the first compares *spellings*: one database reached as `localhost`
+and as a container hostname is two spellings of one disaster.
+
+### The second lesson, which cost as much as the first
+
+**The first version of the guard passed all ten of its unit tests and did not fire.**
+
+I pointed it deliberately at the real database to watch it refuse, and instead watched eighteen
+tests drop and rebuild the schema without a word. The cause: the suite's own autouse fixture
+replaces `DATABASE_URL` with an unreachable placeholder for every test, so a guard reading the
+environment *when it runs* compares the target against the placeholder and waves the real database
+through. The application URL is now captured at import, with a test pinning that specifically.
+
+The general form: **a guard verified only against its own unit tests is verified against the
+author's model of the world**, which is the same model that produced the bug. A safety interlock has
+to be fired at the real thing at least once, deliberately, and watched.
+
+### Worth recording as a limitation
+
+Two claims in this project can no longer be re-checked. The coordinate-uniqueness result was
+measured across **both** corpora, and v1 no longer exists, so "verified on 20.7 million rows across
+two independently generated corpora" is now a figure standing on its committed log alone. And the
+superseded measurements kept for the write-up cite v1 runs by id, which will not resolve.
+
+It also breaks the rule that scenario runs are never deleted, which nothing had broken until now.
+The rule survives as a statement about the system's own behaviour — no code path deletes a run — and
+no longer as a statement about the database's history.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -6004,3 +6084,6 @@ not be read as though the cited rows bracket it.
 | **Coordinate (as against identifier)** | What a finding cites: a sensor and channel and time, or an aircraft and time. It describes a row well enough to find it, but resolving it is a *query*, and a query is a resolution only if it returns exactly one row. See §83. |
 | **Citation and conclusion** | The two kinds of time a finding carries. The window is what the rule concluded; the refs are what it read. Conflating them put 91 citations at an instant nothing was recorded at. See §83. |
 | **Traceability** | The requirement that every piece of evidence in a bundle resolve to a stored row, checked against the database rather than asserted — so the grounding check downstream has a closed set to verify citations against. See §83. |
+| **Construction vs convention** | Whether a safety property holds because the code refuses, or because everybody types the right thing. They look identical until someone is in a hurry. The test: can I break this by typing something? See §84. |
+| **Development batch** | 60 runs generated to build the AI layer against real bundles, pinned to its own base seed and excluded from every corpus query by name. Not a corpus: no thesis figure may be measured from it. See §84. |
+| **No longer checkable** | What happens to a measurement when its data is deleted. Distinct from *no longer true*: the observation happened and the log is committed; what is lost is re-verification. See §84. |
