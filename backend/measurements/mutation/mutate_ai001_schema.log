@@ -1,0 +1,25 @@
+confidence becomes a free string                         KILLED   1 failed, 1 passed in 0.22s
+a fourth confidence level is added                       KILLED   1 failed in 0.21s
+confidence is spelled lower case                         KILLED   1 failed in 0.22s
+the alternatives default to empty                        KILLED   1 failed, 10 passed in 0.22s
+the uncertainty list defaults to empty                   KILLED   1 failed, 9 passed in 0.23s
+the recommended action defaults to nothing               KILLED   1 failed, 11 passed in 0.22s
+the summary defaults to nothing                          KILLED   1 failed, 7 passed in 0.21s
+a hypothesis may cite nothing                            KILLED   1 failed, 20 passed in 0.21s
+a hypothesis may name no alternatives                    KILLED   1 failed, 21 passed in 0.22s
+the uncertainty list acquires a floor it must not have   KILLED   1 failed, 22 passed in 0.23s
+supporting evidence becomes prose                        KILLED   1 failed, 14 passed in 0.24s
+a citation drops the finding type                        KILLED   1 failed, 5 passed in 0.21s
+a citation's finding type becomes optional               KILLED   1 failed, 18 passed in 0.24s
+whitespace is no longer stripped before the length check KILLED   1 failed, 26 passed in 0.23s
+an empty string counts as text                           KILLED   1 failed, 23 passed in 0.24s
+unknown fields are carried rather than refused           KILLED   1 failed, 13 passed in 0.22s
+a hypothesis can be edited after validation              KILLED   1 failed, 14 passed in 0.23s
+the derived schema is shared rather than copied          SURVIVED 39 passed in 0.23s
+
+restored
+
+17 killed of 18 valid mutants
+SURVIVED, and equivalent -- see the note above:
+  - the derived schema is shared rather than copied
+no unexpected survivors
