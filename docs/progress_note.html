@@ -439,9 +439,9 @@
       finds, and can ask a map where those findings happened and which of them belong together. For
       the first time the screen could be shown something that was <em>found</em> rather than only
       what was <em>ingested</em>. Since then the findings have been gathered into packages, and each
-      package's evidence is checked against the store rather than taken on trust. <strong>Two stages
-      now separate that from an explanation anybody would read</strong>, and both of them are the
-      AI half.
+      package's evidence is checked against the store rather than taken on trust. <strong>This week the
+      last stage started producing explanations</strong> — and the first thing that produces one has
+      no AI in it at all, for reasons that turn out to be the whole point.
     </p>
 
     <div class="spine">
@@ -531,13 +531,16 @@
           </div>
         </div>
       </div>
-      <div class="stage stage--todo">
+      <div class="stage">
         <div class="stage__rail"><div class="stage__dot"></div></div>
         <div class="stage__body">
-          <div class="stage__name">Hypothesis layer <span class="chip chip--none">Not started</span></div>
+          <div class="stage__name">Hypothesis layer <span class="chip chip--part">One of three producers</span></div>
           <div class="stage__what">
-            The bundle goes to an AI model, which proposes an explanation. Two gates check it before
-            anyone sees it.
+            The package becomes a written explanation. Three things will produce one — a mechanical
+            summary with no model behind it, a hosted model, and a local one — and all three hand
+            back the same shape, which is what lets a screen show any of them and lets the study
+            compare them. The mechanical one is built and runs on real packages. The two model arms,
+            and the two gates that check what a model says, are next.
           </div>
         </div>
       </div>
@@ -5502,6 +5505,240 @@ second pass   <b>5.060000171975998</b></div>
   </section>
 
   <section>
+    <h2>The first explanation, and why it has no AI in it</h2>
+    <p class="lede">
+      Everything up to here produces <em>evidence</em>. A package now exists for each event, every
+      statement in it is traceable to a stored reading, and each kind of not-knowing is labelled.
+      What nobody could yet do was <em>read</em> one. This is the stage that turns a package into an
+      account a person can take a decision on — and the first thing built for it is deliberately the
+      one with no model behind it.
+    </p>
+
+    <h3>One shape, three producers</h3>
+    <p>
+      Three things will eventually write explanations: a mechanical summary with no model, a hosted
+      model, and a local one. The first thing built was none of them. It was the <em>shape</em> all
+      three hand back — a title, a confidence, a summary, the evidence it rests on, what speaks
+      against it or is unknown, what else it could be, and what to ask a human being to do.
+    </p>
+    <p>
+      Fixing that first buys two things. A screen can show any explanation without knowing which
+      produced it; and the study can compare them at all, which is impossible if the three arms
+      return different things. Doing it afterwards would mean bending two finished generators to fit
+      a third.
+    </p>
+
+    <div class="panel panel--warn">
+      <p>
+        <b>The shape is a rule about what a model may emit, not a description of what it did.</b> A
+        hosted model is handed a translated copy of it and is physically unable to produce anything
+        that does not conform. That translation is where a guarantee quietly dies: a confidence
+        restricted to three words on the original, but translated into "any text at all", would pass
+        every test written against the original and lose the restriction at the only boundary that
+        relies on it — because the original never runs during a constrained generation. So every
+        guarantee is checked twice, once on each.
+      </p>
+    </div>
+
+    <h3>Confidence is three words, and cannot be a number</h3>
+    <p>
+      Not "rejected if it is a number" — <em>unable to be one</em>. The field holds one of three
+      values and 0.87 is not among the things it can contain. This rule has been in the project since
+      the interface work, and it exists because a decimal invites arithmetic nobody justified: a
+      reader who sees 0.87 will compare it with 0.84 as if the gap meant something.
+    </p>
+    <p>
+      Stated as a limit rather than claimed as a solution: this stops a number appearing in the
+      confidence <em>field</em>. It cannot stop a generator writing "High (about 87% sure)" into the
+      summary. That half is the screen's job, and it is not built.
+    </p>
+
+    <h3>A citation has to name two things, because one does not identify</h3>
+    <p>
+      The evidence an explanation rests on is a structured reference, never a sentence. A sentence
+      cannot be looked up, so an explanation whose citations are prose does not make the checking
+      step awkward — it makes it impossible.
+    </p>
+    <p>
+      The reference names the rule <em>and</em> the kind of finding, and it took building this to
+      close a loose end the project had been carrying. Two different statements share one rule name:
+      the rule that notices an aircraft's reporting break, and the comparison that counts how many
+      such breaks happened inside a zone against outside it. By rule name they are identical while
+      making completely different claims. Naming the pair separates them, and the mechanical
+      generator is where that stopped being an argument and became behaviour — grouped by rule alone,
+      the two collapse into one citation making neither claim.
+    </p>
+
+    <h3>Nothing is allowed to default to empty</h3>
+    <p>
+      This is the same principle the packages already use, one layer up. If a list of alternatives
+      can quietly be empty because a generator forgot it, then <em>weighed the alternatives and found
+      none</em> and <em>never mentioned alternatives</em> arrive looking identical.
+    </p>
+    <p>
+      One asymmetry on top of that is worth stating, because it is a judgement rather than a rule.
+      An explanation must offer <b>at least one alternative</b> and is allowed to offer <b>no
+      evidence against itself</b>. "Nothing speaks against this" can be true. "Nothing else could
+      explain this" essentially cannot — and a system built to stop a fluent model overclaiming must
+      not accept the second sentence from it.
+    </p>
+
+    <h3>The producer with no model, and its two jobs</h3>
+    <p>
+      The mechanical generator reads a package and writes the explanation out by rule. Both of its
+      jobs are permanent; it is not scaffolding to be deleted when the model arrives.
+    </p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>The job</th><th>What it means</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="key">The safety net</td>
+            <td class="why">When a model returns something malformed, or claims something the
+              evidence does not contain, the analyst has to receive an explanation rather than an
+              error message.</td>
+          </tr>
+          <tr>
+            <td class="key">The yardstick</td>
+            <td class="why">The question this project asks is whether a language model adds anything
+              over an honest mechanical account of the same evidence. That cannot be answered by
+              looking at model output alone, however good it reads. It needs the mechanical account
+              of the identical package, graded blind alongside it.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      The first job produces a constraint that is easy to say and easy to break:
+      <b>a fallback that depends on the thing whose failure summons it is not a fallback.</b> If the
+      hosted service is unreachable and the fallback needs to reach the network, there is no
+      fallback. That is checked rather than promised — a test follows every module the generator can
+      reach, however indirectly, and refuses any network client or model library anywhere in that
+      chain.
+    </p>
+    <p>
+      That check is a search that finds nothing when it passes, which is also what it finds when it
+      is broken. So it is fired once at a part of the system that genuinely does reach the network,
+      to watch it go off. This is the same lesson as the store's safety catch, which passed ten tests
+      of its own and did not fire when it mattered: <b>a guard tested only against the case it is
+      meant to allow has been tested against its author's assumptions.</b>
+    </p>
+
+    <h3>A baseline must not flatter itself</h3>
+    <p>
+      The second job produces a subtler constraint. A fault in a model's explanation shows up as a
+      bad explanation a human grader can see. A fault in the <em>yardstick</em> shows up nowhere — it
+      moves the measuring stick, and every comparison drawn against it moves by the same amount in
+      silence. Three decisions all push against that.
+    </p>
+    <ul class="gaps">
+      <li><b>Confidence is inherited, never recalculated.</b> Each package already carries the
+        confidence of the rule that decided it, and that value was measured and argued when the rule
+        was built. Working out a second one here would be the same judgement expressed in two places,
+        and two expressions of one judgement eventually disagree while both keep working. It also
+        means the mechanical account can never be more confident than the rule it is restating.</li>
+      <li><b>One citation per kind of evidence, not per piece.</b> A real package holds thirty-four
+        pieces of four kinds. An explanation with thirty-four citations is complete and unreadable,
+        and a yardstick nobody can read is not one a grader can mark.</li>
+      <li><b>The alternatives are what the system itself ruled out.</b> When two rules claim the same
+        event, the losing claim is recorded as a competing account. Those are the alternatives.
+        Inventing plausible-sounding ones while ignoring the ones the system actually set aside would
+        be the explanation disagreeing with its own evidence.</li>
+    </ul>
+    <p>
+      Underneath all three sits a property the whole design leans on: every word of evidence the
+      mechanical generator cites is <em>copied</em> from the package, so it cannot cite something
+      that is not there. That has a consequence worth stating carefully, because the obvious reading
+      is backwards. When the automatic checking step is eventually run over one of these
+      explanations, a pass proves nothing — it was guaranteed before the check ran. A
+      <em>failure</em> would be a fault in the <b>check</b>. It is the one input whose right answer
+      is known in advance, which is exactly what a checker needs and rarely gets.
+    </p>
+
+    <div class="panel panel--warn">
+      <p>
+        <b>One trap, avoided, and the obvious repair was worse than the fault.</b> The detection
+        rules write confidence in lower case; the explanation format requires a capital. Passing the
+        value straight through fails. The instinctive fix — capitalise the first letter — turns
+        <span class="num">low</span> into <span class="num">Low</span> correctly and also turns
+        <span class="num">certain</span> into <span class="num">Certain</span>, which is accepted
+        here and rejected two layers downstream, at a point where the package that caused it is no
+        longer to hand. Matching the word against the list of permitted ones instead refuses the
+        unfamiliar word where it can still be explained.
+      </p>
+    </div>
+
+    <h3>Thirty-seven tests, a deliberate sabotage pass, and then real data found two more</h3>
+    <p>
+      Three separate checks were run on this, and each found what the one before it could not.
+    </p>
+    <p>
+      Before writing the generator at all, a throwaway stand-in was put in its place — one that
+      returns the same fixed, valid-looking explanation whatever it is given. <b>Eleven tests passed
+      against it.</b> Four of those were genuinely wrong: one asserted that a made-up claim was
+      absent and was satisfied by a generator citing a different made-up claim; another checked that
+      the recommended action tells a human to look at something and was satisfied by the words
+      "Check it." The other seven pass by their nature, and the test file now says which and why
+      rather than leaving a reader to wonder.
+    </p>
+    <p>
+      Then the sabotage pass: thirty-five deliberate faults introduced one at a time, to see whether
+      the tests notice. Twenty-nine did. The four that slipped through had one shape between them,
+      and it is <em>not</em> that the tests were testing nothing — each was passing for a reason
+      other than the one its name claimed, which no amount of reading would have revealed. A test
+      that a damaged package is refused was satisfied because the <em>sabotaged</em> version also
+      refused it, for a different reason, with a message that happened to contain the same words. A
+      test that an explanation says how many findings it stands for was satisfied because its two
+      examples differed in another number as well. Each repair removed the accidental route to the
+      answer rather than asserting harder.
+    </p>
+    <p>
+      Then it was run over the forty-one real packages. It produced forty-one explanations, refused
+      none, and every one of the <span class="num">164</span> citations was found in the package it
+      came from. It also found two faults in the writing that no test could have:
+    </p>
+    <ul class="gaps">
+      <li><b>A doubled full stop.</b> One rule's recorded reason is three sentences long and already
+        ends in one, so adding a stop produced two. Every test example ended without punctuation,
+        because I wrote them all. Cosmetic anywhere else; here the output is read blind beside a
+        language model's, where punctuation a model would never produce reads as a difference in
+        quality rather than as a typo.</li>
+      <li><b>A sentence pointing at the wrong thing.</b> The summary introduced the deciding rule's
+        words as "the rule's own conclusion", which is right for most packages and wrong for the
+        commonest case here — where the rule's recorded remark is a note about what it
+        <em>could not establish</em>. Nothing was invented and nothing was malformed; a statement of
+        ignorance was simply presented as a finding. It now reads "the rule states", which is true of
+        whatever the rule recorded.</li>
+    </ul>
+    <p>
+      Both belong to the same family as the two faults the earlier end-to-end run found: properties
+      of what real data <em>contains</em>, rather than of what the code says, and therefore invisible
+      to any test whose examples the author chose.
+    </p>
+
+    <h3>Something the study has to declare before it scores anything</h3>
+    <p>
+      Because the mechanical account takes its confidence from the rule rather than forming one, it
+      <b>cannot be badly calibrated</b> in the way a model can — confident about thin evidence,
+      hedged about strong evidence — which is one of the things the grading instrument is designed to
+      catch. On that particular dimension the study is therefore not comparing two answers to one
+      question; it is comparing an answer with a restatement. That is arguably the point, since a
+      model arm that cannot beat a restatement of the rule's own confidence has added nothing there.
+      But it has to be said in advance rather than discovered during the analysis, and the second
+      grader has to be told.
+    </p>
+    <p>
+      A smaller one came out of the same run. The mechanical account emits exactly four citations on
+      every one of the forty-one packages, because both kinds of package the system currently makes
+      happen to carry four kinds of evidence. Its <em>length</em> does not vary with the event, where
+      a model's will — so any part of the grading that rewards completeness or concision is being
+      marked against a constant for one of the arms.
+    </p>
+  </section>
+
+  <section>
     <h2>The rules the build follows</h2>
     <ul class="rules">
       <li><b>Nothing is written before it is specified and proven to fail.</b> Every capability gets a
@@ -5530,7 +5767,7 @@ second pass   <b>5.060000171975998</b></div>
 
     <div class="outcomes">
       <div class="outcome">
-        <h3>999</h3>
+        <h3>1,091</h3>
         <p>Tests passing in containers against a real database, from a database that was deleted first to prove nothing was left over.</p>
       </div>
       <div class="outcome">
@@ -5538,7 +5775,7 @@ second pass   <b>5.060000171975998</b></div>
         <p>Of the back-end code is exercised by those tests. The screens measure nothing of the kind — see below.</p>
       </div>
       <div class="outcome">
-        <h3>47 / 98</h3>
+        <h3>50 / 99</h3>
         <p>Numbered capabilities finished. The rest are specified and waiting, not vague.</p>
       </div>
     </div>
@@ -5665,16 +5902,16 @@ second pass   <b>5.060000171975998</b></div>
           <tr><td class="key">Data Abstraction Layer</td><td class="n">4</td><td class="n">4</td><td class="why">Complete</td></tr>
           <tr><td class="key">Sources and adapters</td><td class="n">7</td><td class="n">8</td><td class="why">Real air traffic in and replayable on command; the tracks unsafe to stage an incident on are listed; invented radio readings now reach the store through the same front door; the third source to come</td></tr>
           <tr><td class="key">Database</td><td class="n">9</td><td class="n">10</td><td class="why">Connected, shaped, written to, read back, and fenced off from everything but the one component allowed to touch it — and it now answers the two geographic questions it was chosen for, which is the first work that could not have been done with ordinary storage. It had also never been told to organise itself around which run a record belongs to, so every measurement was reading all twenty million records from the beginning; that is now fixed</td></tr>
-          <tr><td class="key">Running and tooling</td><td class="n">1</td><td class="n">3</td><td class="why">Containers and commands done; no continuous integration</td></tr>
+          <tr><td class="key">Running and tooling</td><td class="n">2</td><td class="n">4</td><td class="why">Containers and commands done, and every measurement now runs through a named command rather than a hand-written one — which is how the hours came to be destroyed. The store is now fenced against the test suite by construction rather than by everyone remembering. No continuous integration</td></tr>
           <tr><td class="key">API</td><td class="n">5</td><td class="n">11</td><td class="why">A health check, the picture and the dashboard reading it, plus the two scenario endpoints and the screen reading those — a batch now starts from a button</td></tr>
           <tr><td class="key">Screens and map</td><td class="n">2</td><td class="n">16</td><td class="why">Three ways in, two of which lead to a screen; both read the real store, and the rail collapses to give the workspace its width back</td></tr>
-          <tr><td class="key">Scenario generator</td><td class="n">8</td><td class="n">9</td><td class="why">Complete. Receiver positions fixed, an invented hour reproducible from one number, all five kinds of run staging what they should, twenty produced unattended from a single number by one command, the screen that will drive it, disruptions staged only on aircraft that are actually flying, a floor of five affected aircraft per hour so that no hour is unscoreable, and every hour now recording the number it was generated from so a batch can be reproduced rather than remembered</td></tr>
-          <tr><td class="key">Anomaly detection</td><td class="n">9</td><td class="n">15</td><td class="why">What normal looks like, and a rule for each side of the picture — the radio and the aircraft. Findings are kept and grouped, and the evidence the final rules read has been settled: grouping alone could not separate a staged hour from a quiet one, so it was replaced by a local rate comparison — measured first, and chosen over turning up the scenario settings. The three answers the system may give are one decision asked in a fixed order; the order itself is now built and enforced, and two of the three tests with it. Marked against the answer key over three hundred regenerated hours: every one of the five kinds of hour decided correctly sixty times out of sixty, no event anywhere given two answers, and — since a blip lasting one reading stopped counting as an event — no false report anywhere at all. The third test, ruled out last time, is worth attempting again</td></tr>
+          <tr><td class="key">Scenario generator</td><td class="n">8</td><td class="n">8</td><td class="why">Complete. Receiver positions fixed, an invented hour reproducible from one number, all five kinds of run staging what they should, twenty produced unattended from a single number by one command, the screen that will drive it, disruptions staged only on aircraft that are actually flying, a floor of five affected aircraft per hour so that no hour is unscoreable, and every hour now recording the number it was generated from so a batch can be reproduced rather than remembered</td></tr>
+          <tr><td class="key">Anomaly detection</td><td class="n">9</td><td class="n">14</td><td class="why">What normal looks like, and a rule for each side of the picture — the radio and the aircraft. Findings are kept and grouped, and the evidence the final rules read has been settled: grouping alone could not separate a staged hour from a quiet one, so it was replaced by a local rate comparison — measured first, and chosen over turning up the scenario settings. The three answers the system may give are one decision asked in a fixed order; the order itself is now built and enforced, and two of the three tests with it. Marked against the answer key over three hundred regenerated hours: every one of the five kinds of hour decided correctly sixty times out of sixty, no event anywhere given two answers, and — since a blip lasting one reading stopped counting as an event — no false report anywhere at all. The third test, ruled out last time, is worth attempting again</td></tr>
           <tr><td class="key">Evidence bundles</td><td class="n">2</td><td class="n">2</td><td class="why">Complete. One event becomes one package, with the frequency dimension joined up here because nothing upstream joins it, and with every absence labelled by which of the three kinds it is rather than left as silence. Every statement's citations are then resolved against the store before the package is allowed to exist — which found that one citation in eleven had been pointing at a reconstructed instant rather than a stored reading, in a field that had been written and never read since the findings were first kept</td></tr>
-          <tr><td class="key">AI hypothesis layer</td><td class="n">0</td><td class="n">10</td><td class="why">Specified, unbuilt</td></tr>
+          <tr><td class="key">AI hypothesis layer</td><td class="n">2</td><td class="n">10</td><td class="why">The shape every explanation must take, and the first thing that produces one. The shape is a constraint on what a model is allowed to emit rather than a description of what it did, so each guarantee is checked on the translated version a model is actually handed as well as on the original. The producer built first has no model in it: it is both the fallback for when a model's answer cannot be trusted and the yardstick the models are measured against. Run over all forty-one real packages it produced forty-one explanations, refused none, and every one of its one hundred and sixty-four citations was found in the package it came from. The two model arms and the two gates are next</td></tr>
           <tr><td class="key">Hypothesis screen and feedback</td><td class="n">0</td><td class="n">6</td><td class="why">Specified, unbuilt</td></tr>
           <tr><td class="key">Evaluation</td><td class="n">0</td><td class="n">6</td><td class="why">Scoring instrument written and locked; harness unbuilt</td></tr>
-          <tr class="total"><td class="key">Total</td><td class="n">47</td><td class="n">98</td><td class="why">&nbsp;</td></tr>
+          <tr class="total"><td class="key">Total</td><td class="n">50</td><td class="n">99</td><td class="why">&nbsp;</td></tr>
         </tbody>
       </table>
     </div>
@@ -5727,6 +5964,15 @@ second pass   <b>5.060000171975998</b></div>
           proper record of its own. A replay has no incident and no starting number to record, so it
           still opens a run labelled plainly as a replay — which has turned from a stopgap into a
           useful thing, since it is what tells replayed rows from generated ones at a glance.</li>
+        <li><b>No model has been asked anything yet.</b> An explanation now gets written for every
+          package, but by a fixed set of rules rather than by a model. Nothing in the project has
+          made a request to an AI service, no key exists, and the two checks that stand between a
+          model's answer and an analyst — does it fit the required shape, and does every claim in it
+          point at something in the package — are specified and unbuilt. The part that makes this
+          research rather than reporting is the next thing built, and none of it is claimed yet.</li>
+        <li><b>An explanation cannot be saved.</b> The table it belongs in was designed before the
+          explanation had a settled shape, and is missing two of its fields. Every explanation so far
+          has been produced, read and discarded.</li>
         <li><b>Nothing enforces quality on push.</b> The checks all exist as commands; until they run
           automatically, a green result is evidence about one machine at one moment.</li>
       </ul>
@@ -5777,11 +6023,17 @@ second pass   <b>5.060000171975998</b></div>
         <div class="tier__what">
           <b>The part the project is actually about</b> — an explanation proposed by a model,
           checked line by line against the package it was given, and put in front of a person who
-          decides. The packages now exist and their contents are verified rather than asserted,
-          which is what makes that check a list lookup instead of an impossibility. One loose end is
-          owed first: two different kinds of statement currently share one rule name, so a citation
-          naming that rule is ambiguous between them, and the check has to be able to tell them
-          apart before it can be trusted.
+          decides. Two of the three pieces are now in place: the shape every explanation takes, and
+          a producer that writes one mechanically from a package. What is missing is the model
+          itself, and the two gates between it and an analyst. The loose end this page previously
+          listed as owed first — two different kinds of statement sharing one rule name, so a
+          citation naming that rule was ambiguous between them — is closed: a citation now names the
+          rule and the kind of finding together.
+          <br><br>
+          The next piece is the seam the model plugs into, defined <em>before</em> either model is
+          written so that neither one's peculiarities leak into it. One thing has to be fixed on the
+          way: the table an explanation will be stored in was designed before the explanation had a
+          settled shape, and is missing two of its fields.
         </div>
       </div>
       <div class="tier">

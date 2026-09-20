@@ -5996,6 +5996,45 @@ because both bundle shapes the system currently produces happen to carry four ki
 baseline's size does not vary with the event, where a model's will, so any rubric dimension rewarding
 completeness or concision is being scored against a constant for one arm.
 
+## 86. Do we need to update the progress note with anything from the AI specs so far?
+
+**Yes — and the trigger is narrower than "something landed".** The note is updated when a spec item
+changes the *story* it tells, not when one merely passes. Two of the three AI items did.
+
+| What landed | Does it change the story? |
+|---|---|
+| The output schema | **Yes.** The page had said the last two stages were "both the AI half" and untouched. One of them now has its defining object built. |
+| The template generator | **Yes, and it reframes the section.** The page described the hypothesis stage as "the bundle goes to an AI model". The first thing that produces an explanation has no model in it, and that is not a detail — it is why the research question is answerable. |
+| The spec amendment recording the design decisions | **No.** The reasoning belongs in the thesis notes. The note says what a decision *means*, never why it was made. |
+
+Four things always rot first, and all four had:
+
+1. **The pipeline figure.** The hypothesis stage was still marked "Not started".
+2. **The progress-by-area table.** The AI row read `0 / 10`; three other rows had drifted too, because items were added and recategorised since the last update.
+3. **The headline figures.** Tests `999`, capabilities `47 / 98`. Now `1,091` and `50 / 99`.
+4. **"What happens next".** It listed a loose end as owed first — two kinds of statement sharing one rule name — which the schema item closed. A page still asking for something already done reads as neglected rather than as out of date.
+
+### What went in, and what deliberately did not
+
+The new section explains the two jobs the template generator holds, why a fallback must not depend
+on the thing whose failure summons it, why the yardstick must not flatter itself, and the three
+checks run on it in order — a stand-in that eleven tests passed, a sabotage pass that thirty-five
+faults were run through, and real data that found two more the other two could not.
+
+What stayed out is as deliberate. No spec identifiers, no file paths, no function names — the note's
+standing constraint. And no restatement of *why* each decision was taken: that is the thesis notes'
+job, and duplicating it means two documents to keep in step, which in practice means one that is
+right and one that is quietly wrong.
+
+### One thing the note now carries that the code does not
+
+Two limitations were added because a reader outside the project would otherwise be misled about what
+exists. **No model has been asked anything yet** — no request, no key, and both gates between a
+model's answer and an analyst are specified and unbuilt. And **an explanation cannot be saved**: the
+table it belongs in was designed before the explanation had a settled shape and is missing two
+fields, so every explanation produced so far has been read and discarded. Neither is a defect. Both
+are things somebody skimming the page would otherwise assume were done.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
