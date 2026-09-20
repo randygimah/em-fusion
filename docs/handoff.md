@@ -14,7 +14,7 @@ interface every generator sits behind).
 
 ## Current state
 
-**51 of 99 spec items pass.** Backend suite: **1155 tests, ~99.8% coverage**, ruff and mypy clean
+**51 of 99 spec items pass.** Backend suite: **1156 tests, 99.84% coverage**, ruff and mypy clean
 across 58 source files.
 
 `ai-003` is complete:
@@ -22,7 +22,7 @@ across 58 source files.
 - `backend/app/ai/service.py` — the interface, the result envelope, the config, the two failure
   categories. `registry.py` — the only module that knows a provider by name. `providers/template.py`
   — `ai-002` behind the interface.
-- 64 tests in `backend/tests/test_ai_service.py`; mutation pass **28 of 29**, single survivor proven
+- 65 tests in `backend/tests/test_ai_service.py`; mutation pass **28 of 29**, single survivor proven
   equivalent (a `try/except` that re-raises).
 - Extensibility measured: **1 new module + 2 lines in 1 existing file, 0 changes anywhere else**.
   Log at `backend/measurements/extensibility/provider_cost.log`.
@@ -82,6 +82,15 @@ file; never pipe a measurement through `head`.
 
 **`cd backend` when already in `backend`, for the sixth time**, this time creating a stray
 `backend/backend/` directory before it was noticed and removed. Use absolute paths in heredocs.
+
+**Two concurrent `make test-backend` runs corrupted each other's database** and the suite failed
+with `duplicate key ... "pg_type_typname_nsp_index"` on `alembic_version` — eight failures and
+thirty errors that look like real breakage and are not. Cause: a suite was started with a raw `&`
+and later stopped with `pkill`, which kills the `make`/compose *client* and leaves the container
+running, so two runs raced to drop and recreate the same test schema. The database tier is not safe
+to run twice at once, by design (`db-001` drops schema). Remove the container, not the client:
+`docker ps -q --filter name=em-fusion-backend-run | xargs -r docker rm -f`. Re-run clean: 1156
+passed, 99.84%.
 
 **A CLAUDE.md repo-map edit failed on a bad anchor** and a second edit in the same script never ran
 because the first assertion aborted it. Both applied in a follow-up. Third occurrence of this exact
