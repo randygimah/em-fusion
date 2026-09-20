@@ -462,9 +462,12 @@ def test_every_known_uncertainty_reaches_the_hypothesis():
     rf = RfNoiseFindings(
         anomalies=(episode("RF-03", 4),),
         unjudged=tuple(
-            UnjudgedCell(cell=RfCell(sensor_id="RF-03", channel_index=c),
-                         reason="no baseline")
-            for c in (1, 2, 5, 6, 7)))
+            UnjudgedCell(
+                cell=RfCell(sensor_id="RF-03", channel_index=c), reason="no baseline"
+            )
+            for c in (1, 2, 5, 6, 7)
+        ),
+    )
     bundle = build([claim_for(f)], faults=[f], rf=rf)[0]
 
     against = generate(bundle).evidence_against_or_uncertainty
@@ -528,13 +531,16 @@ def test_composed_text_never_doubles_a_full_stop():
     # else; here the output is read blind beside a language model's.
     f = fault()
     ends_in_a_stop = "one receiver deviated while its neighbours did not."
-    bundle = build([claim_for(f)], faults=[f],
-                   rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),)))[0]
+    bundle = build(
+        [claim_for(f)], faults=[f], rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),))
+    )[0]
     verdict = verdict_of(bundle)
-    bundle = bundle.with_evidence([
-        replace(item, finding=ends_in_a_stop) if item is verdict else item
-        for item in bundle.evidence
-    ])
+    bundle = bundle.with_evidence(
+        [
+            replace(item, finding=ends_in_a_stop) if item is verdict else item
+            for item in bundle.evidence
+        ]
+    )
 
     hypothesis = generate(bundle)
 

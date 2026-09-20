@@ -268,7 +268,7 @@ None of this blocks the **template generator**, which is the first thing built i
 
 **Implementation prerequisites (build before the first real call):**
 
-- [ ] Define the provider-agnostic service interface (`evidence_bundle → validated hypothesis`) **before** either provider is written, so neither provider's shape leaks into it. Provider, model ID, and params come from config.
+- [x] Define the provider-agnostic service interface **before** either provider is written, so neither provider's shape leaks into it. Provider, model ID, and params come from config. **(`ai-003`)** Corrected while building: the output is a *result envelope*, not a bare hypothesis — an interface returning only a hypothesis forces every arm to carry the model id, frozen parameters and verbatim response its own way, which is the same leak arriving by the back door. The template is registered through it, so the port has two implementations on the day it lands. Measured cost of a provider: 1 new module + 2 lines in 1 existing file, 0 changes elsewhere.
 - [ ] API key in an environment variable with a `.env.example` entry — never committed, never in a fixture.
 - [ ] **Hard spend cap set at the provider console.** Do this before the first call, not after the first surprise.
 - [ ] **Run-level call budget in the code** that aborts the run when exceeded. The console cap is the backstop; this is the thing that catches a retry loop in minutes rather than at the billing boundary.

@@ -1,0 +1,22 @@
+WHAT ADDING A HYPOTHESIS PROVIDER COSTS
+==========================================================================
+  adapter modules registered: 1
+    app/ai/providers/template.py  27 lines of code
+
+  ...and everywhere else:
+    app/ai/registry.py       1 import line(s) and 1 mapping entry(ies) for 1 provider(s)
+    app/ai/service.py        0 -- the interface imports no adapter
+    every caller             0 -- a caller is handed a generator and cannot tell which
+
+  So one provider = 1 new module + 2 lines in 1 existing file,
+  and 0 changes anywhere else.
+
+  CAVEAT, and it matters: the shipped adapter wraps a local function and
+  makes no network call, so its own size is a LOWER BOUND -- a hosted
+  adapter will be several times larger. The claim is about the cost
+  OUTSIDE the new module, and that cost does not depend on what the
+  adapter does.
+
+  For comparison, the interface it plugs into:
+    app/ai/service.py     121 lines of code
+    app/ai/registry.py    24 lines of code

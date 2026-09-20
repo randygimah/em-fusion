@@ -5653,6 +5653,127 @@ what real data contains rather than of what the code says, and therefore invisib
 inputs the author chose.
 
 
+### An interface written before its implementations, for the second time
+
+The hypothesis layer will have three producers and two of them do not exist. The interface between
+"explain this bundle" and "whatever produced the answer" was written now, before either model, and
+the argument for that ordering is not aesthetic — the project has already run the experiment once.
+The storage port was defined before the database existed, so when the database arrived it was a
+**second implementation** rather than a second layer, and the port needed no change to accommodate
+it. An interface written afterwards takes the shape of whichever implementation came first, and the
+second one arrives needing its caller to know which is which.
+
+Building it found an error in its own specification, which is the third time a phase has produced
+that result and the reason the explain-then-specify step exists at all. The item said *Output: a
+validated hypothesis*. That cannot be right. Both model arms must persist the model identifier, the
+frozen parameters and the verbatim pre-parse response, and the retry path must know what was spent.
+An interface returning only a hypothesis forces every arm to carry that provenance some other way —
+which is precisely the provider-specific shape leaking into the seam, arriving by the back door
+rather than through the signature the item was watching. The output is an envelope: the hypothesis,
+which arm produced it, and for a model arm the record of the call.
+
+### Moving a guarantee from where it is checked to where it is made
+
+The first migration created the four reproducibility columns nullable, with a comment saying the
+presence of three of them would be enforced "at the repository boundary, where the generator is
+known". That was correct and it was later than necessary. The generator is known earlier — at the
+moment the result object is constructed — so the guarantee moved there, expressed as a typed
+absence: the model-call record may be omitted only when the generator is the template, and both
+lies are refused at construction.
+
+The difference is not stylistic. Under the original arrangement a hosted arm could build a result
+with no raw response, carry it through the grounding check, and fail only at the write. Under this
+one it cannot be built. And the failure the write-time check would have caught is the one whose
+symptom appears last: a missing verbatim response is discovered when somebody tries to investigate a
+grounding failure after a campaign, at which point the thing that would have explained it is the
+thing that was never recorded.
+
+The same principle produced a second, smaller decision. The configuration's model identifier carries
+**no default**, so a caller must write an explicit absence to mean "this provider has no model". The
+template legitimately has none and a model arm must have one, which is exactly the case where a
+default lets a value nobody filled in look like a value somebody chose.
+
+### A guard whose two failure directions are both real
+
+The generation parameters are persisted verbatim beside every hypothesis. A credential held in them
+is therefore written into the database once per row, and into every backup of it. So the
+configuration refuses a parameter whose name looks like a credential.
+
+What makes this worth recording is that the guard has two failure directions and the second is the
+one that actually bites. Loosened, it lets a key through. **Tightened, it starts refusing
+`max_tokens`** — which contains the word "token" and is precisely the parameter a campaign has to
+freeze. A guard that blocks a legitimate parameter is a guard somebody switches off, and a switched-off
+guard is worse than no guard, because the code still reads as though it were protected.
+
+The rule is therefore substring matching for the unambiguous words and **exact matching** for the
+short ones, over the key stripped of separators and lower-cased. Eleven credential spellings are
+tested as refused and eight real generation parameters as accepted, and the mutation pass attacks
+both directions: one mutant loosens the guard and another tightens it into refusing `max_tokens`.
+
+### Two failure categories, because two fallbacks must not become one
+
+The specification requires the availability fallback and the correctness fallback to remain distinct
+paths in code and in the write-up. Availability fires when the provider cannot be reached and
+responds by trying the other arm; correctness fires when a model answered and the answer cannot be
+used, and responds with a bounded retry and then the template. Retrying elsewhere would be wrong for
+the second — the request reached a model and the model's answer was the problem — and retrying the
+same place would be wrong for the first.
+
+That distinction has to live in the type system rather than in a comment, because a single exception
+type makes the two indistinguishable to the code choosing between them. They are siblings under one
+base, and two properties of the hierarchy are asserted rather than assumed: that neither is a
+subclass of the other, and that a handler catching one does not catch the other.
+
+A misconfiguration is deliberately in **neither**, and is not a generation failure at all. Caught by
+an availability handler it would run a whole campaign against the wrong arm; caught by a correctness
+handler it would produce mechanical output for every bundle while the run reported itself as hosted.
+It has to stop the run. The template generator's own refusal is also in neither, for the opposite
+reason: the template is what both fallbacks fall back *to*, so a handler responding to it by reaching
+for the template would have nowhere to go.
+
+### The extensibility claim, measured rather than asserted
+
+The research question about extensibility is scheduled to be answered by adding a third source
+adapter and recording what it cost. This item provides the same measurement on the generator side,
+and it can be taken now because the template generator is registered as a real provider through the
+real interface — which is also what stops the interface being hypothetical. An interface with one
+implementation is a description of that implementation; this one had two the day it landed, and the
+test suite drives a third through it that is deliberately unlike the template in every respect that
+matters.
+
+Measured over the source tree: **one provider costs one new module plus two lines in one existing
+file, and nothing anywhere else.** The registry holds one import and one mapping entry per provider;
+the interface imports no adapter; no caller can tell which generator it holds. The adapter itself is
+27 lines of code against a 121-line interface.
+
+The caveat is recorded with the figure rather than left for a reader to notice. The shipped adapter
+wraps a local function and makes no network call, so its own size is a lower bound and a hosted
+adapter will be several times larger. The number that carries the claim is the one *outside* the new
+module, and that one does not depend on what the adapter does — which is the whole point of
+measuring it there.
+
+### A test that was too blunt, and the distinction that sharpened it
+
+The suite's purity check began as "no module in the AI package may contain the literal name of a
+provider", enforced over the syntax tree rather than the source text. It failed immediately, on the
+interface module itself, because the enumeration of *which arm produced a result* spells its first
+member `template`.
+
+The blunt reading is that the test was wrong and should be relaxed. The useful reading is that two
+things had been conflated. The stored generator kind is a value with a database check constraint on
+it, written to a column and read back for every per-arm figure the campaign produces. The provider
+name is a registry key that selects an adapter. They coincide today by convention, deliberately, so
+that configuration reads naturally — but they are not the same thing, and a build could register two
+hosted providers under different names while both stored the same kind.
+
+So the check was **sharpened rather than relaxed**: what must not exist is a *comparison* against a
+provider name, which is what branching on provider is however it is spelled. Reading the name to
+resolve it, or to name it in an error message, is not that — and a check unable to tell those apart
+would forbid the one module allowed to do the resolving. The sharpened version is fired at three
+spellings of a real violation and at two legitimate uses, because a check that returns an empty list
+when it holds returns an empty list when it is broken.
+
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;

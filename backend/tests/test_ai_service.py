@@ -82,7 +82,9 @@ def a_call(**kw) -> ModelCall:
     kw.setdefault("model_id", "some-model-2026-01-01")
     kw.setdefault("parameters", {"temperature": 0.0})
     kw.setdefault("raw_response", '{"hypothesis_title": "..."}')
-    kw.setdefault("usage", Usage(prompt_tokens=100, completion_tokens=50, cost_usd=0.01))
+    kw.setdefault(
+        "usage", Usage(prompt_tokens=100, completion_tokens=50, cost_usd=0.01)
+    )
     return ModelCall(**kw)
 
 
@@ -95,7 +97,8 @@ def test_a_model_arm_result_carries_the_model_and_its_verbatim_response():
     call = a_call()
 
     result = GenerationResult(
-        hypothesis=a_hypothesis(), generator=GeneratorKind.HOSTED, call=call)
+        hypothesis=a_hypothesis(), generator=GeneratorKind.HOSTED, call=call
+    )
 
     assert result.generator is GeneratorKind.HOSTED
     assert result.call is not None
@@ -108,8 +111,9 @@ def test_a_model_arm_result_cannot_be_built_without_its_model_call():
     # this to the repository; a typed absence refuses it where the result is
     # made, which is where the generator is known for certain.
     with pytest.raises(GenerationError) as raised:
-        GenerationResult(hypothesis=a_hypothesis(),
-                         generator=GeneratorKind.HOSTED, call=None)
+        GenerationResult(
+            hypothesis=a_hypothesis(), generator=GeneratorKind.HOSTED, call=None
+        )
 
     assert "hosted" in str(raised.value)
 
@@ -128,16 +132,20 @@ def test_which_arm_produced_a_result_is_readable_from_the_result_alone():
     # produced what they are reading, and the campaign has to count per arm.
     # Asserting that a result built with no model call has none would assert
     # only what was passed in, so both kinds are built and compared.
-    mechanical = GenerationResult(hypothesis=a_hypothesis(),
-                                  generator=GeneratorKind.TEMPLATE, call=None)
-    from_a_model = GenerationResult(hypothesis=a_hypothesis(),
-                                    generator=GeneratorKind.HOSTED, call=a_call())
+    mechanical = GenerationResult(
+        hypothesis=a_hypothesis(), generator=GeneratorKind.TEMPLATE, call=None
+    )
+    from_a_model = GenerationResult(
+        hypothesis=a_hypothesis(), generator=GeneratorKind.HOSTED, call=a_call()
+    )
 
     assert (mechanical.call is None) != (from_a_model.call is None)
     assert mechanical.generator is not from_a_model.generator
     # And nothing has to ask the provider which it was.
     assert {r.generator.value for r in (mechanical, from_a_model)} == {
-        "template", "hosted"}
+        "template",
+        "hosted",
+    }
 
 
 def test_a_template_result_carrying_a_model_call_is_refused():
@@ -145,8 +153,9 @@ def test_a_template_result_carrying_a_model_call_is_refused():
     # either way. A template result naming a model would make the campaign's
     # per-arm figures wrong in the direction nobody would check.
     with pytest.raises(GenerationError) as raised:
-        GenerationResult(hypothesis=a_hypothesis(),
-                         generator=GeneratorKind.TEMPLATE, call=a_call())
+        GenerationResult(
+            hypothesis=a_hypothesis(), generator=GeneratorKind.TEMPLATE, call=a_call()
+        )
 
     assert "template" in str(raised.value)
 
@@ -176,8 +185,9 @@ def test_the_generator_kinds_are_exactly_what_the_database_permits():
 def test_a_result_cannot_be_edited_after_it_is_made():
     # spec: ai-003 -- a result is a record of what a generator produced.
     # Something adjustable afterwards is not that.
-    result = GenerationResult(hypothesis=a_hypothesis(),
-                              generator=GeneratorKind.TEMPLATE, call=None)
+    result = GenerationResult(
+        hypothesis=a_hypothesis(), generator=GeneratorKind.TEMPLATE, call=None
+    )
 
     with pytest.raises(dataclasses.FrozenInstanceError):
         result.generator = GeneratorKind.HOSTED  # type: ignore[misc]
@@ -188,8 +198,9 @@ def test_a_result_cannot_be_edited_after_it_is_made():
 
 def test_the_configuration_names_the_provider_the_model_and_the_parameters():
     # spec: ai-003, FR-503
-    config = GenerationConfig(provider="hosted", model_id="m-2026-01-01",
-                              parameters={"temperature": 0.0})
+    config = GenerationConfig(
+        provider="hosted", model_id="m-2026-01-01", parameters={"temperature": 0.0}
+    )
 
     assert config.provider == "hosted"
     assert config.model_id == "m-2026-01-01"
@@ -204,6 +215,15 @@ def test_the_model_id_has_no_default_so_omitting_it_is_impossible():
         GenerationConfig(provider="template")  # type: ignore[call-arg]
 
 
+def test_a_configuration_naming_no_provider_is_refused():
+    # spec: ai-003 -- an empty provider name reaches the registry as a
+    # lookup that misses, which would report "no provider named ''" from a
+    # module whose job is resolution rather than from the one that built a
+    # configuration with nothing in it.
+    with pytest.raises(ConfigurationError):
+        GenerationConfig(provider="   ", model_id=None)
+
+
 def test_a_blank_model_id_in_the_configuration_is_refused():
     # spec: ai-003 -- None means "this provider has no model". An empty
     # string means nobody filled it in, and the two must not look alike.
@@ -212,9 +232,22 @@ def test_a_blank_model_id_in_the_configuration_is_refused():
 
 
 @pytest.mark.parametrize(
-    "key", ["api_key", "API_KEY", "apiKey", "secret", "client_secret",
-            "password", "authorization", "bearer_token", "credentials", "key",
-            "token", "auth"])
+    "key",
+    [
+        "api_key",
+        "API_KEY",
+        "apiKey",
+        "secret",
+        "client_secret",
+        "password",
+        "authorization",
+        "bearer_token",
+        "credentials",
+        "key",
+        "token",
+        "auth",
+    ],
+)
 def test_a_credential_in_the_parameters_is_refused(key: str):
     # spec: ai-003 -- the named failure case, and not tidiness: these
     # parameters are persisted verbatim beside every hypothesis, so a key
@@ -227,8 +260,18 @@ def test_a_credential_in_the_parameters_is_refused(key: str):
 
 
 @pytest.mark.parametrize(
-    "key", ["max_tokens", "max_completion_tokens", "top_k", "top_p",
-            "temperature", "seed", "stop_sequences", "response_format"])
+    "key",
+    [
+        "max_tokens",
+        "max_completion_tokens",
+        "top_k",
+        "top_p",
+        "temperature",
+        "seed",
+        "stop_sequences",
+        "response_format",
+    ],
+)
 def test_a_legitimate_generation_parameter_is_not_mistaken_for_one(key: str):
     # spec: ai-003 -- a guard that also blocks a real parameter is a guard
     # somebody switches off. `max_tokens` contains the word "token" and is
@@ -244,9 +287,12 @@ def test_the_configuration_has_no_field_a_credential_could_live_in():
     # that only inspects one dictionary.
     names = [field.name for field in dataclasses.fields(GenerationConfig)]
     suspicious = [
-        name for name in names
-        if any(word in name.lower()
-               for word in ("key", "secret", "password", "token", "auth", "cred"))
+        name
+        for name in names
+        if any(
+            word in name.lower()
+            for word in ("key", "secret", "password", "token", "auth", "cred")
+        )
     ]
 
     # The positive half matters: the negative one alone is satisfied by a
@@ -262,6 +308,47 @@ def test_the_configuration_cannot_be_edited_after_it_is_made():
 
     with pytest.raises(dataclasses.FrozenInstanceError):
         config.provider = "hosted"  # type: ignore[misc]
+
+
+def test_the_parameters_cannot_be_changed_through_the_configuration():
+    # spec: ai-003 -- found by mutation, which is the honest way to say it:
+    # the suite asserted the config object was frozen and never asserted
+    # that the mapping inside it was. Frozen parameters ARE the
+    # reproducibility claim, and a caller holding a live handle on them can
+    # change what every later call runs under.
+    config = GenerationConfig(
+        provider="hosted", model_id="m", parameters={"temperature": 0.0}
+    )
+
+    with pytest.raises(TypeError):
+        config.parameters["temperature"] = 0.9  # type: ignore[index]
+
+
+def test_changing_the_dictionary_afterwards_does_not_change_the_configuration():
+    # spec: ai-003 -- the subtler half, and the one a read-only view alone
+    # does not give: the configuration has to hold a COPY. A caller that
+    # reuses and edits one dictionary across two arms would otherwise have
+    # built two configurations that are secretly the same one.
+    supplied = {"temperature": 0.0}
+    config = GenerationConfig(provider="hosted", model_id="m", parameters=supplied)
+
+    supplied["temperature"] = 0.9
+
+    assert config.parameters["temperature"] == 0.0
+
+
+def test_a_model_call_freezes_its_parameters_too():
+    # spec: ai-003, db-002 -- these are the ones actually persisted beside
+    # the hypothesis, so a live handle here changes what the stored record
+    # says was used.
+    supplied = {"temperature": 0.0}
+    call = a_call(parameters=supplied)
+
+    supplied["temperature"] = 0.9
+
+    assert call.parameters["temperature"] == 0.0
+    with pytest.raises(TypeError):
+        call.parameters["temperature"] = 0.9  # type: ignore[index]
 
 
 def test_an_unknown_parameter_shape_is_not_silently_dropped():
@@ -290,7 +377,8 @@ def test_the_registry_resolves_a_provider_name_to_a_generator():
 
     generator = build_generator(
         GenerationConfig(provider="two", model_id="m-2026-01-01"),
-        providers={**registry, "two": recording})
+        providers={**registry, "two": recording},
+    )
 
     assert isinstance(generator.generate(fault_bundle()), GenerationResult)
     assert [c.provider for c in seen] == ["two"]
@@ -322,19 +410,52 @@ def test_the_template_is_registered_through_the_interface():
     assert "template" in PROVIDERS
 
 
-def test_the_shipped_registry_is_the_only_place_a_provider_name_is_resolved():
-    # spec: ai-003 -- the named failure case: a caller branching on provider.
-    # Adding a provider must touch one adapter module and one registry line,
-    # and nothing else, which is only true if nothing else knows the names.
+def test_no_module_outside_the_registry_branches_on_the_provider_name():
+    # spec: ai-003 -- the named failure case, stated as what it actually is.
+    # The first version of this test looked for the literal "template"
+    # anywhere in the package, and caught GeneratorKind.TEMPLATE -- which is
+    # the *stored* generator kind, carrying a database check constraint, not
+    # the registry key that selects an adapter. The two coincide today by
+    # convention and are different things: a build could register two hosted
+    # providers under different names and both would store "hosted".
+    #
+    # What must not exist is a comparison against the provider name, because
+    # that is branching on provider however it is spelled.
     offenders = [
-        path.relative_to(BACKEND_ROOT)
+        f"{path.relative_to(BACKEND_ROOT)}: {detail}"
         for path in sorted(AI_ROOT.rglob("*.py"))
-        if path.name not in {"registry.py"}
-        and not path.parent.name == "providers"
-        and "template" in _string_constants(path.read_text(encoding="utf-8"))
+        if path.name != "registry.py"
+        for detail in provider_branches(path.read_text(encoding="utf-8"))
     ]
 
     assert offenders == []
+
+
+def test_the_branch_check_recognises_a_real_violation():
+    # spec: ai-003 -- the check above returns an empty list when it holds and
+    # an empty list when it is broken, so it is fired at a module written to
+    # break it. Three spellings, because one of them is the one somebody
+    # actually writes.
+    equality = "def go(config):\n    if config.provider == 'hosted':\n        pass\n"
+    reversed_ = "def go(config):\n    if 'hosted' == config.provider:\n        pass\n"
+    membership = (
+        "def go(config):\n    if config.provider in ('a', 'b'):\n        pass\n"
+    )
+
+    assert provider_branches(equality)
+    assert provider_branches(reversed_)
+    assert provider_branches(membership)
+
+
+def test_reading_the_provider_name_without_comparing_it_is_not_a_violation():
+    # spec: ai-003 -- the registry has to read it to resolve it, and an
+    # error message has to name it. A check that could not tell those from a
+    # branch would forbid the one module allowed to do the resolving.
+    lookup = "def go(config, providers):\n    return providers[config.provider]\n"
+    message = "def go(config):\n    raise ValueError(f'no {config.provider!r}')\n"
+
+    assert provider_branches(lookup) == []
+    assert provider_branches(message) == []
 
 
 # ------------------------------------------------- the template through the port
@@ -356,8 +477,9 @@ def test_the_template_adapter_returns_the_same_hypothesis_as_calling_it_directly
 
     bundle = zone_bundle()
 
-    assert build_generator(template_config()).generate(bundle).hypothesis \
-        == generate(bundle)
+    assert build_generator(template_config()).generate(bundle).hypothesis == generate(
+        bundle
+    )
 
 
 def test_a_template_configuration_naming_a_model_is_refused():
@@ -439,7 +561,8 @@ class _SecondProvider:
                 model_id=self.config.model_id or "",
                 parameters=self.config.parameters,
                 raw_response='{"pretend": "this came off a model"}',
-                usage=Usage(prompt_tokens=10, completion_tokens=5, cost_usd=None)),
+                usage=Usage(prompt_tokens=10, completion_tokens=5, cost_usd=None),
+            ),
         )
 
 
@@ -450,7 +573,8 @@ def test_a_second_provider_needs_no_change_to_the_interface():
     config = GenerationConfig(provider="second", model_id="m-2026-01-01")
 
     result = build_generator(config, providers={"second": _SecondProvider}).generate(
-        zone_bundle())
+        zone_bundle()
+    )
 
     assert result.generator is GeneratorKind.LOCAL
     assert result.call is not None
@@ -461,14 +585,19 @@ def test_a_caller_drives_both_providers_without_knowing_which_is_which():
     # spec: ai-003 -- the named failure case is "a caller having to branch on
     # provider", so the test is a caller that does not.
     registry = {**PROVIDERS, "second": _SecondProvider}
-    configs = [template_config(),
-               GenerationConfig(provider="second", model_id="m-2026-01-01")]
+    configs = [
+        template_config(),
+        GenerationConfig(provider="second", model_id="m-2026-01-01"),
+    ]
 
-    results = [build_generator(c, providers=registry).generate(zone_bundle())
-               for c in configs]
+    results = [
+        build_generator(c, providers=registry).generate(zone_bundle()) for c in configs
+    ]
 
-    assert [r.generator for r in results] == [GeneratorKind.TEMPLATE,
-                                              GeneratorKind.LOCAL]
+    assert [r.generator for r in results] == [
+        GeneratorKind.TEMPLATE,
+        GeneratorKind.LOCAL,
+    ]
     assert all(isinstance(r.hypothesis, Hypothesis) for r in results)
 
 
@@ -476,8 +605,10 @@ def test_the_port_is_satisfied_structurally_rather_than_by_inheritance():
     # spec: ai-003 -- a Protocol, so a provider library's own client class
     # could satisfy it without importing anything of ours. Inheritance here
     # would make the interface a dependency of every adapter.
-    assert isinstance(_SecondProvider(GenerationConfig(
-        provider="second", model_id="m")), HypothesisGenerator)
+    assert isinstance(
+        _SecondProvider(GenerationConfig(provider="second", model_id="m")),
+        HypothesisGenerator,
+    )
 
 
 def test_the_interface_signature_takes_a_bundle_and_returns_a_result():
@@ -493,11 +624,26 @@ def test_the_interface_signature_takes_a_bundle_and_returns_a_result():
 # ---------------------------------------------- no provider shape in the seam
 
 #: Anything that would mean a provider's own types had reached the interface.
-PROVIDER_PACKAGES = frozenset({
-    "anthropic", "openai", "cohere", "google", "vertexai", "boto3", "mistralai",
-    "llama_cpp", "ollama", "transformers", "torch", "httpx", "requests",
-    "aiohttp", "urllib", "http",
-})
+PROVIDER_PACKAGES = frozenset(
+    {
+        "anthropic",
+        "openai",
+        "cohere",
+        "google",
+        "vertexai",
+        "boto3",
+        "mistralai",
+        "llama_cpp",
+        "ollama",
+        "transformers",
+        "torch",
+        "httpx",
+        "requests",
+        "aiohttp",
+        "urllib",
+        "http",
+    }
+)
 
 #: The modules allowed to know a provider exists. Everything else in the AI
 #: package must be expressible without naming one.
@@ -514,18 +660,43 @@ def _string_constants(source: str) -> set[str]:
     tree = ast.parse(source)
     docstrings: set[int] = set()
     for node in ast.walk(tree):
-        if isinstance(node, ast.Module | ast.ClassDef | ast.FunctionDef
-                      | ast.AsyncFunctionDef):
+        if isinstance(
+            node, ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef
+        ):
             first = node.body[0] if node.body else None
-            if (isinstance(first, ast.Expr)
-                    and isinstance(first.value, ast.Constant)
-                    and isinstance(first.value.value, str)):
+            if (
+                isinstance(first, ast.Expr)
+                and isinstance(first.value, ast.Constant)
+                and isinstance(first.value.value, str)
+            ):
                 docstrings.add(id(first.value))
     return {
-        node.value for node in ast.walk(tree)
-        if isinstance(node, ast.Constant) and isinstance(node.value, str)
+        node.value
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Constant)
+        and isinstance(node.value, str)
         and id(node) not in docstrings
     }
+
+
+def provider_branches(source: str) -> list[str]:
+    """Every comparison against a provider name in one module.
+
+    Branching on provider is the item's named failure case, and it is a
+    *comparison* rather than a mention: the registry must read the name to
+    resolve it and an error message must name it to be useful, so a check
+    that could not tell those apart would forbid the one module allowed to
+    do the resolving.
+    """
+    found: list[str] = []
+    for node in ast.walk(ast.parse(source)):
+        if not isinstance(node, ast.Compare):
+            continue
+        for side in (node.left, *node.comparators):
+            if isinstance(side, ast.Attribute) and side.attr == "provider":
+                found.append(ast.unparse(node))
+                break
+    return found
 
 
 def imported_packages(source: str) -> set[str]:
@@ -565,8 +736,10 @@ def test_no_module_in_the_ai_package_imports_a_provider_library():
         f"{path.relative_to(BACKEND_ROOT)}: {sorted(found)}"
         for path in sorted(AI_ROOT.rglob("*.py"))
         if path.parent.name != ADAPTER_DIR
-        and (found := imported_packages(path.read_text(encoding="utf-8"))
-             & PROVIDER_PACKAGES)
+        and (
+            found := imported_packages(path.read_text(encoding="utf-8"))
+            & PROVIDER_PACKAGES
+        )
     ]
 
     assert offenders == []
@@ -578,18 +751,28 @@ def test_the_service_module_does_not_import_any_adapter():
     # contain a base class.
     tree = ast.parse((AI_ROOT / "service.py").read_text(encoding="utf-8"))
     named = {
-        node.module for node in ast.walk(tree)
+        node.module
+        for node in ast.walk(tree)
         if isinstance(node, ast.ImportFrom) and node.module
     }
-    assert not any(m.startswith("app.ai.providers") or m == "app.ai.registry"
-                   for m in named), named
+    assert not any(
+        m.startswith("app.ai.providers") or m == "app.ai.registry" for m in named
+    ), named
 
 
-def test_the_service_module_names_no_provider():
-    # spec: ai-003 -- not even as a string. A default provider name here
-    # would be the branch-on-provider failure case wearing a constant.
-    assert "template" not in _string_constants(
-        (AI_ROOT / "service.py").read_text(encoding="utf-8"))
+def test_the_service_module_imports_no_adapter_and_holds_no_registry():
+    # spec: ai-003 -- a default provider name here would be the
+    # branch-on-provider failure case wearing a constant, and a mapping of
+    # names to adapters here would make the interface know its
+    # implementations. The generator KINDS live here and are not that: they
+    # are the values db-002 stores and constrains.
+    source = (AI_ROOT / "service.py").read_text(encoding="utf-8")
+
+    assert provider_branches(source) == []
+    assert "PROVIDERS" not in vars(service)
+    assert {kind.value for kind in GeneratorKind} <= _string_constants(
+        source
+    ), "the generator kinds are the one place these words legitimately appear"
 
 
 def test_every_public_name_in_the_service_is_provider_neutral():
@@ -598,8 +781,9 @@ def test_every_public_name_in_the_service_is_provider_neutral():
     # about in review.
     exported = [name for name in vars(service) if not name.startswith("_")]
 
-    offenders = [name for name in exported
-                 if any(p in name.lower() for p in PROVIDER_PACKAGES)]
+    offenders = [
+        name for name in exported if any(p in name.lower() for p in PROVIDER_PACKAGES)
+    ]
 
     assert offenders == []
 

@@ -8,116 +8,113 @@ Layer, detects deviations with deterministic rules, packages each reported event
 bundle, and turns that bundle into a schema-validated, grounding-checked hypothesis an analyst
 reviews. Decision support, never autonomous decision-making.
 
-This session built **`ai-002`, the template hypothesis generator** — the first thing in the project
-that turns an evidence bundle into an explanation, and the one with no model in it. It follows
-`ai-001` (the output schema), which landed immediately before.
+This session built the first three items of the AI layer: **`ai-001`** (the output schema, landed at
+the start), **`ai-002`** (the template hypothesis generator) and **`ai-003`** (the provider-agnostic
+interface every generator sits behind).
 
 ## Current state
 
-**50 of 99 spec items pass.** Backend suite: **1091 tests, 99.2% coverage**, ruff and mypy clean
-across all 54 source files.
+**51 of 99 spec items pass.** Backend suite: **1155 tests, ~99.8% coverage**, ruff and mypy clean
+across 58 source files.
 
-`ai-002` is complete and committed:
+`ai-003` is complete:
 
-- `backend/app/ai/template.py` — 38 tests, mutation pass **34 of 35**, single survivor proven
-  equivalent and recorded in the harness.
-- Measured over the **41 real stored bundles** from the development batch: 41 of 41 generated,
-  **0 refusals**, **164 of 164 citations grounded**, 0 unstable across repeat generation.
-  Confidence inherited from the deciding rule comes out **24 High, 17 Medium** — live on real data,
-  not a constant. Log committed at `backend/measurements/corpus/template_hypotheses.log`.
+- `backend/app/ai/service.py` — the interface, the result envelope, the config, the two failure
+  categories. `registry.py` — the only module that knows a provider by name. `providers/template.py`
+  — `ai-002` behind the interface.
+- 64 tests in `backend/tests/test_ai_service.py`; mutation pass **28 of 29**, single survivor proven
+  equivalent (a `try/except` that re-raises).
+- Extensibility measured: **1 new module + 2 lines in 1 existing file, 0 changes anywhere else**.
+  Log at `backend/measurements/extensibility/provider_cost.log`.
 
-Design decisions now fixed and recorded in `docs/thesis_notes.md` and `docs/qa.md` 85:
+`ai-002` (earlier this session): 38 tests, mutation **34 of 35**, and measured over the 41 real
+stored bundles — 41 of 41 generated, 0 refusals, 164 of 164 citations grounded, 24 High / 17 Medium.
 
-- **Confidence is inherited, never computed** — read off the bundle's verdict item, which must exist
-  exactly once. The two vocabularies (`low` vs `Low`) are joined by **enum member name**, so an
-  unrecognised word is refused where the bundle is still in hand rather than laundered by `.title()`
-  into something that only fails later at the schema.
-- **One citation per kind of evidence**, grouped on the `(rule_id, finding_type)` pair `ai-001`
-  defines. A real bundle carries 34 items of 4 kinds.
-- **Alternatives are what the ladder already ruled out**, then the standing fault/interference pair,
-  then unconditionally the caveat that deterministic rules can only choose among the explanations
-  they encode. That last entry keeps `ai-001`'s floor satisfiable for a claim type that does not
-  exist yet, so the fallback cannot raise at the moment it is needed.
-- **No network, no API key, no model server**, asserted by walking the import graph rather than by
-  comment — paired with one test proving the walker works and one firing it at `app/corpus/fetch.py`,
-  which genuinely does reach the network.
-
-Measurements are all registered in `backend/measurements/README.md`, including
-`mutate_ai001_schema.py`, which had been left unregistered when `ai-001` landed.
+The published progress note was updated with the whole AI layer and four stale figures; it is
+mastered at `docs/progress_note.html` and republished on demand.
 
 ## Files in flight
 
-The tree is clean. Nothing is half-done.
+The tree is clean.
 
-Files added this session:
-
-- `backend/app/ai/template.py`
-- `backend/tests/test_ai_template.py`
-- `backend/measurements/corpus/template_hypotheses.py` + `.log`
-- `backend/measurements/mutation/mutate_ai002_template.py` + `.log`
+Added this session: `backend/app/ai/{template,service,registry}.py`,
+`backend/app/ai/providers/{__init__,template}.py`,
+`backend/tests/test_ai_{template,service}.py`,
+`backend/measurements/corpus/template_hypotheses.py` + `.log`,
+`backend/measurements/mutation/mutate_ai00{2,3}_*.py` + `.log`,
+`backend/measurements/extensibility/provider_cost.py` + `.log`.
 
 ## Changed
 
-- `2e67faf` — `spec: amend ai-002 — confidence inherited, citations grouped on the pair`
-- `57e7d8b` — `test: add tests for ai-002`
-- `feat(ai-002)` — the generator, both measurements, and the write-ups
-  (`thesis_notes.md`, `qa.md` 85 + four glossary terms, `measurements/README.md`, the CLAUDE.md
-  repo map, this file, `spec.jsonl` → `passes: true`).
+- `2e67faf` `spec: amend ai-002`, `57e7d8b` `test: add tests for ai-002`,
+  `0e0084b` `feat(ai-002)`, `60c984e` `docs: progress note`
+- `d4295a2` `spec: amend ai-003`, `5cea287` `test: add tests for ai-003`, `feat(ai-003)`
+- Documentation: `thesis_notes.md` (nine new subsections), `qa.md` 85–87 plus eight glossary terms,
+  `measurements/README.md` (three registrations, including `mutate_ai001_schema.py` which `ai-001`
+  had left unregistered), the CLAUDE.md repo map, `implementation.md` Phase 9, this file.
 
 ## Failed attempts
 
-**Four tests passed for a reason other than the one they name, and only mutation found it.** The
-first pass killed 29 of 34. A refusal test asserted a `TemplateError` whose message names the claim
-type — and the *mutant's* fallback path raised too, for a different reason, with a message that also
-names it. A count test's two fixtures differed in source count as well as item count, so removing
-the count changed nothing measurable. An ordering test asserted the word "rule" appeared in the last
-alternative, and the text that displaced it contains that word. A differential test compared actions
-across bundle types, where one generic sentence still differed because it interpolates the subject.
-All four repairs removed the *accidental* route to the assertion rather than asserting harder.
+**Two specification errors, both found by building rather than by reading.** `ai-002`'s citation
+grouping exposed the rule-id ambiguity as *behaviour* rather than argument. `ai-003` said "Output: a
+validated hypothesis", which cannot be right — `ai-004`, `ai-005` and `db-002` each need the model
+id, frozen parameters and verbatim response, so a bare hypothesis forces every arm to carry that its
+own way, which is the leak the item forbids arriving by the back door.
 
-**Eleven tests passed against a throwaway do-nothing stub**, which is why the stub was written before
-the implementation rather than going straight from an import error to code. Four of the eleven were
-wrong tests and were strengthened; the nine that remain pass by nature and the suite docstring names
-them and says why.
+**A purity test that was too blunt, and the temptation to relax it.** "No module in the AI package
+may contain a provider's name" failed on the interface itself, because `GeneratorKind.TEMPLATE`
+spells that word. The right move was not to relax it but to notice two conflated things — the
+*stored generator kind* (a database check constraint) and the *provider name* (a registry key). The
+check now forbids a **comparison** against the provider name, and is fired at three spellings of a
+real violation and two legitimate uses.
 
-**Two prose defects survived 37 unit tests and a mutation pass and were found by real bundles.** A
-doubled full stop, because the fusion rule's not-measurable reason already ends in one and every
-fixture I wrote did not; and a summary framing that reason as "the rule's own conclusion" when it is
-a statement of what could not be established. Both are properties of what real data contains rather
-than of what the code says.
+**Mutation found one gap in `ai-003` and four in `ai-002`.** The `ai-003` gap was the property
+nobody thinks to test: the suite asserted the config object was frozen and never that the parameters
+*mapping inside it* was, so a caller holding a live handle could change what every later call ran
+under. The four `ai-002` gaps were all tests passing for a reason other than the one they name.
 
-**`| head -40` killed a measurement mid-run again via SIGPIPE** — the second occurrence, and the
-`measurements/README.md` note about it exists because of the first. Never pipe a measurement through
-`head`; redirect to a file and read the file.
+**Real bundles found two prose defects in `ai-002`** that 37 unit tests and a mutation pass could
+not: a doubled full stop where a rule's own text already ends in one, and a summary framing a
+not-measurable caveat as "the rule's own conclusion".
 
-**`mutate_ai001_schema.py` was never registered in `measurements/README.md`** when `ai-001` landed.
-Fixed here.
+**`| head -40` killed a measurement mid-run via SIGPIPE again** — second occurrence. Redirect to a
+file; never pipe a measurement through `head`.
+
+**`cd backend` when already in `backend`, for the sixth time**, this time creating a stray
+`backend/backend/` directory before it was noticed and removed. Use absolute paths in heredocs.
+
+**A CLAUDE.md repo-map edit failed on a bad anchor** and a second edit in the same script never ran
+because the first assertion aborted it. Both applied in a follow-up. Third occurrence of this exact
+pattern.
 
 ## Next step
 
-1. **`ai-003`, the provider-agnostic hypothesis service interface.** Defined *before* either model
-   provider is written, so no provider's request or response shape leaks into it. Needs no corpus
-   and no key. This is the natural next item.
-2. **`ai-008`, the automated grounding check.** Now unusually cheap to validate, because the
-   template generator is an input whose correct answer is known in advance — anything the check
-   flags on a template hypothesis is a defect in the check.
-3. **`docs/phase9_hypothesis_layer.md`** — recorded as an explicit precondition on `ai-004`, not a
-   handoff note. It has to settle: the two model arms plus the deterministic one and what
-   comparability means, the two different kinds of fallback, the spend ceiling whose realistic
-   failure is a retry loop rather than a price rise, and what sending an evidence bundle to a hosted
-   provider means for the rule that no real aircraft identifier may reach one.
-4. **`db-002` owes columns.** The `hypotheses` table has no `summary` or `recommended_human_action`
-   column and names three fields differently from `ai-001`. This blocks persisting a hypothesis and
-   should be picked up before `ai-004`.
+1. **`docs/phase9_hypothesis_layer.md`** — an explicit precondition on `ai-004`, and now the
+   genuine blocker. It has to settle: what comparability between three arms means, the two kinds of
+   fallback (now expressible, since `ai-003` named the two failure categories), the spend ceiling
+   whose realistic failure is a retry loop, the pinned dated model id, and what sending an evidence
+   bundle to a hosted provider means for the rule that no real aircraft identifier may reach one.
+2. **`db-002` owes columns.** The `hypotheses` table has no `summary` or `recommended_human_action`
+   and names three fields differently from `ai-001`. Nothing can be persisted until this is fixed,
+   and it is cheap now and expensive after a campaign.
+3. **`ai-008`, the grounding check.** Unusually cheap to validate because the template generator is
+   an input whose correct answer is known in advance — anything flagged on a template hypothesis is
+   a defect in the check.
+4. **`ai-004`**, gated on 1–3.
 
 Open and unowned:
 
 - **Regenerate corpus v2** when `eval-001` is picked up — three seeds in `CORPUS_V2_PLAN.md`, about
-  twenty minutes, verified against the committed logs. Every thesis figure needs it; the development
-  batch must never be used for one.
+  twenty minutes. Every thesis figure needs it; the development batch must never be used for one.
+- Nothing yet builds a `GenerationConfig` from the environment. Deliberate: that belongs with the
+  first arm that needs a credential, and `backend/.env.example` gains its keys then.
 - Frontend suite exits non-zero: `control.runs.map is not a function` at `scenarioControl.tsx:344`.
-- Broadband generation arm — no run stages a wide event, so the bundle builder's frequency axis is
-  unit-tested only.
+- Broadband generation arm — no run stages a wide event.
 - Nine measurement scripts still select runs by means other than `_corpus.run_filter()`.
-- `DEFAULT_AFFECTED_FRACTION` is inert.
 - `CORPUS_V2_PLAN.md` and `DEV_BATCH_PLAN.md` sit at the repository root rather than in `docs/`.
+- **Several committed files are not Black-formatted**, so `make format` (and therefore `make check`)
+  produces a large unrelated diff: `app/detection/bundle.py` alone is ~430 lines of churn, plus
+  `app/db/bundles.py`, `app/pipeline.py`, `app/scenario/incident.py` and five test modules. Found
+  while formatting `ai-003` and deliberately **not** fixed inside it — reformatting 900 lines of
+  another item's code inside a feature commit hides the feature. Worth one commit of its own that
+  does nothing else.

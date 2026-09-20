@@ -187,6 +187,7 @@ no observable behaviour), and an **invalid mutant** (the edit I wrote does not m
 | `mutate_evb002_traceability.py` | `app/db/bundles.py`, `app/detection/bundle.py`, `app/detection/track_gap.py`, `app/detection/findings.py` | **27 of 29 killed**, both survivors equivalent. One of the two is equivalent *only because another guard covers it* — the constructor refuses a judgement carrying refs, so the resolver's skip has nothing to skip. Delete that check and this mutant becomes a live defect with no test on it. Recorded in the harness for that reason. |
 | `mutate_ai001_schema.py` | `app/ai/hypothesis.py` | **17 of 18 killed**, the survivor proven equivalent. Almost every site *widens* rather than breaks, because that is the shape of nearly every schema defect: a schema that accepts more than it should passes everything it used to and admits something new. Half the sites are on the **derived** JSON schema, which is what actually constrains a hosted generation — a derivation that widened confidence to a free string would pass every test written against the Python model. |
 | `mutate_ai002_template.py` | `app/ai/template.py` | **34 of 35 killed**, the survivor proven equivalent — after a first pass killed 29. All four genuine survivors were tests passing for a reason other than the one they name: a refusal test satisfied by a *different* refusal whose message carries the same words, a count test whose two fixtures also differed in source count, an ordering test asserting a word the displaced text also contains, and a differential test satisfied because the generic sentence interpolates the subject. |
+| `mutate_ai003_service.py` | `app/ai/service.py`, `app/ai/registry.py`, `app/ai/providers/template.py` | **28 of 29 killed**, the survivor proven equivalent — after a first pass killed 27. An interface is mostly refusals, and a refusal that stops refusing is the quietest defect there is: everything that worked still works and one new thing is permitted. The single genuine gap was the one property nobody thinks to test — the suite asserted the configuration object was frozen and never that the **parameters mapping inside it** was, so a caller holding a live handle could change what every later call ran under. Frozen parameters are the reproducibility claim itself. 3 tests added. Mutates three files, like the `evb-002` pass: a single-file pass over the interface would leave the two places it is actually used untested. |
 | `mutate_anom014_minimum_duration.py` | `app/detection/rf_noise.py` | — |
 | `mutate_scn007_floor.py` | `app/scenario/tracks.py` | 17 of 19, both survivors proven unreachable |
 | `mutate_scn008_batch_provenance.py` | `app/scenario/emitter.py` | — |
@@ -197,6 +198,19 @@ assumption.** `anom-007`'s first implementation passed 36 tests and killed 18 of
 misattributing 21 of 60 interference runs, because both the tests and the code believed that a
 neighbour with no reported anomaly is a neighbour reading normally. A high score is evidence the
 tests are load-bearing; it is not evidence the rule is right. Only `corpus/` can say that.
+
+## `extensibility/` — what an abstraction actually costs
+
+Needs no database and no corpus; it reads the source tree. `US-R6` asks for the cost of adding a
+source adapter as a **measurement** rather than an assertion, and `ai-003` makes the same claim on
+the generator side. The interesting number is never how big the new module is — that is mostly the
+provider's own API surface. It is how much has to change **everywhere else**: an abstraction that
+holds costs a constant, small edit outside the new module, and one that leaks costs a change per
+existing caller.
+
+| Script | The question it answers | Figure of record |
+|---|---|---|
+| `provider_cost.py` | What does adding a hypothesis provider cost outside its own module? The generator-side half of the RQ1 extensibility argument, taken now because the `ai-002` template is a real provider registered through the real interface. | **1 new module + 2 lines in 1 existing file, and 0 changes anywhere else.** The registry holds one import and one mapping entry per provider; the interface imports no adapter, and no caller can tell which generator it holds. The adapter itself is 27 lines of code against a 121-line interface — and that 27 is a **lower bound**, because it wraps a local function and makes no network call. The claim is about the cost outside the module, and that does not depend on what the adapter does. |
 
 ## `superseded/`
 

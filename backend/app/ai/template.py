@@ -83,13 +83,21 @@ from datetime import datetime
 from typing import Sequence
 
 from app.ai.hypothesis import Citation, Confidence, Hypothesis
+from app.ai.service import GenerationError
 from app.detection.bundle import EvidenceBundle, EvidenceItem
 from app.detection.fusion import ANOMALY_TYPE as INTERFERENCE
 from app.detection.sensor_fault import ANOMALY_TYPE as SENSOR_FAULT
 
 
-class TemplateError(ValueError):
+class TemplateError(GenerationError):
     """A bundle this generator will not turn into a hypothesis.
+
+    A `GenerationError`, and deliberately **neither** of its two
+    categories. `ai-006` falls back on a provider being unavailable and
+    `ai-007` falls back on a model's output being unusable; this is the
+    thing both of them fall back *to*. A refusal here means the bundle
+    itself cannot be explained, and a handler that responded by reaching
+    for the template would have nowhere to go (`ai-003`).
 
     Every case is a bundle that would force an invention: a missing
     verdict, an ambiguous one, or a confidence that is absent or is not a

@@ -6035,6 +6035,121 @@ table it belongs in was designed before the explanation had a settled shape and 
 fields, so every explanation produced so far has been read and discarded. Neither is a defect. Both
 are things somebody skimming the page would otherwise assume were done.
 
+## 87. What is ai-003 actually for, when there is only one generator to plug into it?
+
+**That is the reason to build it now, not an argument against it.** An interface written after its
+implementations takes the shape of the first one. This project has already run that experiment in
+the other direction and it worked: the storage port was defined before the database existed, so the
+database arrived as a **second implementation** rather than as a second layer, and the port needed no
+change to accept it.
+
+The same reasoning applies here with one extra wrinkle. There is not "only one generator" — the
+template is registered through the interface as a provider like any other, and the test suite drives
+a second, deliberately unlike it, through the same port. An interface with one implementation is a
+description of that implementation.
+
+### The output is not a hypothesis, and that was an error in the specification
+
+The item said *Output: a validated hypothesis*. Building it showed why that cannot be right.
+
+| Who needs it | What they need beyond the hypothesis |
+|---|---|
+| The hosted arm | the dated model identifier, the frozen parameters, the verbatim pre-parse response |
+| The local arm | the same, from a different mechanism |
+| The reproducibility columns | all of it, populated on write |
+| The retry path | what the call consumed, so a loop is caught in minutes rather than at the billing boundary |
+
+If the interface hands back only a hypothesis, each arm has to carry that some other way — and a
+provider-specific shape travelling alongside the interface **is** the leak the item forbids. It just
+arrives by the back door instead of through the signature the item was watching. So the output is an
+envelope: the hypothesis, which arm produced it, and for a model arm a record of the call.
+
+### Why the model-call record is absent rather than empty
+
+The first migration made those columns nullable with a comment saying their presence would be
+enforced "at the repository boundary, where the generator is known". True, and later than necessary.
+The generator is known when the result is *made*.
+
+```
+template  ->  no model call.  Carrying one is refused.
+hosted    ->  a model call.   Omitting it is refused.
+local     ->  a model call.   Omitting it is refused.
+```
+
+Both directions, so the declaration cannot be a lie either way — the same shape as the evidence
+bundle's grounding declaration one layer down. The difference this makes is about *when* a defect
+surfaces. Under the old arrangement a hosted result with no raw response could be built, pass the
+grounding check, and fail at the write. Under this one it cannot be built at all. And the
+write-time failure is the one whose symptom arrives last: a missing verbatim response is noticed
+when somebody tries to investigate a grounding failure after a campaign, which is exactly when the
+thing that would have explained it turns out never to have been recorded.
+
+### The credential rule, and why `max_tokens` nearly broke it
+
+The generation parameters are stored verbatim next to every hypothesis. So a key held in them is
+written into the database once per row, and into every backup of it. The configuration refuses a
+parameter that looks like a credential.
+
+The trap is that this guard has **two** failure directions and the second is the one that bites:
+
+| Direction | What happens |
+|---|---|
+| Too loose | a key reaches the database, once per hypothesis |
+| Too tight | it starts refusing `max_tokens` — which contains "token" and is exactly the parameter a campaign must freeze |
+
+A guard that blocks a legitimate parameter is a guard somebody switches off, and switched off is
+worse than absent, because the code still reads as protected. So the rule is substring matching for
+the unambiguous words (`apikey`, `secret`, `password`, `credential`, `bearer`, `authorization`) and
+**exact** matching for the short ones (`key`, `token`, `auth`), over the key with separators stripped
+and lower-cased. `API_KEY`, `api-key` and `apiKey` are one thing; `max_tokens` is not any of them.
+
+### Two fallbacks, and why they need two exception types
+
+These are easy to conflate and must not be:
+
+| Category | When it fires | The right response |
+|---|---|---|
+| **Provider unavailable** | unreachable, unauthenticated, rate limited, timed out | try the *other arm* — nothing was wrong with the request |
+| **Generation refused** | the model answered and the answer is unusable | bounded retry, then the template — the request reached a model and the *answer* was the problem |
+
+Retrying elsewhere is wrong for the second; retrying the same place is wrong for the first. A single
+exception type makes them indistinguishable to the code that has to choose, so they are siblings and
+the suite asserts that catching one does not catch the other.
+
+Two things are deliberately in **neither** category. A **misconfiguration** is not a generation
+failure at all — caught by an availability handler it would run a campaign against the wrong arm;
+caught by a correctness handler it would produce mechanical output for every bundle while the run
+reported itself as hosted. It has to stop the run. And the **template's own refusal** is in neither,
+for the opposite reason: the template is what both fallbacks fall back *to*, so a handler responding
+to it by reaching for the template has nowhere to go.
+
+### The test that was too blunt, and what it taught
+
+The purity check started as "no module in the AI package may contain a provider's name". It failed
+on the interface module itself, because the enumeration of which arm produced a result spells its
+first member `template`.
+
+The tempting move is to relax the test. The right move was to notice that two things had been
+conflated:
+
+- the **stored generator kind** — a value with a database check constraint on it, written to a
+  column, read back for every per-arm figure;
+- the **provider name** — a registry key that selects an adapter.
+
+They coincide today by convention, deliberately, so configuration reads naturally. They are not the
+same thing: a build could register two hosted providers under different names and both would store
+the same kind. So the check was *sharpened*, not relaxed — what must not exist is a **comparison**
+against the provider name, which is what branching on provider is however it is spelled. Reading the
+name to resolve it, or to name it in an error message, is not that, and a check unable to tell those
+apart would forbid the one module allowed to do the resolving.
+
+### Worth recording as a limitation
+
+Nothing yet builds a configuration from the environment. The interface takes a configuration object
+and the registry resolves it; where that object comes from — environment variables, a settings file,
+a command-line flag — belongs with the first arm that needs a key, and putting it here would mean
+designing the loading of credentials before there is a credential to load.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -6052,6 +6167,10 @@ are things somebody skimming the page would otherwise assume were done.
 | **Reportable anomaly** | A finding the analyst is shown. Subject to the zero-on-a-clean-run control; produced only by the fusion rules. |
 | **Intermediate finding** | A finding computed for the system's own use, feeding a later rule. Never shown, and not counted by the control. |
 | **Attribution** | Saying *why* a measurement moved, as distinct from detecting that it did. The track rule detects staleness and cannot attribute it. |
+| **Port (or seam)** | An interface defined where two layers meet, importing neither. Written before its implementations so the first one cannot shape it. |
+| **Generation result** | What every generator hands back: the hypothesis plus what produced it. Not a bare hypothesis, so no arm has to carry provenance its own way. |
+| **Availability fallback** | Fires when a provider cannot be reached. Response: try the other arm. Distinct from the correctness fallback, which fires on an unusable answer. |
+| **Dated model ID** | A model identifier pinned to a release date rather than a moving alias. An alias that changes mid-campaign invalidates the comparison with no visible failure. |
 | **Template generator** | The deterministic hypothesis producer, with no model behind it. Both the correctness fallback and the evaluation baseline; permanent, not scaffolding. |
 | **Correctness fallback** | What an analyst receives when a model's answer fails validation or the grounding check. Distinct from the *availability* fallback, which fires when the provider is unreachable. |
 | **Grounded by construction** | Cannot cite what is not in the bundle, because every citation is copied from it. Makes the template a test of the grounding check rather than the reverse. |

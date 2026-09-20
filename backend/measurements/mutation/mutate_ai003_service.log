@@ -1,0 +1,36 @@
+a model arm may omit its model call                            KILLED   1 failed, 1 passed in 0.35s
+a template result may carry a model call                       KILLED   1 failed, 5 passed in 0.31s
+the absence is checked for the template only, not for both arms KILLED   1 failed, 3 passed in 0.30s
+a model call may record an empty raw response                  KILLED   1 failed, 6 passed in 0.30s
+a raw response of pure whitespace counts as recorded           KILLED   1 failed, 6 passed in 0.30s
+a model call may carry a blank model id                        KILLED   1 failed, 7 passed in 0.30s
+a generator kind the database would refuse is added            KILLED   1 failed, 8 passed in 0.32s
+the stored generator kind is spelled differently from the column KILLED   1 failed, 4 passed in 0.32s
+a result can be edited after it is made                        KILLED   1 failed, 9 passed in 0.32s
+a credential in the parameters is allowed through              KILLED   1 failed, 13 passed in 0.32s
+the guard stops matching api_key                               KILLED   1 failed, 13 passed in 0.31s
+the guard stops matching the short words                       KILLED   1 failed, 22 passed in 0.32s
+the guard matches on substring and starts refusing max_tokens  KILLED   1 failed, 25 passed in 0.32s
+the guard becomes case sensitive                               KILLED   1 failed, 14 passed in 0.32s
+the guard stops ignoring separators, so api_key passes         KILLED   1 failed, 13 passed in 0.31s
+the model id acquires a default                                KILLED   1 failed, 11 passed in 0.31s
+a blank model id is accepted                                   KILLED   1 failed, 12 passed in 0.32s
+the parameters are stored as the caller's own mutable dictionary KILLED   1 failed, 35 passed in 0.33s
+a configuration error becomes something a fallback would catch KILLED   1 failed, 41 passed in 0.32s
+the two failure categories collapse into one                   KILLED   1 failed, 51 passed in 0.33s
+the interface stops being structurally satisfiable             KILLED   1 failed, 55 passed in 0.36s
+the interface signature admits a provider-shaped extra argument KILLED   1 failed, 56 passed in 0.34s
+an unknown provider falls back to the template                 KILLED   1 failed, 39 passed in 0.32s
+the refusal does not say which providers are known             KILLED   1 failed, 40 passed in 0.32s
+an injected registry is ignored in favour of the shipped one   KILLED   1 failed, 39 passed in 0.33s
+the template is not registered at all                          KILLED   1 failed, 40 passed in 0.32s
+the template adapter accepts a model id                        KILLED   1 failed, 48 passed in 0.33s
+the template adapter reports itself as a model arm             KILLED   1 failed, 46 passed in 0.34s
+the adapter swallows a refusal and invents a result            SURVIVED 64 passed in 0.32s
+
+restored
+
+28 killed of 29 valid mutants
+SURVIVED, and equivalent -- see the note above:
+  - the adapter swallows a refusal and invents a result
+no unexpected survivors
