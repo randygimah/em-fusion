@@ -1,0 +1,42 @@
+confidence becomes a constant High                             KILLED   1 failed, 8 passed in 0.18s
+the two vocabularies are joined by capitalisation              KILLED   1 failed, 10 passed in 0.19s
+a missing confidence defaults to Low                           KILLED   1 failed, 11 passed in 0.15s
+a missing confidence is read as the word 'low'                 KILLED   1 failed, 12 passed in 0.16s
+confidence is read off the first evidence item, not the verdict KILLED   1 failed in 0.15s
+a bundle with no verdict falls back to its first item          KILLED   1 failed, 13 passed in 0.15s
+two verdict items are tolerated and the first is taken         KILLED   1 failed, 14 passed in 0.16s
+the verdict is matched on the rule id instead of the finding type KILLED   1 failed, 1 passed in 0.15s
+citations are grouped on the rule id alone                     KILLED   1 failed in 0.15s
+citations are grouped on the finding type alone                KILLED   1 failed in 0.16s
+one citation per item rather than per kind                     KILLED   1 failed in 0.15s
+citations are sorted alphabetically rather than left in bundle order KILLED   1 failed, 4 passed in 0.16s
+only the first two kinds are cited                             KILLED   1 failed in 0.14s
+a group of several is described as though it were one          KILLED   1 failed, 6 passed in 0.16s
+a group of several loses the count it stands for               KILLED   1 failed, 6 passed in 0.16s
+superseded claims are dropped from the alternatives            KILLED   1 failed, 15 passed in 0.16s
+a superseded claim loses the reason it was set aside           KILLED   1 failed, 16 passed in 0.16s
+a superseded claim is also cited as supporting evidence        KILLED   1 failed, 17 passed in 0.17s
+the standing alternative is dropped                            KILLED   1 failed, 18 passed in 0.16s
+both kinds of claim get the same standing alternative          KILLED   1 failed, 19 passed in 0.15s
+the outside-the-ruleset caveat is dropped                      KILLED   1 failed, 20 passed in 0.16s
+the outside-the-ruleset caveat comes first instead of last     KILLED   1 failed, 20 passed in 0.16s
+the uncertainties are truncated to the first three             KILLED   1 failed, 21 passed in 0.17s
+the not-applicable absences are filtered out                   KILLED   1 failed, 21 passed in 0.16s
+the uncertainties arrive in reverse order                      KILLED   1 failed, 22 passed in 0.16s
+an uncertainty is reduced to the name of its kind              KILLED   1 failed, 22 passed in 0.17s
+the title drops the subject                                    KILLED   1 failed, 26 passed in 0.17s
+the title becomes a constant                                   KILLED   1 failed, 26 passed in 0.16s
+the summary loses the end of the window                        KILLED   1 failed, 27 passed in 0.16s
+a source sentence already ending in a full stop gets a second one KILLED   1 failed, 25 passed in 0.16s
+the summary loses the window entirely                          KILLED   1 failed, 27 passed in 0.17s
+every bundle gets the same recommended action                  KILLED   1 failed, 28 passed in 0.16s
+the recommended action stops naming the subject                KILLED   1 failed, 28 passed in 0.17s
+an unmeasurable aircraft side reads like a clean negative      KILLED   1 failed, 31 passed in 0.16s
+the hypothesis is built without validation                     SURVIVED 38 passed in 1.00s
+
+restored
+
+34 killed of 35 valid mutants
+SURVIVED, and equivalent -- see the note above:
+  - the hypothesis is built without validation
+no unexpected survivors

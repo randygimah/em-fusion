@@ -64,12 +64,11 @@ import pytest
 
 from app.ai.hypothesis import Confidence, Hypothesis
 from app.ai.template import TemplateError, generate
+from app.detection.baseline import RfCell
 from app.detection.fusion import ANOMALY_TYPE as ZONE_TYPE
-from app.detection.fusion import Confidence as RuleConfidence
 from app.detection.fusion import Corroboration
 from app.detection.precedence import Claim, Suppression
 from app.detection.rf_noise import RfNoiseFindings, UnjudgedCell
-from app.detection.baseline import RfCell
 from app.detection.sensor_fault import ANOMALY_TYPE as FAULT_TYPE
 
 # The real builder's fixtures. See the module docstring: a bundle made here
@@ -97,12 +96,13 @@ def zone_bundle(*, tracks=True, suppressed=(), **kw):
     """A `possible_interference_zone` bundle spanning both data modes."""
     z = zone(**kw)
     rf = RfNoiseFindings(anomalies=(episode("RF-03", 4), episode("RF-04", 4)))
+    later = START + timedelta(seconds=30)
     track_findings = (
-        [track_finding(), track_finding("AC-aaaa1111", at=START + timedelta(seconds=30))]
-        if tracks else []
+        [track_finding(), track_finding("AC-aaaa1111", at=later)] if tracks else []
     )
-    return build([claim_for(z)], zones=[z], rf=rf, tracks=track_findings,
-                 suppressed=suppressed)[0]
+    return build(
+        [claim_for(z)], zones=[z], rf=rf, tracks=track_findings, suppressed=suppressed
+    )[0]
 
 
 def kinds(bundle):
@@ -117,17 +117,18 @@ def kinds(bundle):
 
 def verdict_of(bundle):
     """The item carrying the bundle's own conclusion."""
-    return next(i for i in bundle.evidence
-                if i.finding_type == bundle.anomaly_type)
+    return next(i for i in bundle.evidence if i.finding_type == bundle.anomaly_type)
 
 
 def rewrite_verdict(bundle, **details):
     """The same bundle with its verdict item's details replaced."""
     verdict = verdict_of(bundle)
-    return bundle.with_evidence([
-        replace(item, details=details) if item is verdict else item
-        for item in bundle.evidence
-    ])
+    return bundle.with_evidence(
+        [
+            replace(item, details=details) if item is verdict else item
+            for item in bundle.evidence
+        ]
+    )
 
 
 # ------------------------------------------------- grounded by construction
@@ -140,8 +141,7 @@ def test_every_citation_names_a_pair_the_bundle_actually_carries():
     bundle = zone_bundle()
     available = set(kinds(bundle))
 
-    cited = {(c.rule_id, c.finding_type)
-             for c in generate(bundle).supporting_evidence}
+    cited = {(c.rule_id, c.finding_type) for c in generate(bundle).supporting_evidence}
 
     assert cited <= available
     assert cited == available
@@ -160,8 +160,9 @@ def test_a_kind_absent_from_the_bundle_is_never_cited():
     assert "FUSION-SPATIAL" not in cited
     # Absence alone is satisfied by a generator that cites nothing real, so
     # the positive half belongs in the same test.
-    assert {(c.rule_id, c.finding_type) for c in hypothesis.supporting_evidence} \
-        == set(kinds(fault_only))
+    assert {(c.rule_id, c.finding_type) for c in hypothesis.supporting_evidence} == set(
+        kinds(fault_only)
+    )
 
 
 def test_one_citation_per_distinct_kind_not_one_per_item():
@@ -182,12 +183,15 @@ def test_grouping_is_on_the_pair_and_not_on_the_rule_alone():
     # where grouping on the rule alone would visibly collapse them.
     bundle = zone_bundle()
 
-    track = [c for c in generate(bundle).supporting_evidence
-             if c.rule_id == "TRACK-GAP"]
+    track = [
+        c for c in generate(bundle).supporting_evidence if c.rule_id == "TRACK-GAP"
+    ]
 
     assert len(track) == 2
     assert {c.finding_type for c in track} == {
-        "track_rate_excess", "track_discontinuity"}
+        "track_rate_excess",
+        "track_discontinuity",
+    }
 
 
 def test_citations_follow_first_appearance_order_in_the_bundle():
@@ -196,8 +200,7 @@ def test_citations_follow_first_appearance_order_in_the_bundle():
     # side before the radio evidence that raised the event.
     bundle = zone_bundle()
 
-    cited = [(c.rule_id, c.finding_type)
-             for c in generate(bundle).supporting_evidence]
+    cited = [(c.rule_id, c.finding_type) for c in generate(bundle).supporting_evidence]
 
     assert cited == kinds(bundle)
 
@@ -205,11 +208,13 @@ def test_citations_follow_first_appearance_order_in_the_bundle():
 def test_a_kind_with_one_item_copies_that_item_s_own_words():
     # spec: ai-002 -- the maximally grounded case: nothing is composed.
     bundle = zone_bundle(tracks=False)
-    excess = next(i for i in bundle.evidence
-                  if i.finding_type == "track_rate_excess")
+    excess = next(i for i in bundle.evidence if i.finding_type == "track_rate_excess")
 
-    cited = next(c for c in generate(bundle).supporting_evidence
-                 if c.finding_type == "track_rate_excess")
+    cited = next(
+        c
+        for c in generate(bundle).supporting_evidence
+        if c.finding_type == "track_rate_excess"
+    )
 
     assert excess.finding in cited.statement
 
@@ -219,19 +224,35 @@ def test_a_kind_with_several_items_says_how_many_it_stands_for():
     # like one understates the evidence, which for a baseline is the
     # direction that matters.
     z = zone()
-    two = build([claim_for(z)], zones=[z], tracks=[], rf=RfNoiseFindings(
-        anomalies=(episode("RF-03", 4), episode("RF-04", 4))))[0]
-    three = build([claim_for(z)], zones=[z], tracks=[], rf=RfNoiseFindings(
-        anomalies=(episode("RF-03", 4), episode("RF-04", 4),
-                   episode("RF-03", 5))))[0]
+    two = build(
+        [claim_for(z)],
+        zones=[z],
+        tracks=[],
+        rf=RfNoiseFindings(anomalies=(episode("RF-03", 4), episode("RF-04", 4))),
+    )[0]
+    three = build(
+        [claim_for(z)],
+        zones=[z],
+        tracks=[],
+        rf=RfNoiseFindings(
+            anomalies=(episode("RF-03", 4), episode("RF-04", 4), episode("RF-03", 5))
+        ),
+    )[0]
 
     def rf_statement(bundle):
-        return next(c.statement for c in generate(bundle).supporting_evidence
-                    if c.finding_type == "rf_noise_deviation")
+        return next(
+            c.statement
+            for c in generate(bundle).supporting_evidence
+            if c.finding_type == "rf_noise_deviation"
+        )
 
     # The first episode is identical in both, so the statements can only
-    # differ by what the citation says about the ones behind it.
+    # differ by what the citation says about the ones behind it -- but
+    # these two differ in how many SOURCES they span as well, so the
+    # inequality alone does not pin the count. Found by mutation.
     assert rf_statement(two) != rf_statement(three)
+    assert "2 findings" in rf_statement(two)
+    assert "3 findings" in rf_statement(three)
 
 
 # ------------------------------------------------------- confidence, inherited
@@ -308,7 +329,14 @@ def test_a_bundle_with_no_verdict_item_is_refused():
     # forgot would otherwise get a hypothesis with an invented confidence.
     bundle = fault_bundle()
     verdict = verdict_of(bundle)
-    without = bundle.with_evidence([i for i in bundle.evidence if i is not verdict])
+    # The first remaining item is given a valid confidence on purpose. A
+    # generator that quietly fell back to it would then succeed, where
+    # against an ordinary bundle it would raise for a different reason and
+    # this test would pass without having tested anything. Found by
+    # mutation: that is exactly what the first version of it did.
+    remaining = [i for i in bundle.evidence if i is not verdict]
+    remaining[0] = replace(remaining[0], details={"confidence": "high"})
+    without = bundle.with_evidence(remaining)
 
     with pytest.raises(TemplateError) as raised:
         generate(without)
@@ -335,12 +363,17 @@ def test_a_bundle_with_two_verdict_items_is_refused():
 def superseded_fault_bundle():
     """A fault bundle that took its zone from a competing claim."""
     f = fault()
-    loser = Claim(rule_id="SOURCE-GAP", anomaly_type="possible_data_source_issue",
-                  zone=claim_for(f).zone)
-    return build([claim_for(f)], faults=[f],
-                 rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),)),
-                 suppressed=[Suppression(claim=loser, claimed_by="SENSOR-FAULT",
-                                         reason=WHY)])[0]
+    loser = Claim(
+        rule_id="SOURCE-GAP",
+        anomaly_type="possible_data_source_issue",
+        zone=claim_for(f).zone,
+    )
+    return build(
+        [claim_for(f)],
+        faults=[f],
+        rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),)),
+        suppressed=[Suppression(claim=loser, claimed_by="SENSOR-FAULT", reason=WHY)],
+    )[0]
 
 
 def test_a_superseded_claim_becomes_an_alternative_explanation():
@@ -373,8 +406,7 @@ def test_a_superseded_claim_is_never_cited_as_supporting_evidence():
     # it would undo that at the last step before an analyst reads it.
     bundle = superseded_fault_bundle()
 
-    cited = {(c.rule_id, c.finding_type)
-             for c in generate(bundle).supporting_evidence}
+    cited = {(c.rule_id, c.finding_type) for c in generate(bundle).supporting_evidence}
 
     assert "SOURCE-GAP" not in {rule for rule, _ in cited}
     # And everything the bundle DOES carry is cited, so this cannot be
@@ -404,11 +436,17 @@ def test_every_hypothesis_carries_the_outside_the_ruleset_caveat_last():
     # conclusions they encode, which is true of every bundle and is exactly
     # the caveat a fluent generator omits. Last, so it reads as the
     # standing limit rather than as a finding about this event.
-    for bundle in (fault_bundle(), zone_bundle(), superseded_fault_bundle()):
-        alternatives = generate(bundle).alternative_explanations
+    bundles = (fault_bundle(), zone_bundle(), superseded_fault_bundle())
+    last = {generate(b).alternative_explanations[-1] for b in bundles}
 
-        assert len(alternatives) >= 2
-        assert "rule" in alternatives[-1].lower()
+    # One string, identical across three different kinds of bundle: the
+    # standing caveat and nothing else can be last. Asserting a word
+    # instead let the caveat move to the front unnoticed, because the
+    # type-specific alternative that took its place also says "rule".
+    assert len(last) == 1
+    assert "does not encode" in last.pop()
+    for bundle in bundles:
+        assert len(generate(bundle).alternative_explanations) >= 2
 
 
 # --------------------------------------------------------- uncertainties, whole
@@ -418,11 +456,20 @@ def test_every_known_uncertainty_reaches_the_hypothesis():
     # spec: ai-002, evb-001 -- untruncated. Dropping the tail to keep the
     # text short loses the distinction between measured-and-negative and
     # never-looked, which is the material this layer exists to preserve.
-    bundle = zone_bundle(corroboration=Corroboration.NOT_MEASURABLE)
+    # Deliberately many: a bundle carrying one or two cannot catch a
+    # generator that keeps the first three and drops the rest.
+    f = fault()
+    rf = RfNoiseFindings(
+        anomalies=(episode("RF-03", 4),),
+        unjudged=tuple(
+            UnjudgedCell(cell=RfCell(sensor_id="RF-03", channel_index=c),
+                         reason="no baseline")
+            for c in (1, 2, 5, 6, 7)))
+    bundle = build([claim_for(f)], faults=[f], rf=rf)[0]
 
     against = generate(bundle).evidence_against_or_uncertainty
 
-    assert len(bundle.known_uncertainties) > 0
+    assert len(bundle.known_uncertainties) == 6
     assert len(against) == len(bundle.known_uncertainties)
 
 
@@ -432,8 +479,12 @@ def test_uncertainties_are_copied_verbatim_and_in_bundle_order():
     # most faithful option and the one that composes nothing.
     rf = RfNoiseFindings(
         anomalies=(episode("RF-03", 4),),
-        unjudged=(UnjudgedCell(cell=RfCell(sensor_id="RF-03", channel_index=2),
-                               reason="no baseline"),))
+        unjudged=(
+            UnjudgedCell(
+                cell=RfCell(sensor_id="RF-03", channel_index=2), reason="no baseline"
+            ),
+        ),
+    )
     f = fault()
     bundle = build([claim_for(f)], faults=[f], rf=rf)[0]
 
@@ -464,8 +515,32 @@ def test_the_result_is_a_valid_hypothesis_by_the_schema_not_by_construction():
     hypothesis = generate(zone_bundle())
 
     assert isinstance(hypothesis, Hypothesis)
-    assert Hypothesis.model_validate(
-        json.loads(hypothesis.model_dump_json())) == hypothesis
+    assert (
+        Hypothesis.model_validate(json.loads(hypothesis.model_dump_json()))
+        == hypothesis
+    )
+
+
+def test_composed_text_never_doubles_a_full_stop():
+    # spec: ai-002 -- found on real bundles, not by a unit test: anom-005's
+    # reason for a zone whose corroboration could not be measured already
+    # ends in a full stop, and appending one gave "..". Cosmetic anywhere
+    # else; here the output is read blind beside a language model's.
+    f = fault()
+    ends_in_a_stop = "one receiver deviated while its neighbours did not."
+    bundle = build([claim_for(f)], faults=[f],
+                   rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),)))[0]
+    verdict = verdict_of(bundle)
+    bundle = bundle.with_evidence([
+        replace(item, finding=ends_in_a_stop) if item is verdict else item
+        for item in bundle.evidence
+    ])
+
+    hypothesis = generate(bundle)
+
+    assert ".." not in hypothesis.summary
+    for citation in hypothesis.supporting_evidence:
+        assert ".." not in citation.statement
 
 
 def test_the_title_names_the_subject_and_the_claim():
@@ -495,11 +570,21 @@ def test_the_recommended_action_differs_with_what_the_bundle_shows():
     # spec: ai-002, US-R1 -- decision support, and an action identical on a
     # broken receiver and on interference is not support. Differential,
     # because a constant string satisfies the schema's non-blank rule.
-    fault_action = generate(fault_bundle()).recommended_human_action
-    zone_action = generate(zone_bundle()).recommended_human_action
+    # Both bundles are chosen to carry a track uncertainty, and each
+    # action has its own subject removed before the comparison, so what is
+    # left can only differ by what the generator says about this KIND of
+    # claim. Without that, a single generic sentence interpolating the
+    # subject passes -- which is what mutation found it doing.
+    one = fault_bundle()
+    other = zone_bundle(corroboration=Corroboration.NOT_MEASURABLE)
 
-    assert fault_action != zone_action
-    assert fault_action.strip() and zone_action.strip()
+    def said_about(bundle):
+        action = generate(bundle).recommended_human_action
+        assert bundle.subject in action
+        return action.replace(bundle.subject, "")
+
+    assert said_about(one) != said_about(other)
+    assert said_about(one).strip() and said_about(other).strip()
 
 
 def test_the_recommended_action_asks_a_human_to_check_not_the_system_to_act():
@@ -508,8 +593,10 @@ def test_the_recommended_action_asks_a_human_to_check_not_the_system_to_act():
     for bundle in (fault_bundle(), zone_bundle()):
         action = generate(bundle).recommended_human_action
 
-        assert any(verb in action.lower() for verb in
-                   ("check", "verify", "confirm", "review", "corroborate"))
+        assert any(
+            verb in action.lower()
+            for verb in ("check", "verify", "confirm", "review", "corroborate")
+        )
         # Addressed at this event and not at anomalies in general.
         assert bundle.subject in action
 
@@ -520,9 +607,30 @@ def test_the_hypothesis_carries_no_ground_truth():
     # scenario would score perfectly and measure nothing.
     text = generate(zone_bundle()).model_dump_json().lower()
 
-    for leak in ("gnss-degradation", "rf-sensor-fault", "staged",
-                 "answer key", "ground truth", "normal-baseline"):
+    for leak in (
+        "gnss-degradation",
+        "rf-sensor-fault",
+        "staged",
+        "answer key",
+        "ground truth",
+        "normal-baseline",
+    ):
         assert leak not in text
+
+
+def test_the_action_says_when_the_aircraft_side_is_not_a_clean_negative():
+    # spec: ai-002, evb-001 -- the majority case in the corpus is a zone
+    # whose discontinuity rate could not be measured at all, and an action
+    # reading the same as on a corroborated zone invites an analyst to
+    # treat "could not measure" as "measured and found nothing".
+    corroborated = generate(zone_bundle()).recommended_human_action
+    unmeasured = generate(
+        zone_bundle(corroboration=Corroboration.NOT_MEASURABLE)
+    ).recommended_human_action
+
+    assert corroborated != unmeasured
+    assert "aircraft" in unmeasured.lower()
+    assert "aircraft" not in corroborated.lower()
 
 
 # ---------------------------------------------------------------- determinism
@@ -567,8 +675,14 @@ def test_the_output_does_not_depend_on_the_hash_seed():
 
     def run(seed: str) -> str:
         env = {**os.environ, "PYTHONHASHSEED": seed, "PYTHONPATH": str(root)}
-        done = subprocess.run([sys.executable, "-c", script], cwd=root, env=env,
-                              capture_output=True, text=True, check=False)
+        done = subprocess.run(
+            [sys.executable, "-c", script],
+            cwd=root,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
         assert done.returncode == 0, done.stderr
         return done.stdout
 
@@ -582,9 +696,22 @@ def test_the_output_does_not_depend_on_the_hash_seed():
 #: thing whose failure summons it. Checked across every `app` module the
 #: generator can reach, not just its own import line.
 FORBIDDEN = {
-    "aiohttp", "anthropic", "boto3", "google", "http", "httpcore", "httpx",
-    "llama_cpp", "ollama", "openai", "requests", "socket", "torch",
-    "transformers", "urllib", "vertexai",
+    "aiohttp",
+    "anthropic",
+    "boto3",
+    "google",
+    "http",
+    "httpcore",
+    "httpx",
+    "llama_cpp",
+    "ollama",
+    "openai",
+    "requests",
+    "socket",
+    "torch",
+    "transformers",
+    "urllib",
+    "vertexai",
 }
 
 

@@ -5494,6 +5494,165 @@ about twenty minutes for the full corpus — a figure nobody had ever recorded, 
 the cost of the incident from an unknown to an afternoon.
 
 
+### One shape three generators must agree on, and the half of it that is easy to lose
+
+The hypothesis layer has three producers planned — a deterministic template, a hosted model and a
+local one — and the first thing built for it was not any of them. It was the object all three hand
+back. That ordering is deliberate and it buys two things at once: the screen can render any
+hypothesis without knowing which arm produced it, and the evaluation can compare them at all, since
+a comparison across arms is only possible if the arms produce comparable things.
+
+The design decision worth recording is that this schema is **a constraint on generation rather than
+a description of it**. The hosted arm is handed the schema's JSON derivation and can only emit
+conforming output, which means every guarantee has to survive the derivation. It is entirely
+possible to write a model class whose Python-side tests all pass while its derived schema has
+quietly widened — an enumeration becoming a free string is the obvious case, and it would lose the
+guarantee at precisely the one boundary that depends on it, because the Python model never runs
+during a constrained generation. Every guarantee is therefore asserted twice: once on the class and
+once on the derived schema.
+
+Two smaller choices carry more weight than their size suggests. A supporting-evidence item is a
+**structured citation and never a sentence**, because prose cannot be resolved against an evidence
+bundle; a prose citation does not make the automated grounding check awkward, it makes it
+impossible. And a citation names **two** identifiers rather than one, because one does not identify:
+the rate-excess rule defines no rule identity of its own and borrows the continuity rule's, so a
+rate excess and a discontinuity arrive carrying the same rule identifier while making different
+claims. That ambiguity had been recorded as owed since the bundle builder was specified; naming the
+pair is where it was actually closed.
+
+Nothing in the schema defaults. This is the typed-absence principle the evidence bundle already
+applies to uncertainties, moved one layer up: a list that became empty because a generator omitted
+it makes *weighed the alternatives and found none* and *never mentioned alternatives* arrive
+identically. On top of that, the alternatives list carries a floor of one and the
+evidence-against list deliberately does not — *nothing speaks against this* can be true, where
+*nothing else could explain this* essentially cannot, and a system built to stop a fluent model
+overclaiming must not accept the second.
+
+Stated as a limitation rather than solved: this stops a number appearing in the confidence *field*
+and cannot stop a generator writing "High (about 87% sure)" into the summary. The prohibition on
+numeric confidence is a rendering rule as well as a schema rule, and the interface carries the other
+half of it.
+
+### A baseline that cannot flatter itself, and the two jobs that shape it
+
+The template generator is the first thing in the system that turns an evidence bundle into an
+explanation, and it has no model in it. It has two jobs, and almost every decision in it follows
+from having both at once rather than either alone.
+
+It is the **correctness fallback**: when a model arm returns something that fails validation or
+fails the grounding check, this is what the analyst receives instead of an error. And it is the
+**evaluation baseline**: the research question is whether a language model adds anything over an
+honest mechanical summary of the same evidence, which has no answer without the honest mechanical
+summary to compare against. The campaign scores it blind alongside the model arms.
+
+The first job produces a hard constraint that is easy to state and easy to violate: a fallback that
+shares a dependency with the thing whose failure summons it is not a fallback. If the hosted
+provider is unreachable and the fallback needs an HTTP client to run, there is no fallback. This is
+enforced from the import graph rather than promised in a comment — the test suite walks every module
+reachable from the generator and refuses an HTTP client, a provider library or a model server
+anywhere in the closure. That guard is a set intersection which is empty when it holds and empty
+when it is broken, so it is paired with one test proving the walker reaches what it claims to and
+one firing it at a module that genuinely does reach the network. The reasoning is the same as the
+database guard's, and the lesson behind it is the same: a guard verified only against the case it is
+meant to pass is verified against the author's model of the world.
+
+The second job produces a subtler constraint. A baseline that overstates the evidence flatters
+itself, and every comparison drawn against it moves by exactly that much, silently — a defect in a
+model arm shows up as a bad hypothesis a human scorer can see, while a defect in the baseline shifts
+the yardstick. So three decisions all push the same way.
+
+**Confidence is inherited, never computed.** Every bundle already carries the deciding rule's own
+confidence, and that value was measured and argued when the rule was built — the sensor-fault rule's
+qualifies an attribution rather than a deviation, the fusion rule's has a floor of Medium the
+aircraft side cannot breach. Recomputing it here would be a second scoring scheme, and a constant
+expressed in two places is a constant that will eventually disagree with itself while both halves go
+on working. It also means the template can never be more confident than the rule that produced its
+evidence.
+
+The join between the two vocabularies is where this nearly went wrong. The detection layer spells
+confidence in lower case and the hypothesis schema demands initial capitals, so a pass-through
+raises. The obvious repair — capitalise the first letter — is worse than the fault it fixes, because
+it launders *any* word into something that looks valid and the failure then surfaces at the schema,
+one layer too late to say which bundle caused it. The join is by enumeration member name instead, so
+an unfamiliar word is refused at the point where the bundle is still in hand.
+
+**A citation stands for a kind of evidence, not for an item.** A real bundle carries 34 evidence
+items; one citation per item is complete and unreadable, and a baseline nobody can read is not a
+baseline a scorer can grade. The grouping key is exactly the two-part citation identity the schema
+defines, which is also the first place that choice becomes visible in behaviour rather than in
+argument: grouping on the rule alone would collapse the rate excess and the discontinuities into one
+citation making neither claim.
+
+**Alternatives come from what the system already ruled out.** A claim the precedence ladder
+suppressed *is* a competing conclusion, recorded as one — so those are the alternatives, and a
+generator inventing alternatives while ignoring the ones the system itself set aside would be
+disagreeing with its own evidence. Below those sits the standing pair, a broken receiver and
+interference in the environment being each other's competing reading of the same radio evidence.
+Last and unconditionally sits the caveat that deterministic rules can only choose among the
+explanations they were written to distinguish. That last entry is the one a fluent generator omits,
+and it also keeps the schema's floor satisfied by construction for a bundle type that does not exist
+yet — which matters, because a fallback generator that raised on an unfamiliar claim would fail at
+exactly the moment it is needed.
+
+Uncertainties are copied verbatim and untruncated, in bundle order. They are already written out in
+prose that carries which kind of not-knowing each one is, so copying composes nothing; and dropping
+a tail to keep the text short would lose the distinction between *measured and found nothing* and
+*never looked*, which is the material the layer exists to preserve.
+
+### Four tests that passed for a reason other than the one they name
+
+The mutation pass over the template generator killed 29 of 34 on its first run, and the four genuine
+survivors turned out to have a single shape between them. None of the four tests was testing nothing;
+each was passing for a reason other than the one its name claimed, and in every case the accidental
+reason was invisible by reading.
+
+A refusal test asserted that a damaged bundle raises and that the message names the claim type — and
+the *mutant's* fallback path raised too, for a different reason, with a message that also names the
+claim type. A count test compared two fixtures and asserted their citations differed, without
+noticing that the fixtures differed in how many sources they spanned as well as how many findings,
+so removing the count changed nothing measurable. An ordering test asserted a word appeared in the
+last alternative, and the text that displaced it contains that word too. A differential test
+compared the recommended action across two bundle types, where a single generic sentence still
+differed between them because it interpolates the subject.
+
+The repairs are worth recording as a pattern, because none of them was "assert harder". Each removed
+the accidental route to the assertion: the refusal test now gives the fallback item a valid
+confidence, so a generator that fell back would *succeed* rather than raise for another reason; the
+ordering test now asserts that the final entry is one identical string across three different kinds
+of bundle, which only the standing caveat can be; the action test strips each bundle's own subject
+out before comparing, so what remains can only differ by what the generator says about that kind of
+claim.
+
+This is the third time in this project that a mutation pass has found gaps of a family rather than
+scattered ones — the bundle builder's were all scoping rules, the traceability checker's were all
+refusals asserted with a pattern any failure satisfies. The generalisation is that a suite tends to
+be uniformly strong on the thing its author was thinking about and uniformly weak on the thing
+they were not, so the survivors cluster.
+
+### Two prose defects that only real bundles could find
+
+The generator passed 37 unit tests and a mutation pass before it was run over the 41 evidence bundles
+stored from real replayed hours. That run produced no refusals and no ungrounded citations, and it
+found two defects anyway, both in the text a human being reads.
+
+The first is trivial and instructive: the fusion rule's stated reason for a zone whose corroboration
+could not be measured is three sentences long and ends in a full stop, so appending one produced a
+doubled stop. Every fixture in the test suite ended without punctuation, because I wrote them.
+Cosmetic in most contexts and not in this one — the output is read blind beside a language model's,
+where punctuation a model would never produce reads as a quality difference rather than as a typo.
+
+The second is a framing error. The summary introduced the verdict item's text with "the rule's own
+conclusion", which is accurate for most bundles and wrong for the majority case here: on a zone whose
+aircraft-side rate could not be measured, the rule's recorded reason is a *caveat about what could
+not be established*, so the summary presented a statement of ignorance as a conclusion. Nothing was
+invented and nothing was schema-invalid; the sentence simply pointed at the wrong thing. It now
+reads "the rule states", which is true of whatever the rule recorded.
+
+Both belong in the same category as the two defects the end-to-end bundle run found: properties of
+what real data contains rather than of what the code says, and therefore invisible to any test whose
+inputs the author chose.
+
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;
@@ -5770,3 +5929,26 @@ pass, but the corpus has never presented it with two rules bidding for one zone,
 exactly one rule bids. That is a limitation of the **ladder's** corpus evidence, not only of
 `anom-006`.
 
+
+### Threat to validity: the baseline's confidence is inherited, so one scoring dimension compares two mechanisms
+
+The template generator takes its confidence from the deciding rule rather than assigning one, which
+is the right engineering decision and introduces an asymmetry the scoring campaign has to declare.
+The model arms will *choose* a confidence, and can therefore be miscalibrated — confident about thin
+evidence, hedged about strong evidence — which is one of the things the rubric is designed to
+detect. The template cannot be miscalibrated in that sense, because its confidence is not a judgement
+it made. It is the rule's judgement, restated.
+
+So on the calibration dimension the campaign is not comparing two answers to one question; it is
+comparing an answer to a restatement. This does not invalidate the comparison — it is arguably the
+point, since a model arm that cannot beat a restatement of the rule's own confidence has added
+nothing on that dimension — but it must be stated in advance rather than discovered in the analysis,
+and the second scorer should be told what the baseline's confidence *is* before scoring begins.
+Recorded here rather than in the rubric because the rubric is pre-registered and may not be edited
+after the campaign starts.
+
+A second, smaller asymmetry came out of the run over real bundles. The template emits exactly four
+citations on every one of the 41 stored bundles, because both bundle shapes the system currently
+produces happen to carry four kinds of evidence. The baseline's *size* therefore does not vary with
+the event, where a model arm's will. Any dimension of the rubric that rewards completeness or
+concision is, for the baseline, being scored against a constant.

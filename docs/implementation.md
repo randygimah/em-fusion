@@ -280,8 +280,8 @@ None of this blocks the **template generator**, which is the first thing built i
 
 ## Phase 9: Constrained AI Hypothesis Layer (RQ3 — core deliverable)
 
-- [ ] Define the hypothesis output schema in Pydantic (title, confidence Low/Medium/High only, summary, supporting evidence, uncertainty, alternatives, recommended action).
-- [ ] Build the template-based hypothesis generator first — it is the correctness fallback *and* the evaluation baseline. No model dependency; nothing in Phase 8.5 blocks it.
+- [x] Define the hypothesis output schema in Pydantic (title, confidence Low/Medium/High only, summary, supporting evidence, uncertainty, alternatives, recommended action). **(`ai-001`)** Every guarantee is asserted on the *derived* JSON schema as well as the Python model, because the derived schema is what constrains a hosted generation and the Python model never runs during one. Supporting evidence is a structured citation naming `rule_id` **and** `finding_type`, since one does not identify.
+- [x] Build the template-based hypothesis generator first — it is the correctness fallback *and* the evaluation baseline. No model dependency; nothing in Phase 8.5 blocks it. **(`ai-002`)** 41 of 41 real stored bundles, 0 refusals, 164 of 164 citations grounded. The no-model constraint is enforced by walking the import graph, not by comment: a fallback sharing a dependency with the thing whose failure summons it is not a fallback.
 - [ ] Implement the hosted AI generator (primary arm) using native JSON-schema-constrained output, so schema conformance is a generation-time guarantee rather than a post-hoc check.
 - [ ] Implement the local AI generator (second arm) against the *same* schema via a GBNF grammar. One schema, two enforcement mechanisms, identical guarantee.
 - [ ] Persist `generator`, `model_id`, `generation_params`, and verbatim `raw_response` on every hypothesis, both arms.

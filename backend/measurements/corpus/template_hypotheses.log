@@ -1,0 +1,54 @@
+DEVELOPMENT BATCH -- base seed 695081452, 60 runs over three types. Generated to develop the AI layer against real bundles after the corpus was lost. NOT a corpus: no thesis figure may be measured from it. See DEV_BATCH_PLAN.md.
+41 stored bundles from 40 runs
+
+==============================================================================
+WHAT IT PRODUCED
+==============================================================================
+  hypotheses generated: 41 of 41 bundles
+  refused: 0   PASS
+  by kind of claim: {'possible_sensor_fault': 21, 'possible_interference_zone': 20}
+  confidence, inherited from the deciding rule: {'High': 24, 'Medium': 17}
+  citations                min 4  median 4  max 4  total 164
+  alternatives             min 2  median 2  max 2  total 82
+  uncertainties carried    min 0  median 3  max 8  total 120
+
+==============================================================================
+GROUNDED BY CONSTRUCTION, CHECKED RATHER THAN ARGUED
+==============================================================================
+  citations checked against their own bundle: 164
+  citing something the bundle does not carry: 0   PASS
+  bundles generating different words on a second run: 0   PASS
+
+==============================================================================
+ONE HYPOTHESIS, AS A BLIND SCORER WOULD READ IT
+==============================================================================
+  run 61, from a bundle of 34 evidence items
+
+  TITLE       Possible interference zone at RF-05, RF-06, RF-07
+  CONFIDENCE  Medium
+  SUMMARY     FUSION-SPATIAL reports possible interference zone at RF-05, RF-06, RF-07 between 2022-06-27 12:37:36 and 12:43:06 UTC, on channel(s) 4. The rule states: the reference period holds no track findings, so its rate is nothing but the smoothing constant and the ratio compares one observed rate against an assumption. A disc with nothing in it is not a disc that showed no disruption. Behind it are 34 evidence item(s) of 4 kind(s), with 6 recorded uncertainty(ies). This account restates what the detection rules found and adds nothing to it.
+
+  SUPPORTING EVIDENCE (4 citations)
+    [RF-NOISE / rf_noise_deviation]
+      16 findings of this kind across 3 source(s) between 12:37:56 and 12:42:46; for example, RF-05:4: power_dbm deviated by 11.85 dB at its peak.
+    [FUSION-SPATIAL / possible_interference_zone]
+      RF-05, RF-06, RF-07: the reference period holds no track findings, so its rate is nothing but the smoothing constant and the ratio compares one observed rate against an assumption. A disc with nothing in it is not a disc that showed no disruption.
+    [TRACK-GAP / track_rate_excess]
+      60 km disc: 4 discontinuities during the window against 0 outside it, a rate ratio of 11.79.
+    [TRACK-GAP / track_continuity_gap]
+      16 findings of this kind across 14 source(s) between 12:28:48 and 12:50:50; for example, AC-<redacted>: reporting from this aircraft broke during the window.
+
+  EVIDENCE AGAINST / UNCERTAINTY (6)
+    - the local discontinuity rate could not be measured: the reference period outside this window held no track findings, so the ratio would consist of nothing but the smoothing constant and is not a comparison of two observed rates. This is the majority case, and it means the aircraft side neither supports nor contradicts the radio evidence here.
+    - a deviation on channel 4 of RF-05 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
+    - a deviation on channel 4 of RF-05 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
+    - a deviation on channel 4 of RF-06 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
+    - a deviation on channel 4 of RF-06 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
+    - a deviation on channel 4 of RF-07 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
+
+  ALTERNATIVE EXPLANATIONS (2)
+    - possible_sensor_fault: the deviation may be in the receivers rather than in the environment. The rule ruled this out because more than one receiver deviated together, so a common-mode failure -- a shared power supply, a shared clock, one configuration change applied to several units -- is the reading this does not exclude.
+    - something the rule set does not encode: these conclusions are drawn by deterministic rules that can only choose among the explanations they were written to distinguish, so an event unlike any of them is reported as whichever encoded explanation it most resembles.
+
+  RECOMMENDED HUMAN ACTION
+    Corroborate the deviation at RF-05, RF-06, RF-07 against a source outside this system -- a NOTAM, a spectrum-monitoring report, an operator log -- before treating it as interference in the environment. The aircraft side is not a clean negative here -- see the uncertainties -- so it should not be read as evidence against.

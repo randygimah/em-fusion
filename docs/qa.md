@@ -5910,6 +5910,92 @@ It also breaks the rule that scenario runs are never deleted, which nothing had 
 The rule survives as a statement about the system's own behaviour — no code path deletes a run — and
 no longer as a statement about the database's history.
 
+## 85. Why build a hypothesis generator with no AI in it?
+
+**Because without one there is no way to answer the research question, and no safe answer when the
+model fails.** The instinct is that a template generator is scaffolding — something to fill the
+screen until the real generator arrives, to be deleted afterwards. It is the opposite: it is
+permanent, and two separate parts of the project depend on it existing.
+
+**It is the yardstick.** The question this project asks is whether a language model adds anything
+over a deterministic account of the same evidence. That question cannot be answered by looking at
+model output alone, however good it is, because there is nothing to compare it against. So the
+comparison needs an honest mechanical summary of the identical bundle, written out by rule, and the
+human scorer grades both without being told which is which. If the model's hypotheses do not score
+better than the template's, that is the finding — and it is a finding that only exists because the
+template exists.
+
+**It is the safety net.** When the model returns something that fails validation, or claims
+something the evidence does not contain, the analyst has to receive an explanation rather than an
+error. That is the correctness fallback, and it has one hard constraint:
+
+> A fallback that shares a dependency with the thing whose failure summons it is not a fallback.
+
+If the hosted provider is unreachable and the fallback needs a network client, there is no fallback.
+This is checked rather than promised: the test suite walks every module the generator can reach and
+refuses an HTTP client, a provider library or a model server anywhere in that graph.
+
+### What "grounded by construction" means here, and what it does *not* prove
+
+Every citation the template emits is copied from the bundle it was given, so it cannot cite something
+that is not there. That has a consequence worth being precise about, because it is easy to state
+backwards:
+
+| | What it tells you |
+|---|---|
+| The grounding check **passes** on a template hypothesis | Nothing about the template. This was guaranteed before the check ran. |
+| The grounding check **fails** on a template hypothesis | A defect in the **check**, not in the generator. |
+| The grounding check passes on a *model* hypothesis | Something real, because the model could have cited anything. |
+
+So the template is a test of the grounding check rather than the other way round. It is the one input
+whose correct answer is known in advance, which is exactly what a check needs and rarely has.
+
+### Three decisions that all push the same way
+
+A baseline that overstates the evidence does not merely produce one bad hypothesis. It moves the
+yardstick, and every comparison drawn against it moves by the same amount, invisibly. A defect in a
+model arm shows up as a bad hypothesis a scorer can see; a defect in the baseline shows up nowhere.
+
+| Decision | The tempting alternative | Why it loses |
+|---|---|---|
+| Confidence is **read from the rule** that produced the bundle | Score the evidence here and assign a confidence | That is a second scoring scheme, and a rule expressed in two places will eventually disagree with itself while both halves go on working. It also lets the template be more confident than the rule it is restating. |
+| One citation per **kind** of evidence | One citation per evidence item | A real bundle carries 34 items. A baseline nobody can read is not a baseline a scorer can grade. |
+| Alternatives are **what the ladder already ruled out** | Write plausible alternatives per claim type | The system has already recorded which competing claims it set aside and why. Inventing alternatives while ignoring those is the generator disagreeing with its own evidence. |
+
+### A join between two vocabularies, and the repair that would have been worse
+
+The detection layer spells confidence `low`, `medium`, `high`. The hypothesis schema demands `Low`,
+`Medium`, `High`, because that is what an analyst sees and what the database column permits. So
+passing the value straight through raises.
+
+The obvious repair is to capitalise the first letter. It is worse than the fault:
+
+```
+"low"      -> "Low"        correct
+"certain"  -> "Certain"    accepted here, rejected later, by the schema
+```
+
+The second line is the problem. `.title()` launders *any* word into something that looks like a
+valid confidence, and the failure then surfaces one layer downstream as a schema complaint about an
+enumeration, at a point where the bundle that caused it is no longer in hand. Matching on the
+enumeration's **member name** instead refuses the unfamiliar word where the bundle is still
+available to name in the message.
+
+### Worth recording as a limitation
+
+Two, both about the baseline rather than the code.
+
+The template's confidence is inherited, so it **cannot be miscalibrated** in the way a model's can.
+On any scoring dimension about calibration, the campaign is comparing an answer to a restatement
+rather than two answers. That is arguably the point — a model arm that cannot beat a restatement of
+the rule's own confidence has added nothing there — but it has to be declared before scoring, not
+discovered during analysis.
+
+And on the 41 real bundles stored so far, the template emits **exactly four citations every time**,
+because both bundle shapes the system currently produces happen to carry four kinds of evidence. The
+baseline's size does not vary with the event, where a model's will, so any rubric dimension rewarding
+completeness or concision is being scored against a constant for one arm.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -5927,6 +6013,10 @@ no longer as a statement about the database's history.
 | **Reportable anomaly** | A finding the analyst is shown. Subject to the zero-on-a-clean-run control; produced only by the fusion rules. |
 | **Intermediate finding** | A finding computed for the system's own use, feeding a later rule. Never shown, and not counted by the control. |
 | **Attribution** | Saying *why* a measurement moved, as distinct from detecting that it did. The track rule detects staleness and cannot attribute it. |
+| **Template generator** | The deterministic hypothesis producer, with no model behind it. Both the correctness fallback and the evaluation baseline; permanent, not scaffolding. |
+| **Correctness fallback** | What an analyst receives when a model's answer fails validation or the grounding check. Distinct from the *availability* fallback, which fires when the provider is unreachable. |
+| **Grounded by construction** | Cannot cite what is not in the bundle, because every citation is copied from it. Makes the template a test of the grounding check rather than the reverse. |
+| **Constrained generation** | Handing a model a JSON schema so it can only emit conforming output. Guarantees shape and says nothing about truth, which is why the grounding check exists. |
 | **Equivalent mutant** | A deliberate code change that cannot alter behaviour, so no test can catch it. Counting one as a surviving mutant understates test quality. |
 | **Rolling average** | An average over a trailing window rather than over everything, so the expectation tracks slow drift instead of being fixed at the start. |
 | **Noise floor** | Background RF power with no signal present; the reference that "elevated noise" is elevated above. |
