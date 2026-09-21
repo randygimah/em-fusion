@@ -14,7 +14,7 @@ interface every generator sits behind).
 
 ## Current state
 
-**51 of 99 spec items pass.** Backend suite: **1156 tests, 99.84% coverage**, ruff and mypy clean
+**51 of 99 spec items pass** (`db-002` is built but deliberately not yet marked — see Blocked). Backend suite at last clean run: **1156 tests, 99.84% coverage**; +33 for `db-002` unverified on the full tier, ruff and mypy clean
 across 58 source files.
 
 `ai-003` is complete:
@@ -95,6 +95,23 @@ passed, 99.84%.
 **A CLAUDE.md repo-map edit failed on a bad anchor** and a second edit in the same script never ran
 because the first assertion aborted it. Both applied in a follow-up. Third occurrence of this exact
 pattern.
+
+## Blocked right now
+
+**The Docker daemon is wedged.** The full-tier run stalled at 71% inside `test_evb_traceability.py`
+and has not advanced; `docker ps` and `docker version` both hang indefinitely. This is the
+environment, not the code — the stall is in a test file this session did not touch, and a hanging
+`docker version` is definitive. **Restart Docker Desktop, then run `make test-backend`.**
+
+What that run has to confirm before `db-002` can be marked passing:
+
+1. `make test-backend` green (the item's own 33 tests already passed via
+   `make test-backend PYTEST_ARGS="tests/test_db_hypotheses.py --no-cov -q"`, and ruff and mypy are
+   clean across 59 source files).
+2. `backend/measurements/mutation/mutate_db002_hypotheses.py` — written, never run. ~26 mutants,
+   each driving the target, so budget roughly 20 minutes.
+3. Then set `db-002` to `passes: true` (it is deliberately still `false`) and append the `qa.md`
+   entry, which is the one write-up still owed for the item.
 
 ## Next step
 
