@@ -6150,6 +6150,96 @@ and the registry resolves it; where that object comes from — environment varia
 a command-line flag — belongs with the first arm that needs a key, and putting it here would mean
 designing the loading of credentials before there is a credential to load.
 
+## 88. Why did the hypotheses table need changing at all, when it was built first on purpose?
+
+**Because building it first was right, and building it first could not tell it what a hypothesis
+would turn out to be.**
+
+The four reproducibility columns were placed in the very first migration deliberately, and that
+revision's own note explains why:
+
+> a `raw_response` column added late, after an evaluation campaign has run against a hosted model,
+> is a campaign that has to be repeated.
+
+That reasoning was sound and it held. What it could not anticipate is the field vocabulary the
+output schema settled four phases later. Comparing the table against it turns up four problems, and
+none of them is visible from either artefact on its own:
+
+| | What was wrong |
+|---|---|
+| `summary`, `recommended_human_action` | **No column at all.** The summary is what an analyst reads first and the recommended action is the entire point of decision support. |
+| `title`, `uncertainty`, `alternatives` | Columns under names the schema does not use. |
+| `grounding_passed` | A plain true/false that **cannot say "not yet checked"**. |
+| `status` | Accepts any text, while the columns either side of it are constrained. |
+
+### Rename or map? And why the answer had a deadline
+
+Two ways to reconcile the three misnamed columns. Translate between them in the write path, or change
+the columns.
+
+A translation layer is a **permanent place for two vocabularies to drift**, and the drift is silent:
+content stored under the wrong field's name complains to nobody and is discovered by reading output
+that makes no sense. Renaming makes the mismatch unrepresentable rather than handled.
+
+The deadline is the interesting part. **The table held zero rows**, and had since it was created, so
+the rename cost nothing. That window closes permanently the first time anything is written — which is
+the same argument the first migration made for placing the reproducibility columns early, applied to
+the rest of the table.
+
+### Three values over a two-valued column
+
+A hypothesis is written **before** the grounding check examines it. So a true/false flag forces every
+new row to claim an outcome it does not have, and makes two very different things identical:
+
+```
+failed the check     ->  false
+was never checked    ->  false     <- wrong, and undetectable
+```
+
+The column became nullable, and the three states became an enumeration in code. Not `bool | None` —
+because that invites `if not passed:`, which is exactly the substitution being prevented. This is
+the typed-absence principle at its third separate layer: uncertainties in a bundle, citations in an
+evidence item, and now a grounding verdict.
+
+### Why findings are replaced and hypotheses are appended
+
+These look inconsistent and are not. The difference is what kind of thing each one is.
+
+| | Finding | Hypothesis |
+|---|---|---|
+| Reproducible? | Yes — a pure function of stored observations and a seed | **No** — a model call happened once and cost money |
+| Asking again gives | the same finding | possibly different words, even at temperature zero |
+| So a second write is | the same fact again | **a second fact** |
+| Therefore | replace | append |
+
+Concretely: one bundle legitimately carries a model's hypothesis *and* the mechanical one that
+replaced it after a grounding failure. A retry is a second call that the run-level budget has to
+count and the retry rate has to be computed from. Collapsing them would destroy the only record of
+what the campaign actually did.
+
+### A test that had been testing the wrong thing since the day after it was written
+
+Adding the migration broke an existing test, and the break was informative. The test downgraded the
+database by `"-1"` — *one step back from head* — and asserted that a column added by the previous
+revision had gone.
+
+That is correct only while that revision **is** head. Adding a new one made `"-1"` reverse something
+else entirely, and the test failed. It had been asserting the reversibility of whatever happened to
+be last, not of the revision it was written for.
+
+It now names the revision explicitly. This is the same shape as a bug recorded earlier in the corpus
+filter, which selected *"any run carrying a base seed"* — true on the day it was written and silently
+wrong the moment a fourth batch existed. **A relative reference is a bug with a delay on it.**
+
+### Worth recording as a limitation
+
+The repository refuses a model-arm row missing its model id or raw response, which is the item's
+named failure case — but the interface above it already makes such a result impossible to
+*construct*, so this guard cannot be reached through the front door. It is kept deliberately, for
+two reasons: a boundary check holds against a row assembled some other way, and this is the failure
+class nobody can repair afterwards. A campaign that ran against a model whose identity was not
+recorded is a campaign that has to be run again.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -6167,6 +6257,8 @@ designing the loading of credentials before there is a credential to load.
 | **Reportable anomaly** | A finding the analyst is shown. Subject to the zero-on-a-clean-run control; produced only by the fusion rules. |
 | **Intermediate finding** | A finding computed for the system's own use, feeding a later rule. Never shown, and not counted by the control. |
 | **Attribution** | Saying *why* a measurement moved, as distinct from detecting that it did. The track rule detects staleness and cannot attribute it. |
+| **Typed absence** | Recording *which kind* of not-knowing applies rather than leaving a blank. Applied here at three layers: bundle uncertainties, evidence citations, and the grounding verdict. |
+| **Relative migration reference** | Naming a revision by distance from head (`-1`) rather than by name. Correct until another revision is added, then silently reverses something else. |
 | **Port (or seam)** | An interface defined where two layers meet, importing neither. Written before its implementations so the first one cannot shape it. |
 | **Generation result** | What every generator hands back: the hypothesis plus what produced it. Not a bare hypothesis, so no arm has to carry provenance its own way. |
 | **Availability fallback** | Fires when a provider cannot be reached. Response: try the other arm. Distinct from the correctness fallback, which fires on an unusable answer. |

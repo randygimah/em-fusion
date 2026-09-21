@@ -122,13 +122,17 @@ def check_reproducibility(
                 "campaign reports would count this row as a model's."
             )
         return
-    if not model_id:
+    # Stripped, matching `ai-003`'s ModelCall: an empty string satisfies a
+    # check for "populated" while naming nothing, and a whitespace-only one
+    # satisfies `if not model_id` too. Found by a test written to close a
+    # mutation gap, which then found this.
+    if not (model_id or "").strip():
         raise HypothesisWriteError(
             f"a {generator.value} hypothesis carries no model id. The model "
             "identity is the reproducibility claim (NFR-602), and a campaign "
             "that ran against a model nobody recorded has to be run again."
         )
-    if not raw_response:
+    if not (raw_response or "").strip():
         raise HypothesisWriteError(
             f"a {generator.value} hypothesis carries no raw response. It is "
             "the verbatim pre-parse output, and its absence is discovered at "

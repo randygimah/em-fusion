@@ -1,0 +1,31 @@
+a model arm may omit its model id                          KILLED   2 failed, 39 passed in 48.32s
+a model arm may omit its raw response                      KILLED   2 failed, 39 passed in 48.36s
+a template row may name a model                            KILLED   1 failed, 40 passed in 48.44s
+the guard checks only the template direction               KILLED   2 failed, 39 passed in 48.08s
+a blank model id counts as present                         KILLED   1 failed, 40 passed in 48.72s
+the generator is not recorded from the result              KILLED   2 failed, 39 passed in 48.67s
+the raw response is re-serialised rather than stored verbatim KILLED   3 failed, 38 passed in 49.13s
+an absent parameter set is stored as a JSON null           KILLED   1 failed, 40 passed in 48.27s
+the summary is not stored                                  KILLED   12 failed, 29 passed in 48.49s
+the recommended action is not stored                       KILLED   12 failed, 29 passed in 48.25s
+the alternatives land in the uncertainty column            KILLED   1 failed, 40 passed in 48.74s
+a new row starts under review rather than new              KILLED   1 failed, 40 passed in 49.13s
+a new row claims the grounding check passed                KILLED   1 failed, 40 passed in 48.54s
+the write does not say which row it made                   KILLED   18 failed, 20 passed, 3 errors in 47.50s
+not-checked is stored as failed                            KILLED   2 failed, 39 passed in 48.49s
+a stored null reads back as failed                         KILLED   2 failed, 39 passed in 48.30s
+passed and failed are swapped                              KILLED   3 failed, 38 passed in 48.36s
+hypotheses come back in whatever order the heap gives      KILLED   1 failed, 40 passed in 47.96s
+another bundle's hypotheses are returned too               KILLED   2 failed, 39 passed in 48.44s
+the two added columns are nullable                         KILLED   1 failed, 40 passed in 48.28s
+the grounding column stays two-valued                      KILLED   19 failed, 19 passed, 3 errors in 49.95s
+the review status keeps accepting any text                 KILLED   2 failed, 39 passed in 48.27s
+one column keeps its old name                              KILLED   22 failed, 16 passed, 3 errors in 49.86s
+a review state the requirements name is left out           KILLED   1 failed, 40 passed in 48.47s
+stored bundles come back without their ids                 KILLED   18 failed, 20 passed, 3 errors in 50.65s
+the new reader is not scoped to the run                    KILLED   2 failed, 39 passed in 48.59s
+
+restored
+
+26 killed of 26 valid mutants
+no unexpected survivors

@@ -114,6 +114,52 @@ def store_a_bundle(engine: Engine, factory: sessionmaker) -> int:
     return stored_bundles_for_run(factory, RUN_ID)[0][0]
 
 
+OTHER_RUN_ID = RUN_ID + 1
+
+
+@pytest.fixture
+def neighbours(migrated_database: Engine, factory: sessionmaker) -> dict[str, int]:
+    """Two bundles in this run and one in another, each with a hypothesis.
+
+    Every one of these exists because a mutation survived without them.
+    Three of `db-002`'s five genuine gaps were scoping or ordering rules,
+    which is the third time a pass over this project has found exactly that
+    family: the suites test thoroughly what goes in and barely what must
+    stay out.
+    """
+    from dataclasses import replace
+
+    # The run first: observations carry a NOT NULL foreign key to it.
+    with migrated_database.connect() as connection:
+        connection.execute(text(
+            "INSERT INTO scenario_runs "
+            "(id, scenario_type, parameters, seed, started_at) "
+            "VALUES (:id, 'rf-sensor-fault', '{}'::jsonb, 43, now())"),
+            {"id": OTHER_RUN_ID})
+        connection.commit()
+    for sensor in ("RF-03", "RF-04"):
+        insert_rf(migrated_database, run_id=RUN_ID, sensor=sensor, channel=4, at=START)
+        insert_rf(migrated_database, run_id=OTHER_RUN_ID, sensor=sensor, channel=4,
+                  at=START)
+
+    # One call, two bundles: save_bundles replaces per run, so two calls
+    # would leave only the second.
+    save_bundles(factory, scenario_run_id=RUN_ID, bundles=[
+        replace(zone_bundle(tracks=False), scenario_run_id=RUN_ID),
+        replace(fault_bundle(), scenario_run_id=RUN_ID),
+    ])
+    save_bundles(factory, scenario_run_id=OTHER_RUN_ID, bundles=[
+        replace(zone_bundle(tracks=False), scenario_run_id=OTHER_RUN_ID)])
+
+    here = stored_bundles_for_run(factory, RUN_ID)
+    there = stored_bundles_for_run(factory, OTHER_RUN_ID)
+    ids = {"first": here[0][0], "second": here[1][0], "other_run": there[0][0]}
+
+    save_hypothesis(factory, bundle_id=ids["second"], result=template_result())
+    save_hypothesis(factory, bundle_id=ids["other_run"], result=template_result())
+    return ids
+
+
 @pytest.fixture
 def bundle_id(migrated_database: Engine, factory: sessionmaker) -> int:
     """One stored bundle, and its identity.
@@ -267,6 +313,49 @@ def test_every_named_review_state_is_accepted(
         session.execute(text("UPDATE hypotheses SET status = :s"), {"s": status})
 
 
+@pytest.mark.database
+@requires_database
+def test_the_revision_is_reversible(migrated_database: Engine) -> None:
+    # spec: db-002, db-010 -- a rename and two added columns are exactly the
+    # kind of change that must be undoable. The target revision is NAMED,
+    # not counted: the equivalent test for evb-002 used "one step back from
+    # head" and silently began testing a different revision the moment this
+    # one was added.
+    config = alembic_config()
+    config.set_main_option(
+        "sqlalchemy.url",
+        migrated_database.url.render_as_string(hide_password=False),
+    )
+
+    # At head first, or the downgrade half passes against any revision that
+    # never made the change.
+    assert "summary" in column_names(migrated_database)
+    assert "title" not in column_names(migrated_database)
+
+    command.downgrade(config, "0005_evidence_bundle_columns")
+
+    columns = column_names(migrated_database)
+    assert "summary" not in columns
+    assert "recommended_human_action" not in columns
+    assert "title" in columns, "the old name did not come back"
+    assert "hypotheses" in _tables(migrated_database), \
+        "the downgrade took the table with it"
+
+    command.upgrade(config, "head")
+
+    assert "summary" in column_names(migrated_database)
+    assert "hypothesis_title" in column_names(migrated_database)
+
+
+def _tables(engine: Engine) -> set[str]:
+    with engine.connect() as connection:
+        return {
+            row[0] for row in connection.execute(text(
+                "SELECT table_name FROM information_schema.tables "
+                "WHERE table_schema = 'public'"))
+        }
+
+
 # ------------------------------------------------------------------- the write
 
 
@@ -383,6 +472,28 @@ def test_the_write_returns_the_identity_of_the_row_it_made(
     assert made == hypotheses_for_bundle(factory, bundle_id)[0].id
 
 
+@pytest.mark.database
+@requires_database
+def test_a_template_row_stores_no_parameters_rather_than_a_json_null(
+    factory: sessionmaker, bundle_id: int
+) -> None:
+    # spec: db-002 -- found by mutation, and invisible from Python: a JSONB
+    # `null` reads back as None exactly like SQL NULL, so the round trip
+    # cannot tell them apart. They are different facts about the column --
+    # "no parameter set was recorded" against "a parameter set was recorded
+    # and it was null" -- and only the first is true of an arm with no model.
+    save_hypothesis(factory, bundle_id=bundle_id, result=template_result())
+
+    with factory.begin() as session:
+        sql_null, json_null = session.execute(text(
+            "SELECT generation_params IS NULL, "
+            "  generation_params = 'null'::jsonb "
+            "FROM hypotheses")).one()
+
+    assert sql_null is True
+    assert json_null is None, "a JSONB null would compare, not return NULL"
+
+
 # --------------------------------------------------------- appending, not replacing
 
 
@@ -431,6 +542,73 @@ def test_a_second_call_to_the_same_arm_is_not_a_replacement(
     assert [s.raw_response for s in stored] == ['{"attempt": 1}', '{"attempt": 2}']
 
 
+@pytest.mark.database
+@requires_database
+def test_only_this_bundle_s_hypotheses_come_back(
+    factory: sessionmaker, neighbours: dict[str, int]
+) -> None:
+    # spec: db-002, evb-001 -- found by mutation. Every earlier test had one
+    # bundle in the database, so dropping the WHERE clause changed nothing
+    # any of them could see. A hypothesis attached to the wrong event is not
+    # malformed, it is wrong.
+    save_hypothesis(factory, bundle_id=neighbours["first"], result=template_result())
+
+    stored = hypotheses_for_bundle(factory, neighbours["first"])
+
+    assert len(stored) == 1
+    assert stored[0].bundle_id == neighbours["first"]
+
+
+@pytest.mark.database
+@requires_database
+def test_a_hypothesis_from_another_run_never_reaches_this_bundle(
+    factory: sessionmaker, neighbours: dict[str, int]
+) -> None:
+    # spec: db-002 -- the same rule across runs rather than across bundles,
+    # because the uniqueness everything here rests on is uniqueness WITHIN
+    # one run and the same coordinates exist in all 300.
+    stored = hypotheses_for_bundle(factory, neighbours["second"])
+
+    assert [s.bundle_id for s in stored] == [neighbours["second"]]
+
+
+@pytest.mark.database
+@requires_database
+def test_hypotheses_come_back_in_the_order_they_were_written(
+    factory: sessionmaker, bundle_id: int
+) -> None:
+    # spec: db-002, NFR-601 -- found by mutation, and the ordering had to be
+    # DISTURBED to see it: with a handful of untouched rows a sequential
+    # scan returns them in insertion order anyway, so dropping ORDER BY
+    # changed nothing. Updating a row rewrites it to the end of the heap
+    # under MVCC, which is what makes physical order differ from id order.
+    made = [save_hypothesis(factory, bundle_id=bundle_id, result=hosted_result(
+        raw_response=f'{{"attempt": {n}}}')) for n in range(4)]
+
+    with factory.begin() as session:
+        session.execute(text(
+            "UPDATE hypotheses SET summary = summary || :s WHERE id = :i"),
+            {"s": " (revised)", "i": made[0]})
+
+    assert [s.id for s in hypotheses_for_bundle(factory, bundle_id)] == made
+
+
+@pytest.mark.database
+@requires_database
+def test_the_bundle_reader_is_scoped_to_its_run(
+    factory: sessionmaker, neighbours: dict[str, int]
+) -> None:
+    # spec: db-002, evb-002 -- found by mutation on the reader this item
+    # added. Every test of it had one run in the database.
+    here = stored_bundles_for_run(factory, RUN_ID)
+    there = stored_bundles_for_run(factory, OTHER_RUN_ID)
+
+    assert len(here) == 2
+    assert len(there) == 1
+    assert {i for i, _ in here}.isdisjoint({i for i, _ in there})
+    assert all(bundle.scenario_run_id == RUN_ID for _, bundle in here)
+
+
 # -------------------------------------------------- refusals at the boundary
 
 
@@ -472,6 +650,28 @@ def test_a_model_arm_row_without_its_model_id_is_refused() -> None:
         )
 
     assert "hosted" in str(raised.value)
+
+
+def test_a_blank_model_id_does_not_count_as_present() -> None:
+    # spec: db-002 -- found by mutation: the suite passed None and never an
+    # empty string, so a guard reading `is None` survived. An empty model id
+    # satisfies a check for "populated" while naming nothing, which is the
+    # same distinction ai-003's ModelCall already draws one layer up.
+    from app.db.hypotheses import check_reproducibility
+
+    for blank in ("", "   "):
+        with pytest.raises(HypothesisWriteError):
+            check_reproducibility(generator=GeneratorKind.HOSTED, model_id=blank,
+                                  raw_response='{"a": 1}')
+
+
+def test_a_blank_raw_response_does_not_count_as_present() -> None:
+    # spec: db-002, NFR-602 -- the same hole on the other field.
+    from app.db.hypotheses import check_reproducibility
+
+    with pytest.raises(HypothesisWriteError):
+        check_reproducibility(generator=GeneratorKind.LOCAL, model_id="m-2026",
+                              raw_response="   ")
 
 
 def test_a_model_arm_row_without_its_raw_response_is_refused() -> None:

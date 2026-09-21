@@ -895,7 +895,14 @@ def test_the_revision_is_reversible(migrated_database: Engine) -> None:
     # Asserted at head first. Without this the downgrade half passes
     # vacuously against any revision that never added the column.
     assert "scenario_run_id" in columns()
-    command.downgrade(config, "-1")
+    # The revision BEFORE this item's, named rather than counted. This read
+    # `"-1"` until 2026-09-21, which means "one step back from head" and was
+    # only the same thing as "undo 0005" while 0005 happened to be head.
+    # db-002 added 0006 and this test failed, having tested the wrong
+    # revision's reversibility for as long as it took to add one. Same shape
+    # as the corpus filter that selected "any run carrying a base seed":
+    # a relative reference that is correct today and silently wrong tomorrow.
+    command.downgrade(config, "0004_observations_run_index")
     assert "scenario_run_id" not in columns()
     assert "anomaly_type" in columns(), "the downgrade took the original table with it"
     command.upgrade(config, "head")

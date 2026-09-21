@@ -52,17 +52,18 @@ TESTS = "tests/test_db_hypotheses.py"
 M = {
     # --- provenance, in both directions ------------------------------------
     "a model arm may omit its model id": (
-        MODULE, "    if not model_id:", "    if False:"),
+        MODULE, '    if not (model_id or "").strip():', "    if False:"),
     "a model arm may omit its raw response": (
-        MODULE, "    if not raw_response:", "    if False:"),
+        MODULE, '    if not (raw_response or "").strip():', "    if False:"),
     "a template row may name a model": (
         MODULE,
         "        if model_id is not None or raw_response is not None:",
         "        if False:"),
     "the guard checks only the template direction": (
-        MODULE, "    if not model_id:\n", "    if generator is None:\n"),
+        MODULE, '    if not (model_id or "").strip():\n',
+        "    if generator is None:\n"),
     "a blank model id counts as present": (
-        MODULE, "    if not model_id:", "    if model_id is None:"),
+        MODULE, '    if not (model_id or "").strip():', "    if model_id is None:"),
     "the generator is not recorded from the result": (
         MODULE, '"generator": result.generator.value,',
         '"generator": "template",'),
