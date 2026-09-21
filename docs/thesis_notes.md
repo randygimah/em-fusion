@@ -5812,6 +5812,72 @@ note, following the precedent set when the reasoning document was made a precond
 arm: a handoff is overwritten and a specification is not.
 
 
+### A table designed before the thing it stores, and the window in which that is free to fix
+
+The hypotheses table was created in the first migration, deliberately and for a good reason: its own
+docstring records that a column for the model's verbatim response, added late and after an
+evaluation campaign has run, is a campaign that has to be repeated. So the four columns that make a
+result reproducible were placed before anything needed them.
+
+What that revision could not anticipate is the field vocabulary the output schema settled four
+phases later. Comparing the table against it turned up four problems, none of which is visible from
+either artefact alone. Two fields of a hypothesis had no column at all — the summary an analyst reads
+first, and the recommended action, which is the entire purpose of decision support. Three more had
+columns under different names. A flag intended to record whether every claim had been checked
+against the evidence was a plain boolean, and could not express *not yet checked*. And the analyst
+review status accepted arbitrary text while the columns either side of it were both constrained to
+their permitted values.
+
+The decision worth recording is **renaming rather than mapping**. A translation layer between two
+vocabularies is a permanent place for them to drift, and the drift is silent: content stored under
+the wrong field's name complains to nobody and is discovered by reading output that makes no sense.
+The rename was available because the table held zero rows, which it had since creation — and that
+window closes permanently the moment anything is written. The same argument the first migration made
+for placing the reproducibility columns early applies to fixing the rest of the table now.
+
+The third problem is the same typed-absence principle this project has now applied at three separate
+layers. A hypothesis is written before the grounding check examines it, so a two-valued flag forces
+every new row to claim an outcome it does not have, and makes *failed the check* indistinguishable
+from *was never checked*. The column became nullable and the three states became an enumeration in
+code — not a `bool | None`, because that invites `if not passed:`, which is precisely the
+substitution being prevented.
+
+### Two writes that look the same and must behave oppositely
+
+Findings are replaced per run per rule; hypotheses are appended. The asymmetry looks like an
+inconsistency and is not.
+
+A finding is derived. It is a pure function of stored observations and a seed, so regenerating it
+produces the same finding, and keeping the old one beside the new one means every metric counts
+both. Replacement is the only correct behaviour.
+
+A model call is not derived. It consumed money, happened once, and produced one specific response
+that cannot be reproduced by asking again — even at temperature zero, since the serving stack may
+not be deterministic. Two calls are two facts. One bundle legitimately carries a model's hypothesis
+and the mechanical one that replaced it after a grounding failure, and a retry is a second call that
+the run-level budget has to count and the retry rate has to be computed from. Collapsing them would
+destroy the only record of what the campaign actually did.
+
+### A mutation harness that reported a perfect score without running a test
+
+Found while writing the harness for this item, by checking how an existing one invoked the suite.
+Two harnesses ran the containerised test target from the backend directory. That target lives at the
+repository root; from the backend directory the build tool exits with *no rule to make target*,
+which is a non-zero exit, which the harness read as "the tests failed", which it reported as a
+killed mutant. Every mutant would have scored perfect without a single test having run.
+
+Neither harness had a published figure, which is the only reason nothing has to be withdrawn — and
+that is luck rather than process. The generalisable lesson is sharper than the bug: **a harness that
+infers "the tests noticed" from a non-zero exit code cannot distinguish a failed test from a failed
+invocation.** The two are the same signal. The new harness therefore parses the test summary and
+reports a third outcome, inconclusive, when no summary appears at all.
+
+This is the second defect found in the measurement instruments themselves rather than in the code
+they measure, after the bytecode-cache collision that scored two genuinely-killed mutants as
+survivors. Both share a shape worth stating: the instrument was trusted because it produced
+plausible numbers, and plausible numbers are exactly what a broken instrument produces.
+
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;
