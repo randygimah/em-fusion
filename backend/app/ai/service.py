@@ -85,7 +85,18 @@ class GenerationRefused(GenerationError):
     `ai-007` responds with a bounded retry and then the template. Retrying
     *elsewhere* would be wrong here: the request reached a model and the
     model's answer was the problem.
+
+    It may carry **the call it paid for**. An answer that could not be
+    parsed never becomes a `GenerationResult`, so nothing else is left
+    holding the tokens it consumed -- and `ai-009`'s budget exists for a
+    retry loop, which is only visible if the calls that *failed* are
+    counted too. `ProviderUnavailable` deliberately has no such field:
+    nothing was served, so there is nothing to record.
     """
+
+    def __init__(self, *args: object, call: ModelCall | None = None) -> None:
+        super().__init__(*args)
+        self.call = call
 
 
 class ConfigurationError(ValueError):

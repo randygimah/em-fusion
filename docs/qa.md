@@ -6240,6 +6240,81 @@ two reasons: a boundary check holds against a row assembled some other way, and 
 class nobody can repair afterwards. A campaign that ran against a model whose identity was not
 recorded is a campaign that has to be run again.
 
+## 89. Why does a retry need its own spec item, when it is just calling the model again?
+
+**Because the retry is the small half.** The item is really two guarantees that happen to share a
+code path, and the one that carries the risk is not the retry at all.
+
+The visible half: a model is asked to explain an evidence bundle, it answers, and the answer cannot
+be used — it cites a rule the bundle does not contain, or it does not fit the required shape. The
+analyst must see neither that hypothesis nor an error message, so the request is tried again a fixed
+number of times and then the mechanically written explanation is produced instead.
+
+The half that carries the risk: **a mechanical explanation that arrived because the model failed and
+one that arrived because the template was the configured arm look identical on screen.** They must
+not look identical in the data, or every per-arm figure in the evaluation is wrong in the direction
+nobody would think to check. So the fallback and the record of why it fired are one deliverable, and
+the item's named failure case is falling back *without* recording that a fallback occurred.
+
+### The wrong assumption this corrects
+
+It is natural to read "retry, then fall back" as one behaviour with a counter on it. It is two, and
+the project already has a second fallback that also ends with the analyst reading something other
+than the primary arm's output. Those two are easy to merge and must not be:
+
+| | Availability (`ai-006`) | Correctness (`ai-007`) |
+|---|---|---|
+| Fires when | the provider is unreachable, unauthenticated, rate limited, timed out | the provider answered and the answer cannot be used |
+| What was wrong | nothing about the request | the answer |
+| Right response | try the **same request** somewhere else | retry **here** a bounded number of times, then give up |
+| Wrong response | retrying the same place harder | retrying elsewhere, which asks a different model the same failed question |
+
+Merging them is not a style question. Asking a different model the same question that a first model
+answered badly is not a recovery; it is a second guess dressed as one. The two are kept apart by two
+sibling exception types under one base — neither a subclass of the other — so the code that chooses
+between them *can* tell, and by the correctness fallback catching exactly one of them and being blind
+to the other.
+
+### Why the retry may not do anything
+
+The campaign fixes temperature 0 and a seed so the results are reproducible. A retry sends the
+identical request. If the provider is genuinely deterministic, the identical request returns the
+identical answer, which fails the identical check — so the retry is a second payment for the same
+refusal and buys nothing.
+
+Whether that is true of a given provider is not knowable from the documentation. Serving stacks batch
+requests together, and floating-point addition is not associative, so the same prompt can produce
+different numbers depending on what else was in the batch — the same class of problem that moved a
+cluster centroid by 0.9 nanometres in §64 and broke a determinism requirement. There is already a
+measurement planned that answers it, for an unrelated reason, and it settles this too.
+
+So the ceiling is **2 attempts for now, chosen rather than measured**, and labelled that way in the
+code. The reasoning is asymmetric rather than confident: guessing too high costs about twenty extra
+calls out of a 200-call budget, and guessing too low throws away a hypothesis the model might have
+got right on a second try and understates the model arm in a comparison that cannot be re-run.
+
+### Two ways to fail, and only one of them leaves a trace
+
+Worth recording as a limitation, because it is invisible unless stated.
+
+| | It cited something absent | It did not parse at all |
+|---|---|---|
+| Rows written to the database | one, with its grounding marked failed, beside the template that replaced it | **none** |
+| What is left | the hypothesis itself, permanently | a log line and a counted call |
+
+A hypothesis that cites a rule the bundle does not carry is still a hypothesis — it can be stored,
+read, and shown to a supervisor as an example of the failure mode the grounding check exists to catch.
+A response that never parsed is not. Nothing reaches the database, so the log is the whole record,
+which is why the two are logged as separate categories rather than counted together as "retries".
+
+The second case should also be *rare to the point of alarming*: the hosted arm uses the provider's
+own schema-constrained decoding, so a malformed answer means the provider broke a guarantee it
+advertises. Counting it alongside ordinary grounding failures would hide exactly the event most worth
+noticing.
+
+See `docs/thesis_notes.md` for why the ceiling has no default, and §87 for the interface both
+fallbacks are built on.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |

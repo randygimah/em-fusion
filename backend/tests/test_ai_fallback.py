@@ -68,8 +68,8 @@ import pytest
 from app.ai.fallback import (
     CorrectnessFallback,
     FallbackOutcome,
-    RefusalCategory,
     Refusal,
+    RefusalCategory,
 )
 from app.ai.providers.template import TemplateGenerator
 from app.ai.service import (
@@ -528,6 +528,32 @@ def test_an_unrelated_exception_passes_straight_through():
     assert arm.calls == 1
 
 
+def test_a_broken_grounding_check_is_not_recorded_as_an_ungrounded_model():
+    # spec: ai-007, ai-008 -- the check is a piece of software that can have
+    # bugs, and its catch clause sits exactly where one would be swallowed.
+    # Recorded as ungrounded, a defect in ai-008 inflates the per-arm
+    # ungrounded rate -- which is a REPORTED evaluation result, not a safety
+    # net -- and the model is blamed for the checker's fault.
+    check = _ScriptedCheck(TypeError("the check itself is broken"))
+
+    with pytest.raises(TypeError):
+        a_fallback(
+            _ScriptedArm(model_result(), model_result()), check=check
+        ).generate_recorded(fault_bundle())
+
+
+def test_a_broken_grounding_check_is_not_retried_either():
+    # spec: ai-007, ai-008 -- and it consumes no second call. Retrying a
+    # broken checker spends money to reach the same exception.
+    arm = _ScriptedArm(model_result(), model_result())
+    check = _ScriptedCheck(RuntimeError("boom"), RuntimeError("boom"))
+
+    with pytest.raises(RuntimeError):
+        a_fallback(arm, check=check, max_attempts=2).generate_recorded(fault_bundle())
+
+    assert arm.calls == 1
+
+
 def test_a_template_that_refuses_carries_the_models_refusal_as_its_cause():
     # spec: ai-007, ai-002 -- the template is what both fallbacks fall back
     # TO, so its own refusal has nowhere to go and must surface. It must
@@ -645,9 +671,22 @@ def test_the_records_are_frozen():
 def test_the_trail_is_a_tuple_rather_than_the_list_it_was_built_from():
     # spec: ai-007 -- a caller appending to the record of what happened
     # would be writing history, and a list invites exactly that.
-    arm = _ScriptedArm(GenerationRefused("no"))
+    #
+    # Built from a LIST on purpose. Every call site inside the module
+    # already passes a tuple, so a version asserting only on the returned
+    # outcome tested nothing: the coercion could be deleted and the suite
+    # stayed green.
+    refusal = Refusal(
+        attempt=1,
+        category=RefusalCategory.MALFORMED,
+        reason="no",
+        result=None,
+        refused_call=None,
+    )
 
-    outcome = a_fallback(arm, max_attempts=1).generate_recorded(fault_bundle())
+    outcome = FallbackOutcome(
+        result=model_result(), refusals=[refusal], fell_back=True
+    )
 
     assert isinstance(outcome.refusals, tuple)
 
@@ -659,11 +698,17 @@ def test_each_refusal_is_logged_with_its_category(caplog):
     # spec: ai-007 -- "the fallback reason logged". The malformed category
     # is the one this matters most for: it leaves no row, so the log line is
     # its only record.
-    arm = _ScriptedArm(GenerationRefused("truncated JSON"))
+    #
+    # The retry SUCCEEDS deliberately, so no fallback summary is emitted. A
+    # mutation pass caught the first version of this test passing with the
+    # per-refusal log deleted: the summary line names the same category and
+    # the same reason, so it satisfied both assertions on its own.
+    arm = _ScriptedArm(GenerationRefused("truncated JSON"), model_result())
 
     with caplog.at_level(logging.WARNING, logger="app.ai.fallback"):
-        a_fallback(arm, max_attempts=1).generate_recorded(fault_bundle())
+        outcome = a_fallback(arm, max_attempts=2).generate_recorded(fault_bundle())
 
+    assert outcome.fell_back is False
     logged = " ".join(record.getMessage() for record in caplog.records)
     assert "malformed" in logged
     assert "truncated JSON" in logged

@@ -5878,6 +5878,135 @@ survivors. Both share a shape worth stating: the instrument was trusted because 
 plausible numbers, and plausible numbers are exactly what a broken instrument produces.
 
 
+### A retry that cannot work, and the measurement already scheduled to prove it
+
+`ai-007` says that a model response failing validation or the grounding check is retried a bounded
+number of times before the template replaces it. The bound is the part the item argues for, and the
+argument is sound: a retry loop, not the campaign, is the realistic route to an unexpected bill. What
+the item does not say is whether a retry can succeed at all.
+
+It cannot, if the provider is deterministic. The Phase 8.5 gate fixes **temperature 0 with a fixed
+seed** for exactly the reason a pre-registered comparison needs — an arm whose parameters moved
+mid-campaign is not an arm. A retry sends the *identical* request. A deterministic serving stack
+returns the identical answer, which fails the identical check. The retry is then a second payment for
+the same refusal, and the ceiling's only effect is to multiply the cost of a failure by N.
+
+Three responses were available and two are worse than they look. Widening the port so a retry can
+carry the refusal back to the model — "you cited a rule this bundle does not contain" — makes the
+retried generation run under a *different prompt* from the scored one, which raises the question of
+which of the two is the campaign's result and answers it badly whichever way it is answered. Removing
+the retry entirely is defensible but forecloses a question that has not been asked yet. What was
+chosen instead was to keep the mechanism, make the ceiling an argument the caller must supply, and
+record that its value is **contingent on a measurement already in the plan**.
+
+That measurement is §8's non-scored probe. It exists for an unrelated reason — N generations per
+bundle contradicted temperature 0, and the coherent version of that measurement turned out to be
+"is this provider actually deterministic at temperature 0?" rather than "how much does it vary?".
+Many providers are not, because of batching and floating-point non-associativity in the serving
+stack, which is the same class of problem this project has hit three times in its own results. The
+probe was written as a threat-to-reproducibility check. It is also, without modification, the thing
+that says whether `ai-007`'s retry is a mechanism or a tax.
+
+So the recommended ceiling is **2 attempts, chosen and not measured** — the only figure in the module
+with no corpus behind it, and labelled as such at the constant. The choice is defensible in the
+interim because the arithmetic is asymmetric rather than because the value is right: being wrong
+upwards costs at most about twenty extra calls against a 200-call run budget, while being wrong
+downwards throws a recoverable hypothesis to the template and understates the model arm in a
+comparison that cannot be re-run. The ceiling itself carries **no default**, on the same rule as
+`GenerationConfig.model_id` — a retry count is a spending decision, and one made by omission is one
+nobody chose.
+
+*(Record here what the determinism probe returns, and whether the ceiling moved to 1 as a result.)*
+
+### Two records of the same failure, one of which leaves no row
+
+The phase 9 document found that `ai-007`'s two triggers are not two triggers for a schema-constrained
+arm: `ai-004` uses the provider's native constrained decoding, so schema conformance is a
+generation-time guarantee and a validation failure cannot happen in the ordinary course. If one
+happens anyway, the provider broke its own constraint, which is a different and much more alarming
+event than a model citing a rule that is not there. The amendment owed was that it be logged
+distinctly rather than folded into a retry count.
+
+Building it showed a second, sharper reason, which is about what survives rather than about alarm.
+The two categories leave records of **different strength**.
+
+| | Ungrounded | Malformed |
+|---|---|---|
+| What happened | it parsed, then cited something absent | nothing parsed |
+| What survives | a full hypothesis, stored with grounding FAILED | a log line and a counted call |
+| Rows in the database | one, beside the template that replaced it | **none** |
+
+The ungrounded case is why `db-002` appends and never replaces: one bundle legitimately carries a
+model hypothesis and the template that superseded it, and the pair *is* the record of what happened.
+The malformed case has no such pair. Nothing became a hypothesis, so there is nothing for the write
+path to take, and the only evidence that a model was asked and answered badly is whatever this layer
+chose to keep. That makes the log line and the attempt trail load-bearing rather than diagnostic, and
+it is a second argument for the amendment that has nothing to do with how alarming the event is.
+
+The categories are distinguished **by origin rather than by a flag**: a refusal raised by the
+generator is malformed, a refusal raised by the injected grounding check is ungrounded. Neither
+`ai-004` nor `ai-008` has to know a shared enum exists, and — more to the point — neither can forget
+to set it. A flag is a thing an adapter author omits under deadline; the position in the call stack
+is not.
+
+### Building one fallback against an interface that had already named the other
+
+`ai-006` and `ai-007` end at the same destination for opposite reasons, which the phase 9 document
+identified in advance as the distinction most likely to be collapsed by accident. `ai-003` responded
+by making it *expressible*: `ProviderUnavailable` and `GenerationRefused` are siblings under one base,
+neither a subclass of the other. What building `ai-007` added is that the distinction is now
+*observed* — the correctness fallback catches one and is blind to the other, and the suite proves
+this by scripting the answer a wrongly-retried arm would give, so an implementation that widened its
+`except` clause to the shared parent returns a hypothesis where the test demands a raise.
+
+That is a small illustration of a claim this project has now made three times and should make in the
+write-up once: a distinction recorded in prose is a distinction that survives until the next person
+writes an `except` clause, and a distinction recorded in the type system is one that has to be
+deliberately removed. The same argument produced `evb-001`'s typed absences, `db-002`'s three-valued
+grounding state, and here the pair of sibling exceptions. In each case the alternative — a comment, a
+nullable boolean, one exception type — would pass every ordinary test and fail at the one moment the
+distinction mattered.
+
+The fallback is a **decorator over the port** rather than a branch inside each arm, which is what
+keeps the two paths separate in code as well as in the write-up. `ai-004` and `ai-005` never learn
+that retry exists. The grounding check and the replacement generator are both injected, following the
+pattern `api-006`'s batch launcher and `ai-003`'s provider registry already established; importing
+`ai-002` here would have made the correctness fallback a special case carved beside the port instead
+of the port's own shape, and the suite could then never have driven it with anything else.
+
+### A survivor that was not a weak test but a hidden defect
+
+The mutation pass over `ai-007` killed 29 of 32 on its first run. Two of the three survivors were
+the ordinary kind — a test whose name promised more than it checked. The third was not, and it is
+worth separating because the distinction matters to how much weight a mutation score can carry.
+
+The mutant widened the `except` clause around the **injected grounding check** from
+`GenerationRefused` to `Exception`. It survived because nothing in the suite had ever made the check
+raise anything else. Every test handed it either a refusal or a pass, which is what one writes when
+one is thinking about the check's *verdicts*.
+
+The consequence is not a missing test. It is that a defect *inside `ai-008`* — a `TypeError`, an
+attribute error, any ordinary bug — would have been caught by the fallback and recorded as the
+category `UNGROUNDED`. The model would then be blamed for the checker's fault, and the per-arm
+ungrounded rate would rise. That rate is not a safety net whose false positives cost nothing; `ai-008`
+states explicitly that the catch rate per arm is **a reportable evaluation result**. A checker with a
+bug would produce a *finding* about model reliability, and the finding would be about the checker.
+
+The behaviour was already correct — the implementation only ever caught `GenerationRefused`. What
+was missing was any reason it had to stay that way. A property nothing asserts is a property that
+changes the next time somebody widens a clause to make a traceback go away, and this is the third
+time on this project that a mutation pass has found a correct behaviour resting on nothing:
+`evb-002`'s two refusals asserted with a pattern any failure message satisfied, `ai-003`'s frozen
+parameters asserted on the wrapper and not the mapping, and now this.
+
+What separates this one from those is where the damage lands. The earlier two would have produced a
+wrong *answer*. This one would have produced a wrong *measurement of how often the answers are
+wrong* — a defect in the instrument rather than in the thing measured, which is the second time
+Phase 9 has turned one up, after the two mutation harnesses that reported a perfect score without
+running a test. Both share a shape worth naming in the write-up: **the instrument was trusted
+because its output was plausible**, and nothing downstream of a plausible number asks where it came
+from.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;

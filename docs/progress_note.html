@@ -5739,6 +5739,181 @@ second pass   <b>5.060000171975998</b></div>
   </section>
 
   <section>
+    <h2>Two things that only matter because a model is about to be asked</h2>
+    <p class="lede">
+      An explanation can now be written for every package, mechanically, with no model involved. The
+      next thing built was not the model. It was the pair of things that are worthless until there
+      <em>is</em> one, and expensive to add once there has been: somewhere to keep what a model says,
+      and a decision about what a person sees when what it says cannot be used.
+    </p>
+
+    <h3>The table was built too early, and this was the last free moment to fix it</h3>
+    <p>
+      Explanations had a place to live from the very first version of the store — written months
+      before anybody knew what an explanation would contain. Three of its fields turned out to have
+      the wrong names, and two of the seven did not exist at all. An explanation could be produced
+      and read; it could not be kept.
+    </p>
+    <p>
+      The tempting fix is a translation layer: keep the old names in the store, convert on the way in
+      and out. That is a permanent place for two vocabularies to drift apart quietly, and it makes
+      every later reader learn both. The names were changed instead — which was possible only because
+      <b>the table still held nothing</b>. Renaming a column with rows in it is a migration with risk;
+      renaming an empty one is a rename. That window closes the first time a model answers, and the
+      first version of the store carries a comment saying exactly this about a related field: a column
+      added after a study has run is a study that has to be run again.
+    </p>
+
+    <div class="panel panel--warn">
+      <p class="lede">
+        <b>Explanations are added and never replaced — the opposite of how findings are kept.</b>
+      </p>
+      <p>
+        A finding is a conclusion a rule drew from stored readings. Delete it and re-run the rule and
+        you get it back exactly, so the store keeps one current set per rule per hour and overwrites.
+        A model's answer is not like that. It cost money, it was said once, and asking again produces
+        a different thing rather than the same thing. Two answers are two facts.
+      </p>
+      <p>
+        That is not a philosophical point. One package will legitimately carry <em>both</em> a model's
+        explanation and the mechanical one that replaced it after the model's failed a check, and the
+        pair is the record of what happened. Overwriting would keep the replacement and destroy the
+        evidence of why there was one.
+      </p>
+    </div>
+
+    <h3>Checked has three answers, not two</h3>
+    <p>
+      An explanation is stored before anything examines whether its claims hold up. So the field
+      recording that examination has to distinguish <em>passed</em>, <em>failed</em>, and
+      <em>nobody has looked yet</em> — and a plain yes/no makes the last two identical. The same
+      mistake, in the same shape, that the evidence packages already had to avoid twice. It is written
+      so that no future code can treat "not checked" as "not passed" by accident.
+    </p>
+    <p>
+      Two further refusals run in opposite directions, and both are deliberately a <em>second</em>
+      line of defence rather than the first. An explanation claiming to come from a model, but
+      carrying neither the model's name nor its exact words, is refused. So is a mechanical one that
+      names a model, since no model ran and that name would be written into the columns the study's
+      reproducibility rests on. Both are already impossible one layer up. They are kept because this
+      is the one kind of failure nobody can repair afterwards: a study run against a model whose
+      identity was never recorded is a study to run again.
+    </p>
+
+    <h3>What a person sees when the answer cannot be used</h3>
+    <p>
+      There are two ways a model's answer fails here, and only one of them is the obvious one. It can
+      cite a rule or a reading that is not in the package it was given — which is the failure the
+      whole project exists to catch. Or it can fail to fit the required shape at all.
+    </p>
+    <p>
+      Either way, the analyst must see neither that answer nor an error message. So the request is
+      made again a <b>fixed</b> number of times, and if it still cannot be used, the mechanical
+      account is produced instead. The ceiling is not politeness. A loop that retries without a limit
+      is the realistic way this project spends money it did not mean to — far more likely than the
+      study itself, which costs pennies.
+    </p>
+
+    <div class="panel panel--warn">
+      <p class="lede">
+        <b>Two different failures end in the same place, and merging them would be a real mistake.</b>
+      </p>
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr><th>&nbsp;</th><th>The service is unreachable</th><th>The service answered badly</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="key">What was wrong</td><td class="why">nothing about the question</td><td class="why">the answer</td></tr>
+            <tr><td class="key">Right response</td><td class="why">ask the <em>same</em> question somewhere else</td><td class="why">ask again <em>here</em>, a fixed number of times, then stop</td></tr>
+            <tr><td class="key">Wrong response</td><td class="why">asking the same place harder</td><td class="why">asking a different service the same failed question</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Both end with the analyst reading something other than the first service's answer, which is
+        exactly what makes them easy to treat as one. They are not. Asking a second model a question
+        the first answered badly is not a recovery; it is a second guess wearing a recovery's
+        clothes. The two are held apart by the type system rather than by discipline, and the tests
+        prove the separation is <em>observed</em> rather than merely intended.
+      </p>
+    </div>
+
+    <h3>The retry may do nothing at all, and there is already a measurement that will say</h3>
+    <p>
+      The study fixes the model's settings so that the same question always produces the same answer —
+      that is what makes a result reproducible, and it is not negotiable. But a retry asks the
+      <em>identical</em> question. If the service really is that predictable, the identical question
+      returns the identical answer, which fails the identical check. <b>The retry is then a second
+      payment for the same refusal</b>, and the limit's only effect is to multiply the cost of a
+      failure.
+    </p>
+    <p>
+      Whether a given service behaves that predictably is not something its documentation can tell
+      you. These services process many requests together, and adding the same numbers in a different
+      order gives very slightly different results — the same effect that moved a measured centre by
+      less than a billionth of a metre earlier in this project and broke a reproducibility rule.
+      There is already a small measurement planned, for an unrelated reason, whose question is exactly
+      <em>is this service actually as predictable as it claims?</em> Without changing a line, it also
+      answers whether this retry is a mechanism or a tax.
+    </p>
+    <p>
+      So the limit is <b>two attempts for now, chosen rather than measured</b> — the only figure in
+      this part of the system with no measurement behind it, and labelled that way where it is
+      written. The reasoning is lopsided rather than confident. Guessing too high costs about twenty
+      extra requests out of a budget of two hundred. Guessing too low throws away an answer a model
+      might have got right on a second attempt, and understates the model in a comparison that cannot
+      be run again.
+    </p>
+
+    <h3>One of the two failures leaves no trace, and that decided how both are recorded</h3>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>&nbsp;</th><th>It cited something absent</th><th>It did not fit the shape</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="key">Did it produce an explanation?</td><td class="why">yes — it was well formed, its claims were wrong</td><td class="why">no</td></tr>
+          <tr><td class="key">What is kept in the store</td><td class="why">the explanation itself, marked as having failed its check, beside the mechanical one that replaced it</td><td class="why"><b>nothing</b></td></tr>
+          <tr><td class="key">What is left</td><td class="why">a permanent example of the failure the checking exists to catch</td><td class="why">a line in a log, and a request counted against the budget</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      The second column is also the one that should be <em>alarming</em>. A hosted model is
+      constrained so that it physically cannot produce the wrong shape, so a malformed answer means
+      the service broke a guarantee it advertises. Counting that alongside ordinary wrong-citation
+      failures, as one number called "retries", would bury the single event most worth noticing under
+      the one that is expected. They are recorded as separate kinds — and separated by <em>where</em>
+      the refusal came from rather than by a label somebody has to remember to attach.
+    </p>
+
+    <div class="panel panel--warn">
+      <p class="lede">
+        <b>The sabotage pass found three tests that were not testing what their names said — and one
+        of them was hiding something worse than a weak test.</b>
+      </p>
+      <p>
+        Thirty-two deliberate faults were introduced one at a time to see whether the tests noticed.
+        Twenty-nine were caught first time; after the three gaps below were closed, all thirty-two
+        were. One of the three was a test that checked each rejected answer is written to the log:
+        it passed with that logging deleted, because a <em>separate</em> summary line happened to
+        mention the same two words. It was rewritten around a case where no summary line is
+        produced.
+      </p>
+      <p>
+        The third is the one that matters. Nothing had ever asked what happens if
+        <b>the checking software itself has a bug</b>. As written, a crash inside the checker would
+        have been caught and filed as "the model cited something that is not there" — so a defect in
+        the checker would inflate the reported rate at which models make things up, and the model
+        would be blamed for the checker's fault. That rate is a headline result of this project, not
+        a safety net. The behaviour was already correct; nothing proved it, which means nothing would
+        have noticed it changing.
+      </p>
+    </div>
+  </section>
+
+  <section>
     <h2>The rules the build follows</h2>
     <ul class="rules">
       <li><b>Nothing is written before it is specified and proven to fail.</b> Every capability gets a
@@ -5767,15 +5942,15 @@ second pass   <b>5.060000171975998</b></div>
 
     <div class="outcomes">
       <div class="outcome">
-        <h3>1,091</h3>
+        <h3>1,241</h3>
         <p>Tests passing in containers against a real database, from a database that was deleted first to prove nothing was left over.</p>
       </div>
       <div class="outcome">
-        <h3>99.83%</h3>
+        <h3>99.85%</h3>
         <p>Of the back-end code is exercised by those tests. The screens measure nothing of the kind — see below.</p>
       </div>
       <div class="outcome">
-        <h3>50 / 99</h3>
+        <h3>53 / 99</h3>
         <p>Numbered capabilities finished. The rest are specified and waiting, not vague.</p>
       </div>
     </div>
@@ -5901,17 +6076,17 @@ second pass   <b>5.060000171975998</b></div>
         <tbody>
           <tr><td class="key">Data Abstraction Layer</td><td class="n">4</td><td class="n">4</td><td class="why">Complete</td></tr>
           <tr><td class="key">Sources and adapters</td><td class="n">7</td><td class="n">8</td><td class="why">Real air traffic in and replayable on command; the tracks unsafe to stage an incident on are listed; invented radio readings now reach the store through the same front door; the third source to come</td></tr>
-          <tr><td class="key">Database</td><td class="n">9</td><td class="n">10</td><td class="why">Connected, shaped, written to, read back, and fenced off from everything but the one component allowed to touch it — and it now answers the two geographic questions it was chosen for, which is the first work that could not have been done with ordinary storage. It had also never been told to organise itself around which run a record belongs to, so every measurement was reading all twenty million records from the beginning; that is now fixed</td></tr>
+          <tr><td class="key">Database</td><td class="n">10</td><td class="n">10</td><td class="why">Connected, shaped, written to, read back, and fenced off from everything but the one component allowed to touch it — and it now answers the two geographic questions it was chosen for, which is the first work that could not have been done with ordinary storage. It had also never been told to organise itself around which run a record belongs to, so every measurement was reading all twenty million records from the beginning; that is now fixed. <b>Complete.</b> The table an explanation lives in was built before anybody knew what an explanation contained, and has now been brought up to it — three fields renamed rather than translated, two that did not exist added, and the record of whether a claim was checked given a third state so that <em>failed</em> and <em>nobody looked yet</em> stop being the same value</td></tr>
           <tr><td class="key">Running and tooling</td><td class="n">2</td><td class="n">4</td><td class="why">Containers and commands done, and every measurement now runs through a named command rather than a hand-written one — which is how the hours came to be destroyed. The store is now fenced against the test suite by construction rather than by everyone remembering. No continuous integration</td></tr>
           <tr><td class="key">API</td><td class="n">5</td><td class="n">11</td><td class="why">A health check, the picture and the dashboard reading it, plus the two scenario endpoints and the screen reading those — a batch now starts from a button</td></tr>
           <tr><td class="key">Screens and map</td><td class="n">2</td><td class="n">16</td><td class="why">Three ways in, two of which lead to a screen; both read the real store, and the rail collapses to give the workspace its width back</td></tr>
           <tr><td class="key">Scenario generator</td><td class="n">8</td><td class="n">8</td><td class="why">Complete. Receiver positions fixed, an invented hour reproducible from one number, all five kinds of run staging what they should, twenty produced unattended from a single number by one command, the screen that will drive it, disruptions staged only on aircraft that are actually flying, a floor of five affected aircraft per hour so that no hour is unscoreable, and every hour now recording the number it was generated from so a batch can be reproduced rather than remembered</td></tr>
           <tr><td class="key">Anomaly detection</td><td class="n">9</td><td class="n">14</td><td class="why">What normal looks like, and a rule for each side of the picture — the radio and the aircraft. Findings are kept and grouped, and the evidence the final rules read has been settled: grouping alone could not separate a staged hour from a quiet one, so it was replaced by a local rate comparison — measured first, and chosen over turning up the scenario settings. The three answers the system may give are one decision asked in a fixed order; the order itself is now built and enforced, and two of the three tests with it. Marked against the answer key over three hundred regenerated hours: every one of the five kinds of hour decided correctly sixty times out of sixty, no event anywhere given two answers, and — since a blip lasting one reading stopped counting as an event — no false report anywhere at all. The third test, ruled out last time, is worth attempting again</td></tr>
           <tr><td class="key">Evidence bundles</td><td class="n">2</td><td class="n">2</td><td class="why">Complete. One event becomes one package, with the frequency dimension joined up here because nothing upstream joins it, and with every absence labelled by which of the three kinds it is rather than left as silence. Every statement's citations are then resolved against the store before the package is allowed to exist — which found that one citation in eleven had been pointing at a reconstructed instant rather than a stored reading, in a field that had been written and never read since the findings were first kept</td></tr>
-          <tr><td class="key">AI hypothesis layer</td><td class="n">2</td><td class="n">10</td><td class="why">The shape every explanation must take, and the first thing that produces one. The shape is a constraint on what a model is allowed to emit rather than a description of what it did, so each guarantee is checked on the translated version a model is actually handed as well as on the original. The producer built first has no model in it: it is both the fallback for when a model's answer cannot be trusted and the yardstick the models are measured against. Run over all forty-one real packages it produced forty-one explanations, refused none, and every one of its one hundred and sixty-four citations was found in the package it came from. The two model arms and the two gates are next</td></tr>
+          <tr><td class="key">AI hypothesis layer</td><td class="n">4</td><td class="n">10</td><td class="why">The shape every explanation must take, and the first thing that produces one. The shape is a constraint on what a model is allowed to emit rather than a description of what it did, so each guarantee is checked on the translated version a model is actually handed as well as on the original. The producer built first has no model in it: it is both the fallback for when a model's answer cannot be trusted and the yardstick the models are measured against. Run over all forty-one real packages it produced forty-one explanations, refused none, and every one of its one hundred and sixty-four citations was found in the package it came from. Since then, the seam a model plugs into — defined before either model exists, so neither one's peculiarities leak into it — and the decision about what a person sees when a model's answer cannot be used: ask again a fixed number of times, then fall back to the mechanical account, and keep a record of why. The two model arms and the automatic checking are next</td></tr>
           <tr><td class="key">Hypothesis screen and feedback</td><td class="n">0</td><td class="n">6</td><td class="why">Specified, unbuilt</td></tr>
           <tr><td class="key">Evaluation</td><td class="n">0</td><td class="n">6</td><td class="why">Scoring instrument written and locked; harness unbuilt</td></tr>
-          <tr class="total"><td class="key">Total</td><td class="n">50</td><td class="n">99</td><td class="why">&nbsp;</td></tr>
+          <tr class="total"><td class="key">Total</td><td class="n">53</td><td class="n">99</td><td class="why">&nbsp;</td></tr>
         </tbody>
       </table>
     </div>
@@ -5945,13 +6120,17 @@ second pass   <b>5.060000171975998</b></div>
           never been scored is the half the project is actually about: the quality of a written
           explanation, which needs a hypothesis layer to produce one and a second marker to judge
           it. The instrument for that is written and locked; nothing has been put through it.</li>
-        <li><b>Nothing is explained yet, in the sense a person would mean.</b> The system can now
-          say <em>this is a broken receiver rather than interference, here is what that rests on, and
-          here is what could not be measured</em> — as a structured package, not as prose. Turning
-          that into an account somebody would read, and checking the account line by line against the
-          package it came from, is the whole of what remains.</li>
-        <li><b>No hypothesis has ever been generated.</b> The AI layer, its two validation gates, and
-          the deterministic template it will be compared against are all still ahead.</li>
+        <li><b>Nothing a model wrote has ever been read.</b> Every package now gets an account in
+          prose — a title, a confidence, what it rests on, what speaks against it, what else it could
+          be, and what to ask a person to do. But it is written by a fixed set of rules, and the
+          rules can only choose between the explanations they were built to tell apart. Whether a
+          model can do better on the same package is the question the whole project exists to ask,
+          and it has not been asked once.</li>
+        <li><b>The automatic checking of a model's claims is specified and unbuilt.</b> It is the
+          load-bearing safeguard: constraining a model's output guarantees the <em>shape</em> of an
+          explanation and says nothing about whether the things it cites exist. The machinery around
+          it is finished — there is a place for it to plug in, and a decision about what happens when
+          it says no — but the check itself does not exist yet.</li>
         <li><b>One of the three screens does not exist</b>, and the picture is thinner than it
           looks — live, but sparse by necessity, because with no detector most of what it is designed
           to display has nothing behind it. The scenario screen is now wired end to end, with two
@@ -5964,15 +6143,20 @@ second pass   <b>5.060000171975998</b></div>
           proper record of its own. A replay has no incident and no starting number to record, so it
           still opens a run labelled plainly as a replay — which has turned from a stopgap into a
           useful thing, since it is what tells replayed rows from generated ones at a glance.</li>
-        <li><b>No model has been asked anything yet.</b> An explanation now gets written for every
-          package, but by a fixed set of rules rather than by a model. Nothing in the project has
-          made a request to an AI service, no key exists, and the two checks that stand between a
-          model's answer and an analyst — does it fit the required shape, and does every claim in it
-          point at something in the package — are specified and unbuilt. The part that makes this
-          research rather than reporting is the next thing built, and none of it is claimed yet.</li>
-        <li><b>An explanation cannot be saved.</b> The table it belongs in was designed before the
-          explanation had a settled shape, and is missing two of its fields. Every explanation so far
-          has been produced, read and discarded.</li>
+        <li><b>No model has been asked anything yet.</b> Nothing in the project has made a request
+          to an AI service and no key exists. What has changed is that the machinery around the
+          absent model is now finished rather than sketched: a seam it plugs into, somewhere for its
+          answer to be kept with the model's name and exact words beside it, and a decision about
+          what a person sees when the answer cannot be used. The part that makes this research rather
+          than reporting is the next thing built, and none of it is claimed yet.</li>
+        <li><b>An explanation can now be saved, and none has been.</b> The table is fixed and the
+          writing is tested; nothing has yet run the mechanical account across the packages and kept
+          the results. That is a deliberate ordering rather than an omission — the first thing worth
+          storing is a comparison, and there is nothing to compare against yet.</li>
+        <li><b>The spending guard is not built.</b> The limit on retrying a single package exists;
+          the limit on what a whole run may spend, and the counting of what each request cost, do
+          not. Both are owed before the first real request rather than after the first surprise, and
+          they are the next thing built.</li>
         <li><b>Nothing enforces quality on push.</b> The checks all exist as commands; until they run
           automatically, a green result is evidence about one machine at one moment.</li>
       </ul>
@@ -6023,17 +6207,19 @@ second pass   <b>5.060000171975998</b></div>
         <div class="tier__what">
           <b>The part the project is actually about</b> — an explanation proposed by a model,
           checked line by line against the package it was given, and put in front of a person who
-          decides. Two of the three pieces are now in place: the shape every explanation takes, and
-          a producer that writes one mechanically from a package. What is missing is the model
-          itself, and the two gates between it and an analyst. The loose end this page previously
-          listed as owed first — two different kinds of statement sharing one rule name, so a
-          citation naming that rule was ambiguous between them — is closed: a citation now names the
-          rule and the kind of finding together.
+          decides. Everything around the model is now in place: the shape every explanation takes,
+          a producer that writes one mechanically, the seam a model plugs into, somewhere to keep
+          what it says, and the decision about what a person sees when its answer cannot be used.
+          Both loose ends this page previously listed as owed first are closed.
           <br><br>
-          The next piece is the seam the model plugs into, defined <em>before</em> either model is
-          written so that neither one's peculiarities leak into it. One thing has to be fixed on the
-          way: the table an explanation will be stored in was designed before the explanation had a
-          settled shape, and is missing two of its fields.
+          One thing comes before the first real request rather than after it: <b>a limit on what a
+          single run may spend, and a count of what each request cost.</b> The per-package retry
+          limit is built; the run-level one is not. Then the hosted model itself — and the
+          instructions given to it are written and reviewed <em>first</em>, because they are the
+          largest thing in this comparison that nobody has pinned down, and a study whose arms were
+          asked differently is not a comparison. Then the automatic checking of what it says, which
+          is unusually cheap to validate: the mechanical account is an input whose right answer is
+          known in advance, so anything the checker objects to there is a fault in the checker.
         </div>
       </div>
       <div class="tier">
@@ -6081,7 +6267,7 @@ second pass   <b>5.060000171975998</b></div>
     </div>
     <div>
       EM Fusion · a human-in-the-loop AI prototype for explainable electromagnetic situational
-      awareness · progress note, 18 September 2026
+      awareness · progress note, 21 September 2026
     </div>
   </footer>
 
