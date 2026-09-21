@@ -1,0 +1,102 @@
+DEVELOPMENT BATCH -- base seed 695081452, 60 runs over three types. Generated to develop the AI layer against real bundles after the corpus was lost. NOT a corpus: no thesis figure may be measured from it. See DEV_BATCH_PLAN.md.
+
+==============================================================================
+WHAT ONE BUNDLE COSTS TO SEND
+==============================================================================
+  bundles measured: 41
+  characters   min 2,556  median 6,668  max 22,540
+  ~tokens      min 639  median 1,667  max 5,635   (at 4 chars/token, ESTIMATE)
+
+    possible_interference_zone       n=20  median 18,435 chars
+    possible_sensor_fault            n=21  median 5,802 chars
+
+  The largest bundle carries 34 evidence items; the smallest 4.
+
+  WHAT A CAMPAIGN WOULD SEND (input only; output is extra)
+    20 bundles x 1 generation(s) x 1 arm  ~= 33,340 input tokens
+    20 bundles x 3 generation(s) x 1 arm  ~= 100,020 input tokens
+    41 bundles x 1 generation(s) x 1 arm  ~= 68,347 input tokens
+    41 bundles x 3 generation(s) x 1 arm  ~= 205,041 input tokens
+  Two model arms double it. Retries add on top, which is the point of a
+  call budget rather than a spend estimate.
+
+==============================================================================
+WHAT IS ACTUALLY IN ONE -- every field name, so NFR-405 is a list
+==============================================================================
+  affected_area                                  x41
+  affected_area.lat                              x41
+  affected_area.lon                              x41
+  affected_channels                              x41
+  anomaly_type                                   x41
+  evidence                                       x41
+  evidence[].data_mode                           x679
+  evidence[].details                             x679
+  evidence[].details.adjacent_abnormal           x21
+  evidence[].details.adjacent_checked            x21
+  evidence[].details.channels                    x21
+  evidence[].details.confidence                  x41
+  evidence[].details.corroboration               x20
+  evidence[].details.db                          x31
+  evidence[].details.duration_s                  x248
+  evidence[].details.during                      x20
+  evidence[].details.metric                      x318
+  evidence[].details.nominal_within_db           x31
+  evidence[].details.outside                     x20
+  evidence[].details.peak_deviation              x318
+  evidence[].details.radius_km                   x51
+  evidence[].details.ratio                       x20
+  evidence[].details.sensors                     x20
+  evidence[].details.severity                    x318
+  evidence[].details.shape                       x248
+  evidence[].ended_at                            x679
+  evidence[].finding                             x679
+  evidence[].finding_type                        x679
+  evidence[].grounding                           x679
+  evidence[].refs                                x679
+  evidence[].refs[].aircraft_id                  x496
+  evidence[].refs[].at                           x496
+  evidence[].refs[].channel_index                x1553
+  evidence[].refs[].sensor_id                    x1553
+  evidence[].refs[].timestamp                    x1553
+  evidence[].rule_id                             x679
+  evidence[].source                              x679
+  evidence[].started_at                          x679
+  known_uncertainties                            x41
+  known_uncertainties[].kind                     x120
+  known_uncertainties[].statement                x120
+  known_uncertainties[].subject                  x120
+  rule_id                                        x41
+  subject                                        x41
+  superseded                                     x41
+  time_window                                    x41
+
+  fields that could carry a position: ['affected_area.lat', 'affected_area.lon']
+  affected_area is the RF receiver or zone centre, from the synthetic
+  layout in scn-005 -- not an aircraft position. No aircraft position
+  reaches a bundle.
+
+  what a TRACK citation carries:
+    evidence[].details
+    evidence[].details.adjacent_abnormal
+    evidence[].details.adjacent_checked
+    evidence[].details.channels
+    evidence[].details.confidence
+    evidence[].details.corroboration
+    evidence[].details.db
+    evidence[].details.duration_s
+    evidence[].details.during
+    evidence[].details.metric
+    evidence[].details.nominal_within_db
+    evidence[].details.outside
+    evidence[].details.peak_deviation
+    evidence[].details.radius_km
+    evidence[].details.ratio
+    evidence[].details.sensors
+    evidence[].details.severity
+    evidence[].details.shape
+    evidence[].refs
+    evidence[].refs[].aircraft_id
+    evidence[].refs[].at
+    evidence[].refs[].channel_index
+    evidence[].refs[].sensor_id
+    evidence[].refs[].timestamp
