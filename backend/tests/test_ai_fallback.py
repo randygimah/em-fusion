@@ -39,6 +39,20 @@ call. The asymmetry is asserted here rather than discovered later.
 The grounding check is **injected**, because `ai-008` is built after this.
 `None` means no check and has to be written, because forgetting a check and
 deciding against one must not look alike.
+
+**Eleven of these pass against a do-nothing stub, and are named rather
+than pretended away**: seven assert properties of the *declaration* -- the
+two no-default signature checks, the frozen check, the port check, the
+agreement between the port's method and the recording one, and the two
+import checks -- and four assert a negative, since an implementation that
+catches nothing has "does not catch `ProviderUnavailable`" for free. Those
+four were sharpened anyway, by scripting a second answer the arm would give
+if it were wrongly retried, so the realistic defect -- catching
+`GenerationError`, the parent of both categories -- returns a hypothesis
+where the test demands a raise. Two others passed against the stub for a
+reason other than their name and were rewritten: one could not tell
+"checked and passed" from "never checked", and one asserted that `None`
+means no check on an implementation that ran no check under any setting.
 """
 
 from __future__ import annotations
@@ -205,15 +219,17 @@ def test_a_usable_first_answer_is_returned_untouched():
     # leaves no refusals behind.
     result = model_result()
     arm = _ScriptedArm(result)
+    check = _ScriptedCheck(None)
 
-    outcome = a_fallback(arm, check=_ScriptedCheck(None)).generate_recorded(
-        fault_bundle()
-    )
+    outcome = a_fallback(arm, check=check).generate_recorded(fault_bundle())
 
     assert outcome.result is result
     assert outcome.refusals == ()
     assert outcome.fell_back is False
     assert arm.calls == 1
+    # Without this the test cannot tell "checked and passed" from "never
+    # checked", and both satisfy every other line above.
+    assert check.calls == 1
 
 
 def test_a_none_check_runs_no_check_at_all():
@@ -221,13 +237,21 @@ def test_a_none_check_runs_no_check_at_all():
     # output is grounded by construction, the honest configuration is no
     # check rather than a check that always passes.
     result = model_result()
+    refusing = _ScriptedCheck(*[GenerationRefused("ungrounded") for _ in range(2)])
 
-    outcome = a_fallback(_ScriptedArm(result), check=None).generate_recorded(
+    unchecked = a_fallback(_ScriptedArm(result), check=None).generate_recorded(
         fault_bundle()
     )
+    # The same arm, the same answer, and a check that refuses it: the only
+    # difference is the check, so the pair proves None is honoured rather
+    # than proving checks are never run at all.
+    checked = a_fallback(
+        _ScriptedArm(result, model_result()), check=refusing
+    ).generate_recorded(fault_bundle())
 
-    assert outcome.result is result
-    assert outcome.fell_back is False
+    assert unchecked.result is result
+    assert unchecked.fell_back is False
+    assert checked.fell_back is True
 
 
 def test_it_satisfies_the_generation_port():
@@ -455,10 +479,15 @@ def test_an_unreachable_provider_is_not_caught_here():
     # end with the analyst reading something else, which is what makes
     # merging them easy; but nothing was wrong with the request, so the
     # answer is to ask somewhere else, not to give up on the question.
-    arm = _ScriptedArm(ProviderUnavailable("connection refused"))
+    # The second entry is what makes this discriminating: an implementation
+    # catching GenerationError -- the parent of both categories -- would
+    # retry, succeed, and return a hypothesis instead of raising.
+    arm = _ScriptedArm(ProviderUnavailable("connection refused"), model_result())
 
     with pytest.raises(ProviderUnavailable):
         a_fallback(arm).generate_recorded(fault_bundle())
+
+    assert arm.calls == 1
 
 
 def test_an_unreachable_provider_consumes_no_retries_and_no_template():
@@ -466,7 +495,7 @@ def test_an_unreachable_provider_consumes_no_retries_and_no_template():
     # against an unreachable provider is the "retrying the same place
     # harder" error the phase document names.
     fallback_arm = _ScriptedArm()
-    arm = _ScriptedArm(ProviderUnavailable("timed out"))
+    arm = _ScriptedArm(ProviderUnavailable("timed out"), model_result())
 
     with pytest.raises(ProviderUnavailable):
         a_fallback(arm, fallback_arm, max_attempts=3).generate_recorded(fault_bundle())
@@ -479,20 +508,24 @@ def test_a_misconfiguration_is_not_caught_here():
     # spec: ai-007, ai-003 -- ConfigurationError is not a GenerationError on
     # purpose. Caught here it would produce mechanical output for every
     # bundle while the run reported itself as hosted.
-    arm = _ScriptedArm(ConfigurationError("no model id"))
+    arm = _ScriptedArm(ConfigurationError("no model id"), model_result())
 
     with pytest.raises(ConfigurationError):
         a_fallback(arm).generate_recorded(fault_bundle())
+
+    assert arm.calls == 1
 
 
 def test_an_unrelated_exception_passes_straight_through():
     # spec: ai-007 -- the fallback responds to refusals, not to bugs.
     # Swallowing a TypeError here would turn a defect into a quietly
     # degraded arm.
-    arm = _ScriptedArm(RuntimeError("a defect, not a refusal"))
+    arm = _ScriptedArm(RuntimeError("a defect, not a refusal"), model_result())
 
     with pytest.raises(RuntimeError):
         a_fallback(arm).generate_recorded(fault_bundle())
+
+    assert arm.calls == 1
 
 
 def test_a_template_that_refuses_carries_the_models_refusal_as_its_cause():
