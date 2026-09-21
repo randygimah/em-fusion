@@ -5774,6 +5774,44 @@ spellings of a real violation and at two legitimate uses, because a check that r
 when it holds returns an empty list when it is broken.
 
 
+### A gate item deferred rather than decided, and the one argument that makes that safe
+
+The plan gates the model arms behind a list of decisions to be settled before any model code is
+written, on the stated grounds that each is cheap now and expensive-to-impossible after a campaign
+has run. One of them — whether to build a local model arm alongside the hosted one — was deferred
+instead, and the reasoning is worth recording because the general form of the argument is wrong and
+the specific form is right.
+
+The general form is wrong: "decide later" is what gates exist to prevent, and every other item on
+that list genuinely cannot be revisited. Change the frozen generation parameters after scoring and
+the arms are no longer comparable. Change the scoring corpus after seeing results and the campaign
+is not blind. Change the model identifier mid-run and half the results came from something else.
+
+The specific form is right because of one fact that distinguishes this item from all the others:
+**the local arm is not scored.** The pre-registered instrument compares the hosted arm against the
+template only. An arm that no scorer ever sees is outside the pre-registration, so adding it later
+costs nothing in validity — the thing that makes the other items irreversible simply does not apply.
+
+Two further observations reduced what a later cut would cost, and both became true only recently,
+which is itself the argument for revisiting rather than deciding early. The offline demonstration
+that was one of the local arm's justifications is already provided by the template generator, which
+needs no network and produces a real explanation rather than a placeholder. And the two fallbacks —
+availability and correctness — were at risk of merging if the local arm disappeared, because they
+would then share a destination; but the provider-agnostic interface names the two failure
+*categories* separately, so they keep different causes and different records even when both end at
+the template. Only the destination coincides.
+
+What remains genuinely at stake is a portability result: one JSON Schema enforced two ways, by a
+hosted provider's constrained decoding and by a grammar compiled locally, producing an identical
+guarantee. That is worth a time-boxed day if the hosted arm proves flaky and worth very little if it
+does not, which is exactly the shape of decision that should wait for the measurement rather than
+precede it.
+
+The deferral is recorded on the two affected specification items themselves rather than in a session
+note, following the precedent set when the reasoning document was made a precondition of the hosted
+arm: a handoff is overwritten and a specification is not.
+
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;
