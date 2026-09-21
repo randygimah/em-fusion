@@ -57,7 +57,11 @@ try:
         SRC.write_text(original.replace(old, new, 1))
         proc = subprocess.run(
             ["make", "test-backend", "PYTEST_ARGS=tests/test_db_clustering.py -q -x"],
-            cwd=str(Path(__file__).resolve().parents[2]),
+            # parents[3], not [2]: `make test-backend` lives at the repository
+            # root. Pointed at backend/ it fails with "No rule to make
+            # target", which is a non-zero exit, which this harness scored
+            # as KILLED -- so every mutant passed for the wrong reason.
+            cwd=str(Path(__file__).resolve().parents[3]),
             capture_output=True, text=True,
         )
         killed = proc.returncode != 0

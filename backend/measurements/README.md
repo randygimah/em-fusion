@@ -313,3 +313,18 @@ than changed for symmetry.
 
 **Anything new here must clear the cache.** A mutation score is only evidence if each mutant was the
 code that actually ran.
+
+## A second hazard in the harnesses, found 2026-09-21
+
+**A harness that drives `make test-backend` from the wrong directory scores every mutant as killed.**
+`make test-backend` lives at the repository root. Run from `backend/` it fails with `No rule to make
+target 'test-backend'` — a non-zero exit, which a harness reads as "the tests failed", which it
+reports as KILLED. The result is a perfect score produced without running a single test.
+
+Two harnesses had it: `mutate_db009_clustering.py` and `determinism_test_reliability.py`, both using
+`parents[2]` where the other five use `parents[3]`. Neither had a published figure — both show "—"
+in the table above — which is the only reason nothing has to be withdrawn. Both are fixed.
+
+The general form is worth keeping: **a harness that infers "killed" from a non-zero exit code cannot
+tell a failed test from a failed invocation.** Anything added here should confirm the tests actually
+ran, not merely that something exited badly.

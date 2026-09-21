@@ -16,7 +16,11 @@ assert original.count(OLD) == 1
 def run(label):
     proc = subprocess.run(
         ["make", "test-backend", f"PYTEST_ARGS={TEST} -q"],
-        cwd=str(Path(__file__).resolve().parents[2]),
+        # parents[3], not [2]: `make test-backend` lives at the repository
+            # root. Pointed at backend/ it fails with "No rule to make
+            # target", which is a non-zero exit, which this harness scored
+            # as KILLED -- so every mutant passed for the wrong reason.
+            cwd=str(Path(__file__).resolve().parents[3]),
         capture_output=True, text=True,
     )
     print(f"{label}: {'FAIL' if proc.returncode else 'pass'}", flush=True)

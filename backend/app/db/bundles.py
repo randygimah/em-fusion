@@ -178,8 +178,7 @@ def _miss(
     matched: Sequence[int],
 ) -> ResolutionError:
     """The refusal, phrased so the log says which of the two failures it is."""
-    where = (f"run {bundle.scenario_run_id}, {bundle.rule_id} on "
-             f"{bundle.subject!r}")
+    where = f"run {bundle.scenario_run_id}, {bundle.rule_id} on " f"{bundle.subject!r}"
     if not matched:
         return ResolutionError(
             f"{where}: evidence item {item.source!r} cites {ref}, and there is "
@@ -216,25 +215,32 @@ def _match_rf(
         # trip was measured exact on 2,000 sampled observations.
         params[f"t{n}"] = ref["timestamp"]
 
-    rows = session.execute(
-        text(
-            "SELECT id, payload->>'sensor_id' AS sensor_id, "
-            "  (payload->>'channel_index')::int AS channel_index, timestamp "
-            "FROM observations "
-            "WHERE scenario_run_id = :run AND observation_type = 'rf' "
-            "  AND (payload->>'sensor_id', (payload->>'channel_index')::int, "
-            f"      timestamp) IN ({values})"
-        ),
-        params,
-    ).mappings().all()
+    rows = (
+        session.execute(
+            text(
+                "SELECT id, payload->>'sensor_id' AS sensor_id, "
+                "  (payload->>'channel_index')::int AS channel_index, timestamp "
+                "FROM observations "
+                "WHERE scenario_run_id = :run AND observation_type = 'rf' "
+                "  AND (payload->>'sensor_id', (payload->>'channel_index')::int, "
+                f"      timestamp) IN ({values})"
+            ),
+            params,
+        )
+        .mappings()
+        .all()
+    )
 
     by_coordinate: dict[tuple[str, int, datetime], list[int]] = {}
     for row in rows:
         key = (row["sensor_id"], row["channel_index"], row["timestamp"])
         by_coordinate.setdefault(key, []).append(int(row["id"]))
     for position, index, ref in refs:
-        key = (ref["sensor_id"], int(ref["channel_index"]),
-               datetime.fromisoformat(ref["timestamp"]))
+        key = (
+            ref["sensor_id"],
+            int(ref["channel_index"]),
+            datetime.fromisoformat(ref["timestamp"]),
+        )
         found[(position, index)] = by_coordinate.get(key, [])
 
 
@@ -253,15 +259,19 @@ def _match_track(
         params[f"a{n}"] = ref["aircraft_id"]
         params[f"t{n}"] = ref["at"]
 
-    rows = session.execute(
-        text(
-            "SELECT id, payload->>'aircraft_id' AS aircraft_id, timestamp "
-            "FROM observations "
-            "WHERE scenario_run_id = :run AND observation_type = 'track' "
-            f"  AND (payload->>'aircraft_id', timestamp) IN ({values})"
-        ),
-        params,
-    ).mappings().all()
+    rows = (
+        session.execute(
+            text(
+                "SELECT id, payload->>'aircraft_id' AS aircraft_id, timestamp "
+                "FROM observations "
+                "WHERE scenario_run_id = :run AND observation_type = 'track' "
+                f"  AND (payload->>'aircraft_id', timestamp) IN ({values})"
+            ),
+            params,
+        )
+        .mappings()
+        .all()
+    )
 
     by_coordinate: dict[tuple[str, datetime], list[int]] = {}
     for row in rows:
@@ -351,6 +361,38 @@ def bundles_for_run(
             .all()
         )
     return [_bundle(row) for row in rows]
+
+
+def stored_bundles_for_run(
+    session_factory: sessionmaker[Session], run_id: int
+) -> list[tuple[int, EvidenceBundle]]:
+    """Every bundle for one run, each with the identity of its row.
+
+    Beside `bundles_for_run` rather than a change to it. A hypothesis
+    references the bundle it explains by id (`db-002`), and nothing exposed
+    one -- a blocker found by attempting that write rather than by reading
+    the schema. Changing the existing reader's return type instead would
+    have touched `evb-002`'s suite and two committed measurements to add a
+    value neither of them wants.
+    """
+    with session_factory.begin() as session:
+        rows = (
+            session.execute(
+                text(
+                    "SELECT id, scenario_run_id, anomaly_type, rule_id, subject, "
+                    "  started_at, ended_at, affected_channels, evidence, "
+                    "  known_uncertainties, superseded, "
+                    "  ST_Y(affected_area) AS lat, ST_X(affected_area) AS lon "
+                    "FROM evidence_bundles "
+                    "WHERE scenario_run_id = :run "
+                    "ORDER BY started_at, subject, id"
+                ),
+                {"run": run_id},
+            )
+            .mappings()
+            .all()
+        )
+    return [(row["id"], _bundle(row)) for row in rows]
 
 
 def _row(bundle: EvidenceBundle) -> dict[str, object]:
@@ -466,4 +508,5 @@ __all__ = [
     "bundles_for_run",
     "resolve_bundles",
     "save_bundles",
+    "stored_bundles_for_run",
 ]
