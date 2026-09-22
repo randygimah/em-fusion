@@ -40,6 +40,21 @@ bundle and misses every retry -- the only failure mode the item names.
 lower bound whenever any call could not be priced, and the ledger says how
 many. A cost figure that quietly omits what it could not price is worse
 than none, and `eval-005` reports actual cost as a result.
+
+**Twelve of these pass against a do-nothing stub, and are named rather than
+pretended away.** Eight assert properties of the *declaration* -- the two
+no-default signature checks, the recommended constant, the port check, the
+two subclass checks that pin `BudgetExceeded` and `ConfigurationError`
+outside the `GenerationError` tree, the frozen check, and that a run may
+have no spend ceiling. Three assert a boundary or a negative that a stub
+satisfies for free: an empty ledger has spent nothing, ordinals start at
+one, and an unreachable provider is not swallowed. One -- that a report is
+a snapshot -- passes on any implementation that copies, which is the only
+implementation worth writing. Two others passed for a reason other than
+their name and were rewritten to be differential within themselves: the
+inert-spend-ceiling test could not tell "does not fire on unpriced calls"
+from "does not fire at all", and the completeness flag was asserted only in
+the state a constant would satisfy.
 """
 
 from __future__ import annotations
@@ -414,11 +429,18 @@ def test_a_total_over_any_unpriced_call_is_declared_incomplete():
 
 
 def test_a_total_over_only_priced_calls_is_declared_complete():
-    # spec: ai-009 -- and the flag has to move, or it says nothing.
-    budget = a_budget()
-    budgeted(_ScriptedArm(priced(0.01)), budget).generate(fault_bundle())
+    # spec: ai-009 -- the flag has to MOVE, or it says nothing. Asserted on
+    # its own, a constant True satisfies this test, so both states are
+    # exercised here rather than split across two tests where one of them
+    # could not fail.
+    complete = a_budget()
+    budgeted(_ScriptedArm(priced(0.01)), complete).generate(fault_bundle())
 
-    assert budget.report().cost_is_complete is True
+    incomplete = a_budget()
+    budgeted(_ScriptedArm(priced(None)), incomplete).generate(fault_bundle())
+
+    assert complete.report().cost_is_complete is True
+    assert incomplete.report().cost_is_complete is False
 
 
 # ------------------------------------------- the spend tripwire, and its honest limits
@@ -468,13 +490,20 @@ def test_a_spend_ceiling_over_unpriced_calls_never_fires():
     # be discovered. On an arm that reports no cost the spend ceiling
     # enforces nothing at all, which is precisely why it cannot be the
     # guard and the call ceiling is.
-    budget = a_budget(max_calls=5, max_cost_usd=0.01)
-    generator = budgeted(_ScriptedArm(*[priced(None) for _ in range(4)]), budget)
-
+    # Same ceiling, same money, and the ONLY difference is whether the arm
+    # priced its calls. Without the second half this test cannot tell "does
+    # not fire on unpriced calls" from "does not fire at all", which is what
+    # it passed against on a stub that never fired anything.
+    unpriced = a_budget(max_calls=5, max_cost_usd=0.01)
+    generator = budgeted(_ScriptedArm(*[priced(None) for _ in range(4)]), unpriced)
     for _ in range(4):
         generator.generate(fault_bundle())
 
-    assert budget.report().call_count == 4
+    metered = a_budget(max_calls=5, max_cost_usd=0.01)
+    with pytest.raises(BudgetExceeded):
+        budgeted(_ScriptedArm(priced(0.02)), metered).generate(fault_bundle())
+
+    assert unpriced.report().call_count == 4
 
 
 def test_no_spend_ceiling_means_no_spend_ceiling():
