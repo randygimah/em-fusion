@@ -7,6 +7,7 @@ dependencies = [
     "alembic",
     "fastapi",
     "geoalchemy2",
+    "openai>=3.18.0",
     "psycopg[binary]",
     "pyarrow",
     "pydantic",
