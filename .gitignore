@@ -24,3 +24,6 @@ backend/measurements/.zone_cache.json
 # rebuild and leave a graph that still renders after the code beneath it moved.
 # .graphify_python holds an absolute path to one machine's interpreter.
 graphify-out/
+
+# Mutation harness crash guard (measurements/mutation/*.in-progress.json)
+*.in-progress.json

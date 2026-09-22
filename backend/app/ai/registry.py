@@ -27,6 +27,7 @@ from __future__ import annotations
 
 from typing import Callable, Mapping
 
+from app.ai.providers.openai import OpenAIGenerator
 from app.ai.providers.template import TemplateGenerator
 from app.ai.service import ConfigurationError, GenerationConfig, HypothesisGenerator
 
@@ -39,6 +40,7 @@ ProviderFactory = Callable[[GenerationConfig], HypothesisGenerator]
 #: other -- which is what makes `ai-007`'s correctness fallback "ask for
 #: the template" rather than a special case carved into each model arm.
 PROVIDERS: Mapping[str, ProviderFactory] = {
+    "openai": OpenAIGenerator,
     "template": TemplateGenerator,
 }
 

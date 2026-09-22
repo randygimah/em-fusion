@@ -125,7 +125,9 @@ def fake_client(**kw) -> SimpleNamespace:
 def an_arm(client=None, config=None, **kw) -> OpenAIGenerator:
     return OpenAIGenerator(
         config or hosted_config(),
-        client=client if client is not None else fake_client(content=a_valid_response()),
+        client=client
+        if client is not None
+        else fake_client(content=a_valid_response()),
         **kw,
     )
 
@@ -539,7 +541,8 @@ def test_cost_is_computed_when_prices_are_supplied():
     ).generate(fault_bundle())
 
     assert result.call is not None
-    assert result.call.usage.cost_usd == pytest.approx(1200 / 1000 * 0.0025 + 0.4 * 0.01)
+    expected = 1200 / 1000 * 0.0025 + 400 / 1000 * 0.01
+    assert result.call.usage.cost_usd == pytest.approx(expected)
 
 
 def test_prices_are_not_recorded_as_generation_parameters():
@@ -634,6 +637,43 @@ def test_a_constraint_the_schema_could_not_express_is_refused_as_such():
     assert "structur" not in str(raised.value).lower()
 
 
+def test_a_confidence_outside_the_three_is_refused_as_structural():
+    # spec: ai-004, ai-001, FR-715 -- the enum DOES survive narrowing, so a
+    # value outside it means the provider did not honour the schema it was
+    # given. That makes this the alarming kind of refusal rather than the
+    # ordinary one, and it is the guarantee ai-001 says must not be lost at
+    # this boundary.
+    body = json.loads(a_valid_response())
+    body["confidence"] = "Certain"
+
+    with pytest.raises(GenerationRefused) as raised:
+        an_arm(fake_client(content=json.dumps(body))).generate(fault_bundle())
+
+    assert "structur" in str(raised.value).lower()
+
+
+def test_the_environment_path_builds_a_real_client(monkeypatch):
+    # spec: ai-004 -- every other test injects a client, so nothing
+    # exercised the branch that actually authenticates. Constructing the
+    # client makes no request, so this stays offline.
+    import openai
+
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-not-a-real-key")
+
+    arm = OpenAIGenerator(hosted_config())
+
+    assert isinstance(arm.client, openai.OpenAI)
+
+
+def test_a_blank_credential_is_treated_as_missing(monkeypatch):
+    # spec: ai-004 -- an empty string satisfies "the variable is set" while
+    # naming nothing, which is the same defect ai-003's ModelCall refuses.
+    monkeypatch.setenv("OPENAI_API_KEY", "   ")
+
+    with pytest.raises(ConfigurationError):
+        OpenAIGenerator(hosted_config())
+
+
 def test_a_refused_call_still_carries_what_it_paid_for():
     # spec: ai-004, ai-009 -- tokens were spent on an answer nobody can use,
     # and those are the calls a retry loop is made of.
@@ -652,11 +692,16 @@ def test_an_empty_answer_is_refused_rather_than_stored():
 
 
 def _an_openai_error(cls):
-    """Build one of the SDK's errors without a live request object."""
-    import httpx
+    """Build one of the SDK's errors without a live request object.
+
+    `httpx2`, not `httpx`: openai 3.x carries its own fork, and importing
+    the wrong one fails at collection rather than at assertion -- which is
+    how it was found.
+    """
+    import httpx2
     import openai
 
-    request = httpx.Request("POST", "https://example.invalid/v1/chat/completions")
+    request = httpx2.Request("POST", "https://example.invalid/v1/chat/completions")
     if issubclass(cls, openai.APIStatusError):
         status = {
             openai.AuthenticationError: 401,
@@ -665,8 +710,8 @@ def _an_openai_error(cls):
             openai.BadRequestError: 400,
             openai.InternalServerError: 500,
         }[cls]
-        response = httpx.Response(status, request=request)
+        response = httpx2.Response(status, request=request)
         return cls("boom", response=response, body=None)
     if cls is openai.APITimeoutError:
         return cls(request=request)
-    return cls("boom", request=request)
+    return cls(message="boom", request=request)
