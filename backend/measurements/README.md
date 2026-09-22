@@ -193,6 +193,7 @@ no observable behaviour), and an **invalid mutant** (the edit I wrote does not m
 | `mutate_ai003_service.py` | `app/ai/service.py`, `app/ai/registry.py`, `app/ai/providers/template.py` | **28 of 29 killed**, the survivor proven equivalent — after a first pass killed 27. An interface is mostly refusals, and a refusal that stops refusing is the quietest defect there is: everything that worked still works and one new thing is permitted. The single genuine gap was the one property nobody thinks to test — the suite asserted the configuration object was frozen and never that the **parameters mapping inside it** was, so a caller holding a live handle could change what every later call ran under. Frozen parameters are the reproducibility claim itself. 3 tests added. Mutates three files, like the `evb-002` pass: a single-file pass over the interface would leave the two places it is actually used untested. |
 | `mutate_ai007_fallback.py` | `app/ai/fallback.py`, `app/ai/service.py` | **32 of 32 killed, no survivors** — after a first pass killed 29. This item is two guarantees wearing one coat and the mutants separate them: the ceiling is about **money**, so several sites move the bound by one or remove it without raising anything (an off-by-one ceiling is a 50% overspend that no test asserting "it eventually stopped" would notice); the record is about **what a row means afterwards**, since a mechanical explanation that arrived because the model failed and one that arrived because the template was the configured arm are the same row unless this layer says otherwise. Three mutants widen the caught exception from `GenerationRefused` to its parent or to `Exception`, because `ai-006` and `ai-007` end at the same destination for opposite reasons and merging them is the item's central risk. **One of those three was the first pass's most valuable survivor**: nothing had ever made the injected grounding check raise anything but a refusal, so a defect *inside `ai-008`* would have been caught here and recorded as the model being ungrounded — inflating a **reported evaluation result** with the checker's own fault. The behaviour was already right; nothing proved it, so nothing would have noticed it changing. The other two were a test satisfied by the wrong log line (the fallback summary names the same category and the same reason, so the per-refusal log could be deleted with the suite green — rewritten around a *successful* retry, where no summary is emitted) and a coercion no call site exercised (`refusals` is always passed as a tuple already, so the tuple() that defends against a caller's list was never run). 4 tests added, 2 rewritten, 0 implementation changes. |
 | `mutate_ai009_budget.py` | `app/ai/budget.py` | **30 of 33 killed**, all three survivors proven equivalent — after a first pass killed 28. A spending guard fails quietly: every mutant here still produces hypotheses, still returns results, and still reports a number when asked what the run spent. The two genuine gaps were both boundaries. **The refusal did not have to name its ceiling** — the assertion looked for the value and the *call count* supplied it, and this one cannot be fixed by choosing better numbers, because the abort fires exactly when count equals ceiling so the two are always identical; the message structure had to be pinned instead. And **nothing ever landed exactly on the spend ceiling**, so `>=` and `>` were indistinguishable — a decision (an allowance spent in full is spent) that had never been tested, and without it a run configured for 20.00 would quietly continue at 20.00. 1 test added, 1 rewritten, 0 implementation changes. **One equivalence is a finding rather than a nuisance**: summing only the priced calls, and summing every call with `None` read as 0.00, *necessarily* produce the same number, since the excluded terms are exactly the ones that would have contributed zero — which proves the honest-total claim is not carried by `spent_usd` at all. Unpriced and free are separated entirely by `unpriced_calls` and `cost_is_complete`, so the figure to quote in the write-up is never the total on its own. A second equivalence measured something the source cannot show: the tuple coercion at the report site is covered by `BudgetReport.__post_init__`, but **the cover is one-directional** — deleting the `__post_init__` coercion is caught and deleting the report site is not, so they are not two guards making each other redundant as they appear to be. |
+| `mutate_ai004_hosted.py` | `app/ai/payload.py`, `app/ai/prompt.py`, `app/ai/providers/openai.py`, `app/ai/registry.py` | *(pending — a first attempt was killed by the OOM killer 18 mutants into 47; see the third hazard below)* |
 | `mutate_anom014_minimum_duration.py` | `app/detection/rf_noise.py` | — |
 | `mutate_scn007_floor.py` | `app/scenario/tracks.py` | 17 of 19, both survivors proven unreachable |
 | `mutate_scn008_batch_provenance.py` | `app/scenario/emitter.py` | — |
@@ -331,3 +332,32 @@ in the table above — which is the only reason nothing has to be withdrawn. Bot
 The general form is worth keeping: **a harness that infers "killed" from a non-zero exit code cannot
 tell a failed test from a failed invocation.** Anything added here should confirm the tests actually
 ran, not merely that something exited badly.
+
+
+## A third hazard: a killed run leaves a mutant in your working tree, found 2026-09-22
+
+Every harness here restores the source in a `finally` block. **A `finally` does not survive a
+`SIGKILL`** — the OOM killer, `kill -9`, or a runtime reclaiming memory. When
+`mutate_ai004_hosted.py` was killed 18 mutants into a 47-mutant pass, one mutated file stayed on
+disk. It looked exactly like ordinary uncommitted work: one test red, and the cause three steps
+away from anything that pointed at it.
+
+The same shape as the two hazards above, and the third time on this project that an *instrument*
+rather than a measurement has been the defect. What is different here is the direction of the
+damage: the other two produced a wrong figure, this one silently edits the code under test.
+
+Two mitigations, in order of value.
+
+1. **Run a mutation pass against committed code.** Recovery is then `git checkout -- <files>` and
+   takes a second. This is now the rule rather than a suggestion: commit the implementation, run the
+   pass, and commit the figure and any gap fixes separately. It costs one extra commit and removes
+   the failure mode entirely.
+2. `mutate_ai004_hosted.py` writes a **guard file** (`*.in-progress.json`, gitignored) holding the
+   originals before the first mutant, and removes it on a clean exit. If the file is present at
+   startup, the harness restores from it, deletes it, and refuses to run until you have looked at
+   `git diff`. **The other harnesses do not do this yet** — adding it is owed, and is a five-line
+   change each.
+
+A long pass is also the one most likely to be killed. At roughly **2.5 minutes per mutant** — each
+source edit invalidates the image's `COPY app/` layer and forces a rebuild — 47 mutants is about two
+hours of continuous Docker builds, which is what exhausted memory in the first place.
