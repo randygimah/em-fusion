@@ -29,6 +29,22 @@ failure from this arm must mean the provider broke its own constraint.
 
 **No test makes a real call.** The client is injected, and the adapter is
 proved not to build one when it is given one.
+
+**Twelve of these pass against do-nothing stubs, and are named rather than
+pretended away**: the exclusion-set pin, the estimate docstring and the
+registry construction assert *declarations*; the fingerprint derivation and
+its sensitivity to an edit are properties of SHA-256 that any honest
+implementation has; the three schema-shape assertions and the no-mutation
+check are satisfied by a narrower that does nothing, which is correct --
+they exist to catch one that *widens*, which is `ai-001`'s warning; the
+parse-time enforcement is a property of `ai-001` recorded here as a
+dependency; the same-bytes check is a purity property; and the
+dated-model-id acceptance is the positive half of a pair whose refusing
+half is red.
+Seven others passed for a reason other than their name and were rewritten:
+four were negative or determinism assertions satisfied by a near-empty
+payload, one checked a key existed rather than its contents, and one was
+satisfied by a narrower that dropped nothing.
 """
 
 from __future__ import annotations
@@ -58,7 +74,7 @@ from app.ai.service import (
     ProviderUnavailable,
 )
 from app.ai.template import generate as template_generate
-from app.detection.bundle import EvidenceBundle, EvidenceItem
+from app.detection.bundle import EvidenceBundle, EvidenceItem, SupersededClaim
 from tests.test_ai_template import fault_bundle, zone_bundle
 
 DATED_MODEL = "gpt-4o-2024-08-06"
@@ -157,6 +173,7 @@ def test_no_database_identifier_reaches_the_provider():
     # too.
     serialised = payload_json(fault_bundle())
 
+    assert len(serialised) > 1000
     assert "scenario_run_id" not in serialised
     assert "observation_ids" not in serialised
 
@@ -165,7 +182,13 @@ def test_the_payload_is_json_serialisable_without_a_custom_encoder():
     # spec: ai-004 -- datetimes and enums have to be converted here rather
     # than by whatever happens to serialise them later, or two callers
     # produce two different payloads from one bundle.
-    json.dumps(bundle_payload(zone_bundle()))
+    payload = bundle_payload(zone_bundle())
+
+    # Round-tripped rather than merely dumped: a stub payload carrying
+    # almost nothing is trivially serialisable, and this has to fail on one.
+    assert json.loads(json.dumps(payload)) == payload
+    assert isinstance(payload["time_window"][0], str)
+    assert isinstance(payload["evidence"][0]["data_mode"], str)
 
 
 def test_the_same_bundle_always_produces_the_same_bytes():
@@ -173,6 +196,10 @@ def test_the_same_bundle_always_produces_the_same_bytes():
     # so "the same bundle" has to mean the same bytes and not merely the
     # same object.
     assert payload_json(fault_bundle()) == payload_json(fault_bundle())
+    # And DIFFERENT bundles must not: without this the test cannot tell a
+    # pure function from a constant, and a stub returning the same string
+    # for everything satisfies the line above.
+    assert payload_json(fault_bundle()) != payload_json(zone_bundle())
 
 
 def test_rejected_claims_are_sent_rather_than_hidden():
@@ -180,7 +207,22 @@ def test_rejected_claims_are_sent_rather_than_hidden():
     # conclusion. Sending it is what lets a model write an honest
     # alternative, and it creates exactly the trap ai-008 exists to catch: a
     # hypothesis citing a rejected claim as SUPPORT.
-    assert "superseded" in bundle_payload(fault_bundle())
+    #
+    # A bundle is CONSTRUCTED with one, because the corpus produces none --
+    # ladder_suppression.py records 188 claims bid and 0 suppressed -- so a
+    # test over a real bundle would assert an empty list is present and pass
+    # with the contents dropped.
+    rejected = SupersededClaim(
+        rule_id="SENSOR-FAULT",
+        anomaly_type="possible_sensor_fault",
+        claimed_by="FUSION-SPATIAL",
+        reason="a higher rule had already claimed this zone",
+    )
+    bundle = dataclasses.replace(fault_bundle(), superseded=(rejected,))
+
+    payload = bundle_payload(bundle)
+    assert payload["superseded"][0]["rule_id"] == "SENSOR-FAULT"
+    assert payload["superseded"][0]["claimed_by"] == "FUSION-SPATIAL"
 
 
 def test_the_payload_names_no_scenario_type():
@@ -189,6 +231,9 @@ def test_the_payload_names_no_scenario_type():
     # than reasoning over evidence.
     serialised = payload_json(fault_bundle()) + payload_json(zone_bundle())
 
+    # A negative assertion is satisfied by an empty haystack, so the
+    # haystack is pinned as substantial first.
+    assert len(serialised) > 2000
     for scenario in (
         "gnss-degradation",
         "rf-sensor-fault",
@@ -234,6 +279,7 @@ def test_the_prompt_states_the_rules_it_must_state():
 def test_the_prompt_names_no_scenario_type():
     # spec: ai-004, api-009 -- the same rule as the payload, at the other
     # end of the request.
+    assert len(HYPOTHESIS_PROMPT) > 800
     for scenario in ("gnss-degradation", "rf-sensor-fault", "normal-baseline"):
         assert scenario not in HYPOTHESIS_PROMPT
 
@@ -285,6 +331,10 @@ def test_what_was_dropped_is_reported_rather_than_discarded():
     # place for a guarantee to vanish between versions of a provider's API.
     _, dropped = strict_schema()
 
+    # Non-empty first: an empty tuple is a subset of anything and is
+    # already sorted, so both lines below pass on a narrower that removed
+    # nothing at all.
+    assert dropped
     assert set(dropped) <= UNSUPPORTED_BY_STRICT_MODE
     assert dropped == tuple(sorted(dropped))
 
