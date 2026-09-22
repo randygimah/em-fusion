@@ -1,0 +1,38 @@
+one more call than the ceiling allows                          KILLED   8 failed, 38 passed in 0.52s
+the call ceiling is never checked                              KILLED   8 failed, 38 passed in 0.50s
+a ceiling of zero calls is accepted                            KILLED   1 failed, 45 passed in 0.44s
+the ceiling is not validated at all                            KILLED   1 failed, 45 passed in 0.43s
+the recommended ceiling drifts                                 KILLED   1 failed, 45 passed in 0.46s
+the refusal does not name the ceiling                          KILLED   1 failed, 45 passed in 0.43s
+the call ceiling is checked after the call instead of before   KILLED   8 failed, 38 passed in 0.54s
+a spend ceiling of nothing is accepted                         KILLED   1 failed, 45 passed in 0.43s
+the spend ceiling is never checked                             KILLED   5 failed, 41 passed in 0.47s
+the spend ceiling fires one call early                         KILLED   1 failed, 45 passed in 0.46s
+an absent spend ceiling is treated as zero                     KILLED   24 failed, 22 passed in 0.73s
+budget exhaustion is catchable as a generation failure         KILLED   1 failed, 45 passed in 0.45s
+an arm returning another arm's result is a generation failure  KILLED   1 failed, 45 passed in 0.44s
+the abort carries no ledger                                    SURVIVED 46 passed in 0.45s
+a refused call is not counted                                  KILLED   5 failed, 41 passed in 0.47s
+a refused call's tokens are discarded                          KILLED   1 failed, 45 passed in 0.45s
+an unreachable call is not counted                             KILLED   1 failed, 45 passed in 0.43s
+a served call is not counted                                   KILLED   23 failed, 23 passed in 0.63s
+an unpriced call is counted as free rather than unknown        KILLED   3 failed, 43 passed in 0.45s
+a total over unpriced calls is declared complete               KILLED   2 failed, 44 passed in 0.46s
+the unpriced call still adds to the total as zero              SURVIVED 46 passed in 0.44s
+prompt and completion tokens are swapped                       KILLED   2 failed, 44 passed in 0.44s
+the arm is read from the result rather than declared           KILLED   1 failed, 45 passed in 0.45s
+every call is attributed to the same arm                       KILLED   1 failed, 45 passed in 0.44s
+ordinals restart rather than running through the run           KILLED   1 failed, 45 passed in 0.47s
+an ordinal below one is accepted                               KILLED   1 failed, 45 passed in 0.43s
+a call may be attributed to the template                       KILLED   1 failed, 45 passed in 0.44s
+an unreachable call may carry a model call                     KILLED   1 failed, 45 passed in 0.43s
+a served call may carry no model call                          KILLED   1 failed, 45 passed in 0.46s
+the template may be given a budget                             KILLED   1 failed, 45 passed in 0.43s
+the ledger is handed out as the live list                      KILLED   1 failed, 45 passed in 0.44s
+the report is a view rather than a snapshot                    SURVIVED 46 passed in 0.42s
+the abort is logged below error                                KILLED   1 failed, 45 passed in 0.45s
+
+restored
+
+30 killed of 33 valid mutants
+no unexpected survivors

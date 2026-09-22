@@ -6007,6 +6007,129 @@ running a test. Both share a shape worth naming in the write-up: **the instrumen
 because its output was plausible**, and nothing downstream of a plausible number asks where it came
 from.
 
+### Two ceilings that are not the same kind of thing, and a first draft that treated them as one
+
+`ai-009` was written as "a configured maximum number of model calls **or** maximum spend for a run".
+The "or" was wrong, and the reason is worth stating precisely because it is not a matter of taste.
+
+| | Call count | Spend |
+|---|---|---|
+| When it can be checked | **before** the call | only **after** — cost is unknown until the answer returns |
+| Is the number always available? | yes | **no** — `Usage.cost_usd` is `float \| None`, because a local model costs nothing per call |
+| What it therefore is | a guard that refuses | a tripwire that notices |
+
+So a spend ceiling fires one call late by construction, and on the local arm it enforces nothing at
+all. A run configured with only the second has no working guard while appearing configured — which is
+the failure mode the item permitted as written. Amended so that the call ceiling is required and the
+spend ceiling is optional, late, and documented as possibly inert.
+
+**The implementation then made exactly the error the amendment was about.** The first draft shared one
+private `_enforce()` between the pre-flight check and the post-record check — tidy, and it looked like
+removing a duplication. It meant the call ceiling was also evaluated *after* recording, so a ceiling of
+N aborted on the call that **filled** the budget rather than the one that would exceed it, and only
+N−1 calls ever returned. Seven tests caught it immediately.
+
+The interesting part is not the off-by-one. It is that the argument for keeping the two checks apart
+had already been written down, in the spec, that morning — and the code still merged them, because at
+the level of "where does this `if` go" they look like the same statement about the same object. That
+is worth recording as a small general finding: **a distinction argued in prose does not survive
+contact with a refactor unless something about the structure resists it.** The method docstrings now
+carry the reason, which is the weakest available form of resistance; the tests are the real one.
+
+### An unpriced call is unmeasurable, not free
+
+`ai-003` made `cost_usd` optional deliberately — a locally hosted model genuinely has no per-call
+price, and that is an honest absence rather than a missing measurement. One layer up, that creates a
+reporting problem the budget has to answer rather than dodge, because `eval-005` reports **actual
+cost per arm as a result**.
+
+Two wrong answers were available. Treating an unpriced call as `0.00` produces a total that is
+arithmetically the same and epistemically different: it says the run spent that much, when what is
+true is that it spent *at least* that much. Refusing unpriced calls outright would break the local arm
+entirely. What the ledger does instead is count them, exclude them from the total, and expose
+`cost_is_complete` — so `spent_usd` is a stated lower bound whenever it is one, and a figure quoted in
+the write-up can say which it is.
+
+The same shape as `evb-001`'s typed absences and `db-002`'s three-valued grounding state, now for the
+third time in this project: *not measured* and *measured as zero* must not be the same value. What is
+new here is that the consequence is a **reported figure** rather than an internal decision.
+
+### Aborting is not degrading, and the tree says so
+
+Two fallbacks already exist. `ai-006` catches an unreachable provider and tries elsewhere; `ai-007`
+catches an unusable answer and retries, then falls back to the template. A budget exhaustion that was
+shaped like either would not stop the run. It would be *handled* — the campaign would finish on
+mechanical output while every row recorded the arm as hosted, and nothing would look wrong until the
+per-arm figures were compared with something.
+
+So `BudgetExceeded` sits outside the `GenerationError` tree, for the reason `ConfigurationError`
+already sits outside it. That is now the second exception carved out on this argument, which makes it
+a pattern worth naming in the write-up rather than a one-off: **the fallback tree is a statement about
+what may be recovered from, and anything that must stop the run has to be outside it.** The test that
+proves it is a composition test rather than a subclass check — the budget is wrapped inside a real
+`CorrectnessFallback` and the exception is required to come out the other side.
+
+The placement is load-bearing in the other direction too. The budget wraps the *arm* and the fallback
+wraps the budget, because the ceiling exists for a retry loop: placed outside, it would count one call
+per bundle and miss every retry, which is the only failure mode the item actually names.
+
+### An equivalent mutant that settled which number the write-up may quote
+
+The mutation pass over `ai-009` killed 30 of 33, and unusually for this project three of the five
+first-pass survivors were **equivalent** rather than gaps. One of the three is worth more than the
+score.
+
+The mutant rewrote the spend total from *sum the priced calls* to *sum every call, reading an absent
+price as `0.00`*. It survived, and it survives **necessarily**: the terms the original excludes are
+exactly the terms that would have contributed zero. No test can separate them because there is
+nothing to separate.
+
+That is the useful part. The module's organising claim is that an unpriced call is *unmeasurable
+rather than free* — and the pass demonstrates that the claim is **not carried by `spent_usd` at
+all**. The arithmetic is identical under both readings. What separates them is entirely
+`unpriced_calls` and `cost_is_complete`, which are companion properties rather than the headline
+figure. A reader handed only the total cannot tell a run that spent £0.40 from one that spent £0.40
+plus an unknown amount.
+
+The consequence for the write-up is concrete rather than philosophical: **the figure to quote is
+never the total on its own.** `eval-005` reports actual cost per arm as a result, and a cost quoted
+without its completeness flag is a claim the system cannot support. That was an argument before the
+pass and is a measurement after it.
+
+### A cover that turned out to be one-directional
+
+A second equivalent survivor looked like a case this project has recorded before — two guards making
+each other redundant, found by mutation rather than by reading. The report's `calls` field is coerced
+to a tuple in two places: once where the report is built from the live ledger, and once in the frozen
+record's own `__post_init__`. Deleting the first changes nothing, because the second catches it.
+
+But the pass killed the *other* mutant, and that asymmetry is the finding. Deleting the
+`__post_init__` coercion **is** caught, because a test constructs a report from a list directly and
+the build site never runs on that path. So the two are not mutually redundant, which is what the
+source looks like: one is load-bearing and the other states an intent at the place where the sharing
+would actually occur. Both are kept, and the distinction is now recorded rather than inferred.
+
+Worth generalising carefully, because the earlier note on this topic overstated it. Mutation can show
+that a guard is unreachable *through the paths the suite exercises*; it cannot show that two guards
+are equivalent to one. Establishing that needs the mutants run in both directions, which is cheap and
+was not previously being done.
+
+### A test that could not be repaired by choosing better values
+
+The third finding is smaller and is a note about test design. The abort message names both what the
+run has spent and what it was allowed, and the test asserted the ceiling appeared in the message by
+looking for its value. Deleting the ceiling from the message left the test green, because the **call
+count** supplied the same digits.
+
+The usual repair — pick values that cannot be confused — is unavailable here. The call ceiling fires
+exactly when the count reaches it, so the two numbers are equal at the only moment the message is
+ever produced. No choice of ceiling separates them. The assertion had to move from the value to the
+**structure** of the message, pinning "ceiling of N" and "N model call" as distinct phrases.
+
+That is a class of test worth recognising: where two quantities are equal by construction at the
+point of observation, an assertion on the value cannot distinguish their sources, and the only
+remaining evidence is the shape of the output.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;

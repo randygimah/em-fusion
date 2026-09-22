@@ -6315,6 +6315,74 @@ noticing.
 See `docs/thesis_notes.md` for why the ceiling has no default, and §87 for the interface both
 fallbacks are built on.
 
+## 90. Why does a spending limit need its own spec item — isn't it just a counter?
+
+**No, and the part that is not a counter is the part that would have gone wrong.** Three things here
+are decisions rather than arithmetic: what the limit is measured in, what "abort" means when two
+other mechanisms already exist to rescue a failing request, and what a cost figure is allowed to
+claim when some of the calls could not be priced.
+
+### What it is actually guarding against
+
+Not the study. Measured over the real evidence packages, a whole scored campaign is about
+**33,000 input tokens** — single-digit pounds at worst. The risk is a **loop**: a retry that does not
+terminate, a batch that regenerates every time somebody refreshes a page, a test accidentally pointed
+at the real service. So there are two guards at different distances:
+
+| | Where it lives | What it is good for |
+|---|---|---|
+| Hard cap | the provider's own console | works when *the code* is the broken thing |
+| Run budget | in the code | notices in minutes, not at the billing boundary |
+
+Neither replaces the other, and the console cap is deliberately outside the repository.
+
+### Counting calls and capping spend are not two ways of saying the same thing
+
+This is the wrong assumption the item itself contained. It described the input as "a maximum number
+of model calls **or** maximum spend", as though a project could pick either.
+
+| | Number of calls | Money |
+|---|---|---|
+| When can it be checked? | **before** making the call | only **after** — the price is not known until the answer arrives |
+| Is the number always there? | yes | **no** |
+| So it is | a guard that *refuses* | a tripwire that *notices* |
+
+The second row is the one that decides it. A locally hosted model genuinely costs nothing per call,
+so the system records its cost as *absent* rather than as zero — which means a spend ceiling on that
+arm enforces nothing whatsoever while looking exactly as configured as one that does. A run set up
+with only a spend ceiling would have **no working guard at all**.
+
+So the call ceiling is required and the spend ceiling is optional, and the code says out loud that
+the second fires one call late and may be inert.
+
+### "Not priced" and "cost nothing" are different claims
+
+They produce the same total and say different things. If four calls cost 5p each and two could not be
+priced, the honest statement is *at least 20p*, not *20p*. The ledger therefore counts the unpriced
+calls separately and reports whether the total is complete — so a figure quoted in the write-up can
+say which kind of figure it is. The same distinction the evidence packages already make about
+not-measurable evidence, and the third time this project has had to make it.
+
+### Why "abort" needed defining
+
+Two mechanisms already exist to stop a person seeing a failure: one tries a different service when
+the first is unreachable, and one retries and then falls back to the mechanical account. Both are
+good. Both would be **disastrous** here.
+
+If running out of budget looked like an ordinary request failure, neither mechanism would stop the
+run — they would *handle* it. The study would quietly finish on mechanically written explanations
+while every record said the answer came from a model, and nothing would look wrong until somebody
+compared the results with something. Running out of money is therefore deliberately a different kind
+of error from a request failing, and the test that proves it puts a real retry mechanism around a real
+budget and requires the error to come out the other side untouched.
+
+Worth recording as a limitation of a related kind: the budget is held in memory for the duration of a
+run. A process that dies and is restarted starts counting again from zero. The console cap is what
+covers that, which is a second reason it exists rather than a belt-and-braces one.
+
+See `docs/thesis_notes.md` for the first draft of this that merged the two ceilings into one check,
+and what the resulting off-by-one says about arguing a distinction in prose.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |

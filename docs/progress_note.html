@@ -5914,6 +5914,132 @@ second pass   <b>5.060000171975998</b></div>
   </section>
 
   <section>
+    <h2>Spending money on purpose</h2>
+    <p class="lede">
+      Every request to a hosted AI service costs something. Nothing in this project has made one yet,
+      and the last thing built before the first one is the thing that counts them — because the moment
+      to install a spending guard is before the surprise, not after it.
+    </p>
+
+    <h3>What it is actually guarding against, which is not the study</h3>
+    <p>
+      The obvious assumption is that the guard exists because the study is expensive. It is not.
+      Measured across the real evidence packages, a whole scored study — twenty packages, one answer
+      each, two producers — comes to roughly <span class="num">33,000</span> units of input. At any
+      current price that is single-digit pounds at worst.
+    </p>
+    <p>
+      <b>The risk is a loop.</b> A retry that never gives up. A batch that regenerates every time
+      somebody refreshes a page. A test accidentally pointed at the real service instead of a
+      stand-in. None of those is a large study; each of them is an unbounded one. So there are two
+      guards, at deliberately different distances:
+    </p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>&nbsp;</th><th>Where it lives</th><th>What it is good for</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="key">Hard cap</td><td class="why">the service provider's own console</td><td class="why">works when <em>this code</em> is the broken thing</td></tr>
+          <tr><td class="key">Run budget</td><td class="why">in the code</td><td class="why">notices in minutes rather than at the billing boundary</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      Neither replaces the other, and the first is deliberately outside the repository. A guard that
+      lives in the software it is guarding cannot help when the software is what failed.
+    </p>
+
+    <h3>Counting requests and capping money are not two ways of saying the same thing</h3>
+    <p>
+      The plan described this as "a maximum number of requests <em>or</em> a maximum spend", as though
+      a project could pick either. That turned out to be wrong, and wrong in a way that would have
+      allowed a run with no working guard at all while looking properly configured.
+    </p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>&nbsp;</th><th>Number of requests</th><th>Money</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="key">When can it be checked?</td><td class="why"><b>before</b> making the request</td><td class="why">only <b>after</b> — the price is not known until the answer arrives</td></tr>
+          <tr><td class="key">Is the number always there?</td><td class="why">yes</td><td class="why"><b>no</b></td></tr>
+          <tr><td class="key">So what it is</td><td class="why">a guard that <em>refuses</em></td><td class="why">a tripwire that <em>notices</em></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      The second row decides it. A model running on your own machine genuinely costs nothing per
+      request, so the system records its price as <em>absent</em> rather than as zero — which means a
+      money ceiling on that producer enforces nothing whatsoever, while looking exactly as configured
+      as one that does. A run set up with only a money ceiling would have had no guard.
+    </p>
+    <p>
+      So the request count is required and is the guard; the money ceiling is optional, fires one
+      request late by construction, and says so where it is written rather than in a comment somebody
+      has to find.
+    </p>
+
+    <div class="panel panel--warn">
+      <p class="lede">
+        <b>The code then made exactly the mistake the plan had just been corrected for.</b>
+      </p>
+      <p>
+        The first version put both checks in one shared place. That looked like removing a
+        duplication — two limits, one routine that enforces limits. It meant the request count was
+        also evaluated <em>after</em> the request rather than before, so a ceiling of twenty stopped
+        the run on the request that <em>filled</em> the budget rather than the one that would have
+        exceeded it, and only nineteen ever completed. Seven tests caught it within a minute.
+      </p>
+      <p>
+        The off-by-one is not the interesting part. The argument for keeping those two checks apart
+        had been written down, in the plan, the same morning — and the code merged them anyway,
+        because at the level of <em>where does this line go</em> they look like the same statement
+        about the same object. Worth recording as a general finding rather than an embarrassment:
+        <b>a distinction argued in prose does not survive contact with a tidy-up unless something
+        about the structure resists it.</b> Two separate routines, each stating why it is separate,
+        is the weakest available form of that resistance. The tests are the real one.
+      </p>
+    </div>
+
+    <h3>"Not priced" and "cost nothing" are different claims</h3>
+    <p>
+      If four requests cost five pence each and two could not be priced, the honest statement is
+      <em>at least twenty pence</em> — not <em>twenty pence</em>. Both are the same arithmetic and
+      only one of them is true.
+    </p>
+    <p>
+      So unpriced requests are counted separately, left out of the total, and the record says whether
+      the total is complete or a floor. That matters more than bookkeeping tidiness because the actual
+      cost of the study is a <em>reported result</em> of this project, not an internal detail — and a
+      figure that quietly omits what it could not price is worse than no figure. It is the third time
+      this project has had to insist that <em>not measured</em> and <em>measured as zero</em> are
+      different values, after the evidence packages and the record of whether a claim was checked.
+    </p>
+
+    <h3>Why "stop the run" needed defining at all</h3>
+    <p>
+      Two mechanisms already exist to keep a failure away from the analyst: one tries a different
+      service when the first is unreachable, and one asks again and then falls back to the mechanical
+      account. Both are good. Both would be <b>disastrous</b> here.
+    </p>
+    <p>
+      If running out of budget looked like an ordinary failed request, neither mechanism would stop
+      the run. They would <em>handle</em> it. The study would quietly finish on mechanically written
+      explanations while every stored record said the answer came from a model — and nothing would
+      look wrong until somebody compared the results against something. Running out of money is
+      therefore deliberately a different <em>kind</em> of error, outside the family that either
+      mechanism is allowed to catch, and the test that proves it wraps a real retry mechanism around a
+      real budget and requires the error to come out the other side untouched.
+    </p>
+    <p>
+      One limitation, worth stating rather than discovering. The budget is held in memory for the
+      length of a run. A process that dies and is restarted begins counting again from zero. That is a
+      second reason the provider's own cap exists, rather than a belt-and-braces one.
+    </p>
+  </section>
+
+  <section>
     <h2>The rules the build follows</h2>
     <ul class="rules">
       <li><b>Nothing is written before it is specified and proven to fail.</b> Every capability gets a
@@ -5942,7 +6068,7 @@ second pass   <b>5.060000171975998</b></div>
 
     <div class="outcomes">
       <div class="outcome">
-        <h3>1,241</h3>
+        <h3>1,287</h3>
         <p>Tests passing in containers against a real database, from a database that was deleted first to prove nothing was left over.</p>
       </div>
       <div class="outcome">
@@ -5950,7 +6076,7 @@ second pass   <b>5.060000171975998</b></div>
         <p>Of the back-end code is exercised by those tests. The screens measure nothing of the kind — see below.</p>
       </div>
       <div class="outcome">
-        <h3>53 / 99</h3>
+        <h3>54 / 99</h3>
         <p>Numbered capabilities finished. The rest are specified and waiting, not vague.</p>
       </div>
     </div>
@@ -6083,10 +6209,10 @@ second pass   <b>5.060000171975998</b></div>
           <tr><td class="key">Scenario generator</td><td class="n">8</td><td class="n">8</td><td class="why">Complete. Receiver positions fixed, an invented hour reproducible from one number, all five kinds of run staging what they should, twenty produced unattended from a single number by one command, the screen that will drive it, disruptions staged only on aircraft that are actually flying, a floor of five affected aircraft per hour so that no hour is unscoreable, and every hour now recording the number it was generated from so a batch can be reproduced rather than remembered</td></tr>
           <tr><td class="key">Anomaly detection</td><td class="n">9</td><td class="n">14</td><td class="why">What normal looks like, and a rule for each side of the picture — the radio and the aircraft. Findings are kept and grouped, and the evidence the final rules read has been settled: grouping alone could not separate a staged hour from a quiet one, so it was replaced by a local rate comparison — measured first, and chosen over turning up the scenario settings. The three answers the system may give are one decision asked in a fixed order; the order itself is now built and enforced, and two of the three tests with it. Marked against the answer key over three hundred regenerated hours: every one of the five kinds of hour decided correctly sixty times out of sixty, no event anywhere given two answers, and — since a blip lasting one reading stopped counting as an event — no false report anywhere at all. The third test, ruled out last time, is worth attempting again</td></tr>
           <tr><td class="key">Evidence bundles</td><td class="n">2</td><td class="n">2</td><td class="why">Complete. One event becomes one package, with the frequency dimension joined up here because nothing upstream joins it, and with every absence labelled by which of the three kinds it is rather than left as silence. Every statement's citations are then resolved against the store before the package is allowed to exist — which found that one citation in eleven had been pointing at a reconstructed instant rather than a stored reading, in a field that had been written and never read since the findings were first kept</td></tr>
-          <tr><td class="key">AI hypothesis layer</td><td class="n">4</td><td class="n">10</td><td class="why">The shape every explanation must take, and the first thing that produces one. The shape is a constraint on what a model is allowed to emit rather than a description of what it did, so each guarantee is checked on the translated version a model is actually handed as well as on the original. The producer built first has no model in it: it is both the fallback for when a model's answer cannot be trusted and the yardstick the models are measured against. Run over all forty-one real packages it produced forty-one explanations, refused none, and every one of its one hundred and sixty-four citations was found in the package it came from. Since then, the seam a model plugs into — defined before either model exists, so neither one's peculiarities leak into it — and the decision about what a person sees when a model's answer cannot be used: ask again a fixed number of times, then fall back to the mechanical account, and keep a record of why. The two model arms and the automatic checking are next</td></tr>
+          <tr><td class="key">AI hypothesis layer</td><td class="n">5</td><td class="n">10</td><td class="why">The shape every explanation must take, and the first thing that produces one. The shape is a constraint on what a model is allowed to emit rather than a description of what it did, so each guarantee is checked on the translated version a model is actually handed as well as on the original. The producer built first has no model in it: it is both the fallback for when a model's answer cannot be trusted and the yardstick the models are measured against. Run over all forty-one real packages it produced forty-one explanations, refused none, and every one of its one hundred and sixty-four citations was found in the package it came from. Since then, the seam a model plugs into — defined before either model exists, so neither one's peculiarities leak into it — and the decision about what a person sees when a model's answer cannot be used: ask again a fixed number of times, then fall back to the mechanical account, and keep a record of why, plus the guard that counts what a run spends and stops it rather than letting it quietly continue. The two model arms and the automatic checking are next</td></tr>
           <tr><td class="key">Hypothesis screen and feedback</td><td class="n">0</td><td class="n">6</td><td class="why">Specified, unbuilt</td></tr>
           <tr><td class="key">Evaluation</td><td class="n">0</td><td class="n">6</td><td class="why">Scoring instrument written and locked; harness unbuilt</td></tr>
-          <tr class="total"><td class="key">Total</td><td class="n">53</td><td class="n">99</td><td class="why">&nbsp;</td></tr>
+          <tr class="total"><td class="key">Total</td><td class="n">54</td><td class="n">99</td><td class="why">&nbsp;</td></tr>
         </tbody>
       </table>
     </div>
@@ -6153,10 +6279,11 @@ second pass   <b>5.060000171975998</b></div>
           writing is tested; nothing has yet run the mechanical account across the packages and kept
           the results. That is a deliberate ordering rather than an omission — the first thing worth
           storing is a comparison, and there is nothing to compare against yet.</li>
-        <li><b>The spending guard is not built.</b> The limit on retrying a single package exists;
-          the limit on what a whole run may spend, and the counting of what each request cost, do
-          not. Both are owed before the first real request rather than after the first surprise, and
-          they are the next thing built.</li>
+        <li><b>The hard cap at the service provider has not been set.</b> The guard inside the
+          code is built — it counts every request, records what each one cost, and stops the run
+          rather than quietly continuing. The second guard is a cap set in the provider's own
+          console, and it is the one that works when the code is the broken thing. It cannot be
+          written; somebody has to go and set it, and no request should be made before that.</li>
         <li><b>Nothing enforces quality on push.</b> The checks all exist as commands; until they run
           automatically, a green result is evidence about one machine at one moment.</li>
       </ul>
@@ -6212,14 +6339,17 @@ second pass   <b>5.060000171975998</b></div>
           what it says, and the decision about what a person sees when its answer cannot be used.
           Both loose ends this page previously listed as owed first are closed.
           <br><br>
-          One thing comes before the first real request rather than after it: <b>a limit on what a
-          single run may spend, and a count of what each request cost.</b> The per-package retry
-          limit is built; the run-level one is not. Then the hosted model itself — and the
-          instructions given to it are written and reviewed <em>first</em>, because they are the
-          largest thing in this comparison that nobody has pinned down, and a study whose arms were
-          asked differently is not a comparison. Then the automatic checking of what it says, which
-          is unusually cheap to validate: the mechanical account is an input whose right answer is
-          known in advance, so anything the checker objects to there is a fault in the checker.
+          The two things that had to come before the first real request are now both built: a
+          limit on how many times one package may be retried, and a limit on what a whole run may
+          spend, with every request counted and priced from the first one. What remains outside the
+          code is the hard cap at the provider's own console, which somebody has to go and set.
+          <br><br>
+          Then the hosted model itself — and the <b>instructions given to it are written and
+          reviewed first</b>, because they are the largest thing in this comparison that nobody has
+          pinned down, and a study whose arms were asked differently is not a comparison. Then the
+          automatic checking of what it says, which is unusually cheap to validate: the mechanical
+          account is an input whose right answer is known in advance, so anything the checker
+          objects to there is a fault in the checker rather than in the account.
         </div>
       </div>
       <div class="tier">
@@ -6267,7 +6397,7 @@ second pass   <b>5.060000171975998</b></div>
     </div>
     <div>
       EM Fusion · a human-in-the-loop AI prototype for explainable electromagnetic situational
-      awareness · progress note, 21 September 2026
+      awareness · progress note, 22 September 2026
     </div>
   </footer>
 

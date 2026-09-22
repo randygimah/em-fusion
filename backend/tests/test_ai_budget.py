@@ -191,6 +191,12 @@ def test_the_ceiling_refuses_the_call_rather_than_noticing_it():
 def test_the_refusal_names_the_ceiling_and_what_was_spent():
     # spec: ai-009 -- "aborts with a clear reason". A limit reached with no
     # statement of what reached it is a stack trace, not a reason.
+    #
+    # The ceiling is pinned by NAME rather than by value. This abort fires
+    # exactly when the count equals the ceiling, so the two numbers are
+    # always identical and no choice of value can tell them apart -- a
+    # mutation pass caught the first version of this test passing with the
+    # ceiling deleted from the message, satisfied by the call count.
     arm = _ScriptedArm(priced(0.01))
     generator = budgeted(arm, a_budget(max_calls=1))
     generator.generate(fault_bundle())
@@ -198,7 +204,8 @@ def test_the_refusal_names_the_ceiling_and_what_was_spent():
     with pytest.raises(BudgetExceeded) as raised:
         generator.generate(fault_bundle())
 
-    assert "1" in str(raised.value)
+    assert "ceiling of 1" in str(raised.value)
+    assert "1 model call" in str(raised.value)
 
 
 def test_the_refusal_carries_the_ledger_as_it_stood():
@@ -223,7 +230,7 @@ def test_it_satisfies_the_generation_port():
     assert isinstance(budgeted(_ScriptedArm(), a_budget()), HypothesisGenerator)
 
 
-# ------------------------------- exhaustion is not a generation failure, and must not be
+# --------------------------- exhaustion is not a generation failure, and must not be
 
 
 def test_budget_exhaustion_is_not_a_generation_error():
@@ -456,6 +463,18 @@ def test_exceeding_the_spend_ceiling_aborts_the_run():
         generator.generate(fault_bundle())
 
     assert "cost" in str(raised.value).lower() or "spend" in str(raised.value).lower()
+
+
+def test_spending_the_whole_allowance_exactly_stops_the_run():
+    # spec: ai-009 -- the boundary, and a decision rather than an accident:
+    # landing exactly on the ceiling stops, because an allowance spent in
+    # full is spent. Without this nothing separates "at the ceiling" from
+    # "past it", and a run configured for 20.00 would quietly continue at
+    # 20.00.
+    budget = a_budget(max_cost_usd=0.05)
+
+    with pytest.raises(BudgetExceeded):
+        budgeted(_ScriptedArm(priced(0.05)), budget).generate(fault_bundle())
 
 
 def test_the_spend_ceiling_can_only_fire_after_the_call_that_breached_it():
