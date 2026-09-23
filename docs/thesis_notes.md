@@ -6130,6 +6130,93 @@ That is a class of test worth recognising: where two quantities are equal by con
 point of observation, an assertion on the value cannot distinguish their sources, and the only
 remaining evidence is the shape of the output.
 
+### The measurement that closed the egress gate described a script, not the system
+
+The Track 0 data-egress item was closed on a measurement: §4 of the phase 9 document records, field
+by field, exactly what reaches a hosted provider. No aircraft position appears in a bundle at all; a
+track citation carries a `dal-004` pseudonym and a timestamp. That measurement is what the clearance
+conversation rested on and what NFR-405 is checked against.
+
+Building `ai-004` showed that it was taken against a payload dictionary **hand-written inside
+`measurements/corpus/bundle_payload.py`**, and that nothing in `app/` serialised a bundle at all. The
+figure was therefore about a document that existed only inside a measurement script. Unless the
+adapter happened to reproduce it exactly, the thing measured and the thing sent were different
+documents that nobody would ever compare.
+
+This is a different failure from the three instrument defects already recorded, and worth separating
+from them. Those were instruments that produced a **wrong number**. This is an instrument that
+produced a **right number about the wrong object** — and it is harder to notice, because every check
+you could run on the measurement passes.
+
+The repair is small and the principle is not: a measurement about what the system does must be taken
+against the system. `app/ai/payload.py` is now the single definition, inside the package that lint,
+mypy and the coverage gate see, and the measurement re-runs against that function rather than beside
+it.
+
+Writing the test that holds the payload to the bundle's own field list then immediately forced a
+decision that had never been made. `EvidenceBundle` carries `scenario_run_id` and each evidence item
+carries `observation_ids`, and **neither was in the measured payload** — not by decision, but because
+the person writing the dictionary did not think of them. Both are our bookkeeping rather than
+evidence, and a model cannot query the store, so excluding them is right. What matters is that it is
+now an exclusion **argued for by name in a test** rather than an omission, and a third one has to be
+argued for in the same place.
+
+### A constrained schema carries structure, not quantity
+
+`ai-004` uses the provider's native structured outputs, which is what lets `ai-001` describe schema
+conformance as a *generation-time guarantee* rather than a post-hoc check. §10 drew a consequence
+from that: for the hosted arm a validation failure cannot happen in the ordinary course, so if one
+does it means the provider broke its own constraint — a more alarming event than an ungrounded
+claim, and one that must be recorded separately rather than folded into a retry count.
+
+The consequence is half right, and the half that fails is the half `ai-001` warned about. Strict mode
+carries **structure** — field names, types, the three-value confidence enum, `additionalProperties:
+false` — and does not carry **quantity**. `minLength` and `minItems` are not honoured, and `ai-001`
+relies on both: at least one citation, no blank summary, at least one alternative explanation.
+
+Those guarantees are not lost. They **move**, from generation time to parse time, and are enforced by
+the Pydantic model as a refusal rather than as an impossibility. `ai-001` predicted the shape of this
+exactly — "a derivation that widened confidence to a free string would pass every test written
+against the Python model and lose the guarantee at the one boundary relying on it" — and the
+difference is that this loss is loud rather than silent.
+
+The correction to `ai-007` follows. A malformed refusal from the hosted arm is **not automatically
+alarming**: an empty citation list is conformant to the provider and invalid to us, and will happen
+in the ordinary course. A confidence outside the three is a different matter, because the enum *does*
+survive. So the adapter sorts its refusals by which kind they are, and the alarming event keeps a
+signal of its own instead of being buried under the expected one — which was §10's purpose, arrived
+at by a different route than §10 imagined.
+
+*(The exact set of unsupported keywords is provider documentation rather than something this
+repository can verify without a real call. It is a named constant, every surviving guarantee is
+re-asserted on the narrowed schema, and the gate's three-bundle smoke test is what confirms it.
+Record the result of that smoke test here.)*
+
+### An instrument that edits the code under test
+
+Two mutation passes over `ai-004` were killed mid-run by the OOM killer. Each harness restores the
+source in a `finally` block, and **a `finally` does not survive a `SIGKILL`** — so a mutated file was
+left on disk, looking exactly like ordinary uncommitted work. One test was red and the cause was
+three steps from anything that pointed at it.
+
+The third instrument defect on this project, after the bytecode-cache collision and the two harnesses
+that scored perfectly without running a test. The direction of the damage is what is new: those
+produced a wrong figure, this one silently edited the thing being measured. An instrument that
+corrupts its subject is worse than one that misreports it, because every subsequent measurement is
+also wrong and nothing says so.
+
+Investigating the cause produced a second finding that is more useful than the first. The reason a
+pass was long enough to exhaust memory is that each mutant rebuilt the Docker image — and **that
+rebuild was never necessary**. The backend service bind-mounts the source into the container, so an
+edit is already visible and the rebuild was recreating an image whose source the mount overrides. Two
+hours of continuous builds per pass, for nothing; a pass now does none and a mutant costs seconds.
+
+The obvious risk in that change is the exact defect already recorded twice here: an assumption that
+the harness is really testing what it thinks it is. So it is not assumed. The harness makes one
+**deliberately broken edit before the run** and requires the suite to go red; if the sentinel
+survives, it aborts and says no score from the run can be believed. That is a cheap general pattern
+and it is what the two earlier harness defects were missing — neither would have survived a sentinel.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;

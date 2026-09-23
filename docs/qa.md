@@ -6383,6 +6383,68 @@ covers that, which is a second reason it exists rather than a belt-and-braces on
 See `docs/thesis_notes.md` for the first draft of this that merged the two ceilings into one check,
 and what the resulting off-by-one says about arguing a distinction in prose.
 
+## 91. If the model is physically unable to produce the wrong shape, what is left to go wrong?
+
+**Less than before, and not nothing — and the part that is left is the part worth knowing about.**
+The provider is handed the required output shape and constrained to it during generation, so a
+malformed answer is genuinely close to impossible. But "the shape" turns out to mean less than it
+sounds like.
+
+### The wrong assumption
+
+It is natural to read *constrained decoding guarantees the schema* as *everything in the schema is
+guaranteed*. It is not. The constraint covers **structure** and not **quantity**:
+
+| Guaranteed during generation | Not guaranteed |
+|---|---|
+| Every field present, none invented | "at least one supporting citation" |
+| Types correct | "the summary is not blank" |
+| Confidence is one of exactly three words | "at least one alternative explanation" |
+
+The second column is not decoration. *At least one alternative explanation* is the rule that stops a
+fluent model saying "this is obviously interference" and moving on, and it is precisely the sort of
+constraint that cannot be expressed in the mechanism doing the constraining.
+
+### So where did those guarantees go?
+
+They moved rather than vanished. They are still enforced — by the same shape definition, checked
+after the answer arrives — but as a **rejection** rather than an **impossibility**:
+
+| | Enforced during generation | Enforced on arrival |
+|---|---|---|
+| What happens when violated | cannot occur | the answer is thrown away and the request retried |
+| Cost | none | one wasted request, and eventually a fall back to the mechanical account |
+| Visible? | nothing to see | recorded, counted, reported |
+
+That is an acceptable place for them to live. What would not be acceptable is not knowing which
+guarantees are in which column, because the two failures mean completely different things.
+
+### Why the distinction is recorded rather than smoothed over
+
+An earlier decision in this project said: since the shape is guaranteed at generation, an answer that
+fails the check must mean **the provider broke a promise it advertises** — a rare and alarming event
+that deserves its own line in the log rather than being counted alongside ordinary problems.
+
+That reasoning survives, but only for half the cases. An empty citation list is now an *ordinary*
+failure that will happen from time to time. A confidence of "Certain" is still the alarming one,
+because that constraint genuinely is enforced during generation. Counting them together would bury
+the rare, serious event under the common, expected one — which is the exact thing the original
+decision was trying to prevent.
+
+So the two are separated by the system itself, and the message says which kind it was.
+
+### The other thing that changed
+
+Worth recording as a limitation. The provider reports how many units of text it processed, **not how
+much money that cost**. So the spend figure is computed here from prices typed into the
+configuration, which makes it an *estimate* rather than a bill — the provider's own console is the
+authority. One consequence: the run-level spend limit is inert unless those prices are supplied,
+which is true of the hosted producer and not only of a locally run one as previously recorded. The
+limit on the *number* of requests was always the real guard.
+
+See `docs/thesis_notes.md` for why the payload a model receives had to move out of a measurement
+script, and §89 for the two fallbacks this arm sits between.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
