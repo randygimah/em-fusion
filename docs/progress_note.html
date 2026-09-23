@@ -6040,6 +6040,142 @@ second pass   <b>5.060000171975998</b></div>
   </section>
 
   <section>
+    <h2>Asking a model, without letting it say anything it likes</h2>
+    <p class="lede">
+      This is the part the project is actually about. Everything before it produces evidence and
+      writes an explanation by fixed rules; this is the first thing that hands a package to a model
+      and asks it to reason. It is built, it is tested, and <b>it has never made a real request</b> —
+      what stands between it and the first one is not code, and is listed at the end of this section.
+    </p>
+
+    <h3>The model is not asked to behave — it is prevented from misbehaving</h3>
+    <p>
+      The obvious way to get a structured answer out of a language model is to ask nicely and check
+      afterwards. That is not what happens here. The required shape is handed to the service along
+      with the question, and the model is <em>physically unable</em> to emit anything else: the shape
+      is enforced while the words are being chosen, not inspected once they have been.
+    </p>
+    <p>
+      So a whole class of failure disappears. The answer cannot be missing a field, cannot invent an
+      extra one, and cannot express confidence as a percentage — the three words are the only things
+      that fit through.
+    </p>
+
+    <div class="panel panel--warn">
+      <p class="lede">
+        <b>But the constraint covers shape, not quantity — and that correction was earned by
+        building it.</b>
+      </p>
+      <p>
+        An earlier decision on this page's underlying plan reasoned: since the shape is guaranteed
+        during generation, any answer that fails the check afterwards must mean the service broke a
+        promise it advertises — a rare and alarming event deserving its own line in the log rather
+        than being counted with ordinary problems.
+      </p>
+      <p>
+        Half of that survives. The constraint mechanism carries structure — every field present,
+        types correct, confidence one of exactly three words — and <b>does not carry rules about how
+        many</b>. "At least one supporting citation." "At least one alternative explanation." "The
+        summary is not blank." None of those can be expressed in the thing doing the constraining.
+      </p>
+      <p>
+        They are not lost; they <em>move</em>. They are still enforced, by the same shape definition,
+        checked when the answer arrives — as a rejection rather than an impossibility. Which means a
+        rejected answer is no longer automatically alarming: an empty citation list will happen from
+        time to time and is ordinary, while a confidence of "Certain" is still the rare serious event,
+        because <em>that</em> rule genuinely is enforced during generation. The system now tells the
+        two apart and says which it saw. Counting them together would have buried the event worth
+        noticing under the one that is expected — which is exactly what the original decision was
+        trying to prevent, arrived at by a route it did not anticipate.
+      </p>
+    </div>
+
+    <h3>The instructions are part of the experiment, not a setting</h3>
+    <p>
+      Two producers given different instructions are not two answers to one question. So the
+      instruction text is written once, reviewed before any request is made, and would be shared
+      word-for-word with a second model if one is ever added. Nine binding rules: the package is the
+      only source; every citation must name a rule and a finding type copied exactly from it; the
+      rejected explanations are context and may never be cited as support; confidence is three words;
+      at least one genuine alternative; an absence of measurement is not an absence of contrary
+      evidence; the aircraft names are pseudonyms; the recommended action must be something a person
+      can actually do; and write plainly without padding.
+    </p>
+    <p>
+      Every stored explanation carries a <b>fingerprint of the exact instruction text</b> that
+      produced it. Instructions drifting part-way through a study is invisible in the output and
+      would quietly ruin the comparison; a fingerprint makes it a thing you can check rather than a
+      thing you have to remember.
+    </p>
+    <p>
+      Three things are deliberately left out. No glossary of what the anomaly types mean — the
+      package already carries each rule's own conclusion in prose, so a glossary would restate the
+      input and add a variable to an experiment trying to hold everything but the producer still. No
+      mention of which scenario is being looked at, ever. And no instruction to sound human or to
+      match the mechanical producer's voice, which would be tuning for the grader rather than for the
+      analyst.
+    </p>
+
+    <div class="panel panel--warn">
+      <p class="lede">
+        <b>A measurement this project relied on turned out to describe a measuring script rather
+        than the system.</b>
+      </p>
+      <p>
+        Sending evidence to an outside service is the one place this project lets data leave the
+        machine, and the permission to do it rests on a measurement: exactly which fields go, listed
+        one by one. No aircraft position reaches a package at all; an aircraft reference carries a
+        pseudonym and a timestamp and nothing else. That list is what the clearance conversation was
+        settled on.
+      </p>
+      <p>
+        Building this stage showed that the list had been produced by a dictionary written <em>inside
+        the measuring script</em>, and that nothing in the system itself knew how to package an
+        evidence bundle for sending. The measurement was about a document that existed only while the
+        measurement was running. Unless the new code happened to reproduce it exactly, the thing
+        measured and the thing sent would be two different documents that nobody would ever compare.
+      </p>
+      <p>
+        <b>This is a different kind of fault from the three measuring-instrument faults already
+        recorded here</b>, and harder to catch. Those produced a wrong number. This produced a
+        <em>right number about the wrong object</em> — and every check you could run on the
+        measurement passes. The packaging now lives in the system, where the automatic checks see it,
+        and the measurement re-runs against it.
+      </p>
+      <p>
+        Writing the test that holds the package to the evidence bundle's own field list then forced a
+        decision that had never actually been made: two fields were missing from the measured list
+        not because anyone chose to leave them out, but because the person writing the dictionary did
+        not think of them. Both are internal bookkeeping — a database key and some row numbers — and
+        leaving them out is right. What changed is that it is now a decision written down and argued
+        for, and a third omission has to be argued for in the same place.
+      </p>
+    </div>
+
+    <h3>What stands between this and the first real request</h3>
+    <p>
+      None of it is code, and none of it should be skipped.
+    </p>
+    <ul class="gaps">
+      <li><b>A dated model name, pinned.</b> Services offer both a moving name that always points at
+        the current version and a fixed one that never changes. Using the moving one means the study
+        could be half-run against one model and half against another, with nothing in the results
+        saying so. The system now refuses an undated name outright. Which specific model is a
+        purchasing decision, not a design one.</li>
+      <li><b>A hard spending cap set at the service's own console.</b> The limit inside the code is
+        built and counts every request — but it lives in the software it is guarding, and it is held
+        in memory, so a process that dies and restarts begins counting from zero. The cap at the
+        other end is the one that works when the code is the broken thing. Somebody has to go and set
+        it.</li>
+      <li><b>A key, in the environment and never in the repository.</b> The slot exists and the
+        system refuses to start without it rather than quietly running unauthenticated.</li>
+      <li><b>A hand-read trial on three packages</b> before anything is run in bulk. It is also what
+        confirms the assumption above about which rules the constraint mechanism will and will not
+        accept — that is documentation rather than something this project can verify on its own.</li>
+    </ul>
+  </section>
+
+  <section>
     <h2>The rules the build follows</h2>
     <ul class="rules">
       <li><b>Nothing is written before it is specified and proven to fail.</b> Every capability gets a
@@ -6068,15 +6204,15 @@ second pass   <b>5.060000171975998</b></div>
 
     <div class="outcomes">
       <div class="outcome">
-        <h3>1,287</h3>
+        <h3>1,342</h3>
         <p>Tests passing in containers against a real database, from a database that was deleted first to prove nothing was left over.</p>
       </div>
       <div class="outcome">
-        <h3>99.85%</h3>
+        <h3>99.86%</h3>
         <p>Of the back-end code is exercised by those tests. The screens measure nothing of the kind — see below.</p>
       </div>
       <div class="outcome">
-        <h3>54 / 99</h3>
+        <h3>55 / 99</h3>
         <p>Numbered capabilities finished. The rest are specified and waiting, not vague.</p>
       </div>
     </div>
@@ -6209,10 +6345,10 @@ second pass   <b>5.060000171975998</b></div>
           <tr><td class="key">Scenario generator</td><td class="n">8</td><td class="n">8</td><td class="why">Complete. Receiver positions fixed, an invented hour reproducible from one number, all five kinds of run staging what they should, twenty produced unattended from a single number by one command, the screen that will drive it, disruptions staged only on aircraft that are actually flying, a floor of five affected aircraft per hour so that no hour is unscoreable, and every hour now recording the number it was generated from so a batch can be reproduced rather than remembered</td></tr>
           <tr><td class="key">Anomaly detection</td><td class="n">9</td><td class="n">14</td><td class="why">What normal looks like, and a rule for each side of the picture — the radio and the aircraft. Findings are kept and grouped, and the evidence the final rules read has been settled: grouping alone could not separate a staged hour from a quiet one, so it was replaced by a local rate comparison — measured first, and chosen over turning up the scenario settings. The three answers the system may give are one decision asked in a fixed order; the order itself is now built and enforced, and two of the three tests with it. Marked against the answer key over three hundred regenerated hours: every one of the five kinds of hour decided correctly sixty times out of sixty, no event anywhere given two answers, and — since a blip lasting one reading stopped counting as an event — no false report anywhere at all. The third test, ruled out last time, is worth attempting again</td></tr>
           <tr><td class="key">Evidence bundles</td><td class="n">2</td><td class="n">2</td><td class="why">Complete. One event becomes one package, with the frequency dimension joined up here because nothing upstream joins it, and with every absence labelled by which of the three kinds it is rather than left as silence. Every statement's citations are then resolved against the store before the package is allowed to exist — which found that one citation in eleven had been pointing at a reconstructed instant rather than a stored reading, in a field that had been written and never read since the findings were first kept</td></tr>
-          <tr><td class="key">AI hypothesis layer</td><td class="n">5</td><td class="n">10</td><td class="why">The shape every explanation must take, and the first thing that produces one. The shape is a constraint on what a model is allowed to emit rather than a description of what it did, so each guarantee is checked on the translated version a model is actually handed as well as on the original. The producer built first has no model in it: it is both the fallback for when a model's answer cannot be trusted and the yardstick the models are measured against. Run over all forty-one real packages it produced forty-one explanations, refused none, and every one of its one hundred and sixty-four citations was found in the package it came from. Since then, the seam a model plugs into — defined before either model exists, so neither one's peculiarities leak into it — and the decision about what a person sees when a model's answer cannot be used: ask again a fixed number of times, then fall back to the mechanical account, and keep a record of why, plus the guard that counts what a run spends and stops it rather than letting it quietly continue. The two model arms and the automatic checking are next</td></tr>
+          <tr><td class="key">AI hypothesis layer</td><td class="n">6</td><td class="n">10</td><td class="why">The shape every explanation must take, and the first thing that produces one. The shape is a constraint on what a model is allowed to emit rather than a description of what it did, so each guarantee is checked on the translated version a model is actually handed as well as on the original. The producer built first has no model in it: it is both the fallback for when a model's answer cannot be trusted and the yardstick the models are measured against. Run over all forty-one real packages it produced forty-one explanations, refused none, and every one of its one hundred and sixty-four citations was found in the package it came from. Since then, the seam a model plugs into — defined before either model exists, so neither one's peculiarities leak into it — and the decision about what a person sees when a model's answer cannot be used: ask again a fixed number of times, then fall back to the mechanical account, and keep a record of why, plus the guard that counts what a run spends and stops it rather than letting it quietly continue. And now the producer the whole project is about: a model, handed the package and constrained so it cannot emit the wrong shape at all. It has never made a real request — what remains before the first one is a pinned model version, a spending cap set at the service's own console, and a key. The automatic checking of what it says is next</td></tr>
           <tr><td class="key">Hypothesis screen and feedback</td><td class="n">0</td><td class="n">6</td><td class="why">Specified, unbuilt</td></tr>
           <tr><td class="key">Evaluation</td><td class="n">0</td><td class="n">6</td><td class="why">Scoring instrument written and locked; harness unbuilt</td></tr>
-          <tr class="total"><td class="key">Total</td><td class="n">54</td><td class="n">99</td><td class="why">&nbsp;</td></tr>
+          <tr class="total"><td class="key">Total</td><td class="n">55</td><td class="n">99</td><td class="why">&nbsp;</td></tr>
         </tbody>
       </table>
     </div>
@@ -6270,11 +6406,12 @@ second pass   <b>5.060000171975998</b></div>
           still opens a run labelled plainly as a replay — which has turned from a stopgap into a
           useful thing, since it is what tells replayed rows from generated ones at a glance.</li>
         <li><b>No model has been asked anything yet.</b> Nothing in the project has made a request
-          to an AI service and no key exists. What has changed is that the machinery around the
-          absent model is now finished rather than sketched: a seam it plugs into, somewhere for its
-          answer to be kept with the model's name and exact words beside it, and a decision about
-          what a person sees when the answer cannot be used. The part that makes this research rather
-          than reporting is the next thing built, and none of it is claimed yet.</li>
+          to an AI service and no key exists. The producer that would make one is now built and
+          tested against a stand-in service — constrained so it cannot emit the wrong shape, with its
+          instructions fingerprinted onto every answer — but it has never run for real. What stands
+          in the way is deliberately not code: a pinned model version, a spending cap set at the
+          service's own console, and a key. Until those exist, every figure about model quality on
+          this page is absent rather than provisional.</li>
         <li><b>An explanation can now be saved, and none has been.</b> The table is fixed and the
           writing is tested; nothing has yet run the mechanical account across the packages and kept
           the results. That is a deliberate ordering rather than an omission — the first thing worth
@@ -6282,8 +6419,10 @@ second pass   <b>5.060000171975998</b></div>
         <li><b>The hard cap at the service provider has not been set.</b> The guard inside the
           code is built — it counts every request, records what each one cost, and stops the run
           rather than quietly continuing. The second guard is a cap set in the provider's own
-          console, and it is the one that works when the code is the broken thing. It cannot be
-          written; somebody has to go and set it, and no request should be made before that.</li>
+          console, and it is the one that works when the code is the broken thing. It also covers
+          something the in-code guard cannot: that limit is held in memory, so a process that dies
+          and restarts begins counting from zero. It cannot be written; somebody has to go and set
+          it, and no request should be made before that.</li>
         <li><b>Nothing enforces quality on push.</b> The checks all exist as commands; until they run
           automatically, a green result is evidence about one machine at one moment.</li>
       </ul>
@@ -6339,17 +6478,19 @@ second pass   <b>5.060000171975998</b></div>
           what it says, and the decision about what a person sees when its answer cannot be used.
           Both loose ends this page previously listed as owed first are closed.
           <br><br>
-          The two things that had to come before the first real request are now both built: a
-          limit on how many times one package may be retried, and a limit on what a whole run may
-          spend, with every request counted and priced from the first one. What remains outside the
-          code is the hard cap at the provider's own console, which somebody has to go and set.
+          The producer is built, its instructions are written and reviewed, and every request it
+          makes is counted, priced and bounded. What remains before the first real one is not code:
+          a <b>pinned model version</b> rather than a moving name, a <b>hard spending cap at the
+          service's own console</b>, and a <b>key</b>. Then a hand-read trial on three packages
+          before anything runs in bulk.
           <br><br>
-          Then the hosted model itself — and the <b>instructions given to it are written and
-          reviewed first</b>, because they are the largest thing in this comparison that nobody has
-          pinned down, and a study whose arms were asked differently is not a comparison. Then the
-          automatic checking of what it says, which is unusually cheap to validate: the mechanical
-          account is an input whose right answer is known in advance, so anything the checker
-          objects to there is a fault in the checker rather than in the account.
+          Then the <b>automatic checking of every claim a model makes</b> against the package it was
+          given. It is unusually cheap to validate, because the mechanical producer is an input
+          whose right answer is known in advance: it can only restate what the rules found, so
+          anything the checker objects to there is a fault in the checker rather than in the
+          account. It is also the load-bearing safeguard — constraining the output guarantees the
+          shape of an explanation and says nothing whatsoever about whether the things it cites
+          exist.
         </div>
       </div>
       <div class="tier">
@@ -6397,7 +6538,7 @@ second pass   <b>5.060000171975998</b></div>
     </div>
     <div>
       EM Fusion · a human-in-the-loop AI prototype for explainable electromagnetic situational
-      awareness · progress note, 22 September 2026
+      awareness · progress note, 23 September 2026
     </div>
   </footer>
 
