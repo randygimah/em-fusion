@@ -359,5 +359,24 @@ Two mitigations, in order of value.
    change each.
 
 A long pass is also the one most likely to be killed. At roughly **2.5 minutes per mutant** — each
-source edit invalidates the image's `COPY app/` layer and forces a rebuild — 47 mutants is about two
-hours of continuous Docker builds, which is what exhausted memory in the first place.
+source edit invalidated the image's `COPY app/` layer and forced a rebuild — 47 mutants was about two
+hours of continuous Docker builds, which is what exhausted memory in the first place. It killed the
+pass twice, and the second time it wedged the Docker daemon as well.
+
+### The rebuild was never necessary, and `test-backend-nobuild` is the fix
+
+The `backend` service **bind-mounts `./backend` to `/app`**. A source edit is therefore already
+visible inside the container, and `build-backend` was rebuilding an image whose source the mount
+overrides anyway. `make test-backend-nobuild` skips it and keeps everything else — the same compose
+run, the same `db-test-create`, the same mounts — so a mutant costs seconds rather than minutes and
+a pass does no Docker builds at all.
+
+Two rules come with it. Run `make build-backend` **once** before a pass, because this target does not
+pick up a dependency change. And use `make test-backend` for everything else: this one exists for
+mutation passes and its comment in the Makefile says so.
+
+**The assumption is checked rather than trusted.** "A mount makes my edits visible" is exactly the
+shape of the two defects above, where a harness reported a perfect score without running a test. So
+`mutate_ai004_hosted.py` makes one **deliberately broken edit first** and requires the suite to go
+red. If the sentinel survives, the harness aborts and says no score from the run can be believed.
+Any harness moved onto this target must carry the same sentinel — it is the whole safety margin.

@@ -1,18 +1,13 @@
-the citable coordinates are not sent                       KILLED   1 failed, 53 passed in 1.03s
-a rule's own details are not sent                          KILLED   1 failed, 53 passed in 1.02s
-rejected claims are withheld                               KILLED   1 failed, 53 passed in 1.03s
-the recorded uncertainties are not sent                    KILLED   1 failed, 53 passed in 1.05s
-the frequency axis is not sent                             SURVIVED 54 passed in 0.99s
-the run id goes out with the evidence                      KILLED   2 failed, 52 passed in 1.55s
-the resolved row ids go out with the evidence              KILLED   2 failed, 52 passed in 1.12s
-a time is sent as an object rather than a string           KILLED   29 failed, 25 passed in 1.52s
+the citable coordinates are not sent                       KILLED   1 failed, 53 passed in 1.11s
+a rule's own details are not sent                          KILLED   1 failed, 53 passed in 0.99s
+rejected claims are withheld                               KILLED   1 failed, 53 passed in 0.99s
+the recorded uncertainties are not sent                    KILLED   1 failed, 53 passed in 1.06s
+the frequency axis is not sent                             SURVIVED 54 passed in 0.95s
+the run id goes out with the evidence                      KILLED   2 failed, 52 passed in 1.06s
+the resolved row ids go out with the evidence              KILLED   2 failed, 52 passed in 0.99s
+a time is sent as an object rather than a string           KILLED   29 failed, 25 passed in 1.45s
 an enum is sent as the enum rather than its value          SURVIVED 54 passed in 0.96s
-every bundle serialises to the same bytes                  KILLED   2 failed, 52 passed in 1.08s
-the rule about rejected claims is deleted                  SURVIVED 54 passed in 0.95s
-confidence is no longer restricted in the instructions     KILLED   1 failed, 53 passed in 0.99s
-the citation rule loses the pair                           SURVIVED 54 passed in 0.98s
-the pseudonym rule is deleted                              KILLED   1 failed, 53 passed in 1.26s
-the alternatives floor is removed                          KILLED   1 failed, 53 passed in 0.98s
-the fingerprint is a constant rather than a derivation     KILLED   1 failed, 53 passed in 1.02s
-the narrowing removes nothing                              KILLED   2 failed, 52 passed in 0.98s
-the narrowing does not report what it removed              KILLED   2 failed, 52 passed in 1.08s
+every bundle serialises to the same bytes                  KILLED   2 failed, 52 passed in 1.05s
+the rule about rejected claims is deleted                  SURVIVED 54 passed in 1.08s
+confidence is no longer restricted in the instructions     KILLED   1 failed, 53 passed in 1.04s
+the citation rule loses the pair                           SURVIVED 54 passed in 0.99s

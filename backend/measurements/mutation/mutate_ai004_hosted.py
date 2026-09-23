@@ -43,6 +43,10 @@ ADAPTER = BACKEND / "app/ai/providers/openai.py"
 REGISTRY = BACKEND / "app/ai/registry.py"
 TESTS = "tests/test_ai_hosted.py"
 
+#: No image rebuild between mutants -- see the sentinel below for why that
+#: is safe and how it is checked. Run `make build-backend` once beforehand.
+TARGET = "test-backend-nobuild"
+
 M = {
     # --- what leaves the machine -------------------------------------------
     "the citable coordinates are not sent": (
@@ -228,6 +232,51 @@ if GUARD.exists():
 
 originals = {path: path.read_text() for path in {p for p, _, _ in M.values()}}
 GUARD.write_text(json.dumps({str(k): v for k, v in originals.items()}))
+
+
+def run_suite() -> tuple[int, str, bool]:
+    """Run the item's tests and report exit code, summary, and whether any ran."""
+    proc = subprocess.run(
+        ["make", TARGET, f"PYTEST_ARGS={TESTS} -q --no-cov"],
+        cwd=str(ROOT), capture_output=True, text=True, env=os.environ.copy())
+    lines = [line for line in proc.stdout.splitlines()
+             if "passed" in line or "failed" in line or "error" in line]
+    summary = lines[-1] if lines else "NO TEST SUMMARY -- did the suite run?"
+    return proc.returncode, summary, bool(RAN.search(summary))
+
+
+# --- the sentinel --------------------------------------------------------
+# This harness does NOT rebuild the image between mutants, because the
+# backend service bind-mounts ./backend to /app so a source edit is already
+# visible inside the container. Rebuilding each time cost ~2.5 minutes a
+# mutant and two hours of continuous Docker builds, which is what exhausted
+# memory and had the OOM killer stop two passes mid-run.
+#
+# But an assumption about a mount is exactly the shape of the two defects
+# recorded in the README, where a harness reported a perfect score without
+# running a test. So it is not assumed: one deliberately broken edit is
+# made first, and if the suite does not go RED the edits are not reaching
+# the container and nothing below can be believed.
+_sentinel_path, _sentinel_from, _ = M["a moving alias is accepted"]
+_sentinel_original = originals[_sentinel_path]
+_sentinel_path.write_text(
+    _sentinel_original.replace(_sentinel_from, "        if False:", 1))
+_code, _summary, _ran = run_suite()
+_sentinel_path.write_text(_sentinel_original)
+if not _ran:
+    GUARD.unlink(missing_ok=True)
+    raise SystemExit(f"the suite did not run at all: {_summary}")
+if not _code:
+    GUARD.unlink(missing_ok=True)
+    raise SystemExit(
+        "SENTINEL SURVIVED. A deliberately broken source edit left the suite "
+        f"green ({_summary}), so edits are not reaching the container and no "
+        "score from this harness can be believed. Check the bind mount before "
+        "running again."
+    )
+print(f"sentinel killed ({_summary}) -- source edits reach the container\n",
+      flush=True)
+
 res: dict[str, str] = {}
 try:
     for n, (path, o, w) in M.items():
@@ -237,17 +286,11 @@ try:
             print(f"{n:58} {res[n]}", flush=True)
             continue
         path.write_text(orig.replace(o, w, 1))
-        p = subprocess.run(
-            ["make", "test-backend", f"PYTEST_ARGS={TESTS} -q --no-cov"],
-            cwd=str(ROOT), capture_output=True, text=True, env=os.environ.copy())
-        tail = [line for line in p.stdout.splitlines()
-                if "passed" in line or "failed" in line or "error" in line]
-        summary = tail[-1] if tail else "NO TEST SUMMARY -- did the suite run?"
-        ran = bool(RAN.search(summary))
+        code, summary, ran = run_suite()
         if not ran:
             res[n] = f"INCONCLUSIVE -- {summary}"
         else:
-            res[n] = ("KILLED   " if p.returncode else "SURVIVED ") + summary
+            res[n] = ("KILLED   " if code else "SURVIVED ") + summary
         print(f"{n:58} {res[n]}", flush=True)
         path.write_text(orig)
 finally:

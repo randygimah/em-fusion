@@ -210,6 +210,24 @@ test-backend: build-backend db-test-create ## Pytest inside the backend containe
 		-v "$(abspath frontend/src/types):/repo/frontend/src/types:ro" \
 		backend pytest $(PYTEST_ARGS)
 
+test-backend-nobuild: db-test-create ## Pytest with no image rebuild — for mutation passes only
+	@# The backend service bind-mounts ./backend to /app, so a source edit is
+	@# already visible inside the container and `build-backend` rebuilds an
+	@# image whose source is overridden by the mount anyway. Skipping it turns
+	@# a mutation pass from ~2.5 minutes per mutant into seconds, and removes
+	@# the continuous Docker builds that exhausted memory and had the OOM
+	@# killer stop two passes mid-run — leaving a mutant on disk.
+	@#
+	@# Use `test-backend` for everything else. This target does NOT pick up a
+	@# dependency change, so run `make build-backend` once before a pass.
+	$(COMPOSE) run --rm \
+		-e TEST_DATABASE_URL="$(TEST_DATABASE_URL)" \
+		-v "$(abspath Makefile):/repo/Makefile:ro" \
+		-v "$(abspath compose.yaml):/repo/compose.yaml:ro" \
+		-v "$(abspath frontend/nginx.conf):/repo/frontend/nginx.conf:ro" \
+		-v "$(abspath frontend/src/types):/repo/frontend/src/types:ro" \
+		backend pytest $(PYTEST_ARGS)
+
 test-frontend: build-frontend-test ## Vitest inside the frontend build stage
 	$(COMPOSE) --profile test run --rm frontend-test
 
