@@ -1,13 +1,54 @@
-the citable coordinates are not sent                       KILLED   1 failed, 53 passed in 1.11s
-a rule's own details are not sent                          KILLED   1 failed, 53 passed in 0.99s
-rejected claims are withheld                               KILLED   1 failed, 53 passed in 0.99s
-the recorded uncertainties are not sent                    KILLED   1 failed, 53 passed in 1.06s
-the frequency axis is not sent                             SURVIVED 54 passed in 0.95s
-the run id goes out with the evidence                      KILLED   2 failed, 52 passed in 1.06s
-the resolved row ids go out with the evidence              KILLED   2 failed, 52 passed in 0.99s
-a time is sent as an object rather than a string           KILLED   29 failed, 25 passed in 1.45s
-an enum is sent as the enum rather than its value          SURVIVED 54 passed in 0.96s
-every bundle serialises to the same bytes                  KILLED   2 failed, 52 passed in 1.05s
-the rule about rejected claims is deleted                  SURVIVED 54 passed in 1.08s
-confidence is no longer restricted in the instructions     KILLED   1 failed, 53 passed in 1.04s
-the citation rule loses the pair                           SURVIVED 54 passed in 0.99s
+sentinel killed (1 failed, 54 passed in 0.45s) -- source edits reach the container
+
+the citable coordinates are not sent                       KILLED   1 failed, 54 passed in 0.40s
+a rule's own details are not sent                          KILLED   1 failed, 54 passed in 0.41s
+rejected claims are withheld                               KILLED   1 failed, 54 passed in 0.41s
+the recorded uncertainties are not sent                    KILLED   1 failed, 54 passed in 0.41s
+the frequency axis is not sent                             KILLED   1 failed, 54 passed in 0.41s
+the run id goes out with the evidence                      KILLED   2 failed, 53 passed in 0.41s
+the resolved row ids go out with the evidence              KILLED   2 failed, 53 passed in 0.41s
+a time is sent as an object rather than a string           KILLED   29 failed, 26 passed in 0.84s
+an enum is sent as the enum rather than its value          KILLED   1 failed, 54 passed in 0.40s
+every bundle serialises to the same bytes                  KILLED   2 failed, 53 passed in 0.41s
+the rule about rejected claims is deleted                  KILLED   1 failed, 54 passed in 0.41s
+confidence is no longer restricted in the instructions     KILLED   1 failed, 54 passed in 0.40s
+the citation rule loses the pair                           KILLED   1 failed, 54 passed in 0.40s
+the pseudonym rule is deleted                              KILLED   1 failed, 54 passed in 0.40s
+the alternatives floor is removed                          KILLED   1 failed, 54 passed in 0.40s
+the fingerprint is a constant rather than a derivation     KILLED   1 failed, 54 passed in 0.40s
+the narrowing removes nothing                              KILLED   3 failed, 52 passed in 0.43s
+the narrowing does not report what it removed              KILLED   2 failed, 53 passed in 0.41s
+the unsupported set forgets the list floor                 KILLED   2 failed, 53 passed in 0.41s
+the narrowing also removes the confidence enum             KILLED   2 failed, 53 passed in 0.41s
+the narrowing also removes required                        KILLED   1 failed, 54 passed in 0.40s
+the narrowing also removes additionalProperties            KILLED   1 failed, 54 passed in 0.40s
+a moving alias is accepted                                 KILLED   1 failed, 54 passed in 0.42s
+the dated pattern matches anything                         KILLED   1 failed, 54 passed in 0.41s
+an arm with no model at all is accepted                    KILLED   1 failed, 54 passed in 0.41s
+the schema is sent unnarrowed                              KILLED   1 failed, 54 passed in 0.41s
+the generation is not constrained at all                   KILLED   1 failed, 54 passed in 0.41s
+the instructions are not sent                              KILLED   1 failed, 54 passed in 0.42s
+the bundle is not sent                                     KILLED   1 failed, 54 passed in 0.42s
+the frozen parameters do not reach the request             KILLED   1 failed, 54 passed in 0.42s
+the prompt fingerprint is not recorded                     KILLED   1 failed, 54 passed in 0.42s
+a caller may supply its own fingerprint                    KILLED   1 failed, 54 passed in 0.41s
+the response is re-serialised rather than stored verbatim  KILLED   3 failed, 52 passed in 0.44s
+the configured parameters are not recorded                 KILLED   1 failed, 54 passed in 0.40s
+a rejected request is treated as a bad answer              KILLED   1 failed, 54 passed in 0.40s
+only a timeout counts as unreachable                       KILLED   5 failed, 50 passed in 0.45s
+a rate limit is treated as a misconfiguration              KILLED   1 failed, 54 passed in 0.40s
+the model declining to answer is ignored                   KILLED   1 failed, 54 passed in 0.40s
+an empty answer is accepted                                KILLED   1 failed, 54 passed in 0.40s
+every refusal is reported as structural                    KILLED   1 failed, 54 passed in 0.39s
+no refusal is reported as structural                       KILLED   1 failed, 54 passed in 0.39s
+a refused call carries nothing it paid for                 KILLED   1 failed, 54 passed in 0.40s
+an unpriced call is reported as free                       KILLED   1 failed, 54 passed in 0.40s
+the completion rate is applied to the prompt               KILLED   1 failed, 54 passed in 0.40s
+token counts are not recorded                              KILLED   2 failed, 53 passed in 0.40s
+an absent credential is accepted                           KILLED   2 failed, 53 passed in 0.44s
+the arm is not registered                                  KILLED   1 failed, 54 passed in 0.40s
+
+restored
+
+47 killed of 47 valid mutants
+no unexpected survivors

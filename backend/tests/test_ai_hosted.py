@@ -180,6 +180,17 @@ def test_no_database_identifier_reaches_the_provider():
     assert "observation_ids" not in serialised
 
 
+def test_the_frequency_axis_reaches_the_payload():
+    # spec: ai-004, evb-001 -- the channel list is the bundle's OWN
+    # contribution: anom-001 raises episodes per sensor per channel and
+    # nothing upstream merges them. Dropped here it is the one axis of the
+    # claim a model never sees, and nothing else in the payload replaces it.
+    payload = bundle_payload(zone_bundle())
+
+    assert payload["affected_channels"] == list(zone_bundle().affected_channels)
+    assert payload["affected_channels"]
+
+
 def test_the_payload_is_json_serialisable_without_a_custom_encoder():
     # spec: ai-004 -- datetimes and enums have to be converted here rather
     # than by whatever happens to serialise them later, or two callers
@@ -190,7 +201,13 @@ def test_the_payload_is_json_serialisable_without_a_custom_encoder():
     # almost nothing is trivially serialisable, and this has to fail on one.
     assert json.loads(json.dumps(payload)) == payload
     assert isinstance(payload["time_window"][0], str)
-    assert isinstance(payload["evidence"][0]["data_mode"], str)
+    # `type(...) is str`, not isinstance: these enums subclass str, so an
+    # enum member left in the payload passes an isinstance check, compares
+    # equal to its value, and json.dumps serialises it identically. The
+    # module claims every value is already a JSON primitive, and only the
+    # exact type holds that claim.
+    assert type(payload["evidence"][0]["data_mode"]) is str
+    assert type(payload["evidence"][0]["grounding"]) is str
 
 
 def test_the_same_bundle_always_produces_the_same_bytes():
@@ -268,10 +285,19 @@ def test_the_prompt_states_the_rules_it_must_state():
     # spec: ai-004, ai-001, ai-008 -- each of these corresponds to a
     # guarantee elsewhere that the model is the only one able to honour.
     # Losing one during an edit would be invisible until the campaign.
+    # Each is a phrase the rule cannot lose and still mean what it means.
+    # A mutation pass caught the first version of this test matching words
+    # that survive the rule being gutted: "superseded" is still there when
+    # rule 3 becomes "the superseded list holds earlier notes", and
+    # "rule_id and finding_type" is still there when the citation rule stops
+    # requiring them to be copied from the package.
     for required in (
         "Low, Medium or High",
-        "superseded",
-        "at least one",
+        "never a number",
+        "REJECTED",
+        "never cite one as supporting evidence",
+        "copied exactly",
+        "at least one genuine entry",
         "pseudonyms",
         "rule_id and finding_type",
     ):
@@ -418,6 +444,13 @@ def test_the_request_is_constrained_by_the_narrowed_schema():
     sent = client.chat.completions.requests[0]
     assert sent["response_format"]["type"] == "json_schema"
     assert sent["response_format"]["json_schema"]["strict"] is True
+    # And the NARROWED one. Sending the schema unnarrowed is rejected by the
+    # live API, so every call in the campaign would fail -- and nothing here
+    # would have noticed, because the envelope is identical either way.
+    sent_schema = json.dumps(sent["response_format"]["json_schema"]["schema"])
+    assert "minItems" not in sent_schema
+    assert "minLength" not in sent_schema
+    assert '"Low"' in sent_schema
 
 
 def test_the_request_carries_the_prompt_and_the_payload():
@@ -608,8 +641,14 @@ def test_a_model_that_declines_to_answer_is_a_correctness_refusal():
     # back, never to ask a different model the same question.
     client = fake_client(content=None, refusal="I cannot help with that.")
 
-    with pytest.raises(GenerationRefused):
+    with pytest.raises(GenerationRefused) as raised:
         an_arm(client).generate(fault_bundle())
+
+    # Which refusal, not merely that one happened: with the declining branch
+    # removed the empty-content guard raises GenerationRefused too, so a
+    # bare `pytest.raises` passes on an implementation that ignores a model
+    # declining to answer entirely.
+    assert "declined" in str(raised.value)
 
 
 def test_an_unparseable_answer_is_refused_as_structural():
@@ -687,8 +726,13 @@ def test_a_refused_call_still_carries_what_it_paid_for():
 def test_an_empty_answer_is_refused_rather_than_stored():
     # spec: ai-004, ai-003 -- ModelCall refuses a blank raw_response, and
     # the adapter must not be the thing that discovers it.
-    with pytest.raises(GenerationRefused):
+    with pytest.raises(GenerationRefused) as raised:
         an_arm(fake_client(content="")).generate(fault_bundle())
+
+    # Again, which one: without this guard the empty string reaches
+    # json.loads and is refused as malformed JSON, so the test passes while
+    # the specific check it names has been deleted.
+    assert "empty" in str(raised.value)
 
 
 def _an_openai_error(cls):

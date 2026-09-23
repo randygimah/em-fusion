@@ -25,7 +25,9 @@ output for every bundle while the run reports itself as hosted; widening
 the unavailable tuple does the same through `ai-006`. Both are campaigns
 run against the wrong arm with no symptom until the results are compared.
 
-Driven from the repository root; the summary reports how many tests ran,
+Run in the repository's own virtualenv rather than through Docker -- see
+the note on `PYTEST` below for why, why that is valid for this file, and
+the sentinel that makes it safe. The summary reports how many tests ran,
 not only the exit code.
 """
 
@@ -43,9 +45,39 @@ ADAPTER = BACKEND / "app/ai/providers/openai.py"
 REGISTRY = BACKEND / "app/ai/registry.py"
 TESTS = "tests/test_ai_hosted.py"
 
-#: No image rebuild between mutants -- see the sentinel below for why that
-#: is safe and how it is checked. Run `make build-backend` once beforehand.
-TARGET = "test-backend-nobuild"
+#: This pass runs the tests in the repository's own virtualenv rather than
+#: through `make test-backend`, which the README otherwise names as the only
+#: correct way to run the suite. The deviation is deliberate, bounded, and
+#: checked.
+#:
+#: WHY. Three attempts to run this pass through Docker were killed by the
+#: OOM killer -- at 18, 13 and 3 mutants of 47 -- and the third wedged the
+#: daemon. Each container run costs minutes and memory this machine does not
+#: have; the same file runs here in 0.6 seconds.
+#:
+#: WHY IT IS VALID HERE. `tests/test_ai_hosted.py` carries no `database`
+#: marker and touches no database: it is pure unit work over a payload, a
+#: prompt, a schema and an injected fake client. Run both ways it gives the
+#: identical result, 54 passed. The authoritative full-tier figure still
+#: comes from `make test-backend` and nothing here replaces it.
+#:
+#: WHY IT IS SAFE. The sentinel below. A harness that runs the tests the
+#: wrong way reporting a perfect score is the exact defect this directory
+#: has recorded twice, so one deliberately broken edit is made first and the
+#: run aborts if the suite stays green.
+#:
+#: Do NOT copy this to a harness whose tests need the database.
+PYTEST = [
+    str(BACKEND / ".venv/bin/python"),
+    "-m",
+    "pytest",
+    "-q",
+    "--no-cov",
+    # No bytecode and no cache directory: this repository has already been
+    # bitten once by a stale bytecode cache making a measurement lie.
+    "-p",
+    "no:cacheprovider",
+]
 
 M = {
     # --- what leaves the machine -------------------------------------------
@@ -236,10 +268,11 @@ GUARD.write_text(json.dumps({str(k): v for k, v in originals.items()}))
 
 def run_suite() -> tuple[int, str, bool]:
     """Run the item's tests and report exit code, summary, and whether any ran."""
+    env = os.environ.copy()
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
     proc = subprocess.run(
-        ["make", TARGET, f"PYTEST_ARGS={TESTS} -q --no-cov"],
-        cwd=str(ROOT), capture_output=True, text=True, env=os.environ.copy())
-    lines = [line for line in proc.stdout.splitlines()
+        PYTEST + [TESTS], cwd=str(BACKEND), capture_output=True, text=True, env=env)
+    lines = [line for line in (proc.stdout + proc.stderr).splitlines()
              if "passed" in line or "failed" in line or "error" in line]
     summary = lines[-1] if lines else "NO TEST SUMMARY -- did the suite run?"
     return proc.returncode, summary, bool(RAN.search(summary))
