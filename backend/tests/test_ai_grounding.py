@@ -245,7 +245,9 @@ def test_the_statement_beside_a_citation_is_not_resolved():
     pair = first_pair(bundle)
     real_words = bundle.evidence[0].finding
 
-    invented = check(citing(bundle, ("NOT-A-RULE", "nope"), statement=real_words), bundle)
+    invented = check(
+        citing(bundle, ("NOT-A-RULE", "nope"), statement=real_words), bundle
+    )
 
     assert check(citing(bundle, pair, statement="struck by lightning"), bundle).passed
     assert not invented.passed
@@ -833,12 +835,20 @@ def test_near_misses_are_retrievable_per_arm():
     ledger = GroundingLedger()
     checker = GroundingChecker(arm=GeneratorKind.HOSTED, ledger=ledger)
 
+    other = GroundingChecker(arm=GeneratorKind.LOCAL, ledger=ledger)
+
     checker.report(citing(bundle, (rule_id, "not_a_type_this_rule_emits")), bundle)
     checker.report(citing(bundle, ("NOTHING-LIKE-IT", "nor_this")), bundle)
+    # A near miss on a second arm, so a pooled answer is visible here. Found
+    # while writing the mutation harness, which would otherwise have scored a
+    # survivor for it.
+    spelled = (first_pair(bundle)[0].lower(), first_pair(bundle)[1].upper())
+    other.report(citing(bundle, spelled), bundle)
 
     near = ledger.near_misses(GeneratorKind.HOSTED)
 
     assert [f.near_miss for f in near] == [NearMiss.RULE_ID_UNDER_ANOTHER_TYPE]
+    assert len(ledger.near_misses(GeneratorKind.LOCAL)) == 1
 
 
 def test_a_checker_without_a_ledger_still_reports():
