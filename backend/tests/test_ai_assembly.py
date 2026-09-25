@@ -278,8 +278,11 @@ def test_the_template_replacement_comes_from_the_injected_registry():
     # replacement stays injected rather than carved in beside the port. The
     # same has to be true one layer up, or this module reintroduces exactly
     # what that one avoided.
-    seen = _RecordingFactory(generator=TemplateGenerator(
-        GenerationConfig(provider="template", model_id=None)))
+    seen = _RecordingFactory(
+        generator=TemplateGenerator(
+            GenerationConfig(provider="template", model_id=None)
+        )
+    )
 
     built = assembled(providers={"stub": _RecordingFactory(), "template": seen})
 
@@ -291,8 +294,11 @@ def test_the_template_factory_is_never_given_prices():
     # spec: ai-011, ai-004 -- the template makes no call and has no cost, so
     # a price handed to it is meaningless at best and a constructor error at
     # worst.
-    template = _RecordingFactory(generator=TemplateGenerator(
-        GenerationConfig(provider="template", model_id=None)))
+    template = _RecordingFactory(
+        generator=TemplateGenerator(
+            GenerationConfig(provider="template", model_id=None)
+        )
+    )
 
     assembled(
         providers={"stub": _RecordingFactory(), "template": template},
@@ -467,9 +473,7 @@ def test_an_ungrounded_answer_retries_then_falls_back_and_is_counted():
     # budget counts both, and the analyst gets the template.
     bundle = fault_bundle()
     bad = ungrounded(bundle)
-    arm = _ScriptedArm(
-        model_result(hypothesis=bad), model_result(hypothesis=bad)
-    )
+    arm = _ScriptedArm(model_result(hypothesis=bad), model_result(hypothesis=bad))
     built = assembled(providers=registry(_RecordingFactory(arm)))
 
     outcome = built.generator.generate_recorded(bundle)
@@ -529,12 +533,22 @@ def test_two_arms_share_one_budget_and_one_ledger():
             _RecordingFactory(_ScriptedArm(model_result(hypothesis=generate(bundle))))
         ),
     )
+    # The scripted result has to declare the local arm too: ai-009 refuses a
+    # wrapper declared one way returning a result declared the other, and
+    # that guard caught this test being wrong before the test caught
+    # anything. Left as a comment because it is the guard working.
     local = assembled(
         arm=GeneratorKind.LOCAL,
         budget=budget,
         ledger=ledger,
         providers=registry(
-            _RecordingFactory(_ScriptedArm(model_result(hypothesis=generate(bundle))))
+            _RecordingFactory(
+                _ScriptedArm(
+                    model_result(
+                        hypothesis=generate(bundle), generator=GeneratorKind.LOCAL
+                    )
+                )
+            )
         ),
     )
 
