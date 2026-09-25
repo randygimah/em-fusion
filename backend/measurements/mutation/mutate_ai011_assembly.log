@@ -1,0 +1,43 @@
+sentinel killed (7 failed, 32 passed in 0.39s) -- source edits reach the tests
+
+the budget wraps the fallback instead of the other way round   KILLED   15 failed, 24 passed in 0.42s
+the arm is not budgeted at all                                 KILLED   11 failed, 28 passed in 0.41s
+the template replacement is budgeted too                       KILLED   6 failed, 33 passed in 0.40s
+the arm is its own fallback                                    KILLED   6 failed, 33 passed in 0.43s
+no grounding check is wired in                                 KILLED   7 failed, 32 passed in 0.38s
+the retry ceiling is ignored and a fixed one used              KILLED   3 failed, 36 passed in 0.38s
+the grounding checker is hard-coded to the hosted arm          KILLED   2 failed, 37 passed in 0.38s
+the budgeted wrapper is hard-coded to the hosted arm           KILLED   2 failed, 37 passed in 0.37s
+the checker is given no ledger                                 KILLED   4 failed, 35 passed in 0.37s
+the checker is given a ledger of its own                       KILLED   4 failed, 35 passed in 0.37s
+a budget of its own is created per arm                         KILLED   6 failed, 33 passed in 0.38s
+the result reports an arm other than the one built             KILLED   1 failed, 38 passed in 0.35s
+the template may be assembled as the arm                       KILLED   1 failed, 38 passed in 0.36s
+a model arm may be assembled with no model id                  KILLED   1 failed, 38 passed in 0.35s
+a spend ceiling with no prices is accepted                     KILLED   2 failed, 37 passed in 0.36s
+a spend ceiling is refused even when prices are given          KILLED   1 failed, 38 passed in 0.36s
+prices are refused when no spend ceiling is set                KILLED   26 failed, 13 passed in 0.52s
+the spend-ceiling refusal does not say prices are missing      KILLED   1 failed, 38 passed in 0.36s
+the spend-ceiling refusal does not say what goes wrong         KILLED   1 failed, 38 passed in 0.36s
+a price of zero is accepted                                    KILLED   1 failed, 38 passed in 0.36s
+a negative price is accepted                                   KILLED   2 failed, 37 passed in 0.37s
+only the prompt price is validated                             KILLED   1 failed, 38 passed in 0.35s
+the prices never reach the arm                                 KILLED   1 failed, 38 passed in 0.36s
+the completion price is not forwarded                          KILLED   1 failed, 38 passed in 0.36s
+the two prices are forwarded the wrong way round               KILLED   1 failed, 38 passed in 0.35s
+absent prices are forwarded as zero rather than omitted        KILLED   1 failed, 38 passed in 0.36s
+the prices are put into the generation parameters              KILLED   1 failed, 38 passed in 0.35s
+the template factory is given the prices too                   KILLED   4 failed, 35 passed in 0.38s
+the registry drops the construction keywords                   KILLED   2 failed, 37 passed in 0.36s
+the registry stops refusing an unknown name                    KILLED   2 failed, 37 passed in 0.37s
+the parameters are dropped                                     KILLED   2 failed, 37 passed in 0.36s
+the provider name is ignored and the template used             KILLED   27 failed, 12 passed in 0.53s
+the replacement is given the arm's model id                    KILLED   24 failed, 15 passed in 0.53s
+the replacement is built outside the injected registry         KILLED   1 failed, 38 passed in 0.36s
+the reported configuration is not the one used                 KILLED   2 failed, 37 passed in 0.36s
+the budget reported back is not the one wired in               KILLED   5 failed, 34 passed in 0.38s
+
+restored
+
+36 killed of 36 valid mutants
+no unexpected survivors

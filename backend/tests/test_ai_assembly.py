@@ -263,14 +263,25 @@ def test_the_template_replacement_carries_no_model_id():
     assert assembled().generator.fallback.config.model_id is None
 
 
-def test_assembling_the_template_as_the_arm_is_refused():
+def test_assembling_the_template_as_the_arm_is_refused_before_anything_is_built():
     # spec: ai-011 -- it makes no call, needs no credential, and is the
     # thing both fallbacks fall back *to*. An arm that is its own fallback
     # is not a fallback.
-    with pytest.raises(ConfigurationError) as raised:
-        assembled(arm=GeneratorKind.TEMPLATE)
+    #
+    # The refusal has to be pinned to *this* one. ai-009 refuses a budgeted
+    # template as well, so a test asserting only that something was raised
+    # stays green with this guard deleted -- the defect evb-002 recorded and
+    # ai-004 hit twice, found here a third time by the mutation pass. What
+    # this guard buys is the ordering: it fires before the arm is
+    # constructed, and constructing a real arm reads the credential from the
+    # environment.
+    factory = _RecordingFactory()
 
-    assert "template" in str(raised.value).lower()
+    with pytest.raises(ConfigurationError) as raised:
+        assembled(arm=GeneratorKind.TEMPLATE, providers=registry(factory))
+
+    assert factory.calls == 0
+    assert "wired in below it automatically" in str(raised.value)
 
 
 def test_the_template_replacement_comes_from_the_injected_registry():
@@ -371,16 +382,21 @@ def test_a_spend_ceiling_without_prices_is_refused():
         assembled(budget=CallBudget(max_calls=10, max_cost_usd=5.0))
 
 
-def test_the_refusal_says_the_ceiling_would_enforce_nothing():
-    # spec: ai-011 -- a refusal naming only the missing argument leaves the
-    # reader to work out why it matters, and the reason is the whole point:
-    # the ceiling would report itself configured while enforcing nothing.
+def test_the_refusal_names_the_ceiling_the_gap_and_the_consequence():
+    # spec: ai-011 -- three claims, each pinned separately, because a
+    # refusal that names only one of them is not actionable. Matching the
+    # bare word "price" was the first version and the mutation pass killed
+    # it: the tail of the message says "Supply prices, or drop the
+    # ceiling", so the word survives the sentence that reports what is
+    # actually missing being deleted. That is ai-004's lesson about tests
+    # matching words rather than claims, one item later.
     with pytest.raises(ConfigurationError) as raised:
         assembled(budget=CallBudget(max_calls=10, max_cost_usd=5.0))
 
-    message = str(raised.value).lower()
-    assert "price" in message
-    assert "enforc" in message or "inert" in message
+    message = str(raised.value)
+    assert "5.0" in message, "does not name the ceiling it is refusing"
+    assert "no prices" in message, "does not say what is missing"
+    assert "enforces nothing" in message, "does not say why it matters"
 
 
 def test_a_spend_ceiling_with_prices_is_accepted():
