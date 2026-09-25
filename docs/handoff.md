@@ -130,14 +130,6 @@ Open and unowned:
   unit tests over constructed bundles, and the corpus demonstration is owed to a second producing
   rule alongside the ladder's own arbitration. The measurement counts superseded fields, so the
   figure will move on its own the day one appears.
-- **`grounding_catch_rate.log` is owed.** The measurement ran and the figures above are its real
-  output, but the redirect re-run that would have written the log file was killed when the **Docker
-  daemon wedged** (`docker version` hung; Docker Desktop needs restarting). The log was deliberately
-  *not* hand-written from captured stdout: a transcribed log produces spurious differences against a
-  re-run and destroys the diff-against-the-committed-log protocol that is this directory's only guard
-  against rot. Re-run once Docker is back:
-  `make measure SCRIPT=corpus/grounding_catch_rate.py CORPUS=dev` and redirect to
-  `backend/measurements/corpus/grounding_catch_rate.log`.
 - **The other mutation harnesses still lack the crash guard and the sentinel** (~5 lines each). The
   `ai-008` harness has both.
 - Nothing builds a `GenerationConfig` from the environment; deferred to the first arm that runs.

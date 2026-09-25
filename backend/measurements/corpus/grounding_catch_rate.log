@@ -1,0 +1,37 @@
+DEVELOPMENT BATCH -- base seed 695081452, 60 runs over three types. Generated to develop the AI layer against real bundles after the corpus was lost. NOT a corpus: no thesis figure may be measured from it. See DEV_BATCH_PLAN.md.
+41 stored bundles from 40 runs
+
+==============================================================================
+1. WHAT IT FLAGS ON INPUT WHOSE ANSWER IS KNOWN
+==============================================================================
+  template hypotheses generated: 41 of 41 bundles
+  citations resolved against their own bundle: 164
+  flagged: 0   PASS
+  catch rate on the template arm: 0.0   (0.0 is measured; None would mean nothing ran)
+
+==============================================================================
+2. WHAT IT CATCHES WHEN ONE CITATION IS CORRUPTED
+==============================================================================
+  hypotheses corrupted: 41 x 4 = 164
+    an invented rule id                                      caught  41 of 41
+    a real rule cited under a finding type it did not produce caught  41 of 41
+    a real pair with the case flipped                        caught  41 of 41
+    the bundle's own claim cited as evidence for itself      caught  41 of 41
+  missed: 0   PASS
+  catch rate on the corrupted set: 1.0
+  verdicts: {'unknown': 164}
+  near misses: {'none': 41, 'rule_id_under_another_type': 82, 'case_or_spacing': 41}
+  near misses recorded on the arm: 123
+
+==============================================================================
+3. THE CASE THIS CORPUS CANNOT EXERCISE
+==============================================================================
+  bundles carrying a superseded claim: 0 of 41
+  anom-013 suppressed 0 of 188 claims across this corpus (ladder_suppression.log),
+  so the superseded verdict is proved by unit tests over constructed
+  bundles and a corpus demonstration is owed to a second producing rule.
+
+==============================================================================
+4. WHAT AN INVESTIGATOR IS HANDED
+==============================================================================
+  1 of 4 citations do not resolve against this bundle: citation 1 (RF-NOISE-999/rf_noise_deviation) names nothing this bundle carries
