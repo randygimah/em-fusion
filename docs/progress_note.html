@@ -6176,6 +6176,170 @@ second pass   <b>5.060000171975998</b></div>
   </section>
 
   <section>
+    <h2>Checking what it says against what it was shown</h2>
+
+    <p>
+      Everything above fixes the <em>shape</em> of an answer. It says nothing whatever about whether
+      the things named inside it are real. A model can return a flawlessly formed explanation that
+      rests on a receiver nobody mentioned, a rule that never ran, or a kind of finding nothing
+      reported — correct in every respect except the one that matters. That is the failure this whole
+      part of the project was built around, and shape-checking cannot touch it.
+    </p>
+    <p>
+      So every answer is now checked automatically before a person sees it. Each thing the
+      explanation claims to be relying on has to be something the package actually contained.
+    </p>
+
+    <h3>Why that is even possible</h3>
+    <p>
+      Because of a decision made two stages earlier. The model is handed one sealed package and
+      nothing else. Asking <em>does this refer to something real?</em> against twenty million stored
+      readings has no answer anybody could compute. Asking it against the thirty-odd items in one
+      package is a lookup. The sealed package was not built for tidiness; it is what makes the
+      safeguard possible at any price, and a system that handed a model a database connection instead
+      would have no equivalent available to it.
+    </p>
+
+    <h3>The trap, which an honest decision created</h3>
+    <p>
+      A package carries a second compartment beside its evidence: the explanations the system itself
+      <em>considered and threw out</em> — a competing conclusion another rule bid for the same place
+      and lost. They are in there deliberately, so a model can write a real alternative instead of
+      pretending none existed.
+    </p>
+
+    <div class="record"><b>what one package contains</b>
+
+  evidence     RF-03, channel 4 — power rose 8.4 dB above its own baseline   <span class="dim">may be cited</span>
+               RF-03 — the broken-receiver verdict                           <span class="dim">may be cited</span>
+               RF-02 — measured, and stayed normal                           <span class="dim">may be cited</span>
+
+  rejected     a data-source problem, ruled out in favour of the above       <span class="dim">NOT citable</span></div>
+
+    <p>
+      Now consider a model that writes <em>“this is a broken receiver, and it is supported by the
+      data-source problem the system also found.”</em> Every identifier in that sentence is in the
+      package. A check that merely confirmed the names existed would wave it straight through — and
+      would thereby certify that two rules agreed, when what actually happened is that two rules
+      disagreed and one was thrown out.
+    </p>
+
+    <div class="panel panel--warn">
+      <p class="lede">
+        <b>The safeguard would have stamped its approval on precisely the mistake it exists to
+        catch.</b>
+      </p>
+      <p>
+        And nothing about the failure would look wrong from the outside: a well-formed explanation, a
+        citation that resolves, a check that passes. This was spotted when the package's contents were
+        agreed rather than after the fact, which is the only reason it was designed out rather than
+        discovered later in a result nobody could explain.
+      </p>
+      <p>
+        So the check gives three answers rather than two. The claim is supported by the evidence; or
+        it names nothing in the package at all; or it reaches for something the system already
+        rejected. The third is treated as its own kind of failure and never folded into the second,
+        because they are different faults: naming something that does not exist is invention, while
+        citing a rejected conclusion is a <em>misreading of the document the model was handed</em>.
+        The second is rarer and worse, and counting them together would bury it.
+      </p>
+    </div>
+
+    <p>
+      There is a symmetry that makes this coherent rather than merely strict. The rejected
+      explanation is <em>supposed</em> to be mentioned — in the part of the answer that discusses
+      alternatives, which is why it is sent to the model at all and why the instructions label it as
+      rejected. It is only a failure when it appears in the part that lists supporting evidence. The
+      same fact is welcome in the paragraph that is prose and forbidden in the field that can be
+      checked.
+    </p>
+
+    <h3>What it deliberately cannot do</h3>
+    <p>
+      It checks that a citation <em>points at something present</em>. It cannot check that the
+      sentence written beside that citation is a true description of it. A model can correctly name a
+      real finding and then say something false about it, and this will pass it.
+    </p>
+    <p>
+      That boundary decides how the resulting number should be read, so it is worth stating plainly
+      rather than leaving for someone to discover: the figure measures invented references and says
+      nothing about misdescribed ones. Judging the sentence is what the human scoring is for, and the
+      write-up must not slide between the two claims.
+    </p>
+
+    <h3>How do you check the checker?</h3>
+    <p>
+      By giving it an input whose correct answer is already known. The mechanical explainer described
+      earlier copies every word it writes straight out of the package, so it <em>cannot</em> cite
+      something absent. Running the check over its work is therefore a test with the answer written
+      on the back: anything flagged there is a fault in the check, not in the explainer.
+    </p>
+    <p>
+      That only works under a condition which is easy to miss. Both pieces of software identify a
+      finding the same way — by which rule produced it <em>and</em> what kind of finding it was. Had
+      they shared the code that works that out, a mistake in it would have been invisible: the
+      explainer would produce wrongly-labelled citations, the check would resolve wrongly-labelled
+      citations, the two would agree perfectly, and the test would come back clean while both halves
+      were wrong. A test that can share the fault it is testing for is not a test, so the two are now
+      held apart automatically and the separation is verified rather than promised.
+    </p>
+
+    <h3>What it did on real packages</h3>
+    <p>
+      Both directions had to be measured, because a check that simply answers “fine” passes the first
+      one perfectly.
+    </p>
+
+    <div class="outcomes">
+      <div class="outcome">
+        <h3>0 of 164</h3>
+        <p>Citations flagged across all forty-one real packages, where the correct answer is that
+          none should be. Nothing in the check fires on honest work.</p>
+      </div>
+      <div class="outcome">
+        <h3>164 of 164</h3>
+        <p>Deliberate corruptions caught. Every real explanation was damaged four different ways, one
+          citation at a time, and not one slipped through.</p>
+      </div>
+    </div>
+
+    <p>
+      Three quarters of those catches also carried a note about <em>how nearly</em> the citation
+      matched, which is the difference between a number and something anyone can act on. “Fourteen
+      caught” tells you almost nothing; “fourteen caught, eleven of them one rule's findings mistaken
+      for another's” tells you what went wrong. Spelling is not quietly forgiven, either: a name that
+      differs only in capitals is still refused, because silently repairing a model's output would
+      flatter the very figure this exercise exists to report.
+    </p>
+
+    <div class="panel">
+      <p class="lede">
+        <b>“It never caught anything” and “it was never run” must not look the same.</b>
+      </p>
+      <p>
+        An explainer checked ten times and flagged never has a catch rate of zero — a real result. One
+        that was never checked has <em>no</em> rate, and the system says so rather than reporting
+        zero. The sentence “the check flagged nothing here” is exactly as true-sounding in both cases,
+        and only one of them supports any claim at all.
+      </p>
+      <p>
+        This is the same principle the evidence package already applies to things it does not know,
+        and it keeps arriving: an absence has to carry its reason, or a reader will supply the wrong
+        one.
+      </p>
+    </div>
+
+    <p>
+      One case cannot be demonstrated on the current data and that is recorded rather than worked
+      around. Citing a rejected explanation is the failure the check was amended for — but across the
+      whole batch the rule ladder threw nothing out, so not one of the forty-one packages carries a
+      rejected explanation to cite. It is proved on hand-built examples instead, and the measurement
+      counts the real ones every time it runs, so the day a second rule starts competing for the same
+      ground the figure will move on its own.
+    </p>
+  </section>
+
+  <section>
     <h2>The rules the build follows</h2>
     <ul class="rules">
       <li><b>Nothing is written before it is specified and proven to fail.</b> Every capability gets a
@@ -6204,7 +6368,7 @@ second pass   <b>5.060000171975998</b></div>
 
     <div class="outcomes">
       <div class="outcome">
-        <h3>1,342</h3>
+        <h3>1,400</h3>
         <p>Tests passing in containers against a real database, from a database that was deleted first to prove nothing was left over.</p>
       </div>
       <div class="outcome">
@@ -6212,7 +6376,7 @@ second pass   <b>5.060000171975998</b></div>
         <p>Of the back-end code is exercised by those tests. The screens measure nothing of the kind — see below.</p>
       </div>
       <div class="outcome">
-        <h3>55 / 99</h3>
+        <h3>56 / 99</h3>
         <p>Numbered capabilities finished. The rest are specified and waiting, not vague.</p>
       </div>
     </div>
@@ -6345,7 +6509,7 @@ second pass   <b>5.060000171975998</b></div>
           <tr><td class="key">Scenario generator</td><td class="n">8</td><td class="n">8</td><td class="why">Complete. Receiver positions fixed, an invented hour reproducible from one number, all five kinds of run staging what they should, twenty produced unattended from a single number by one command, the screen that will drive it, disruptions staged only on aircraft that are actually flying, a floor of five affected aircraft per hour so that no hour is unscoreable, and every hour now recording the number it was generated from so a batch can be reproduced rather than remembered</td></tr>
           <tr><td class="key">Anomaly detection</td><td class="n">9</td><td class="n">14</td><td class="why">What normal looks like, and a rule for each side of the picture — the radio and the aircraft. Findings are kept and grouped, and the evidence the final rules read has been settled: grouping alone could not separate a staged hour from a quiet one, so it was replaced by a local rate comparison — measured first, and chosen over turning up the scenario settings. The three answers the system may give are one decision asked in a fixed order; the order itself is now built and enforced, and two of the three tests with it. Marked against the answer key over three hundred regenerated hours: every one of the five kinds of hour decided correctly sixty times out of sixty, no event anywhere given two answers, and — since a blip lasting one reading stopped counting as an event — no false report anywhere at all. The third test, ruled out last time, is worth attempting again</td></tr>
           <tr><td class="key">Evidence bundles</td><td class="n">2</td><td class="n">2</td><td class="why">Complete. One event becomes one package, with the frequency dimension joined up here because nothing upstream joins it, and with every absence labelled by which of the three kinds it is rather than left as silence. Every statement's citations are then resolved against the store before the package is allowed to exist — which found that one citation in eleven had been pointing at a reconstructed instant rather than a stored reading, in a field that had been written and never read since the findings were first kept</td></tr>
-          <tr><td class="key">AI hypothesis layer</td><td class="n">6</td><td class="n">10</td><td class="why">The shape every explanation must take, and the first thing that produces one. The shape is a constraint on what a model is allowed to emit rather than a description of what it did, so each guarantee is checked on the translated version a model is actually handed as well as on the original. The producer built first has no model in it: it is both the fallback for when a model's answer cannot be trusted and the yardstick the models are measured against. Run over all forty-one real packages it produced forty-one explanations, refused none, and every one of its one hundred and sixty-four citations was found in the package it came from. Since then, the seam a model plugs into — defined before either model exists, so neither one's peculiarities leak into it — and the decision about what a person sees when a model's answer cannot be used: ask again a fixed number of times, then fall back to the mechanical account, and keep a record of why, plus the guard that counts what a run spends and stops it rather than letting it quietly continue. And now the producer the whole project is about: a model, handed the package and constrained so it cannot emit the wrong shape at all. It has never made a real request — what remains before the first one is a pinned model version, a spending cap set at the service's own console, and a key. The automatic checking of what it says is next</td></tr>
+          <tr><td class="key">AI hypothesis layer</td><td class="n">7</td><td class="n">10</td><td class="why">The shape every explanation must take, and the first thing that produces one. The shape is a constraint on what a model is allowed to emit rather than a description of what it did, so each guarantee is checked on the translated version a model is actually handed as well as on the original. The producer built first has no model in it: it is both the fallback for when a model's answer cannot be trusted and the yardstick the models are measured against. Run over all forty-one real packages it produced forty-one explanations, refused none, and every one of its one hundred and sixty-four citations was found in the package it came from. Since then, the seam a model plugs into — defined before either model exists, so neither one's peculiarities leak into it — and the decision about what a person sees when a model's answer cannot be used: ask again a fixed number of times, then fall back to the mechanical account, and keep a record of why, plus the guard that counts what a run spends and stops it rather than letting it quietly continue. Then the producer the whole project is about: a model, handed the package and constrained so it cannot emit the wrong shape at all. And now the safeguard that constraint cannot be — every claim an explanation rests on is resolved against the package it came from, with citing an explanation the system itself rejected treated as its own kind of failure rather than lumped in with inventing one. Over the forty-one real packages it flagged none of one hundred and sixty-four honest citations, and caught all one hundred and sixty-four deliberate corruptions. No model has made a real request yet: what remains before the first one is a pinned model version, a spending cap set at the service's own console, and a key</td></tr>
           <tr><td class="key">Hypothesis screen and feedback</td><td class="n">0</td><td class="n">6</td><td class="why">Specified, unbuilt</td></tr>
           <tr><td class="key">Evaluation</td><td class="n">0</td><td class="n">6</td><td class="why">Scoring instrument written and locked; harness unbuilt</td></tr>
           <tr class="total"><td class="key">Total</td><td class="n">55</td><td class="n">99</td><td class="why">&nbsp;</td></tr>
@@ -6408,10 +6572,13 @@ second pass   <b>5.060000171975998</b></div>
         <li><b>No model has been asked anything yet.</b> Nothing in the project has made a request
           to an AI service and no key exists. The producer that would make one is now built and
           tested against a stand-in service — constrained so it cannot emit the wrong shape, with its
-          instructions fingerprinted onto every answer — but it has never run for real. What stands
-          in the way is deliberately not code: a pinned model version, a spending cap set at the
-          service's own console, and a key. Until those exist, every figure about model quality on
-          this page is absent rather than provisional.</li>
+          instructions fingerprinted onto every answer — and the safeguard that checks its claims
+          against the package is built and measured too. Neither has run for real. What stands in the
+          way is deliberately not code: a pinned model version, a spending cap set at the service's
+          own console, and a key. Until those exist, every figure about model quality on this page is
+          absent rather than provisional — including the safeguard's catch rate, which has been shown
+          to work on damaged explanations built for the purpose and has never seen a mistake a model
+          actually made.</li>
         <li><b>An explanation can now be saved, and none has been.</b> The table is fixed and the
           writing is tested; nothing has yet run the mechanical account across the packages and kept
           the results. That is a deliberate ordering rather than an omission — the first thing worth
@@ -6471,26 +6638,23 @@ second pass   <b>5.060000171975998</b></div>
       <div class="tier">
         <div class="tier__name">Next</div>
         <div class="tier__what">
-          <b>The part the project is actually about</b> — an explanation proposed by a model,
-          checked line by line against the package it was given, and put in front of a person who
-          decides. Everything around the model is now in place: the shape every explanation takes,
-          a producer that writes one mechanically, the seam a model plugs into, somewhere to keep
-          what it says, and the decision about what a person sees when its answer cannot be used.
-          Both loose ends this page previously listed as owed first are closed.
+          <b>The first real request.</b> Everything around the model is now in place: the shape every
+          explanation takes, a producer that writes one mechanically, the seam a model plugs into,
+          somewhere to keep what it says, the decision about what a person sees when an answer cannot
+          be used, a count of what every request costs — and, as of this version, the safeguard that
+          resolves every claim an explanation makes against the package it came from.
           <br><br>
-          The producer is built, its instructions are written and reviewed, and every request it
-          makes is counted, priced and bounded. What remains before the first real one is not code:
-          a <b>pinned model version</b> rather than a moving name, a <b>hard spending cap at the
-          service's own console</b>, and a <b>key</b>. Then a hand-read trial on three packages
-          before anything runs in bulk.
+          <b>What remains before the first request is not code.</b> A <b>pinned model version</b>
+          rather than a moving name, a <b>hard spending cap at the service's own console</b>, and a
+          <b>key</b>. Then a hand-read trial on three packages before anything runs in bulk, which is
+          also what confirms an assumption this project cannot verify on its own: exactly which of
+          its rules the constraint mechanism will accept.
           <br><br>
-          Then the <b>automatic checking of every claim a model makes</b> against the package it was
-          given. It is unusually cheap to validate, because the mechanical producer is an input
-          whose right answer is known in advance: it can only restate what the rules found, so
-          anything the checker objects to there is a fault in the checker rather than in the
-          account. It is also the load-bearing safeguard — constraining the output guarantees the
-          shape of an explanation and says nothing whatsoever about whether the things it cites
-          exist.
+          One consequence of getting there is worth stating in advance. The safeguard's catch rate is
+          a <em>result this project reports</em>, not a maintenance statistic — so the number it
+          produces on the first real batch is a finding whichever way it comes out. A high rate says
+          the safeguard is earning its place; a rate of zero says the constrained model did not need
+          it, which is equally worth knowing and equally unknown today.
         </div>
       </div>
       <div class="tier">
@@ -6538,7 +6702,7 @@ second pass   <b>5.060000171975998</b></div>
     </div>
     <div>
       EM Fusion · a human-in-the-loop AI prototype for explainable electromagnetic situational
-      awareness · progress note, 23 September 2026
+      awareness · progress note, 25 September 2026
     </div>
   </footer>
 
