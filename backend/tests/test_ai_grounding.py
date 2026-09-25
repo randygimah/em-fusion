@@ -36,12 +36,29 @@ the template.
 `evb-002` and `ai-002` both learned: a hand-written `EvidenceBundle`
 literal tests the author's model of a bundle rather than a bundle.
 
-Three of these cannot fail against a permissive implementation and the
-suite says so rather than leaving a reader to wonder. The two import-graph
-guards are a membership test that is absent when it holds and absent when
-it is broken, which is why each is preceded by a control -- one proving the
-walker reaches what it claims, one firing it at a module that really does
-import the template. The stored-status mapping is shape.
+**Twenty-two of these cannot fail against a permissive implementation, and
+the suite says so rather than leaving a reader to wonder.** Measured, not
+assumed: a throwaway module reporting every citation grounded passed 24 of
+the first draft, and two of those were wrong tests that have been
+strengthened -- the statement-is-not-resolved case, satisfied by a check
+that passes everything, and the evidence-wins case, satisfied by a check
+that never looks in the superseded compartment at all. Both now turn on a
+differential.
+
+The 22 that remain are so by nature. Three are the oracle itself, where
+grounded-by-construction is the assertion and a permissive check asserts it
+too; they are load-bearing only beside the negative cases that follow them.
+Six more are positive verdicts or negative space -- a pair the bundle
+carries, a passing report with nothing to say, a checker returning None.
+Six are ledger behaviour a plausible stub gets right, and each is paired
+with the failing case that makes it mean something. Four are controls and
+interlocks: the superseded claim shown genuinely present, the walker fired
+at a module that really does import the template, and the two import guards
+themselves, which are a membership test absent when they hold and absent
+when they are broken. The last three are the stored-status mapping, which
+is shape, the hash-seed check, which is negative space, and the
+internal-fault case, which fails only against a check that launders its own
+defects into a refusal.
 """
 
 from __future__ import annotations
@@ -219,14 +236,20 @@ def test_the_statement_beside_a_citation_is_not_resolved():
     # the item rather than a surprise. Only the two identifiers are
     # resolvable; whether the sentence is *true of* the finding it names is
     # eval-004's scoring and no part of this.
+    #
+    # The second half is what makes the first load-bearing: a statement
+    # copied verbatim out of the bundle does not rescue a pair the bundle
+    # does not carry. Without it this test is satisfied by a check that
+    # passes everything, which is the shape of wrong test ai-002 recorded.
     bundle = fault_bundle()
     pair = first_pair(bundle)
+    real_words = bundle.evidence[0].finding
 
-    report = check(
-        citing(bundle, pair, statement="the receiver was struck by lightning"), bundle
-    )
+    invented = check(citing(bundle, ("NOT-A-RULE", "nope"), statement=real_words), bundle)
 
-    assert report.passed
+    assert check(citing(bundle, pair, statement="struck by lightning"), bundle).passed
+    assert not invented.passed
+    assert invented.findings[0].verdict is CitationVerdict.UNKNOWN
 
 
 def test_two_citations_of_the_same_pair_are_both_grounded():
@@ -314,9 +337,14 @@ def test_evidence_wins_when_a_pair_sits_in_both_compartments():
     widened = bundle.with_evidence([*bundle.evidence, borrowed])
 
     report = check(citing(widened, (rule_id, anomaly_type)), widened)
+    without = check(citing(bundle, (rule_id, anomaly_type)), bundle)
 
     assert widened.superseded == bundle.superseded
     assert verdicts(report) == [CitationVerdict.GROUNDED]
+    # The differential. One citation, two bundles differing by one evidence
+    # item, and the verdict turns on that item -- otherwise this test is
+    # satisfied by a check that never reaches the superseded compartment.
+    assert verdicts(without) == [CitationVerdict.SUPERSEDED]
 
 
 def test_the_bundles_own_rule_id_is_not_citable_on_its_own():
