@@ -1,6 +1,13 @@
 .DS_store
 .worktrees/
 
+# Secrets. backend/.gitignore already covers backend/.env; this covers a root
+# one, which nothing ignores today and which is where a compose user would
+# naturally put a provider key. .env.example is the committed template.
+.env
+.env.*
+!.env.example
+
 # OpenSky corpus. The Data License Agreement s3(iii) forbids making the data
 # available to anyone outside the licensee's institute, so neither the raw
 # hourly file nor the filtered extract may be committed. manifest.json,
