@@ -6555,6 +6555,106 @@ carry its reason, or a reader will infer the wrong one.**
 See `docs/thesis_notes.md` for why the check must not share any code with the generator that
 validates it, and §91 for why a constrained model can still produce something unusable.
 
+## 93. Does the catch rate just mean the number of ungrounded checks caught per arm, and how do near misses link to it?
+
+**No on the first, and "they don't" on the second — which is the useful part of both answers.** The
+catch rate is a *proportion* and not a count, its unit is a *hypothesis* and not a citation, and a
+near miss changes neither the verdict nor the rate. The two numbers are counted at different
+granularities and cannot be added together.
+
+### The catch rate
+
+```
+catch_rate(arm) = hypotheses from that arm that failed the check
+                  ────────────────────────────────────────────────
+                  hypotheses from that arm that were checked
+```
+
+Three things the phrase "number of ungrounded checks caught" hides:
+
+| Assumption | What is actually true |
+|---|---|
+| It counts citations | It counts **hypotheses**. One explanation with six bad citations is **one** catch |
+| "Ungrounded" means an invented identifier | A catch is **any** failure — invented, or a citation of a rejected explanation |
+| The denominator is what the arm produced | The denominator is what was **checked**, which is not the same set |
+
+The first is deliberate. Counting citations would make a hypothesis citing six kinds of evidence
+weigh six times one citing a single kind, and the campaign compares **arms**, not claims.
+
+The third catches people out. The retry mechanism checks the *primary* arm's output and deliberately
+does **not** check the template it falls back to — the template is grounded by construction, so
+checking it is a test of the checker rather than of the template. A template arm therefore appears in
+the ledger only when something explicitly puts it there, which is exactly what the corpus measurement
+does and what a campaign would have to do on purpose.
+
+And an arm with nothing checked has **no rate**, not a rate of zero. See §92 for why those must not
+read alike.
+
+**The same number means opposite things depending on the arm**, which is worth fixing in mind before
+any result is quoted:
+
+| Arm | A catch means |
+|---|---|
+| A model arm | the safeguard is working — this is the result the project reports |
+| The template arm | **a defect in the checker**, because that arm cannot be ungrounded |
+
+### Near misses
+
+Matching is exact. A citation reading `rf-noise` where the package says `RF-NOISE` is refused, because
+normalising would silently repair model output and understate a figure reported as a *result*. But a
+bare count of catches says nothing about what went wrong, so a refused citation also records **why it
+nearly matched**:
+
+| Kind | Meaning |
+|---|---|
+| **Spelling** | differs from something in the package only in case or spacing |
+| **Rule under another finding type** | the rule *is* in the package, but not with that kind of finding |
+
+The second is the confusion the two-part identifier exists to catch, since one rule in this system
+borrows another's identifier. The two are looked for in that order, because both apply at once when a
+rule carrying several finding types is cited with one of them miscapitalised, and the spelling
+reading is the specific one.
+
+### How the two link, and the trap in adding them up
+
+They are counted at **different granularities**:
+
+| | Unit |
+|---|---|
+| Catch rate | per **hypothesis** |
+| Near misses | per **citation** |
+
+So *"164 catches, 123 of them near misses"* is not a statement that can be made. One hypothesis with
+three bad citations is a single catch carrying up to three near misses. In the corpus measurement the
+two happen to line up one-to-one **only because each corrupted hypothesis was built with exactly one
+bad citation** — an artefact of the instrument, not a property of the system, and it will not hold on
+real model output.
+
+Two further limits on reading the breakdown:
+
+- **Near misses never account for all catches, by construction.** A citation of a rejected
+  explanation carries no near miss at all: it did not *nearly* match anything, it matched something it
+  was not allowed to cite. The most serious failure kind is deliberately invisible on this axis and
+  shows up in the verdict counts instead.
+- **The "rule under another finding type" bucket conflates two mistakes.** A circular citation — the
+  claim offered as evidence for itself — lands there too, because the deciding rule genuinely does
+  appear in the evidence under other finding types. In the 41-package measurement the 82 in that
+  bucket are 41 genuine type confusions **plus** 41 circular citations, so quoting the bucket as "one
+  rule's findings mistaken for another's" overstates it by half.
+
+### How to read all three together
+
+| Number | The question it answers |
+|---|---|
+| Catch rate | How often did this arm produce something unusable? |
+| Verdict counts | What kind of unusable — invented, or a rejected explanation cited as support? |
+| Near-miss counts | Among the inventions, how near were they? |
+
+Worth recording as a limitation: none of the three says anything about a citation that names a **real**
+finding and describes it falsely. That is not detectable mechanically and is left entirely to the blind
+human scoring — so the catch rate is a lower bound on ungroundedness rather than a measure of it. See
+§92.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
