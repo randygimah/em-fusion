@@ -1,0 +1,53 @@
+sentinel killed (13 failed, 45 passed in 1.84s) -- source edits reach the tests
+
+the pair is resolved on the rule id alone                      KILLED   7 failed, 51 passed in 1.80s
+the pair is resolved on the finding type alone                 KILLED   2 failed, 56 passed in 1.78s
+every citation is grounded                                     KILLED   35 failed, 23 passed in 2.02s
+no citation is ever grounded                                   KILLED   20 failed, 38 passed in 1.89s
+matching is case-insensitive                                   KILLED   5 failed, 53 passed in 1.79s
+the bundle's own claim is citable as evidence for itself       KILLED   6 failed, 52 passed in 1.78s
+the normalisation folds nothing                                KILLED   5 failed, 53 passed in 1.79s
+the normalisation ignores case but not spacing                 KILLED   1 failed, 57 passed in 1.78s
+findings come back in reverse order                            KILLED   2 failed, 56 passed in 1.77s
+positions are zero-based                                       KILLED   4 failed, 54 passed in 1.80s
+the superseded compartment is citable too                      KILLED   5 failed, 53 passed in 1.80s
+the rejected claims are never looked up                        KILLED   4 failed, 54 passed in 1.77s
+a rejected claim is reported as merely unknown                 KILLED   2 failed, 56 passed in 1.76s
+a rejected claim beats an evidence item carrying the same pair KILLED   1 failed, 57 passed in 1.76s
+the superseded index reads the wrong field                     KILLED   4 failed, 54 passed in 1.77s
+the sentence a human reads does not say the claim was rejected KILLED   1 failed, 57 passed in 1.80s
+a misspelled rejected claim reads as an ordinary invention     KILLED   1 failed, 57 passed in 1.74s
+the spelling near miss is never looked for                     KILLED   4 failed, 54 passed in 1.83s
+the rule-id near miss is never looked for                      KILLED   3 failed, 55 passed in 1.79s
+the rule-id reading is preferred over the spelling one         KILLED   1 failed, 57 passed in 1.76s
+a near miss softens the verdict to grounded                    KILLED   2 failed, 56 passed in 1.76s
+the near-miss detail does not name the types that are present  KILLED   1 failed, 57 passed in 1.76s
+every refusal is recorded as a near miss                       KILLED   2 failed, 56 passed in 1.76s
+a grounded citation carries a detail too                       KILLED   1 failed, 57 passed in 1.75s
+the near-miss list holds every citation                        KILLED   1 failed, 57 passed in 1.77s
+one ungrounded citation no longer fails the report             KILLED   1 failed, 57 passed in 1.75s
+every report passes                                            KILLED   15 failed, 43 passed in 1.88s
+the ungrounded list holds every citation                       KILLED   4 failed, 54 passed in 1.78s
+a failing report says nothing                                  KILLED   3 failed, 55 passed in 1.77s
+a passing report carries a reason too                          KILLED   1 failed, 57 passed in 1.75s
+the reason does not say which citation failed                  KILLED   2 failed, 56 passed in 1.76s
+the reason does not name the failing identifiers               KILLED   2 failed, 56 passed in 1.76s
+the gate never raises                                          KILLED   5 failed, 53 passed in 1.78s
+the gate raises on a hypothesis that passed                    KILLED   7 failed, 51 passed in 1.80s
+the refusal carries no reason                                  KILLED   1 failed, 57 passed in 1.76s
+the gate raises something ai-007 does not catch                KILLED   5 failed, 53 passed in 1.79s
+the check launders its own defects into a refusal              KILLED   1 failed, 57 passed in 1.82s
+the gate does not record into the ledger                       KILLED   1 failed, 57 passed in 1.78s
+the reporting surface does not record either                   KILLED   11 failed, 47 passed in 1.87s
+an arm that was never checked reports a rate of zero           KILLED   2 failed, 56 passed in 1.77s
+the catch rate is inverted                                     KILLED   2 failed, 56 passed in 1.80s
+a hypothesis that passed is counted as a catch                 KILLED   6 failed, 52 passed in 2.06s
+the arms are pooled                                            KILLED   4 failed, 54 passed in 1.80s
+ordinals restart at one for every record                       KILLED   1 failed, 57 passed in 1.74s
+the ledger hands out its live list                             KILLED   1 failed, 57 passed in 1.75s
+near misses come back pooled across arms                       KILLED   1 failed, 57 passed in 1.77s
+
+restored
+
+46 killed of 46 valid mutants
+no unexpected survivors

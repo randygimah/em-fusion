@@ -6445,6 +6445,116 @@ limit on the *number* of requests was always the real guard.
 See `docs/thesis_notes.md` for why the payload a model receives had to move out of a measurement
 script, and §89 for the two fallbacks this arm sits between.
 
+## 92. If the bundle is the only thing the model sees, how can it cite something that isn't in it?
+
+**It can, easily — and the fact that it can is the reason the whole layer exists.** The bundle is the
+only thing the model is *given*; it is not the only thing the model can *write*. A language model
+produces text that is plausible given what it has read, and a plausible-looking identifier is exactly
+the sort of thing that comes out when the real one is not to hand. The constraint applied at
+generation time fixes the **shape** of the answer — every field present, confidence one of three
+words, nothing extra — and says nothing at all about whether the contents refer to anything.
+
+So the grounding check asks the one question the shape constraint cannot: for each thing the
+hypothesis says it is relying on, is that thing in the packet it was given?
+
+### Why the check is possible at all
+
+Only because of an earlier decision. The model receives one evidence bundle and nothing else, which
+turns an unanswerable question into a lookup:
+
+| Question | Against | Answerable? |
+|---|---|---|
+| Does this claim refer to something real? | 20.7M stored observations | No — there is no computable answer |
+| Does this claim refer to something real? | the ~30 items in one bundle | Yes — it is set membership |
+
+The containment boundary was not built for tidiness. It is what makes the safeguard tractable, and a
+system that handed a model a database connection instead would have no equivalent check available to
+it at any price.
+
+### What is actually compared
+
+Each supporting point carries three things. Only two of them are resolved:
+
+| Field | Example | Checked? |
+|---|---|---|
+| `rule_id` | `TRACK-GAP` | **Yes** |
+| `finding_type` | `track_rate_excess` | **Yes** |
+| `statement` | "dropouts ran at 2.8/min inside the zone against 0.3 outside" | No — it is prose |
+
+Both identifiers are needed, and this is the common wrong assumption worth correcting: **the rule
+alone does not identify anything.** One rule in this system defines no identifier of its own and
+borrows another's, so a rate-excess finding and a track-discontinuity finding carry the *same rule
+id* while making completely different claims — in every interference bundle the corpus produces. A
+check resolving the rule id alone would pass a hypothesis that confused the two, which is the single
+most likely genuine mistake a model could make here.
+
+### The trap, which is created by an honest decision
+
+A bundle carries a second compartment beside its evidence: the competing conclusions the system
+**considered and rejected**. They are there so a generator can write a real alternative explanation
+instead of pretending none existed.
+
+That honesty creates a hole. Consider a fault bundle where a second rule also bid for the same area
+and lost:
+
+```
+evidence:    SENSOR-FAULT / possible_sensor_fault      <- citable
+             RF-NOISE     / rf_power_deviation         <- citable
+             SENSOR-FAULT / neighbour_nominal          <- citable
+superseded:  SOURCE-GAP   / possible_data_source_issue <- present, NOT citable
+```
+
+A model writing "this is a receiver fault, and it is supported by the data-source issue the system
+also found" has produced a citation that **resolves**. The identifier is in the bundle. A check that
+merely verified existence would pass it — and would thereby certify that two rules agreed, when what
+actually happened is that two rules disagreed and one was thrown out. The safeguard would stamp its
+approval on precisely the error it exists to catch.
+
+So there are three answers rather than two:
+
+| Verdict | What it means | Reading |
+|---|---|---|
+| **Grounded** | names a pair the evidence list carries | fine |
+| **Unknown** | names nothing in the bundle | the model invented an identifier |
+| **Superseded** | names a claim that was rejected | the model misread the bundle |
+
+The third is the more serious. An invented identifier is fabrication; a superseded citation is a
+comprehension failure, and it is rarer — merging the two would bury the worse event inside the
+commoner one.
+
+There is a symmetry that makes this coherent rather than merely strict. The rejected claim is
+*supposed* to be mentioned, in the free-text alternatives. It is only a failure in the structured
+supporting evidence. The same content is legitimate in the field that is prose and illegitimate in
+the field that is checkable.
+
+### What the check cannot do
+
+Two limitations, both worth recording because an examiner will ask about the first one.
+
+**It cannot tell whether the sentence is true.** A model can correctly name a real finding and then
+say something false about it, and this passes. Judging the sentence is the human scoring's job. The
+consequence for the write-up is that the catch rate is a lower bound on ungroundedness, not a measure
+of it: it bounds *fabricated reference* and says nothing about *misdescribed reference*.
+
+**It cannot tell whether it was given the right bundle.** Nothing ties a hypothesis to the bundle it
+came from. Handed the wrong one, the check reports a flood of unknown citations — which is the
+caller's error, and a state the check cannot distinguish from a badly behaved model.
+
+### One more distinction: a rate of zero and no rate at all
+
+The catch rate is reported per generator arm. An arm that has been checked ten times and flagged
+never has a rate of **0.0** — a measured result. An arm that was never checked has **no rate**, which
+is a different statement, and the code returns nothing rather than zero to keep them apart.
+
+This is not pedantry. The sentence "the check flagged nothing on the template arm" is exactly as
+true-looking when the template arm was never run through the check as when it was run and passed, and
+only one of those supports any claim at all. It is the same principle the bundle applies to absent
+evidence and the database applies to a hypothesis that has not been checked yet: **an absence has to
+carry its reason, or a reader will infer the wrong one.**
+
+See `docs/thesis_notes.md` for why the check must not share any code with the generator that
+validates it, and §91 for why a constrained model can still produce something unusable.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |

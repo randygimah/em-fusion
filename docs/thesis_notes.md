@@ -1946,6 +1946,39 @@ cannot do without it, not by what looks finished.** Where an empty state is
 legible on its own, the example data has no defence.
 
 
+### The safeguard's hardest case is created by the bundle's own honesty
+
+An evidence bundle carries, besides its evidence, the competing conclusions the rule ladder
+considered and rejected — a claim another rule bid for the same place and lost when a
+higher-precedence rule claimed it. Carrying them was an honesty decision: dropping a rejected claim
+would make the bundle assert more confidence than the system has, and keeping it is what lets a
+generator write a real alternative explanation instead of pretending none existed.
+
+The consequence is a hole in the check that follows, and it was recorded when the bundle's
+composition was agreed rather than discovered later. A grounding check that verifies a cited
+identifier *exists* resolves a rejected claim perfectly well — the identifier is in the bundle. Such
+a check would therefore certify a hypothesis citing another rule's rejected conclusion **as support
+for this one**, which reads two rules' disagreement as two rules' agreement. The safeguard would put
+its stamp on exactly the error it exists to catch, and nothing about the failure would look wrong: a
+well-formed hypothesis, a citation that resolves, a passing check.
+
+So the check distinguishes what may be *cited* from what may only be *discussed*. Both compartments
+are in the bundle; only the evidence list is citable, and a rejected claim reached for as support is
+refused with a verdict of its own rather than folded in with outright invention. The two are
+different failures and the second is the worse. An invented identifier is a model producing a name
+that does not exist; a citation of a rejected claim is a model misreading the document it was handed
+— a comprehension failure rather than a fabrication. They are also of very different frequency, so
+merging them would bury the rarer and more serious one inside the commoner one, which is the same
+reasoning that gave the hosted adapter two kinds of refusal rather than one.
+
+There is a symmetry worth stating, because it is what makes the arrangement coherent rather than
+merely restrictive. The rejected claim is *supposed* to be mentioned — in the free-text alternative
+explanations, which is why it is sent to the model at all and why the instructions label it as
+rejected. It is only a failure when it appears in the structured supporting evidence. The same
+content is legitimate in the field that is prose and illegitimate in the field that is checkable,
+and that is not an accident of the design: the field that can be checked is the field that carries a
+claim about what the system observed.
+
 ## Implementation
 
 <!-- Notable technical decisions per phase (link to implementation.md phases), challenges and
@@ -6217,6 +6250,74 @@ the harness is really testing what it thinks it is. So it is not assumed. The ha
 survives, it aborts and says no score from the run can be believed. That is a cheap general pattern
 and it is what the two earlier harness defects were missing — neither would have survived a sentinel.
 
+### The oracle has to be independent of the thing it validates
+
+The grounding check is unusually cheap to validate, and the reason is that one of its inputs has a
+known correct answer. The template generator copies every word it writes out of the evidence bundle,
+so a template hypothesis is grounded by construction; running the check over one is therefore a test
+whose result is known in advance, and **anything flagged there is a defect in the check rather than
+in the generator**. This is why the check was built after the template rather than before it, and it
+is the whole reason the build order in the phase document puts it late.
+
+That argument holds only under a condition it is easy not to notice. Both modules group a citation on
+the same `(rule_id, finding_type)` pair. Had they derived that key from shared code, a defect in it
+would have been *invisible*: the template would emit wrongly-keyed citations, the check would resolve
+wrongly-keyed citations, the two would agree perfectly, and the oracle would report a clean result
+while both halves were wrong. An oracle that can share the fault it is testing for is not an oracle.
+
+So the independence is asserted rather than promised — the import graph is walked and the check is
+required not to reach the generator, the same instrument `ai-002` already uses for a different
+independence one layer along. Two details make the guard worth its lines. It is a membership test
+that comes back empty when it holds and empty when it is broken, so it is paired with a control
+proving the walker reaches anything at all; and it is fired at a module that genuinely does import
+the template, so the interlock is verified against a real positive rather than against the author's
+model of the world. That is the same shape of mistake this repository recorded when a database guard
+passed ten tests without ever firing.
+
+### Matching is exact, and a near miss is recorded rather than forgiven
+
+A model that writes `rf-noise` where the bundle says `RF-NOISE` has got the identifier wrong. The
+tempting response is to normalise case and spacing before comparing, which repairs the obvious slips
+and produces a check that looks more robust. It was rejected, because the catch rate is not a
+diagnostic here — it is a **reported result**, one of the numbers the evaluation exists to produce.
+Silently repairing model output would understate it, and understate it in a way that no later reader
+could detect or correct.
+
+Refusing the citation, however, leaves a different problem: a bare count of catches says nothing
+about what went wrong, and the three things that can go wrong have very different implications. So
+the refusal carries *why it nearly matched*, without that ever changing the verdict. Two kinds are
+recorded. One is a difference of case or spacing only. The other is the interesting one — the rule
+id is genuinely present in the bundle, but under a different finding type. That is precisely the
+confusion the two-identifier citation was introduced to catch, since one rule in this system borrows
+another's identity, and it is the most likely genuine model error rather than a hypothetical one.
+
+The two are checked in a fixed order, and the order is load-bearing: both apply at once when a rule
+carrying several finding types is cited with one of them miscapitalised, and reporting that as a rule
+confusion rather than a spelling slip would invert what the measurement says. The general form of the
+result is the point. "Fourteen catches" and "fourteen catches, eleven of them one rule's findings
+mistaken for another's" are different findings, and only the second can be acted on.
+
+### The arm has to be declared, because a hypothesis does not know what made it
+
+The catch rate is reported per generator arm, and a `Hypothesis` object carries no record of which
+arm produced it — deliberately, since the object is the one shape all three generators agree on. So
+the arm is stated where the check is wired in, which is the same conclusion `ai-009` reached for a
+refused model call: a call that failed has no result to read an arm from, and a hypothesis has no
+field to read one from either.
+
+The second decision in the same place is the one more likely to matter at write-up time. A catch rate
+over zero checks is `None` and not `0.0`. *Never caught anything* and *never ran* must not arrive
+identically, because the sentence "the check flagged nothing on the template arm" is true-looking in
+exactly the case where that arm was never put through the check at all. This is `evb-001`'s typed
+absence principle applied to a reported number rather than to evidence, and it is now the third place
+in the project where the distinction has had to be built into a type rather than left to a
+convention — after the three-valued grounding column and the completeness flag on a cost total.
+
+Nothing in the module knows which arm is *expected* to pass. Encoding that the template cannot be
+ungrounded would make the check's answer depend on who it was asked about, which is the one property
+an instrument must not have — and it would destroy the oracle, since the oracle works precisely by
+asking the check a question it could get wrong.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;
@@ -6516,3 +6617,26 @@ citations on every one of the 41 stored bundles, because both bundle shapes the 
 produces happen to carry four kinds of evidence. The baseline's *size* therefore does not vary with
 the event, where a model arm's will. Any dimension of the rubric that rewards completeness or
 concision is, for the baseline, being scored against a constant.
+
+### Threat to validity: the grounding check resolves identifiers, not sentences
+
+The grounding check verifies that each supporting citation names a kind of evidence the bundle
+carries. It does not, and cannot, verify that the sentence the generator wrote beside that citation
+is a true description of the finding it names. A model can correctly identify a real rate-excess
+finding and then characterise it as showing something it does not show, and the check will pass it.
+
+This matters for how the catch rate should be read. It is a lower bound on ungroundedness, not a
+measure of it: it bounds the *fabricated reference* failure and says nothing about the
+*misdescribed reference* one. The second is left to the blind human scoring, where it falls under the
+rubric's evidence-fidelity dimension — which means a single scoring dimension carries the whole
+weight of a failure mode the automated instrument cannot see, and the inter-rater agreement on that
+dimension is correspondingly more load-bearing than on the others.
+
+Stating the boundary precisely also settles what the check is evidence *for*. It supports the claim
+that a constrained generator can be prevented from citing evidence that does not exist. It does not
+support the broader claim that the generated explanations are grounded in the evidence, and the
+write-up must not slide between the two.
+
+*(Record the measured catch rate per arm here once the campaign runs, alongside the near-miss
+breakdown — the proportion of catches that were one rule's findings mistaken for another's is what
+says whether the failures were fabrication or confusion.)*
