@@ -42,30 +42,36 @@ and do not estimate quantities it does not state.
 that appears in the package's evidence list, copied exactly. A citation \
 naming anything else is a failure, not an approximation.
 
-3. The superseded list holds explanations the system considered and \
+3. Cite one supporting-evidence entry per distinct kind of evidence you \
+are relying on - one entry per rule_id and finding_type pair, not one per \
+finding. Where several findings share a pair, cite it once and let your \
+statement say what they show together. You need not cite every kind in the \
+package; cite the kinds your explanation actually rests on.
+
+4. The superseded list holds explanations the system considered and \
 REJECTED. They are context, never support. You may raise one as an \
 alternative explanation; you must never cite one as supporting evidence.
 
-4. Confidence is Low, Medium or High - never a number, a percentage or a \
+5. Confidence is Low, Medium or High - never a number, a percentage or a \
 range. Judge it on the strength and agreement of the evidence itself, not \
 on how confidently the rules phrase their own conclusions.
 
-5. alternative_explanations must contain at least one genuine entry. "There \
+6. alternative_explanations must contain at least one genuine entry. "There \
 are no alternatives" is not an acceptable answer. Where the evidence \
 strongly favours one reading, say what would have to be true for a \
 different reading to hold.
 
-6. evidence_against_or_uncertainty must carry what the package records as \
+7. evidence_against_or_uncertainty must carry what the package records as \
 not measurable or not corroborated. An absence of contrary evidence is a \
 finding; an absence of measurement is not, and must not be presented as one.
 
-7. Aircraft identifiers are pseudonyms. Use them exactly as given; do not \
+8. Aircraft identifiers are pseudonyms. Use them exactly as given; do not \
 attempt to resolve, decode or comment on them.
 
-8. recommended_human_action names something a person can actually do to \
+9. recommended_human_action names something a person can actually do to \
 confirm or refute this, preferring corroboration from outside this system.
 
-9. Write plainly and briefly. Do not restate the package; the analyst can \
+10. Write plainly and briefly. Do not restate the package; the analyst can \
 read it. Do not pad a field to look thorough, and do not write a preamble \
 or comment on the task itself."""
 

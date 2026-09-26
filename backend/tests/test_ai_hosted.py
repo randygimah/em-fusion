@@ -125,9 +125,9 @@ def fake_client(**kw) -> SimpleNamespace:
 def an_arm(client=None, config=None, **kw) -> OpenAIGenerator:
     return OpenAIGenerator(
         config or hosted_config(),
-        client=client
-        if client is not None
-        else fake_client(content=a_valid_response()),
+        client=(
+            client if client is not None else fake_client(content=a_valid_response())
+        ),
         **kw,
     )
 
@@ -300,6 +300,13 @@ def test_the_prompt_states_the_rules_it_must_state():
         "at least one genuine entry",
         "pseudonyms",
         "rule_id and finding_type",
+        # Added 2026-09-26 with rule 3. The three-bundle trial found the
+        # model citing one entry per *finding* where the baseline cites one
+        # per kind -- 4 against 17-23 on an interference bundle, which is a
+        # perfect classifier and would have unblinded the scoring outright.
+        # The prompt had never said which, so this was an underspecified
+        # task rather than a model failing.
+        "not one per finding",
     ):
         assert required in HYPOTHESIS_PROMPT
 
@@ -569,9 +576,9 @@ def test_cost_is_absent_when_no_prices_are_supplied():
 def test_cost_is_computed_when_prices_are_supplied():
     # spec: ai-004, ai-009 -- and this is what makes ai-009's spend ceiling
     # anything other than inert on this arm, which it otherwise is.
-    result = an_arm(
-        usd_per_1k_prompt=0.0025, usd_per_1k_completion=0.01
-    ).generate(fault_bundle())
+    result = an_arm(usd_per_1k_prompt=0.0025, usd_per_1k_completion=0.01).generate(
+        fault_bundle()
+    )
 
     assert result.call is not None
     expected = 1200 / 1000 * 0.0025 + 400 / 1000 * 0.01

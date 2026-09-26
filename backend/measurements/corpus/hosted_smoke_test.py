@@ -164,12 +164,45 @@ with factory.begin() as s:
         ).all()
     ]
 
-bundles = [b for run_id in run_ids for b in bundles_for_run(factory, run_id)][:BUNDLES]
-if len(bundles) < BUNDLES:
+available = [b for run_id in run_ids for b in bundles_for_run(factory, run_id)]
+if len(available) < BUNDLES:
     raise SystemExit(
-        f"only {len(bundles)} stored bundles for this corpus; "
+        f"only {len(available)} stored bundles for this corpus; "
         "run corpus/bundle_end_to_end.py first."
     )
+
+
+def choose(pool):
+    """One bundle of each shape, then the largest, in bundle order.
+
+    The first three bundles in this corpus are all `possible_sensor_fault`,
+    so taking the head exercised one shape twice and the other never -- and
+    the shape it missed is the interesting one: an interference bundle spans
+    both data modes, carries a track side, and holds 17-23 evidence items
+    against a fault bundle's 4-10. Three calls only buy coverage if they are
+    chosen rather than taken.
+
+    The largest is included deliberately as the worst case for payload size
+    and for how long a citation list a generator will produce.
+    """
+    chosen, seen = [], set()
+    for bundle in pool:
+        if bundle.anomaly_type not in seen:
+            seen.add(bundle.anomaly_type)
+            chosen.append(bundle)
+    biggest = max(pool, key=lambda b: len(b.evidence))
+    if biggest not in chosen:
+        chosen.append(biggest)
+    return chosen[:BUNDLES]
+
+
+bundles = choose(available)
+print(
+    f"chose {len(bundles)} of {len(available)}: "
+    + ", ".join(f"{b.anomaly_type} ({len(b.evidence)} items)" for b in bundles)
+    + "\n",
+    flush=True,
+)
 
 budget = CallBudget(max_calls=MAX_CALLS, max_cost_usd=MAX_COST_USD)
 ledger = GroundingLedger()

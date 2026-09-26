@@ -596,6 +596,50 @@ is the kind of detail that costs a day and leaves no trace in the write-up.
 schema keywords strict mode actually honoured, and how the estimated cost compared with the
 provider's own billing.)*
 
+### The provider is not deterministic at temperature 0 with a fixed seed
+
+Measured 26 September 2026, on the three-bundle trial, by running it twice with identical inputs.
+This was scheduled as a separate non-scored probe and was answered as a side effect of capturing the
+trial's log, for about three pence.
+
+Input tokens were identical across the two runs — 3,245, 3,086 and 2,768 — confirming the request was
+byte-identical. Completion tokens were not: 675, 547 and 477 became 673, 536 and 472. **All three of
+three bundles differed.**
+
+The *shape* of the variation is what makes it useful. Titles and summaries came back word for word
+identical; citation counts and grounding verdicts were unchanged. What varied was the free prose:
+`alternative_explanations` and `recommended_human_action` differed in wording on every bundle, and in
+one case in content — one bundle's alternative ended with an explicit falsification condition on the
+first run and simply stopped on the second. That is not a cosmetic difference: it is exactly the
+material the rubric's uncertainty dimension scores.
+
+Three consequences, and they pull in different directions.
+
+**The reproducibility claim must be narrowed.** "Pin a dated model, set temperature 0 and a fixed
+seed, and a reader re-running the campaign obtains the same hypotheses" is false. What reproduces is
+the method, the request, and the structural output; the prose does not. The honest claim is that the
+*procedure* is reproducible and the generations are samples. Stated as a threat to validity rather
+than discovered by a reader attempting it.
+
+**The bounded retry is a mechanism rather than a tax, and this is what settles it.** That item carried
+the one figure in the package chosen rather than measured, explicitly gated on this probe: a retry
+sends the identical request, so on a deterministic provider it buys the identical refusal and is a
+second payment for nothing. The provider is not deterministic, so a retry has a genuine chance of a
+different answer. The recommended ceiling of two is now supported by measurement rather than by
+asymmetric arithmetic.
+
+**And the argument for a single generation per bundle rests on a premise now known to be false.** It
+reads: at temperature 0 with a fixed seed, generation is configured not to vary, and you cannot
+measure the variance of a process you have configured not to vary. The process varies. So the
+grounding-variance measurement that was cancelled as incoherent is coherent after all. Two
+qualifications before anyone acts on that: the variance observed was in prose, not in grounding —
+both runs passed every citation — so a larger N might measure something real but small; and N is
+pre-registered, so changing it is a decision about the pre-registration rather than a detail.
+
+*(Record here whether the same non-determinism holds on an interference bundle, which is larger and
+has more prose to vary, and whether any run produces a different confidence value for the same
+evidence — that would be a far more serious finding than varying wording.)*
+
 ## System Design and Architecture
 
 <!-- Actual architecture as built vs as planned (docs/em_fusion_v2.md section 7) and why it
@@ -6755,3 +6799,48 @@ write-up must not slide between the two.
 *(Record the measured catch rate per arm here once the campaign runs, alongside the near-miss
 breakdown — the proportion of catches that were one rule's findings mistaken for another's is what
 says whether the failures were fabrication or confusion.)*
+
+### Threat to validity, found and removed before the campaign: citation count unblinded the scoring
+
+The blind scoring compares a model arm against a mechanical baseline over identical evidence, and its
+whole value rests on the scorer not knowing which arm produced what. Part B already recorded one
+residual threat to that: the baseline's distinctive prose style. The three-bundle trial found a
+second, and it is categorically worse.
+
+The baseline emits **one citation per distinct kind of evidence** — one per rule-and-finding-type
+pair — which was argued for on real data, since a bundle carries as many as thirty-four items of only
+four kinds. The model, on the same bundles, emitted **one citation per item**. Both bundle shapes in
+this corpus carry exactly four kinds, so:
+
+| | Fault bundle (4–10 items) | Interference bundle (17–23 items) |
+|---|---|---|
+| Baseline | 4 | 4 |
+| Model | 4–10 | 17–23 |
+
+A scorer who notices that four citations means the baseline has not guessed — they have a perfect
+classifier, and on interference bundles the two arms are not even close. The difference between this
+and the style threat is the difference between a scorer sometimes suspecting and a scorer always
+knowing, and it would have shown up as suspiciously high inter-rater agreement long after the
+campaign had run.
+
+**The cause was an underspecified task, not a model failing.** The schema defines a citation as
+standing for a *kind* of evidence, and the baseline implements that, and the instructions given to
+the model never said so. Left alone, the measured difference between arms would have included a
+presentational convention that has nothing to do with the research question.
+
+The remedy is one binding rule in the prompt, stating what a citation is and leaving the count free:
+cite one entry per distinct kind you are relying on, not one per finding, and you need not cite every
+kind. That last clause matters — it lets a model cite three kinds where the fourth does not support
+its conclusion, so the counts overlap and any remaining variation carries *judgement* rather than arm
+identity, which is what the scorers are there to assess.
+
+Three alternatives were considered and rejected. Changing the baseline to cite per item would make it
+emit thirty-four citations on a real bundle and would alter a baseline already measured. Normalising
+citations before a scorer reads them would score something that was never produced, where the rubric
+scores what an analyst would see. Accepting it and recording a limitation was the tempting option and
+is the wrong one: it does not qualify the primary evaluation instrument, it defeats it.
+
+The amendment changes the prompt fingerprint from `275187dc…` to `af153726…`, which is recorded here
+rather than left to be inferred. It was made before any scored generation existed, which is the only
+moment at which it is free — the prompt is the experiment's largest variable, and altering it after a
+campaign has begun would mean two arms answering two different questions.
