@@ -558,6 +558,44 @@ the form was signed off by the supervisor, and whether one colleague or two were
 — the latter would move the agreement statistic from Cohen's κ to a pairwise or Fleiss form and
 requires a change-log entry against the pre-registered rubric.)*
 
+### Model selection: a conventional chat model, because the reproducibility claim rests on temperature
+
+The hosted arm is pinned to `gpt-4.1-2025-04-14`, chosen on 25 September 2026. The choice was not
+made on capability or on price, and the reasoning is worth recording because the obvious criteria
+were the wrong ones.
+
+**Price is irrelevant at this volume.** A twenty-bundle scored campaign is about 33,000 input tokens
+for one arm and perhaps 14,000 output, which across the plausible candidates spans roughly four cents
+to twenty-five. The difference between the cheapest and the most expensive sensible model is smaller
+than the cost of one mistake, so optimising for it would be optimising the wrong quantity.
+
+**Recency is a weak criterion and a real risk.** The provider's list carried models newer than the
+one chosen. Two properties this project depends on are not guaranteed across them: native
+schema-constrained output, and honouring `temperature` at all. Several reasoning-oriented models
+reject a temperature parameter outright. That matters more than it first appears, because the
+pre-registered design sets N = 1 at temperature 0 with a fixed seed, and the entire reproducibility
+argument — that a reader could re-run the campaign and obtain the same hypotheses — rests on the
+model honouring both. A model that silently ignores temperature does not fail; it produces varying
+output while the record says it was pinned.
+
+So the criterion was **the two properties the claim rests on**, and the model chosen is a
+conventional chat model where both are well established. The cost of being wrong is one rejected
+request rather than a spoiled campaign, because the adapter maps a rejected request to a
+configuration error that stops the run rather than falling back — but a rejection discovered during
+a campaign would still invalidate everything generated before it, and a *silently ignored* parameter
+would not be discovered at all.
+
+**A separate trap in how models are listed.** The provider's public price table shows moving aliases
+rather than dated snapshots, so it appears to offer almost no dated identifiers. The dated ones it
+does show are legacy models that predate schema-constrained output entirely — which means selecting
+from the price list, the obvious place to look, yields precisely the models that cannot do the thing
+the arm depends on. The authoritative list is the provider's own model endpoint. Recorded because it
+is the kind of detail that costs a day and leaves no trace in the write-up.
+
+*(Record here what the three-bundle trial showed: whether temperature and seed were accepted, which
+schema keywords strict mode actually honoured, and how the estimated cost compared with the
+provider's own billing.)*
+
 ## System Design and Architecture
 
 <!-- Actual architecture as built vs as planned (docs/em_fusion_v2.md section 7) and why it
@@ -6317,6 +6355,83 @@ Nothing in the module knows which arm is *expected* to pass. Encoding that the t
 ungrounded would make the check's answer depend on who it was asked about, which is the one property
 an instrument must not have — and it would destroy the oracle, since the oracle works precisely by
 asking the check a question it could get wrong.
+
+### Composition is a capability, and its failures leave no symptom
+
+By the time the hypothesis layer had five working parts — an adapter that talks to the provider, a
+call budget, a retry-then-fall-back decision, a grounding check and a mechanical writer — nothing
+composed them. That looked like an absence of glue rather than an absence of capability, and it was
+not: three of the ways to glue them together wrongly produce a system that runs perfectly and reports
+something false.
+
+**The nesting order.** The budget must sit inside the retry, not outside it. Outside, it counts one
+call per bundle and misses every retry — which is the only failure the budget exists to catch, since
+the realistic route to an unexpected bill is a loop rather than the campaign. Both arrangements
+answer every bundle, so a suite asking only "did a hypothesis come back" cannot distinguish them.
+The proof had to be behavioural: script a refusal followed by a success, and require two calls to be
+counted for one bundle. The mutation pass later confirmed the point in the sharpest available form —
+inverting the nesting fails fifteen tests, where the first version of that mutant, written with
+unbalanced parentheses, had failed to compile and been scored inconclusive rather than surviving.
+
+**The arm.** Three components need to know which generator this is, and not one of them can find out.
+A result does not record what produced it, and a *refused* call has no result at all — which is
+exactly the call the retry rate is made of. Told separately, they can disagree, and a disagreement
+attributes spend to one arm and grounding catches to another with nothing able to detect it. Naming
+it once and deriving all three from that single argument is the only arrangement in which the
+disagreement is unrepresentable rather than merely unlikely.
+
+**The prices.** Cost is estimated from prices supplied when the adapter is built. Lose them and every
+call reports no cost, the spend ceiling is never approached, and it enforces nothing while reporting
+itself configured.
+
+The general lesson is worth stating because it is the opposite of the usual one about wiring code.
+Glue is normally where nothing interesting happens; here it is where three independently correct
+components can be combined into a system that is wrong in ways none of them can see. That is an
+argument for composition having its own tested seam rather than living at each call site — and the
+same argument the data abstraction layer makes one layer down, arriving at a different level.
+
+### The registry's factory signature could not carry a price
+
+Assembling a run surfaced a defect in the provider registry that two prior items had not, because
+neither had needed to construct an adapter with anything other than a configuration. The factory type
+was *configuration in, generator out*, and the hosted adapter's per-token prices are neither a
+configuration nor a generation parameter: they are economics, they belong to one arm rather than to
+the port — a locally run model costs nothing per call and has no price to give — and they cannot
+travel among the generation parameters, which are splatted verbatim into the provider request, where
+an unrecognised key is a rejected request, and are persisted beside every hypothesis as what the
+model was called with.
+
+So a run assembled through the registry silently lost them. Silently is the operative word: nothing
+raises, cost simply evaluates to nothing on every call, and the reported campaign cost comes back
+empty.
+
+Two fixes were available. Putting prices on the shared configuration object was rejected: it places
+one arm's economics on the object all three arms share, and into the row stored beside every
+hypothesis. Widening the factory to forward construction keywords was taken instead, which keeps the
+registry's own rule intact — it remains the only module that knows a provider by name, and the
+assembler goes through it rather than importing an adapter directly.
+
+The pattern here has now recurred three times in this project. An interface is defined, it is
+correct for the implementations that exist, and the *second* consumer reveals that a signature was
+describing today's callers rather than the abstraction. The port's output shape was the first, the
+grounding column's two-valued flag the second, and this the third. None was a failure of the original
+design so much as evidence that an abstraction is only tested by its second use.
+
+### Two bad configurations made unconstructible rather than refused
+
+A price pair requires both halves, so supplying exactly one cannot be expressed. Half a price makes
+every cost an undercount presented as a number, which is worse than no number at all — and the
+project's own rule is that an unpriced call is *unmeasurable, not free*.
+
+A price of zero is refused for the same reason in the other direction: zero makes every call cost
+0.00, which is a number standing in for unknown, and keeping *free* and *unpriced* apart is what the
+honest-total argument rests on.
+
+The one refusal that had to remain a check rather than a construction is a spend ceiling supplied
+with no prices at all. Neither the budget nor the adapter can see it: the budget never learns whether
+the arm it wraps can price a call, and the adapter never learns whether a ceiling was set. Assembly
+is the only place in the system where both facts are in view at once, which is an argument for the
+seam existing quite apart from the wiring it does.
 
 ## Evaluation
 

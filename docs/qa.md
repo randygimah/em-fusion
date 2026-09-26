@@ -6655,6 +6655,95 @@ finding and describes it falsely. That is not detectable mechanically and is lef
 human scoring — so the catch rate is a lower bound on ungroundedness rather than a measure of it. See
 §92.
 
+## 94. Getting an API key and picking a model — what am I missing, and how much credit is enough?
+
+**Three things, and the one most likely to waste a day is the model list.** The short version: the
+public price table is not the model list, the dated models it *does* show are the ones that cannot do
+the job, and $5 is roughly twenty times what this project will spend.
+
+### Do I need to paste the raw key into the curl command?
+
+**No.** Reference the environment variable instead:
+
+```bash
+set -a; . backend/.env; set +a
+curl https://api.openai.com/v1/models -H "Authorization: Bearer $OPENAI_API_KEY" \
+  | python3 -m json.tool | grep '"id"'
+```
+
+A pasted key lands in shell history, in scrollback, and is visible in the process table while the
+command runs. `backend/.env` is already gitignored. The model list that comes back is not sensitive.
+
+### The trap: the price table shows aliases, not identifiers
+
+The provider's price page lists *moving aliases* — a name that always points at whatever the current
+version is. This project **refuses** those outright, because an alias changing mid-campaign
+invalidates the comparison with nothing in the results saying so. The identifier must end in a full
+`-YYYY-MM-DD`.
+
+Reading the price table, it looks as though almost nothing is dated. Two problems with that reading:
+
+| Belief | Reality |
+|---|---|
+| Only a couple of models are dated | Every current model has a dated snapshot; the price page just prices the alias, because the price is the same |
+| The dated ones on the page are the safe choice | They are **legacy** models that predate schema-constrained output entirely |
+| A date-like suffix is a date | `-0125` and `-0613` are not `YYYY-MM-DD` and this project rejects them before the request leaves |
+
+So the obvious place to look yields exactly the models that cannot do the thing the whole arm depends
+on. The authoritative list is the provider's own `/v1/models` endpoint.
+
+### What actually narrows the choice
+
+Not price, and not recency.
+
+**Price is irrelevant here.** A twenty-bundle campaign is ~33,000 input tokens and ~14,000 output. The
+spread across sensible candidates:
+
+| Model class | One full scored campaign |
+|---|---|
+| mini tier | ~$0.04 |
+| mid tier | ~$0.18 – $0.25 |
+| pro tier | dollars, for no benefit at this size |
+
+The difference between cheapest and dearest is smaller than the cost of one mistake.
+
+**Recency is a risk, not a virtue.** Two properties are required and neither is universal: native
+schema-constrained output, and honouring `temperature`. Several reasoning-oriented models reject a
+temperature parameter outright. That matters because the design pins N = 1 at temperature 0 with a
+fixed seed, and the reproducibility claim rests on both being honoured. **A model that silently
+ignores temperature does not fail — it varies while the record says it was pinned.**
+
+Also excluded, for a reason specific to this project: any `-search-preview` or `-search-api` variant.
+Those inject retrieval, so the model would see material outside the evidence bundle — which destroys
+the grounding claim at its root, since the whole safeguard rests on the bundle being a closed list.
+
+### How much credit
+
+**The minimum on offer, usually $5.** Realistic total spend for this project, including false starts,
+reruns and a loop bug caught by the in-code budget, is under **$2**.
+
+Two settings at purchase matter more than the amount:
+
+- **Turn auto-recharge off.** With prepaid credits and no auto-recharge, *the balance itself is the
+  hard cap* — which is exactly the guarantee wanted: a limit that holds when the code is the broken
+  thing. Auto-recharge on turns it back into a soft one.
+- **Use a dedicated project and a project-scoped key**, so usage and the cap are attributable to this
+  work rather than to the account generally.
+
+### What was missing from the plan
+
+Beyond the key and the cap, three things:
+
+1. **Nothing assembled a run.** Every part existed and nothing composed them — see
+   `docs/thesis_notes.md` on why that is a capability rather than glue.
+2. **Prices must be supplied in the code or cost tracking is inert.** Note the price page quotes per
+   **1M** tokens and the configuration takes per **1k**: divide by 1000.
+3. **The credential has to reach the container**, and the obvious way is wrong. Compose interpolates
+   from the *host* environment, so passing the variable through turns an unset one into an empty
+   string — and an empty string counts as *present*, which would shadow a perfectly good `.env` file.
+   The scripts read `backend/.env` themselves through the bind mount instead, which is the pattern the
+   replay entrypoint already established and the trap `app/dal/pseudonymise.py` already records.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |

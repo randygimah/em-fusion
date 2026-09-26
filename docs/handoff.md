@@ -8,139 +8,155 @@ detects deviations deterministically, and turns evidence bundles into schema-val
 grounding-checked AI hypotheses for an analyst to review. Decision support, never autonomous
 decision-making.
 
-This session built **`ai-008`, the automated grounding check** — build-order step 6 of Phase 9, and
-the last item before the local arm is revisited. It is the safeguard every claim about the AI layer
-rests on: constrained decoding fixes the *shape* of a hosted answer and says nothing about whether
-the identifiers inside it exist.
+This session built **`ai-008`, the grounding check**, then **`ai-011`, run assembly**, and took the
+project to the point where **one command makes the first real model request**. `ai-011` was not on
+the plan: it was added because the gate could not be reached without it.
 
 ## Current state
 
-**`ai-008` passes.** `app/ai/grounding.py`, 58 tests in `tests/test_ai_grounding.py`, **100% on the
-module**, **1400 passed at 99.86%** in the container, ruff and mypy clean. **56 of 99 spec items
-passing.**
+**Both items pass. 57 of 100 spec items.** 1439 tests at 99.86% in the container.
 
-What it does, and the three decisions that are not obvious from the code:
+| Item | Tests | Module coverage | Mutation |
+|---|---|---|---|
+| `ai-008` grounding check | 58 | 100% | **46 of 46**, no survivors |
+| `ai-011` run assembly | 39 | 100% (+ registry) | **36 of 36**, no survivors |
 
-- **Three verdicts, not two.** A citation is grounded, unknown, or **superseded**. The bundle
-  deliberately carries the competing claims `anom-013` rejected, in their own compartment, so a check
-  that verified an identifier *exists* would resolve one perfectly and certify a hypothesis citing it
-  **as support** — reading two rules' disagreement as two rules' agreement, which is the exact error
-  the safeguard exists to catch. Fabrication and misreading are different failures and the rarer one
-  is the worse, so they never merge.
-- **Matching is exact, near misses are recorded.** Normalising case would silently repair model
-  output and understate a catch rate `eval-005` reports as a *result*. Two near-miss kinds are
-  recorded without changing the verdict, and the spelling reading is checked **before** the rule-id
-  one because both apply at once when a rule carrying several finding types is cited with one of them
-  miscapitalised.
-- **The arm is declared and 0/0 is `None`.** A `Hypothesis` carries no record of what produced it, so
-  the arm is stated where the check is wired in — `ai-009`'s argument for a refused call. A catch
-  rate over zero checks is `None` rather than 0.0, because *never caught anything* and *never ran*
-  must not read alike.
+**`ai-008`** resolves every citation against the bundle it came from. Three verdicts, not two: the
+bundle deliberately carries the claims the ladder *rejected*, so a check verifying that an identifier
+*exists* would certify a hypothesis citing one as support — reading two rules' disagreement as two
+rules' agreement, the exact error it exists to catch. Matching is exact and near misses are recorded
+without softening the verdict. The arm is declared, and a catch rate over zero checks is `None`
+rather than 0.0.
 
-**Measured, over the 41 stored bundles** (`measurements/corpus/grounding_catch_rate.log`):
+Measured over the 41 stored bundles (`measurements/corpus/grounding_catch_rate.log`): **0 flagged of
+164 citations**, and **164 of 164 deliberate corruptions caught**, 41 of 41 on each of four kinds.
 
-| | |
-|---|---|
-| Flagged on template hypotheses | **0 of 164 citations**, 41 of 41 bundles |
-| Template arm catch rate | **0.0 measured**, not `None` |
-| Deliberate corruptions caught | **164 of 164**, 41 of 41 on each of four kinds |
-| Near misses classified | 123 of 164 — 82 rule-id, 41 spelling, 41 correctly unclassified |
-| Bundles carrying a superseded claim | **0 of 41** |
+**`ai-011`** composes the arm. The budget nests inside the fallback; the arm is named once and
+derived at all three places needing it; prices reach the adapter through the registry. Two bad
+configurations are unconstructible (exactly one price; a price of zero) and one is refused (a spend
+ceiling with no prices — the only place that can see both).
 
-**Mutation: 46 of 46 killed, no survivors, on the first valid pass**
-(`measurements/mutation/mutate_ai008_grounding.log`) — the first item to reach that without a second
-round. The reason is not that the tests were written better; it is that the gap-finding happened
-*before* the implementation existed. See Failed attempts.
+**The model is pinned: `gpt-4.1-2025-04-14`.** Chosen for the two properties the reproducibility
+claim rests on — schema-constrained output and honouring `temperature` — not price or recency.
 
-Unbuilt and specified: the local arm (`ai-005`/`ai-006`), still deferred with a trigger. The
-availability fallback waits on it.
+**Ready and not yet run:** `measurements/corpus/hosted_smoke_test.py`. Three bundles, printed in full
+to be hand-read. Refuses without `SMOKE_TEST_CONFIRM=yes`. Pre-flight verified: the credential is
+readable inside the container (never printed), the spend guard refuses, ceiling 6 calls / $0.25,
+expected spend about $0.03.
+
+```
+make measure SCRIPT=corpus/hosted_smoke_test.py CORPUS=dev SMOKE_TEST_CONFIRM=yes
+```
 
 ## Files in flight
 
-The tree is clean. Everything below is committed.
+The tree is clean except for the documentation commit in progress. Nothing half-built.
 
-Added: `backend/app/ai/grounding.py`, `backend/tests/test_ai_grounding.py`,
+Added this session: `backend/app/ai/grounding.py`, `backend/app/ai/assembly.py`,
+`backend/tests/test_ai_grounding.py`, `backend/tests/test_ai_assembly.py`,
 `backend/measurements/corpus/grounding_catch_rate.py` (+ `.log`),
-`backend/measurements/mutation/mutate_ai008_grounding.py` (+ `.log`).
+`backend/measurements/corpus/hosted_smoke_test.py`,
+`backend/measurements/mutation/mutate_ai008_grounding.py` (+ `.log`),
+`backend/measurements/mutation/mutate_ai011_assembly.py` (+ `.log`).
 
-Modified: `docs/spec.jsonl` (`ai-008` amended, then `passes: true`), `docs/thesis_notes.md`,
-`docs/qa.md`, `docs/implementation.md`, `backend/measurements/README.md`, `CLAUDE.md`.
+Modified: `backend/app/ai/registry.py` (forwards construction keywords), `Makefile`, `.gitignore`,
+`README.md`, `docs/spec.jsonl`, `docs/thesis_notes.md`, `docs/qa.md`, `docs/implementation.md`,
+`docs/progress_note.html`, `backend/measurements/README.md`, `CLAUDE.md`.
 
 ## Changed
 
 | Commit | What |
 |---|---|
 | `08e4748` | `spec: amend ai-008 — the arm is declared, the oracle must not share the fault` |
-| `6805a40` | `test: add tests for ai-008` (58 tests) |
-| `26ce6a6` | `test: strengthen two ai-008 tests against a permissive check` |
+| `6805a40` / `26ce6a6` | ai-008 tests, then strengthened against a permissive check |
 | `e6d3232` | `feat(ai-008): the automated grounding check - tests pass` |
-
-The spec amendment pinned five things the item did not say: the arm cannot be inferred from a
-hypothesis; 0/0 is unmeasured rather than zero; the citation key must be derived independently of the
-template that validates it; near misses are reported without changing the verdict; and a real
-citation with a false sentence attached is a failure this item **does not** catch.
+| `6509355` / `9a3d87c` | ai-008 write-up, then the corpus measurement log of record |
+| `077ef3c` | `docs: progress note — checking what a model says against what it was shown` |
+| `51974dd` | `docs: qa 93 — what the catch rate counts, and why near misses do not add to it` |
+| `fa6720d` / `5451556` | `spec: add ai-011`, then corrected — the ceilings arrive inside the budget |
+| `f45905b` | `spec: amend ai-003 — the registry forwards construction keywords` |
+| `32da64c` | `feat(ai-011): run assembly for a model arm - tests pass` |
+| `0a9c715` | `test: strengthen two ai-011 refusal tests after the mutation pass` |
+| `ab79a2d` | `feat: the three-bundle hosted smoke test, and a root .env guard` |
 
 ## Failed attempts
 
-- **The first full-suite figure was wrong, and my own doing.** It reported 99.50% with 18 missed
-  statements. I had run Black over `app/ai/grounding.py` and the test file *while the suite was
-  running against the bind mount*, so coverage mapped stale line numbers onto a changed file. The
-  clean re-run gave **99.86%, 5 missed**. Do not touch `backend/` during a containerised run.
+- **A coverage figure was wrong and it was my doing.** The first full-suite run reported 99.50% with
+  18 missed statements. I had run Black over the source *while the suite ran against the bind mount*,
+  so coverage mapped stale line numbers onto a changed file. The clean re-run gave 99.86%, 5 missed.
+  **Do not touch `backend/` during a containerised run.**
 - **A mutation anchor was silently scored INVALID.** Black had collapsed a wrapped call onto one line
-  and the anchor was written against the wrapped form, so it matched zero times. This is the
-  silent-INVALID failure `measurements/README.md` already records, and it surfaced only because the
-  harness reports invalid anchors separately instead of counting them among the killed. Write anchors
-  against the **formatted** source, never against what you typed.
-- **Two tests were wrong and a permissive stub is what showed it.** Before writing any
-  implementation, a throwaway module reporting every citation grounded was run against the suite:
-  **24 of 58 passed**. Two were wrong — the statement-is-not-resolved case only asserted that a good
-  citation passes, and the evidence-wins case never forced the check to look in the superseded
-  compartment at all. Both were strengthened to turn on a differential, re-measured at 36 failed / 22
-  passed, and the 22 that pass by nature are named in the file docstring. **This is why the mutation
-  pass found nothing**: the same gaps were found earlier and far more cheaply.
-- **A third gap was found by writing the mutation harness, not by running it.** `near_misses(arm)`
-  pooling every arm's findings would have survived, because the test used one arm. Fixed before the
-  pass, so the pass never scored it — recorded here because the score alone would misrepresent how
-  the gap was found.
-- **The corpus measurement produced a finding the unit tests could not.** A circular citation — the
-  bundle's own claim cited as evidence for itself — is classified as `rule_id_under_another_type` on
-  every bundle, because the deciding rule genuinely does appear in the evidence under other finding
-  types. The verdict is right and only the classification is coarse, but a write-up quoting that
-  count as "one rule's findings mistaken for another's" would overstate it.
+  and the anchor was written against the wrapped form, so it matched zero times. Write anchors
+  against the **formatted** source.
+- **A mutant was written with unbalanced parentheses** and came back INCONCLUSIVE rather than
+  surviving. Rewritten, inverting the budget/fallback nesting fails 15 tests. An inconclusive mutant
+  is not a passing one — the harness reporting the two separately is what caught it.
+- **Four refusal tests matched something weaker than their name**, twice in each item. `ai-008`'s two
+  were found by a permissive stub before the implementation existed; `ai-011`'s two by the mutation
+  pass. The template-as-arm test asserted only that *something* raised, and `ai-009` refuses a
+  budgeted template anyway, so the guard could be deleted and stay green. The spend-ceiling test
+  matched the bare word "price", which survives in the message's tail when the sentence naming what
+  is missing is deleted. This is now the third and fourth occurrence of the defect `evb-002` first
+  recorded.
+- **`ai-009`'s arm guard caught my test before my test caught anything.** I scripted the local arm
+  returning a result declaring *hosted*; the budget refused it. The test was wrong and the guard was
+  right.
+- **I nearly introduced a credential bug while "fixing" one.** I was about to add
+  `OPENAI_API_KEY: ${OPENAI_API_KEY}` to Compose, which sets the variable to an **empty string** in
+  the container — and `load_dotenv(override=False)` treats present-but-empty as present, so it would
+  have shadowed a perfectly good `backend/.env`. `app/dal/pseudonymise.py` already records that exact
+  trap for the seed. I had also claimed the seed "never reaches the container", which was wrong: the
+  app loads `backend/.env` itself, anchored to the package so it resolves through the bind mount.
+- **Docker's daemon wedged** after a full suite plus two image builds, killing a measurement mid-run.
+  The log was deliberately **not** hand-written from captured stdout: a transcribed log produces
+  spurious differences against a re-run and destroys the diff-against-the-log protocol it exists for.
+  Recorded as owed, then captured properly after an OrbStack restart — and the second run's figures
+  matched the first exactly, so the numbers are confirmed rather than merely restated.
+- **`make measure` passes `--no-deps`**, so it does not start the database. After a Docker restart
+  the measurement died on `failed to resolve host 'postgis'`, which reads like a defect in the script
+  and is not one. `docker compose up -d postgis` first.
 
 ## Next step
 
-1. **Revisit the local arm** (`ai-005`/`ai-006`) — build-order step 7, and the last item in the Phase
-   9 sequence. Deferred 2026-09-21 with a trigger: build `ai-004` first, record how often the hosted
-   arm is actually unavailable, then decide. Safe to defer *only* because that arm is not scored.
-   Note the trigger has not fired, because no real call has been made yet.
-2. **The three non-code gate items before the first real request**, none of which this session
-   touched:
-   - a **dated model ID** pinned, not a moving alias (a procurement decision);
-   - the **hard spend cap at the provider console**, and a real `OPENAI_API_KEY`;
-   - the **three-bundle smoke test**, hand-read — which is also what confirms which schema keywords
-     strict mode actually accepts.
-3. **The determinism probe (N=3, non-scored)**, which is load-bearing for two separate things:
+1. **Run the three-bundle smoke test and read the output.** It is the only outstanding gate, and the
+   command is above. Four things to look for: whether temperature and seed were accepted; which
+   schema keywords strict mode actually honoured; how the estimated cost compares with the provider's
+   own billing page (*only comparable now*, while three calls are the account's whole history); and
+   whether the grounding check flagged anything on a real model. **A catch is a finding either way** —
+   the safeguard earning its place, or a prompt needing a word changed before twenty bundles run
+   through it. Record the result in `docs/thesis_notes.md` under the model-selection section, which
+   carries an explicit gap note for it.
+2. **The determinism probe** (N = 3, non-scored), load-bearing for two separate things:
    reproducibility, and whether `ai-007`'s retry is a mechanism or a tax.
+3. **A campaign runner** — iterate bundles, store through `db-002`, report through `eval-005`.
+   Deliberately excluded from `ai-011`, which assembles and does not run.
+4. **Revisit the local arm** (`ai-005`/`ai-006`) with the hosted arm's measured reliability in hand.
 
 Open and unowned:
 
-- `ai-008`'s **superseded failure case has no corpus demonstration** and cannot have one here: 0 of
-  41 bundles carry a superseded claim, because `anom-013` suppressed 0 of 188 claims. It is proved by
-  unit tests over constructed bundles, and the corpus demonstration is owed to a second producing
-  rule alongside the ladder's own arbitration. The measurement counts superseded fields, so the
-  figure will move on its own the day one appears.
-- **The other mutation harnesses still lack the crash guard and the sentinel** (~5 lines each). The
-  `ai-008` harness has both.
-- Nothing builds a `GenerationConfig` from the environment; deferred to the first arm that runs.
+- **The credential-loading remedy now exists in two places.** `app/dal/pseudonymise.py` has the
+  seed-specific one and the smoke test carries a copy, with the debt recorded in its docstring. That
+  module's own note warns a remedy copied twice is one the third caller will not know about — so
+  **generalise it when the campaign runner lands in `app/`**, which needs a spec item rather than a
+  measurement script's convenience.
+- `ai-008`'s **superseded failure case has no corpus demonstration**: 0 of 41 bundles carry a
+  superseded claim, because the ladder suppressed 0 of 188. Proved by unit tests over constructed
+  bundles; the corpus demonstration is owed to a second producing rule. The measurement counts them,
+  so the figure moves on its own.
+- **The near-miss "rule under another finding type" bucket conflates two mistakes** — a genuine type
+  confusion and a circular citation, 41 of each in the corpus measurement. Split it into a fourth
+  near-miss kind *before* the campaign if that bucket turns out to carry weight, since the
+  classification is what gets reported.
+- **The other mutation harnesses still lack the crash guard and the sentinel** (~5 lines each).
+  `ai-008`'s and `ai-011`'s have both.
 - The run budget is **held in memory**, so a process that dies and restarts counts from zero — a
   second, independent reason the console cap exists.
 - Regenerate corpus v2 for `eval-001`.
-- Several committed files are not Black-formatted (13 files, ~900 lines of churn, one commit of its
-  own). None of them are `ai-008`'s.
+- 13 committed files are not Black-formatted (~900 lines, one commit of its own). None are this
+  session's.
 - Frontend suite exits non-zero: `control.runs.map is not a function` at `scenarioControl.tsx:344`.
 - Broadband generation arm; nine measurement scripts still select runs by means other than `scn-008`'s
   provenance; `CORPUS_V2_PLAN.md` and `DEV_BATCH_PLAN.md` still sit at the repo root.
-- The master `docs/progress_note.html` begins with its own `<!doctype html><html><head>` wrapper, so
-  the published page double-wraps. It has rendered correctly for nine versions and is left alone
+- `docs/progress_note.html` begins with its own `<!doctype html><html><head>` wrapper, so the
+  published page double-wraps. It has rendered correctly for ten versions and is left alone
   deliberately. Worth one small commit of its own.

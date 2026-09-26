@@ -168,6 +168,62 @@ Set it once and do not change it: it determines every pseudonym in every figure.
 produces a valid corpus with different labels, and all reported metrics still reproduce exactly,
 because nothing downstream reads a pseudonym's value.
 
+### The hosted model
+
+The AI hypothesis layer has three producers, and only one of them costs money. Nothing in this
+repository makes a real provider call except `backend/measurements/corpus/hosted_smoke_test.py`,
+which refuses to run without an explicit opt-in.
+
+`OPENAI_API_KEY` goes in `backend/.env` beside the seed, and is **never** committed — the template is
+`backend/.env.example`. It is read from the environment by the adapter and never through a
+configuration object, because generation parameters are persisted verbatim beside every hypothesis,
+so a key held there would be written to the database once per row and into every backup of it.
+
+**The key reaches the container through `backend/.env` on the bind mount, not through Compose.**
+That is deliberate and the obvious alternative is a trap: Compose interpolates from the *host*
+environment, so an unset variable arrives inside the container as an **empty string rather than as
+absent**, and `load_dotenv(override=False)` treats present-but-empty as present — which would let
+nothing shadow a perfectly good `.env`. `app/dal/pseudonymise.py` records the same trap for the seed
+and clears an empty value before reading the file.
+
+**Pin a dated model, never a moving alias.** The adapter refuses an identifier that does not end in
+`-YYYY-MM-DD`: an alias changing mid-campaign invalidates the comparison with nothing in the results
+saying so. Note that the provider's public price table lists aliases rather than identifiers, and the
+dated ones it does show are legacy models that predate schema-constrained output — so the obvious
+place to look yields exactly the models that cannot do the job. The authoritative list is the
+provider's own model endpoint:
+
+```bash
+set -a; . backend/.env; set +a
+curl https://api.openai.com/v1/models -H "Authorization: Bearer $OPENAI_API_KEY" \
+  | python3 -m json.tool | grep '"id"'
+```
+
+Currently pinned: **`gpt-4.1-2025-04-14`**. Chosen for the two properties the reproducibility claim
+rests on — native schema-constrained output, and honouring `temperature` — rather than on price,
+which is immaterial at this volume, or recency, which risks both. See `docs/qa.md` 94.
+
+**Set a hard spending cap at the provider's own console, and turn auto-recharge off.** With prepaid
+credits and no auto-recharge the balance itself is the hard cap, which is the guarantee wanted: a
+limit that holds when the code is the broken thing. The in-code call budget is a second, nearer guard
+that notices a retry loop in minutes rather than at the billing boundary — and it is held in memory,
+so a process that dies and restarts counts from zero. Neither replaces the other.
+
+A whole twenty-bundle scored campaign is about 33,000 input tokens for one arm. The minimum credit
+purchase covers this project many times over.
+
+#### The first real requests
+
+```bash
+make measure SCRIPT=corpus/hosted_smoke_test.py CORPUS=dev SMOKE_TEST_CONFIRM=yes
+```
+
+Three bundles, printed in full to be **read** rather than asserted on, before anything runs in bulk.
+It is also what confirms which schema keywords strict mode actually accepts, which is provider
+documentation this repository cannot verify on its own, and the only moment at which the estimated
+cost can be compared against the provider's own billing while three calls are the account's entire
+history.
+
 ## Layout
 
 | Path | What |
