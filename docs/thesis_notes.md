@@ -6800,6 +6800,71 @@ write-up must not slide between the two.
 breakdown — the proportion of catches that were one rule's findings mistaken for another's is what
 says whether the failures were fabrication or confusion.)*
 
+### What the three-bundle trial showed, and the one thing it could not
+
+Run 26 September 2026 against `gpt-4.1-2025-04-14`, temperature 0, fixed seed, five calls across two
+prompt versions and about eleven pence in total.
+
+**Temperature, seed and a token ceiling were all accepted.** No rejected request, so the parameters
+the reproducibility argument depends on are honoured rather than ignored — the failure mode that
+would not have announced itself.
+
+**Strict mode removed exactly two keywords**, the minimum-length and minimum-items constraints, and
+nothing else. This confirms rather than assumes the earlier correction: the constraint carries
+structure and not quantity, so the at-least-one-citation and non-empty-summary guarantees are
+enforced on arrival as a refusal, not made impossible at generation. Recorded because that list is
+provider documentation this project cannot derive locally, and it is now observed.
+
+**Grounding passed every citation of every generation** — twenty-five across the first prompt
+version, six across the second, none flagged. That is the model, not a corruption built for the
+purpose, and it is the first evidence that the safeguard's catch rate on a real arm may be low. A low
+rate is a result rather than a disappointment: it would say a schema-constrained model handed a
+closed evidence package does not invent identifiers, which is itself an answer to the research
+question.
+
+**The citation rule worked.** Adding one binding rule took the fault bundle from ten citations to
+four — one per kind — and the interference bundle from what would have been thirty-four to two. The
+statements are now synthesised rather than repeated: six near-identical deviation lines became one
+entry naming the range they span. Worth noting as a side effect that was not the point: the output is
+more readable than the mechanical baseline's on the same evidence, because the baseline cannot
+summarise across findings.
+
+**A residual blinding leak remains and is accepted deliberately.** The baseline always cites four
+kinds; the model cited four on one bundle and two on the other, exercising the clause that lets it
+cite only the kinds its explanation rests on. So four now tells a scorer nothing and fewer than four
+still identifies the model — a one-directional, weak leak of the same character as the prose-style
+threat already recorded, rather than the perfect classifier it replaced. It is accepted because the
+remaining variation is the model choosing which evidence supports its conclusion, and that judgement
+is what the scoring exists to assess; removing it would remove signal.
+
+**A concrete instance of what the grounding check cannot catch.** On the interference bundle the
+model cited the track rate excess as supporting evidence — four discontinuities inside the window and
+none outside, a ratio of 11.79 — while in the same hypothesis recording that the rate *could not be
+measured*, the reference period having held nothing. Both statements are faithful to the package; the
+ratio is built on the smoothing constant rather than on an observed comparison, so citing it as
+support while flagging it as unmeasurable is, at best, in tension. The citation resolves, so grounding
+passes. This is the misdescribed-reference failure named as a limitation when the check was
+specified, now observed on real output rather than argued in the abstract — and it is precisely what
+the human scoring's evidence-fidelity dimension has to catch.
+
+**Confidence tracked the evidence rather than the rules' phrasing.** High on a clean single-receiver
+fault, Medium on an interference zone whose corroboration was not measurable — which is the fusion
+rule's own floor, rising to High only on corroboration. One observation of each is not a finding, but
+it is not nothing either.
+
+**The campaign token estimate is roughly four times low.** Measured input was 3,317 tokens on a
+ten-item fault bundle and 9,646 on a thirty-four-item interference bundle. The figure in the phase
+document — about 33,000 input tokens for a twenty-bundle campaign — was derived from the median
+*bundle payload*, and a request also carries the prompt and the derived schema, and the corpus's
+bundles vary threefold in size. A stratified twenty-bundle campaign averages nearer 6,500 tokens a
+call, so about 130,000. The conclusion drawn from the original figure is unchanged and now rests on
+better arithmetic: a whole campaign is about thirty pence per arm, so the spending guard is about a
+runaway loop and never about the campaign.
+
+*(Still owed: whether the same non-determinism holds on an interference bundle, which has more prose
+to vary; and whether any run produces a different confidence value for the same evidence, which would
+be far more serious than varying wording.)*
+
 ### Threat to validity, found and removed before the campaign: citation count unblinded the scoring
 
 The blind scoring compares a model arm against a mechanical baseline over identical evidence, and its

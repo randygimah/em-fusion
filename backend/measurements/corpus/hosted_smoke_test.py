@@ -193,6 +193,16 @@ def choose(pool):
     biggest = max(pool, key=lambda b: len(b.evidence))
     if biggest not in chosen:
         chosen.append(biggest)
+    # Pad to the full BUNDLES. The first version stopped here and chose two,
+    # because the first interference bundle in this corpus happens also to be
+    # the largest, so "plus the biggest" added nothing and a third of the
+    # budget went unspent. A trial that silently buys less coverage than it
+    # was configured for is the quiet kind of wrong.
+    for bundle in pool:
+        if len(chosen) >= BUNDLES:
+            break
+        if bundle not in chosen:
+            chosen.append(bundle)
     return chosen[:BUNDLES]
 
 
