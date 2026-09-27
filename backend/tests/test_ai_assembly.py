@@ -33,6 +33,17 @@ place that sees the ceiling and the prices at the same moment -- `ai-009`
 never learns whether the arm it wraps can price a call, and `ai-004` never
 learns whether a ceiling was set.
 
+A fourth, added 2026-09-27 while building `ai-012`, and it was a **type**
+rather than a behaviour: the assembled arm was handed out as `ai-003`'s
+port, whose `generate` returns the delivered hypothesis and drops the
+refusals -- and an ungrounded refusal carries the parsed hypothesis
+`db-002` appends with grounding FAILED beside the row that replaced it. So
+the port's own method is lossy at precisely the caller that cannot afford
+loss, and the loss has no symptom: every bundle still gets a hypothesis
+and the catch rate still reports a number, with no rows behind it. The
+three-bundle smoke test reached the recorded path by narrowing the
+attribute and got away with it because `measurements/` sits outside mypy.
+
 These tests make no network call. The arm is injected through the registry
 the same way `api-006` injects a batch launcher, which is what makes the
 whole composition testable without a provider, a key, or a bundle the real
@@ -41,11 +52,13 @@ builder did not produce.
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import pytest
 
 from app.ai.assembly import ArmPrices, AssembledArm, assemble_arm
 from app.ai.budget import BudgetedGenerator, BudgetExceeded, CallBudget
-from app.ai.fallback import CorrectnessFallback
+from app.ai.fallback import CorrectnessFallback, RefusalCategory
 from app.ai.grounding import GroundingChecker, GroundingLedger
 from app.ai.hypothesis import Citation, Hypothesis
 from app.ai.providers.template import TemplateGenerator
@@ -621,3 +634,64 @@ def test_an_unknown_name_is_still_refused_when_keywords_are_supplied():
             {"template": TemplateGenerator},
             usd_per_1k_prompt=0.00125,
         )
+
+
+# ------------------------------------- the record the campaign cannot afford to lose
+
+
+def test_the_assembled_arm_is_typed_so_the_record_can_be_asked_for():
+    # spec: ai-011, ai-012 -- the defect is invisible at runtime: the object
+    # always had generate_recorded and the field declared the port, which
+    # does not. The real proof is that ai-012 type-checks; this is what
+    # stops the annotation being widened back to the lossy one afterwards.
+    assert get_type_hints(AssembledArm)["generator"] is CorrectnessFallback
+
+
+def test_the_record_keeps_the_hypothesis_the_grounding_check_rejected():
+    # spec: ai-011, ai-008, db-002 -- an ungrounded refusal parsed, so it is
+    # a storable row that db-002 appends with grounding FAILED beside the
+    # one that replaced it. Reached through the port's method that row does
+    # not exist and nothing says it is missing.
+    bundle = fault_bundle()
+    invented = ungrounded(bundle)
+    arm = assembled(
+        providers=registry(
+            _RecordingFactory(
+                _ScriptedArm(
+                    model_result(hypothesis=invented),
+                    model_result(hypothesis=invented),
+                )
+            )
+        )
+    )
+
+    outcome = arm.generator.generate_recorded(bundle)
+
+    assert outcome.fell_back
+    assert [refusal.category for refusal in outcome.refusals] == [
+        RefusalCategory.UNGROUNDED,
+        RefusalCategory.UNGROUNDED,
+    ]
+    assert [refusal.result.hypothesis for refusal in outcome.refusals] == [
+        invented,
+        invented,
+    ]
+    assert outcome.result.hypothesis != invented, "the template answered instead"
+
+
+def test_the_lossy_method_still_works_and_still_loses_it():
+    # spec: ai-011, ai-003 -- the port is not removed. A caller that wants
+    # one explanation and nothing else still gets one, which is why the
+    # loss was never going to surface as a failure.
+    bundle = fault_bundle()
+    arm = assembled(
+        providers=registry(
+            _RecordingFactory(_ScriptedArm(*(model_result(
+                hypothesis=ungrounded(bundle)),) * 2))
+        )
+    )
+
+    result = arm.generator.generate(bundle)
+
+    assert result.generator is GeneratorKind.TEMPLATE
+    assert result.hypothesis == generate(bundle), "the template, verbatim"
