@@ -6744,6 +6744,81 @@ Beyond the key and the cap, three things:
    The scripts read `backend/.env` themselves through the bind mount instead, which is the pattern the
    replay entrypoint already established and the trap `app/dal/pseudonymise.py` already records.
 
+## 95. If only the first answer is marked, why ask the model three times?
+
+**Because the other two turn a guess into a figure, and marking them would cost something that is
+not money.**
+
+The original plan asked once. The reasoning was sound at the time: the model is pinned to its
+least-random setting with a fixed seed, so asking twice returns the same words, and a second copy of
+an answer cannot inform a score. The first real requests measured that premise false — four of five
+repeated pairs came back different. So one answer is a **sample**, not *the* answer.
+
+That leaves three options, and the one that decided it is not the one you would expect.
+
+| Option | What it costs | Why it was or was not chosen |
+|---|---|---|
+| Ask once, note the limitation | Nothing | Rejected. The limitation is that the headline comparison is between a fixed baseline and one sample of a varying process, with the variance unmeasured — in the two dimensions the variation actually lands on. |
+| Ask three times, mark all three | 80p, and **a second marker's ninety minutes becomes over three hours** | Rejected on the second one. 280 values is the figure on the ethics consent form. Tripling a volunteer's agreed workload is a re-consent, not a setting. |
+| Ask three times, mark the first, measure the other two | 80p | **Chosen.** The marking corpus is untouched at 20 packs, 40 items, 280 values. The two unmarked answers become a measured answer to "how much does this vary", which was previously going to be a guess in one direction or a separate probe over a handful of packs. |
+
+Note what the binding constraint was. Money would have said "mark all three" — three passes over twenty
+packs is about eighty pence of the four pounds left. The consent form said otherwise, and the consent
+form wins.
+
+**The trap, and why the rule had to be fixed before anything ran.** If the first answer is one the
+model failed and the mechanical explainer had to stand in for, *that* stands as the marked answer.
+Swapping in the second would quietly delete every failure from the marked set and flatter the system
+under test — and it is the kind of decision that looks reasonable if you make it after seeing that a
+pack fell back, which is exactly why it is written down first.
+
+One side effect reaches the second marker. On a pack where the model failed, both explanations under
+it are the mechanical one, word for word. Told nothing, a marker meeting that would assume the pack is
+broken. The handout now says two explanations under one pack may be identical, that this is expected,
+and to mark each on its own terms — which is the least that keeps the instrument usable without
+hinting at which is which.
+
+*(Worth recording as a limitation: the marked score is still a single draw. What the two extra answers
+measure is how much a draw moves, not the average of the distribution.)*
+
+## 96. What is the difference between "which explainer answered" and "which one was asked"?
+
+**They are the same on almost every row, and where they differ is the only place it matters.**
+
+A stored explanation has always recorded which of the three generators wrote it. That is true and it
+is not enough, and the gap only opens when both explainers run over the same evidence package — which
+is what the scored run is and what nothing before it did.
+
+Follow one package through a run where the model's answer was rejected:
+
+| | Who wrote the text | Who was asked | Reading |
+|---|---|---|---|
+| Row 1 | the model | the model | the answer that was rejected, stored with a failed verdict |
+| Row 2 | the mechanical explainer | **the model** | what the model arm actually delivered — a stand-in |
+| Row 3 | the mechanical explainer | the mechanical explainer | the baseline, run deliberately |
+
+Rows 2 and 3 are **the same text**, because the same deterministic generator produced both from the
+same package. Before the second column existed they were identical rows, and there was no way to say
+which was which.
+
+Three things that breaks, none of which announces itself:
+
+- **The fallback rate becomes unverifiable.** You can report how often the model arm fell back, and
+  nothing in the data supports the number.
+- **The per-arm comparison is ambiguous exactly where it is most loaded.** The packs where the model
+  failed are the interesting ones, and those are the packs whose rows cannot be told apart.
+- **The screen cannot warn the analyst.** The requirement is that a degraded answer looks different
+  from a primary one. On the old shape it *cannot*, because the two rows are the same.
+
+**What the new column deliberately does not do is refuse a disagreement.** Disagreeing is what a
+fallback *is*. One fallback goes model → mechanical, the other goes hosted model → local model. Only
+one combination is nonsense — the mechanical explainer named as the one that was asked while a model
+answered, because nothing falls back *away from* the thing both fallbacks fall back *to* — and that
+one is refused.
+
+It was added while the table still held no rows at all, which is the same free window an earlier set
+of renames used, and that window is now closed.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
