@@ -1,0 +1,116 @@
+DEVELOPMENT BATCH -- base seed 695081452, 60 runs over three types. Generated to develop the AI layer against real bundles after the corpus was lost. NOT a corpus: no thesis figure may be measured from it. See DEV_BATCH_PLAN.md.
+model      gpt-4.1-2025-04-14
+parameters {'temperature': 0.0, 'seed': 20260925, 'max_tokens': 1500}
+prompt     sha256 af153726a168ddcd9569ee76442efd4c0e740c4a77a9c665cbc3764558c8db0c
+ceiling    6 calls, $0.25 spend
+
+==============================================================================
+WHAT STRICT MODE IS NOT GIVEN
+==============================================================================
+  keywords removed from the schema: ['minItems', 'minLength']
+  ai-001's at-least-one-citation and no-blank-summary guarantees are
+  therefore enforced at parse time, as a refusal, and not at generation
+  time as an impossibility. A malformed refusal below is ordinary if it
+  names an empty list, and alarming if it names the confidence enum.
+
+chose 3 of 41: possible_sensor_fault (10 items), possible_interference_zone (34 items), possible_sensor_fault (8 items)
+
+==============================================================================
+1. POSSIBLE_SENSOR_FAULT on RF-06
+==============================================================================
+  title       RF-06 Channel 4 Likely Sensor Fault
+  confidence  High
+  summary     The repeated, significant power deviations observed only on channel 4 of RF-06, while all other channels and neighbouring receivers remained nominal, strongly indicate a sensor fault isolated to this channel.
+
+  supporting evidence:
+    - RF-NOISE/rf_noise_deviation: Multiple significant power_dbm deviations (10–14.5 dB) were observed on channel 4 of RF-06 during the time window.
+    - SENSOR-FAULT/neighbour_nominal: Neighbouring receivers RF-05 and RF-07 stayed within 2.0 dB of their baselines, showing no similar deviations.
+    - SENSOR-FAULT/channel_adjacency: The deviation was confined to only 1 of 8 channels on RF-06; adjacent channels were checked and found normal.
+    - SENSOR-FAULT/possible_sensor_fault: The system attributes the deviation to the instrument, as only one receiver deviated while its measured neighbours stayed nominal.
+
+  alternatives:
+    - If there were a highly localized external interference affecting only channel 4 of RF-06 and not its neighbours or adjacent channels, this could explain the deviation, but the evidence does not support this scenario.
+
+  against / uncertain:
+    - The aircraft side was not consulted; absence of track evidence is by design and not a missing measurement.
+    - Some deviations on channel 4 lasted only 1 reading, under the 10 s minimum, so were observed but not called events.
+
+  recommended action: Physically inspect and test channel 4 of RF-06 for hardware or calibration faults; compare with independent measurements from a portable instrument at the site.
+
+  grounding: PASS   4 citations
+  tokens: 3317 in, 385 out   estimated $0.0097
+
+==============================================================================
+2. POSSIBLE_INTERFERENCE_ZONE on RF-05, RF-06, RF-07
+==============================================================================
+  title       Probable Localized RF Interference Zone Affecting Channel 4
+  confidence  Medium
+  summary     Multiple sensors (RF-05, RF-06, RF-07) detected significant, temporally overlapping power deviations on channel 4, coinciding with a sharp increase in track reporting gaps from several aircraft within the same area and time window. This pattern is consistent with a localized RF interference event.
+
+  supporting evidence:
+    - RF-NOISE/rf_noise_deviation: RF-05, RF-06, and RF-07 all observed medium-severity power_dbm deviations (up to 14.5 dB) on channel 4 during the window, indicating abnormal RF noise.
+    - TRACK-GAP/track_rate_excess: A 60 km disc around the affected area saw 4 track discontinuities during the window and none outside it, a rate ratio of 11.79.
+    - TRACK-GAP/track_continuity_gap: Multiple aircraft (e.g., AC-<redacted>, AC-<redacted>, AC-<redacted>, and others) experienced reporting gaps during the same window, suggesting a widespread effect.
+
+  alternatives:
+    - The observed track gaps could be due to unrelated aircraft system or network issues rather than RF interference; this would require evidence of such failures independent of the RF noise events.
+
+  against / uncertain:
+    - The local discontinuity rate outside the window could not be measured, so the aircraft-side evidence neither supports nor contradicts the RF findings.
+    - Some short-duration deviations on RF-05, RF-06, and RF-07 were observed but not called events, as they were under the 10 s minimum.
+
+  recommended action: Check for independent reports of RF interference or outages from operators in the affected area and time window, and review maintenance or incident logs for the affected aircraft to rule out unrelated technical failures.
+
+  grounding: PASS   3 citations
+  tokens: 9646 in, 426 out   estimated $0.0227
+
+==============================================================================
+3. POSSIBLE_SENSOR_FAULT on RF-01
+==============================================================================
+  title       RF-01 Channel 4 Likely Sensor Fault
+  confidence  High
+  summary     The observed power deviations on channel 4 of RF-01 are likely due to a sensor fault, as neighbouring sensors and adjacent channels remained nominal during the same period.
+
+  supporting evidence:
+    - RF-NOISE/rf_noise_deviation: Multiple significant power_dbm deviations were observed on channel 4 of RF-01.
+    - SENSOR-FAULT/neighbour_nominal: Neighbouring sensors RF-02 and RF-03 stayed within 2.0 dB of their baselines during the event window.
+    - SENSOR-FAULT/channel_adjacency: The deviation was confined to only 1 of 8 channels on RF-01; adjacent channels were normal.
+    - SENSOR-FAULT/possible_sensor_fault: The deviation is attributed to the instrument because only one receiver deviated while its measured neighbours stayed nominal.
+
+  alternatives:
+    - If there were a localized external interference affecting only channel 4 of RF-01 and not its neighbours or adjacent channels, this could explain the deviation, but the evidence does not support this scenario.
+
+  against / uncertain:
+    - The aircraft side was not consulted. A single-receiver fault verdict does not reach the fusion rule, so the absence of track evidence here is by design and is not a measurement that came back empty.
+    - A deviation on channel 4 of RF-01 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
+
+  recommended action: Physically inspect RF-01, focusing on channel 4 hardware and connections. Cross-check with independent monitoring equipment if available to confirm or refute a sensor fault.
+
+  grounding: PASS   4 citations
+  tokens: 3158 in, 390 out   estimated $0.0094
+
+==============================================================================
+WHAT IT COST
+==============================================================================
+  calls              3 of 6
+  prompt tokens      16121
+  completion tokens  1201
+  estimated spend    $0.0419
+  unpriced calls     0
+  total is complete  True
+  Compare the estimate against the provider's own usage page. That
+  comparison is what makes eval-005's reported cost credible, and it
+  can only be made now, while three calls are the account's whole
+  history.
+
+==============================================================================
+WHAT THE SAFEGUARD SAID
+==============================================================================
+  hypotheses checked 3
+  caught             0
+  catch rate         0.0
+  near misses        []
+
+  A catch here is a finding either way: the safeguard earning its
+  place, or a prompt that needs a word changed before twenty bundles
+  are run through it.
