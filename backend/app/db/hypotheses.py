@@ -26,7 +26,27 @@ own cost that `ai-009` has to count.
 written before `ai-008` examines it, so `NULL` means *not yet checked* --
 and the enum exists so that nothing can write `if not passed:` and treat
 that identically to *failed*. `evb-001`'s principle, and the third time
-this repository has had to state it.
+this repository has had to state it. **And the verdict has a writer**
+(`record_grounding`), added 2026-09-27: without one the column could hold
+three states and only ever held the third, so a campaign stored every
+verdict it had in its hand nowhere. It takes `ai-008`'s report rather than
+a bool, which is what makes *not yet checked* unconstructible as an input
+instead of merely refused -- `ai-011`'s preference, and the mapping from
+report to stored value then exists once.
+
+**A row says which arm was *asked* as well as which generator answered.**
+The two differ exactly once and it is the case that matters: when the model
+arm's answer fails `ai-008` and `ai-007` falls back, `ai-002` writes the
+text, so `generator` says `template` -- truthfully -- and nothing records
+that a model was asked first. The campaign also runs `ai-002` as the scored
+baseline over the same bundle, so the two rows are then byte-identical, the
+same deterministic generator over the same input, and one of them is the
+hosted arm's delivery. `generator != requested_generator` is therefore the
+**definition** of a fallback rather than a state to refuse: `ai-007` goes
+model-to-template and `ai-006` goes hosted-to-local. Only one combination
+is nonsense -- the template named as the arm that was asked while a model
+answered -- and that is refused here, because nothing falls back *from* an
+arm that makes no call.
 """
 
 from __future__ import annotations
@@ -39,6 +59,7 @@ from typing import Any, Mapping
 from sqlalchemy import text
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.ai.grounding import GroundingReport
 from app.ai.hypothesis import Citation, Hypothesis
 from app.ai.service import GenerationResult, GeneratorKind
 
@@ -96,11 +117,24 @@ class StoredHypothesis:
     bundle_id: int
     hypothesis: Hypothesis
     generator: GeneratorKind
+    #: The arm that was **asked**, which is not always the one that
+    #: answered. Read the pair through `fell_back`.
+    requested_generator: GeneratorKind
     model_id: str | None
     generation_params: Mapping[str, Any] | None
     raw_response: str | None
     status: ReviewStatus
     grounding: GroundingStatus
+
+    @property
+    def fell_back(self) -> bool:
+        """Whether something other than the arm that was asked answered.
+
+        Derived in one place rather than at each consumer: `ai-010` renders
+        it, `eval-005` counts it, and two spellings of the same comparison
+        eventually disagree while both keep working.
+        """
+        return self.generator is not self.requested_generator
 
 
 def check_reproducibility(
@@ -141,23 +175,64 @@ def check_reproducibility(
         )
 
 
+def check_requested_arm(
+    *, generator: GeneratorKind, requested_generator: GeneratorKind
+) -> None:
+    """Refuse the one asked-for/answered pair that cannot have happened.
+
+    Differing values are the **definition** of a fallback and are accepted
+    in every direction a fallback really runs: `ai-007` ends at the template
+    from either model arm, and `ai-006` ends at the local arm from the
+    hosted one. What cannot happen is the template being the arm that was
+    *asked* while a model answered: the template makes no call, needs no
+    credential, and is the thing both fallbacks fall back **to**, so
+    nothing ever falls back away from it.
+
+    Refused here rather than in the database, following the split this
+    table already uses: the column holds the vocabulary, the repository
+    holds the meaning of a combination.
+    """
+    if (
+        requested_generator is GeneratorKind.TEMPLATE
+        and generator is not GeneratorKind.TEMPLATE
+    ):
+        raise HypothesisWriteError(
+            f"a row says the template was the arm asked and the "
+            f"{generator.value} arm answered. The template makes no call and "
+            "is what both fallbacks fall back *to*, so nothing falls back "
+            "away from it -- this row has the pair the wrong way round, and "
+            "stored it would attribute a model's answer to the baseline in "
+            "every per-arm figure the campaign reports."
+        )
+
+
 def save_hypothesis(
     session_factory: sessionmaker[Session],
     *,
     bundle_id: int,
     result: GenerationResult,
+    requested_generator: GeneratorKind,
 ) -> int:
     """Store one hypothesis against the bundle it explains, and say which row.
 
     Returns the new row's id because `ai-008` attaches a grounding verdict
     to one hypothesis and `fbk-001` attaches an analyst's, and a write that
     does not say what it made forces both of them to guess.
+
+    `requested_generator` has **no default**, on `GenerationConfig.model_id`'s
+    rule. The obvious default is `result.generator`, which is right on every
+    row except the ones where an arm fell back -- and those are the only
+    rows the column exists for, so a default would be wrong exactly where
+    it was relied on.
     """
     call = result.call
     model_id = call.model_id if call else None
     raw_response = call.raw_response if call else None
     check_reproducibility(
         generator=result.generator, model_id=model_id, raw_response=raw_response
+    )
+    check_requested_arm(
+        generator=result.generator, requested_generator=requested_generator
     )
 
     hypothesis = result.hypothesis
@@ -166,13 +241,14 @@ def save_hypothesis(
             session.execute(
                 text(
                     "INSERT INTO hypotheses ("
-                    "  bundle_id, generator, model_id, generation_params, "
+                    "  bundle_id, generator, requested_generator, model_id, "
+                    "  generation_params, "
                     "  raw_response, hypothesis_title, confidence, summary, "
                     "  status, supporting_evidence, evidence_against_or_uncertainty, "
                     "  alternative_explanations, recommended_human_action, "
                     "  grounding_passed"
                     ") VALUES ("
-                    "  :bundle_id, :generator, :model_id, "
+                    "  :bundle_id, :generator, :requested_generator, :model_id, "
                     "  CAST(:generation_params AS jsonb), :raw_response, "
                     "  :hypothesis_title, :confidence, :summary, :status, "
                     "  CAST(:supporting_evidence AS jsonb), "
@@ -184,6 +260,7 @@ def save_hypothesis(
                 {
                     "bundle_id": bundle_id,
                     "generator": result.generator.value,
+                    "requested_generator": requested_generator.value,
                     "model_id": model_id,
                     # `None`, not `'null'`: an absent parameter set and a
                     # stored JSON null are different facts, and only the
@@ -233,7 +310,8 @@ def hypotheses_for_bundle(
         rows = (
             session.execute(
                 text(
-                    "SELECT id, bundle_id, generator, model_id, generation_params, "
+                    "SELECT id, bundle_id, generator, requested_generator, "
+                    "  model_id, generation_params, "
                     "  raw_response, hypothesis_title, confidence, summary, status, "
                     "  supporting_evidence, evidence_against_or_uncertainty, "
                     "  alternative_explanations, recommended_human_action, "
@@ -266,6 +344,7 @@ def _stored(row: Any) -> StoredHypothesis:
             recommended_human_action=row["recommended_human_action"],
         ),
         generator=GeneratorKind(row["generator"]),
+        requested_generator=GeneratorKind(row["requested_generator"]),
         model_id=row["model_id"],
         generation_params=row["generation_params"],
         raw_response=row["raw_response"],
@@ -274,12 +353,59 @@ def _stored(row: Any) -> StoredHypothesis:
     )
 
 
+def record_grounding(
+    session_factory: sessionmaker[Session],
+    *,
+    hypothesis_id: int,
+    report: GroundingReport,
+) -> None:
+    """Attach `ai-008`'s verdict to one stored hypothesis.
+
+    **The parameter is the report and not a status**, which is what makes
+    *not yet checked* unconstructible here rather than merely refused: a
+    report has two outcomes and neither of them is "nobody looked". The
+    mapping from report to stored value then exists in exactly one place,
+    so no caller can decide for itself that a failed check reads as
+    unchecked -- the collapse `evb-001` refuses and this repository has now
+    recorded four times.
+
+    **An unknown row is refused rather than counted as written.** An
+    `UPDATE` matching nothing is a success at the database and a silent loss
+    at the caller, and the caller here is a campaign that has already paid
+    for the answer whose verdict this is.
+
+    Only `grounding_passed` is written. The review status belongs to the
+    analyst (`fbk-001`), and a verdict that reset it would discard a human
+    judgement on any row that was checked twice.
+    """
+    status = GroundingStatus.PASSED if report.passed else GroundingStatus.FAILED
+    with session_factory.begin() as session:
+        # `session.connection()` rather than `session.execute()`, which is
+        # typed as returning a `Result` and does not carry `rowcount` -- the
+        # one thing this needs from it. Same connection, same transaction,
+        # following `db-007`'s completion writer, which refuses a missing run
+        # for the same reason.
+        result = session.connection().execute(
+            text("UPDATE hypotheses SET grounding_passed = :passed WHERE id = :id"),
+            {"passed": status.to_stored(), "id": hypothesis_id},
+        )
+        if result.rowcount != 1:
+            raise HypothesisWriteError(
+                f"no hypothesis with id {hypothesis_id} to record a grounding "
+                f"verdict against: {result.rowcount} rows updated. The verdict "
+                "belongs to a generation that was paid for, and an UPDATE "
+                "matching nothing succeeds at the database while losing it here."
+            )
+
+
 __all__ = [
     "GroundingStatus",
     "HypothesisWriteError",
     "ReviewStatus",
     "StoredHypothesis",
     "check_reproducibility",
+    "check_requested_arm",
     "hypotheses_for_bundle",
+    "record_grounding",
     "save_hypothesis",
 ]

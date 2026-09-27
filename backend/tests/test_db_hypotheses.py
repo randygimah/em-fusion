@@ -850,7 +850,7 @@ def test_exposing_the_identity_did_not_change_what_the_reader_returns(
     ]
 
 
-# ------------------------------------------- which arm was asked, not only which answered
+# ------------------------------- which arm was asked, not only which answered
 
 
 @pytest.mark.database
@@ -876,9 +876,7 @@ def test_an_unknown_asked_for_arm_is_refused_by_the_database(
 
     with pytest.raises(DBAPIError):
         with factory.begin() as session:
-            session.execute(
-                text("UPDATE hypotheses SET requested_generator = 'gpt'")
-            )
+            session.execute(text("UPDATE hypotheses SET requested_generator = 'gpt'"))
 
 
 @pytest.mark.database
