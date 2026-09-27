@@ -13,13 +13,17 @@ Tests that need the *absence* of the variable override this with
 
 import os
 from collections.abc import Iterator
+from datetime import UTC, datetime
 
 import pytest
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.engine import make_url
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
 
+from alembic import command
 from app.db import session as db_session
+from app.db.migrations import alembic_config
 
 UNREACHABLE_URL = "postgresql+psycopg://nobody@127.0.0.1:1/none"
 
@@ -194,3 +198,38 @@ def database_without_postgis() -> Iterator[Engine]:
         yield engine
     finally:
         engine.dispose()
+
+
+#: One scenario run for bundles and hypotheses to hang off, and the instant
+#: their observations are recorded at. Shared because two suites need the
+#: same schema-at-head database -- `db-002`'s and `ai-012`'s -- and a second
+#: copy of a fixture is a second place for the two to drift.
+RUN_ID = 8812
+START = datetime(2022, 6, 27, 12, 0, tzinfo=UTC)
+
+
+@pytest.fixture
+def migrated_database(empty_database: Engine) -> Engine:
+    """Schema at head, holding one scenario run for the bundles to hang off."""
+    config = alembic_config()
+    config.set_main_option(
+        "sqlalchemy.url", empty_database.url.render_as_string(hide_password=False)
+    )
+    command.upgrade(config, "head")
+
+    with empty_database.connect() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO scenario_runs "
+                "(id, scenario_type, parameters, seed, started_at) "
+                "VALUES (:id, 'gnss-degradation', '{}'::jsonb, 42, now())"
+            ),
+            {"id": RUN_ID},
+        )
+        connection.commit()
+    return empty_database
+
+
+@pytest.fixture
+def factory(migrated_database: Engine) -> sessionmaker:
+    return sessionmaker(bind=migrated_database, autoflush=False)

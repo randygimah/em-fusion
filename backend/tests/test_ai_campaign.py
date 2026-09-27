@@ -56,23 +56,19 @@ from app.ai.service import (
     GeneratorKind,
     ProviderUnavailable,
 )
+from app.ai.template import TemplateError
+from app.ai.template import generate as template_generate
 from app.db.bundles import save_bundles, stored_bundles_for_run
 from app.db.hypotheses import (
     GroundingStatus,
     HypothesisWriteError,
     hypotheses_for_bundle,
 )
-from tests.conftest import requires_database
+from tests.conftest import RUN_ID, START, requires_database
 from tests.test_ai_assembly import _RecordingFactory, registry, ungrounded
-from tests.test_ai_fallback import _ScriptedArm, model_result
+from tests.test_ai_fallback import model_result
 from tests.test_ai_service import a_call, template_config
 from tests.test_ai_template import fault_bundle, zone_bundle
-from tests.test_db_hypotheses import (  # noqa: F401 -- fixtures, used by name
-    RUN_ID,
-    START,
-    factory,
-    migrated_database,
-)
 from tests.test_evb_traceability import insert_rf
 
 MODEL = "some-model-2026-01-01"
@@ -107,8 +103,42 @@ def sample(migrated_database: Engine, factory: sessionmaker) -> list:
 # ------------------------------------------------------------------ the doubles
 
 
+class _HonestArm:
+    """A model arm that answers **the bundle it was asked about**, correctly.
+
+    Anything in `script` happens first, in order -- a result is returned and
+    an exception is raised -- and once it runs out every further call is an
+    ordinary grounded answer.
+
+    Deriving the answer from the bundle is not a convenience. The first
+    version of these doubles returned a fixed hypothesis grounded in one
+    bundle and the sample holds two, so the model arm was ungrounded on
+    half of them and three tests failed for reasons that had nothing to do
+    with what they were testing. A model that answers correctly must answer
+    correctly about *this* bundle.
+    """
+
+    def __init__(self, *script) -> None:
+        self.script = list(script)
+        self.calls = 0
+
+    def generate(self, bundle):
+        self.calls += 1
+        if self.script:
+            action = self.script.pop(0)
+            if isinstance(action, BaseException):
+                raise action
+            return action
+        return model_result(
+            hypothesis=template_generate(bundle),
+            # Distinct per call, so a test asserting on stored rows is not
+            # asserting on rows that were identical anyway.
+            call=a_call(raw_response=json.dumps({"call": self.calls})),
+        )
+
+
 def arm(*script, budget=None, ledger=None, max_attempts=2):
-    """An assembled hosted arm whose provider does exactly what was scripted."""
+    """An assembled hosted arm over `_HonestArm`, scripted where a test needs it."""
     return assemble_arm(
         arm=GeneratorKind.HOSTED,
         provider="stub",
@@ -117,20 +147,8 @@ def arm(*script, budget=None, ledger=None, max_attempts=2):
         budget=budget or CallBudget(max_calls=50, max_cost_usd=None),
         ledger=ledger or GroundingLedger(),
         max_attempts=max_attempts,
-        providers=registry(_RecordingFactory(_ScriptedArm(*script))),
+        providers=registry(_RecordingFactory(_HonestArm(*script))),
     )
-
-
-def answers(n: int = 20):
-    """`n` ordinary model answers, each distinguishable from the last.
-
-    The raw responses differ so that a test asserting on stored rows is not
-    asserting on rows that are identical anyway.
-    """
-    return [
-        model_result(call=a_call(raw_response=json.dumps({"attempt": i})))
-        for i in range(1, n + 1)
-    ]
 
 
 def baseline() -> TemplateGenerator:
@@ -139,11 +157,9 @@ def baseline() -> TemplateGenerator:
 
 
 def campaign(sample, *, generations=1, **kw) -> CampaignRecord:
-    kw.setdefault("arm", arm(*answers()))
+    kw.setdefault("arm", arm())
     kw.setdefault("baseline", baseline())
-    return run_campaign(
-        kw.pop("factory"), sample=sample, generations=generations, **kw
-    )
+    return run_campaign(kw.pop("factory"), sample=sample, generations=generations, **kw)
 
 
 def for_arm(record: CampaignRecord, kind: GeneratorKind) -> list[GenerationRecord]:
@@ -227,8 +243,16 @@ def test_every_generation_is_stored_and_the_record_says_where(
 
     for bundle_id, _ in sample:
         stored = {row.id for row in hypotheses_for_bundle(factory, bundle_id)}
-        named = {g.hypothesis_id for g in record.generations if g.bundle_id == bundle_id}
-        assert named == stored
+        named = {
+            g.hypothesis_id for g in record.generations if g.bundle_id == bundle_id
+        } | {
+            refusal.hypothesis_id
+            for g in record.generations
+            if g.bundle_id == bundle_id
+            for refusal in g.refusals
+            if refusal.hypothesis_id is not None
+        }
+        assert named == stored, "every row is accounted for, refusals included"
 
 
 @pytest.mark.database
@@ -247,10 +271,8 @@ def test_the_stored_rows_say_which_arm_was_asked(
         GeneratorKind.HOSTED,
         GeneratorKind.TEMPLATE,
     ], "the model arm runs first, so a template row before one is not a fallback"
-    assert [g.requested_arm for g in record.generations if g.bundle_id == bundle_id] == [
-        GeneratorKind.HOSTED,
-        GeneratorKind.TEMPLATE,
-    ]
+    asked = [g.requested_arm for g in record.generations if g.bundle_id == bundle_id]
+    assert asked == [GeneratorKind.HOSTED, GeneratorKind.TEMPLATE]
 
 
 # ---------------------------------------------- the rows the port would drop
@@ -329,13 +351,19 @@ def test_the_row_a_fallback_delivered_is_not_marked_as_checked(
     )
 
     generation = for_arm(record, GeneratorKind.HOSTED)[0]
+    checked = for_arm(record, GeneratorKind.TEMPLATE)[0]
 
     assert generation.grounding is GroundingStatus.NOT_CHECKED
-    delivered = {row.id: row for row in hypotheses_for_bundle(factory, bundle_id)}
-    assert delivered[generation.hypothesis_id].grounding is (
-        GroundingStatus.NOT_CHECKED
-    )
-    assert delivered[generation.hypothesis_id].fell_back
+    rows = {row.id: row for row in hypotheses_for_bundle(factory, bundle_id)}
+    assert rows[generation.hypothesis_id].grounding is GroundingStatus.NOT_CHECKED
+    assert rows[generation.hypothesis_id].fell_back
+    # The contrast is the assertion. Without it this passes against anything
+    # that never records a verdict at all -- which is the defect this
+    # repository has now recorded four times: a test matching something
+    # weaker than its name. Found by a permissive stub, before the
+    # implementation existed.
+    assert rows[checked.hypothesis_id].grounding is GroundingStatus.PASSED
+    assert not rows[checked.hypothesis_id].fell_back
 
 
 @pytest.mark.database
@@ -365,7 +393,7 @@ def test_the_model_arm_is_counted_once_per_generation_and_not_twice(
     # the delivered hypothesis through the same checker would count each
     # generation twice and halve the catch rate it reports as a result.
     ledger = GroundingLedger()
-    campaign(sample, factory=factory, generations=2, arm=arm(*answers(), ledger=ledger))
+    campaign(sample, factory=factory, generations=2, arm=arm(ledger=ledger))
 
     assert ledger.checked(GeneratorKind.HOSTED) == 2 * len(sample)
 
@@ -379,7 +407,7 @@ def test_the_baseline_is_checked_into_the_same_ledger(
     # so its catch rate is the oracle: anything flagged there is a defect in
     # the check. One ledger spans the run, as ai-009's budget does.
     ledger = GroundingLedger()
-    campaign(sample, factory=factory, arm=arm(*answers(), ledger=ledger))
+    campaign(sample, factory=factory, arm=arm(ledger=ledger))
 
     assert ledger.checked(GeneratorKind.TEMPLATE) == len(sample)
     assert ledger.catch_rate(GeneratorKind.TEMPLATE) == 0.0
@@ -426,7 +454,7 @@ def test_a_bundle_the_arm_could_not_answer_is_recorded_and_skipped(
     record = campaign(
         sample,
         factory=factory,
-        arm=arm(ProviderUnavailable("the provider is down"), *answers()),
+        arm=arm(ProviderUnavailable("the provider is down")),
     )
 
     assert [s.bundle_id for s in record.skipped] == [sample[0][0]]
@@ -458,6 +486,29 @@ def test_a_skipped_model_generation_does_not_skip_the_baseline(
 
 @pytest.mark.database
 @requires_database
+def test_a_bundle_the_baseline_refuses_is_recorded_and_skipped(
+    factory: sessionmaker, sample: list
+) -> None:
+    # spec: ai-012, ai-002, eval-004 -- the template refuses a bundle whose
+    # verdict is missing or ambiguous, because explaining it would force an
+    # invention. That bundle then has no baseline, so the pair eval-004
+    # scores is incomplete -- and an incomplete pair has to be reported
+    # rather than silently half-exported, since the pairing is what makes
+    # bundle difficulty cancel out of the arm difference.
+    class _RefusingBaseline:
+        def generate(self, bundle):
+            raise TemplateError("this bundle carries no verdict item")
+
+    record = campaign([sample[0]], factory=factory, baseline=_RefusingBaseline())
+
+    assert [s.requested_arm for s in record.skipped] == [GeneratorKind.TEMPLATE]
+    assert "no verdict item" in record.skipped[0].reason
+    assert len(for_arm(record, GeneratorKind.HOSTED)) == 1, "the model arm still ran"
+    assert for_arm(record, GeneratorKind.TEMPLATE) == []
+
+
+@pytest.mark.database
+@requires_database
 def test_a_budget_exhaustion_stops_the_campaign(
     factory: sessionmaker, sample: list
 ) -> None:
@@ -471,7 +522,7 @@ def test_a_budget_exhaustion_stops_the_campaign(
             sample,
             factory=factory,
             generations=3,
-            arm=arm(*answers(), budget=CallBudget(max_calls=2, max_cost_usd=None)),
+            arm=arm(budget=CallBudget(max_calls=2, max_cost_usd=None)),
         )
 
     assert isinstance(aborted.value.cause, BudgetExceeded)
@@ -491,7 +542,7 @@ def test_stopping_keeps_the_account_of_what_was_already_stored(
             sample,
             factory=factory,
             generations=3,
-            arm=arm(*answers(), budget=CallBudget(max_calls=2, max_cost_usd=None)),
+            arm=arm(budget=CallBudget(max_calls=2, max_cost_usd=None)),
         )
 
     partial = aborted.value.record
@@ -568,7 +619,7 @@ def test_a_model_arm_supplied_as_the_baseline_is_refused_at_the_write(
         campaign(
             [sample[0]],
             factory=factory,
-            baseline=_ScriptedArm(*answers()),
+            baseline=_HonestArm(),
         )
 
 

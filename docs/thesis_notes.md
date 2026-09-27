@@ -636,9 +636,67 @@ qualifications before anyone acts on that: the variance observed was in prose, n
 both runs passed every citation — so a larger N might measure something real but small; and N is
 pre-registered, so changing it is a decision about the pre-registration rather than a detail.
 
-*(Record here whether the same non-determinism holds on an interference bundle, which is larger and
-has more prose to vary, and whether any run produces a different confidence value for the same
-evidence — that would be a far more serious finding than varying wording.)*
+Both questions left open above were answered by two further runs on 26 and 27 September. The
+non-determinism **does** hold on an interference bundle, and more strongly: completion tokens went
+364 to 426 and the number of cited evidence kinds went two to three, so the *set* of citations
+changed and not only the prose. **Confidence was stable on every comparable pair**, which is the
+reassuring half — the dimension that would have been most damaging did not move. Across five
+comparable pairs in total, four differed and one reproduced exactly, so the non-determinism is
+intermittent rather than universal, which is worse for anyone hoping to characterise it and makes no
+difference to the conclusion.
+
+### Raising N from one to three, and why the binding constraint was a consent form rather than a budget
+
+The pre-registration fixed one scored generation per arm per bundle, and the argument was clean: at
+temperature 0 with a fixed seed the model returns the identical answer, so a second generation is a
+second copy of the first and cannot inform a score. The measurement above destroyed the premise. Four
+of five repeated pairs differed, one of them in the *set* of evidence cited and one in whether an
+alternative carried a falsification condition — which is not decoration, it is the material two of
+the five scoring dimensions are about. A single generation is therefore one draw from a distribution
+rather than the model's answer, and the variation is concentrated in the dimensions the study cares
+most about.
+
+Three options, and the one that decided it is not the obvious one.
+
+**Keep N at 1 and record a limitation.** Cheapest, and defensible in the narrow sense that the
+limitation would be stated. Rejected because the limitation is not marginal: it says the headline
+comparison is between a fixed baseline and one sample of a varying process, with the variance
+unmeasured and concentrated where the comparison is being made.
+
+**Score all three generations.** The statistically obvious answer, and the one a budget-based
+analysis would choose — three generations over twenty bundles costs about eighty pence. It was
+rejected on a constraint that has nothing to do with money. Scoring three model generations against
+one baseline takes a rater from 40 items to 80, from 280 values to 560, and from about ninety minutes
+to something over three hours. **That figure is on the participant information sheet and on the
+ethics approval form.** Raising it is a re-consent, not a configuration change: the second rater
+agreed to a specific workload, and quietly tripling it would make the consent uninformed. The
+rubric's own rule already said the three places quoting it must change together — it simply had not
+anticipated that one of them would be the binding one.
+
+**Generate three, score the first, measure the other two.** Chosen. The human corpus is untouched at
+20 bundles, 40 items and 280 values, so nothing quoted to the participant moves. The two unscored
+generations become a measured grounding-variance population per bundle, which the per-arm statistics
+item had always asked for and which was to have been supplied by a separate probe over a handful of
+bundles. Variance stops being an assumption in either direction and becomes a figure.
+
+Two rules had to be fixed at the same time, because both are the kind of choice that is worthless if
+made later. **The scored generation is the first.** Not a random pick, which adds a second source of
+randomness for no gain, and certainly not a pick informed by any machine metric, which is
+cherry-picking with a procedure attached. The first generation is also what a single-shot deployment
+would have produced, so it is the honest one to score. **And it is not substituted when it fell
+back.** If the first generation is one the model failed and the mechanical baseline had to stand in
+for, that stands as the scored item, because it is what the model arm *delivered* on that bundle.
+Substituting the second would delete every failure from the scored corpus and flatter the arm under
+test — an omission that would be invisible in the results and indefensible if noticed.
+
+One consequence had to reach the scorer's handout: a fallback item and the baseline item for the same
+bundle carry the same text, so two hypotheses under one pack can be identical. Told nothing, a rater
+meeting that would reasonably assume a fault in the pack. The handout now says it is expected and to
+score each on its own terms, which is the minimum that keeps the instrument usable without telling
+the rater anything about which arm is which.
+
+Both changes are recorded in the instrument's own change log with their reasons, and both were made
+before the first scored generation existed — the only moment at which either is free.
 
 ## System Design and Architecture
 
@@ -6476,6 +6534,126 @@ with no prices at all. Neither the budget nor the adapter can see it: the budget
 the arm it wraps can price a call, and the adapter never learns whether a ceiling was set. Assembly
 is the only place in the system where both facts are in view at once, which is an argument for the
 seam existing quite apart from the wiring it does.
+
+### Three defects in the store, found by building its first real caller
+
+The hypothesis table was designed twice before anything wrote to it: once in the first migration,
+before the output schema existed, and once six days before this, when the two were compared field by
+field and four problems fixed. Both passes were careful and both were done by *reading*. Building the
+campaign that would be the table's first real caller turned up three more in an afternoon, and the
+pattern across them is worth stating on its own: each one is a thing the schema could express and no
+code could produce.
+
+**The three-valued grounding column had a writer for one of its three values.** The column was made
+nullable deliberately, with an enum over it, so that *failed the check* and *was never checked* could
+not collapse into one another — the typed-absence principle, recorded by then for the third time. The
+writer hard-coded "not yet checked" and nothing ever came back to change it. A campaign would have
+filled the table with rows whose verdicts it held in its hand and stored nowhere. This is a worse
+state than the two-valued flag it replaced, because the column now *looks* capable of the distinction
+while the data never makes it, and a reader checking the schema would conclude the distinction was
+being kept.
+
+**The port's own method drops what the store's append rule exists to keep.** The generation interface
+returns one hypothesis. The retry-then-fall-back decorator's *recorded* method returns the delivered
+hypothesis plus every attempt that did not become one — and an ungrounded attempt parsed, so it is a
+storable row the table appends with grounding FAILED beside the row that replaced it. That is the
+whole reason this table appends and never replaces, argued at length when it was designed. Reached
+through the interface, the row simply does not exist, and nothing complains: every bundle still gets
+an explanation, and the catch rate still reports a number with no rows behind it. The composition item
+had typed the assembled arm as the interface, which is the narrowest honest type and the wrong one,
+and the three-bundle trial had reached past it because measurement scripts sit outside the type
+checker.
+
+**A fallback row and the baseline row for the same bundle were byte-identical.** This is the one that
+could not have been found by reading either the schema or the specification, because it only exists
+when *both* arms run over one bundle — which is what a campaign is and what nothing before it did.
+When the model arm's answer fails the grounding check, the mechanical generator writes the text, so
+the row records `template`, truthfully. The campaign also runs that same generator as the scored
+baseline over the same bundle. Same deterministic generator, same input: two rows differing in
+nothing at all, one of which is the model arm's delivery. Three consequences, none with a symptom —
+the fallback rate becomes a number with no rows behind it, the per-arm figures are ambiguous at
+exactly the rows carrying the most weight, and the planned screen indicator that must show the
+analyst when the AI layer has degraded is *unbuildable* on that schema rather than merely unbuilt.
+
+The remedy is a column recording which arm was **asked**, beside the one recording which generator
+answered, and the interesting part is what it is not: a constraint refusing rows where the two
+disagree. Disagreement is the *definition* of a fallback, and both fallbacks run in that direction —
+one from a model to the template, the other from the hosted arm to the local one. Exactly one
+combination is nonsense, the template named as the arm that was asked while a model answered, and it
+is refused at the repository boundary rather than in the database, following the split this table
+already used: the column holds the vocabulary and the repository holds the meaning of a combination.
+That guard then earned itself within the hour — a test supplying a model arm where the baseline
+belongs is refused by it, which is the only place such a mistake can be caught, since nothing can
+know what a generator will return before it is called.
+
+Both changes were free because the table still held zero rows, which is the same window the renames
+used and is now closed. The argument that made them urgent is the migration's own, written before any
+of this existed: *a column added late, after an evaluation campaign has run against a hosted model, is
+a campaign that has to be repeated.*
+
+### A count that lands once per arm, and the trap in checking a hypothesis twice
+
+The grounding ledger is a reported result rather than a diagnostic: the catch rate per arm is one of
+the numbers the research question is answered with. Its unit is a hypothesis, and the arm is declared
+rather than read off the hypothesis, because a hypothesis carries no record of what made it.
+
+The campaign has to do two things with a verdict — put it in the row, and leave it in the ledger — and
+the obvious implementation does the second twice. The retry-then-fall-back decorator is handed a
+checker and calls it on every attempt, which is what feeds the ledger. A campaign that then asked the
+same checker for a report, in order to have something to store, would add a second entry for the
+generation it had just counted, doubling the population and halving the reported catch rate. The
+remedy is that the verdict written into a row comes from the *pure* check, which records nothing, and
+the ledger is fed from exactly one place per arm.
+
+A second, subtler version of the same problem sits next to it. When the model arm falls back, should
+the replacement be counted? It must not be, and the direction of the error is what makes it worth
+recording: a mechanical hypothesis is grounded by construction and always passes, so counting
+stand-ins against the model arm would dilute the model arm's catch rate with baseline output — making
+the arm look *better* the more often it failed. And the replacement is not marked as checked either,
+because the fallback deliberately does not check it: "not yet checked" is the true value there, and a
+PASSED would claim a check that never ran. The column built to make that distinction possible now has
+a live third value in real data, which is the first time it has.
+
+### A permissive stub, for the second time, and the one test it caught
+
+The grounding check was written against a stub that reported every citation grounded, and 24 of its 58
+tests passed — two of which turned out to be wrong tests. The same technique was applied here before
+the campaign existed: a stub that iterates the sample, generates through the *lossy* method, stores
+the delivered hypothesis and does nothing else — no verdicts, no refusal rows, no skips, no aborts, no
+input refusals.
+
+Sixteen of twenty-four failed, which is the expected shape. Of the eight that passed, seven were the
+iteration-and-storage tests, which is what they are for. The eighth was not:
+
+> *the row a fallback delivered is not marked as checked*
+
+It passed against a stub that marked **everything** not-checked. As written it asserted nothing about
+the fallback at all and would have stayed green against a campaign that never recorded a single
+verdict. The repair is to assert the *contrast* in the same campaign — the fallback's row carries no
+verdict while the baseline's row for the same bundle carries PASSED — which a stub cannot satisfy
+either way. This is the fifth occurrence of a defect first recorded when a refusal test matched
+something weaker than its name, and it is the second time a permissive stub has found one before the
+implementation existed rather than a mutation pass finding it afterwards.
+
+### A test double that had to know which bundle it was being asked about
+
+Worth recording because it produced three failures that looked like implementation defects and were
+not, and because the reason generalises.
+
+The campaign's doubles began as a list of ordinary model answers, each a valid hosted result carrying
+a hypothesis borrowed from an existing suite. That hypothesis was grounded — in *one* bundle. The
+sample deliberately holds two, one of each kind the corpus produces, because they differ in size by
+about three times and in whether they carry a track side at all. So on half the sample the scripted
+"correct" answer cited evidence the bundle did not contain, the grounding check caught it exactly as
+designed, the arm retried, failed again and fell back — and three tests failed reporting verdicts and
+counts that were entirely correct for what had actually happened.
+
+The fix is a double that derives its answer from the bundle it is handed: whatever it is asked about,
+it returns the mechanical explanation of *that* bundle, relabelled as a model answer. A model that
+answers correctly must answer correctly about this bundle, not about a bundle the test author had in
+mind. The general form is that a double standing in for something whose output must be *consistent
+with its input* cannot be a constant, and the failure it causes is diagnosed as a defect in the code
+under test, which is the expensive kind of wrong.
 
 ## Evaluation
 

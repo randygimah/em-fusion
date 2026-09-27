@@ -55,7 +55,6 @@ rather than merely unbuilt.
 from __future__ import annotations
 
 import inspect
-from datetime import UTC, datetime
 from typing import Any
 
 import pytest
@@ -79,43 +78,16 @@ from app.db.hypotheses import (
     save_hypothesis,
 )
 from app.db.migrations import alembic_config
-from tests.conftest import requires_database
+from tests.conftest import RUN_ID, START, requires_database
 from tests.test_ai_grounding import citing
 from tests.test_ai_template import fault_bundle, zone_bundle
 from tests.test_evb_traceability import insert_rf
 
-RUN_ID = 8812
-START = datetime(2022, 6, 27, 12, 0, tzinfo=UTC)
-
-
 # ------------------------------------------------------------------ fixtures
-
-
-@pytest.fixture
-def migrated_database(empty_database: Engine) -> Engine:
-    """Schema at head, holding one scenario run for the bundles to hang off."""
-    config = alembic_config()
-    config.set_main_option(
-        "sqlalchemy.url", empty_database.url.render_as_string(hide_password=False)
-    )
-    command.upgrade(config, "head")
-
-    with empty_database.connect() as connection:
-        connection.execute(
-            text(
-                "INSERT INTO scenario_runs "
-                "(id, scenario_type, parameters, seed, started_at) "
-                "VALUES (:id, 'gnss-degradation', '{}'::jsonb, 42, now())"
-            ),
-            {"id": RUN_ID},
-        )
-        connection.commit()
-    return empty_database
-
-
-@pytest.fixture
-def factory(migrated_database: Engine) -> sessionmaker:
-    return sessionmaker(bind=migrated_database, autoflush=False)
+#
+# `migrated_database`, `factory`, `RUN_ID` and `START` moved to conftest.py
+# when `ai-012`'s suite needed the same schema-at-head database: a second
+# copy is a second place for the two to drift.
 
 
 def store_a_bundle(engine: Engine, factory: sessionmaker) -> int:
