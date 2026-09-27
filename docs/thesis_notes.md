@@ -6655,6 +6655,61 @@ mind. The general form is that a double standing in for something whose output m
 with its input* cannot be a constant, and the failure it causes is diagnosed as a defect in the code
 under test, which is the expensive kind of wrong.
 
+### What the mutation pass found in the campaign, and two things it found about itself
+
+Thirty-nine mutants over the campaign, and the first pass killed thirty-two. The six that did not
+die separate cleanly into three kinds, and only one kind is a weak test.
+
+**Two genuine gaps, and they are the same gap twice.** Both are cases where the suite asserted
+something *about the run* and never the thing the run is supposed to have changed in the world.
+
+The first: deleting the write that attaches a verdict to a stored row left every test green. The
+campaign still reported a verdict in its own record, and the test read the record. That is precisely
+the defect the verdict writer was added to fix, reappearing one layer up — a number reported with
+nothing behind it — and it is worth noting that having just spent an afternoon on that exact failure
+did not stop me writing a test with the same shape.
+
+The second: swapping the baseline's recording call for the raising gate changed nothing any test
+could see, because **nothing in the suite ever makes the baseline fail.** It cannot fail on real
+input: the mechanical generator is grounded by construction, which is the whole reason it serves as
+the check's oracle. So the behaviour that distinguishes the two calls — a flagged baseline is
+*recorded* rather than raised, because raising would let a defect in the instrument destroy a
+campaign already paid for — had no test, and could not acquire one without a double that does
+something the real thing never does. The general form is that a property whose interesting case is
+unreachable from real input needs a deliberately unreal input, or it is not tested at all.
+
+**One equivalence, established rather than assumed.** Hard-coding the delivered model answer's
+verdict to PASSED survives, and it survives because it is *correct*: the branch runs only when the
+arm did not fall back, and through an assembled arm a non-fallback delivery is one the retry
+decorator's injected checker has already passed. The derivation stays anyway. Writing the constant
+would encode another module's invariant as an assumption in this one, and the reason this module
+re-derives the verdict at all is that a verdict inferred from "nothing raised" is not a verdict. The
+useful outcome is that the pass *proved* the invariant rather than leaving it as a belief, and it is
+now declared as an expected equivalence with that argument attached, so a later reader does not
+re-litigate it.
+
+**And two faults in the instrument, which is the part worth generalising.**
+
+A mutant that does not parse tests nothing. One of the new mutants replaced a line with an `if
+False:` at the same indentation as the line below it, producing an `IndentationError`; the whole
+module then failed to import, forty-five tests errored, the harness saw a non-zero exit and a test
+summary, and scored it KILLED. It was killed by a syntax error rather than by a test noticing
+anything. This is the second occurrence — the first returned INCONCLUSIVE and was caught by the
+harness's own no-summary guard, and this one slipped past that guard precisely because a broken
+import still produces a summary. Both harnesses now have their mutants checked for two things before
+a pass runs: that every anchor matches the formatted source exactly once, and that every mutated
+file *parses*. Two minutes of checking against forty minutes of running.
+
+**A harness scoped narrower than the thing it scores will report a gap where there is none.** One
+mutant widened the type annotation that lets the campaign ask for the full record at all, and it
+survived — because the test pinning that annotation lives in the composition item's suite, and the
+harness ran only the campaign's own test file. Nothing was weak; the instrument was looking in one
+place. The harness now runs both suites, which is the honest scope: it is asking whether *the tests
+that protect this item* are load-bearing, and those are not all in one file. Worth stating because
+the failure is silent in the direction that wastes work — it manufactures gaps rather than hiding
+them, so it costs an investigation rather than a defect, but an investigator who believed the first
+report would have written a duplicate test.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;
