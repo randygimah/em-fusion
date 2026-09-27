@@ -221,6 +221,9 @@ Those five are discarded and not counted in the results.
 - **The evidence pack doesn't make sense to you.** Score the hypothesis on whether it reasons well
   from what's in front of it. You don't need domain knowledge to judge whether an argument follows.
 - **A dimension doesn't apply.** Score it 1. A missing section is a low score, not a blank.
+- **The two hypotheses under one pack look the same, or very nearly.** That happens, and it is
+  expected rather than a mistake in the pack. Score each one on its own terms exactly as you would
+  any other item, including giving them the same numbers if that is your honest reading.
 - **You genuinely can't decide between two adjacent scores.** Take the lower one and move on. Don't
   spend more than about two minutes on any single hypothesis.
 
@@ -268,13 +271,26 @@ a single dimension, never across dimensions. Worth pre-empting in the Evaluation
 
 ## Corpus and procedure
 
-- **Sampling unit is the evidence bundle**, not the scenario run. Roughly 5 bundles from each of the
-  four anomalous scenario types, ~20 total, stratified so no type is absent. Normal-baseline runs
-  produce no bundles by design (`anom-008`).
+- **Sampling unit is the evidence bundle**, not the scenario run. **Stratified on bundle kind**: 10
+  `possible_interference_zone` and 10 `possible_sensor_fault`, 20 in total. Stratifying on scenario
+  type, as this document originally said, cannot be done — five scenario types produce **two** kinds
+  of bundle, and one of the four anomalous types produces none at all. Two consequences the scorer's
+  experience depends on: interference bundles are about 3.2x larger, so balancing by kind gives
+  roughly equal numbers of long and short documents where balancing by type would have given
+  three-quarters short ones; and the producing scenario type is recorded on every sampled bundle, so
+  the two fault-producing types can still be compared afterwards without having been stratified on.
+  Normal-baseline runs produce no bundles by design (`anom-008`). The sample is a **seeded draw,
+  committed before the first scored generation is made**, recording the chosen bundles, the seed and
+  the rule: an instrument that predates the results is worth nothing if the corpus does not.
 - **Two scored arms**: `hosted` and `template`. The `local` generator runs as an availability fallback
   and is **not** scored — see `thesis_notes.md`, "Scored arms".
-- **One generation per arm per bundle** is scored. The N-generations-per-bundle grounding-variance
-  measurement is separate, machine-computed, and does not enter the human corpus.
+- **One generation per arm per bundle is scored, and for the model arm three are generated.** The
+  scored one is the **first**, fixed in advance and never substituted — including when it is a
+  generation the model failed and the template answered, which is what the model arm *delivered* on
+  that bundle. The other two are never scored and become the machine-computed grounding-variance
+  population instead. The template baseline is generated once, and that is safe for the reason the
+  model arm's single generation was not: there is no provider in it. See the change log for why this
+  changed.
 - 20 bundles × 2 arms = **40 items**, each scored independently by **both raters** — full
   double-scoring, no partial overlap. Every reported number is therefore double-scored and there is
   no unscored remainder to defend. See `docs/qa.md` Q8 for why this beat the larger-corpus,
@@ -312,7 +328,7 @@ no longer informed by the right number.
   corpus, κ is computed over the double-scored subset and the remainder reported separately — never
   silently averaged as though both had scored it.
 
-Implemented by `eval-004` (export) and `eval-006` (ingest and agreement).
+Implemented by `eval-004` (the sample, drawn first; then the export), `ai-012` (the campaign that generates what is exported) and `eval-006` (ingest and agreement).
 
 ## Threats to validity, recorded in advance
 
@@ -340,3 +356,5 @@ Results describe this prototype on this data, not hypothesis generation in gener
 | 2026-08-07 | Initial version. | Pre-registration before any campaign run. |
 | 2026-09-06 | Part B: added "Why five rather than one overall score" and "What 'dimension' means here, and what it does not". | Clarification only — no dimension, anchor, or procedure altered. Records that the term is rating-scale vocabulary carrying no orthogonality claim, that the five are expected to correlate, and that no composite is computed across them. Pre-empts a misreading by a technical examiner. See `docs/qa.md` Q47. |
 | 2026-09-06 | Part B: added the per-rater scoring volume (280 values) to "Corpus and procedure"; Part A: added the same figure to "What you'll be given". | Derived from figures already fixed (40 items × 5 dimensions, plus 40 × 2 pass-2 judgements), not a change to them. Needed because the number is quoted to the participant in the information sheet and on the ethics approval form, and the three must agree. Makes explicit that the five calibration items sit **outside** the 40 — previously only implied by 20 bundles × 2 arms = 40. |
+| 2026-09-27 | Part B: the sample is stratified on **bundle kind** (10 interference, 10 fault) rather than on scenario type, and is a seeded draw committed before the first scored generation. | **A correction, recorded late.** The five-per-type stratification is unsatisfiable on the built system: five scenario types produce two kinds of bundle, `aircraft-coverage-gap` produces none because its rule was closed as unbuildable on this corpus, and `normal-baseline` produces none by design. The backlog recorded this on 2026-09-21 and this document was not told, so for six days the instrument cited as fixed-in-advance described a corpus that could not exist. Corpus size (20), item count (40) and scoring volume (280) are unchanged, so nothing quoted to the participant moves. The commitment that the sample is drawn and committed *before* any scored generation is new here and was previously implicit. |
+| 2026-09-27 | Part B: the model arm generates **three** times per bundle, of which the **first** is scored and is never substituted; the two others become the grounding-variance population. Part A: a new stuck-point telling the scorer that two hypotheses under one pack may be identical. | **A change to the method, not a clarification, and the premise it rested on was measured false.** N was fixed at 1 because temperature 0 with a fixed seed returns the identical answer, so a second generation could add nothing to score. The first real requests measured otherwise: 4 of 5 comparable repeated pairs differed, one changing the set of cited evidence kinds and one losing an alternative's falsification test between runs. A single generation is therefore one draw from a distribution rather than the model's answer, and the observed variation falls on dimensions 1 and 3 — the two this study is most about. Scoring all three was rejected because it takes one rater from 280 values to 840 and from about 90 minutes to four and a half hours: 280 is quoted in the participant information sheet and on the ethics approval form, so raising it is a re-consent and not a configuration change. **The human corpus is therefore unchanged at 40 items and 280 values.** The scored generation is the first, declared here rather than chosen later, because substituting a different one when the first fell back would delete every fallback from the scored corpus and flatter the arm under test. The Part A note follows from that rule: a fallback item and the template baseline for the same pack carry the same text. Both entries are committed before any scored generation is made. |
