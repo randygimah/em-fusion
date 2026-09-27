@@ -165,7 +165,9 @@ def test_every_entry_records_the_scenario_type_that_produced_it() -> None:
     sample = drawn()
 
     for entry in sample.entries:
-        expected = "gnss-degradation" if entry.kind == INTERFERENCE else "rf-sensor-fault"
+        expected = (
+            "gnss-degradation" if entry.kind == INTERFERENCE else "rf-sensor-fault"
+        )
         assert entry.scenario_type == expected
 
 
