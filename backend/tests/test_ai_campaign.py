@@ -53,8 +53,10 @@ from app.ai.providers.template import TemplateGenerator
 from app.ai.service import (
     ConfigurationError,
     GenerationRefused,
+    GenerationResult,
     GeneratorKind,
     ProviderUnavailable,
+    Usage,
 )
 from app.ai.template import TemplateError
 from app.ai.template import generate as template_generate
@@ -378,9 +380,56 @@ def test_a_model_answer_that_stood_is_stored_with_a_passing_verdict(
     for generation in for_arm(record, GeneratorKind.HOSTED):
         assert generation.grounding is GroundingStatus.PASSED
         assert not generation.fell_back
+        # The **row**, not only the record. Asserting the record alone let a
+        # mutant delete the write and survive: the campaign would report a
+        # verdict it never stored, which is the defect db-002's writer was
+        # added for, one layer up. Found by the mutation pass.
+        rows = {
+            row.id: row for row in hypotheses_for_bundle(factory, generation.bundle_id)
+        }
+        assert rows[generation.hypothesis_id].grounding is GroundingStatus.PASSED
 
 
 # ------------------------------------------------- the count, once per arm
+
+
+@pytest.mark.database
+@requires_database
+def test_a_flagged_baseline_is_recorded_rather_than_raised(
+    factory: sessionmaker, sample: list
+) -> None:
+    # spec: ai-012, ai-008, eval-005 -- ai-002 is grounded by construction,
+    # so a flagged baseline is a defect in the **check** and not in the
+    # baseline. It is recorded rather than raised for two reasons: eval-005
+    # reports the template's catch rate as the oracle reading either way, and
+    # raising would let a defect in the instrument destroy a campaign that
+    # has already been paid for. Nothing here made the baseline fail until
+    # the mutation pass pointed out that swapping `report` for the raising
+    # gate changed nothing any test could see.
+    class _UngroundedBaseline:
+        def generate(self, bundle):
+            return GenerationResult(
+                hypothesis=ungrounded(bundle),
+                generator=GeneratorKind.TEMPLATE,
+                call=None,
+            )
+
+    bundle_id, _ = sample[0]
+    ledger = GroundingLedger()
+
+    record = campaign(
+        [sample[0]],
+        factory=factory,
+        arm=arm(ledger=ledger),
+        baseline=_UngroundedBaseline(),
+    )
+
+    assert record.skipped == (), "a flagged baseline is not a skipped bundle"
+    baseline = for_arm(record, GeneratorKind.TEMPLATE)[0]
+    assert baseline.grounding is GroundingStatus.FAILED
+    rows = {row.id: row for row in hypotheses_for_bundle(factory, bundle_id)}
+    assert rows[baseline.hypothesis_id].grounding is GroundingStatus.FAILED
+    assert ledger.catch_rate(GeneratorKind.TEMPLATE) == 1.0
 
 
 @pytest.mark.database
@@ -642,6 +691,36 @@ def test_the_record_serialises_to_json(factory: sessionmaker, sample: list) -> N
     assert written["budget"]["calls"] == 2 * len(sample)
     assert written["grounding"]["hosted"]["checked"] == 2 * len(sample)
     assert written["grounding"]["template"]["catch_rate"] == 0.0
+
+
+@pytest.mark.database
+@requires_database
+def test_an_unpriced_call_makes_the_reported_total_a_lower_bound(
+    factory: sessionmaker, sample: list
+) -> None:
+    # spec: ai-012, ai-009, eval-005 -- an unpriced call is unmeasurable
+    # rather than free, which is why the budget says whether its total is
+    # the total. eval-005 reports actual cost as a *result*, and a figure
+    # that quietly omitted the calls it could not price would be worse than
+    # no figure. Every other test here prices every call, so a mutant
+    # hard-coding the completeness flag survived until this existed.
+    bundle_id, bundle = sample[0]
+    unpriced = model_result(
+        hypothesis=template_generate(bundle),
+        call=a_call(
+            usage=Usage(prompt_tokens=100, completion_tokens=50, cost_usd=None),
+            raw_response='{"priced": false}',
+        ),
+    )
+
+    record = campaign([sample[0]], factory=factory, arm=arm(unpriced))
+
+    written = json.loads(json.dumps(record.as_json()))
+    assert written["budget"]["calls"] == 1
+    assert written["budget"]["unpriced_calls"] == 1
+    assert written["budget"]["cost_is_complete"] is False
+    assert record.generations[0].usage is not None
+    assert record.generations[0].usage.cost_usd is None
 
 
 @pytest.mark.database

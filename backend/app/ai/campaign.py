@@ -65,7 +65,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.ai.assembly import AssembledArm
 from app.ai.budget import BudgetExceeded, BudgetReport
-from app.ai.fallback import RefusalCategory
+from app.ai.fallback import Refusal, RefusalCategory
 from app.ai.grounding import GroundingChecker, GroundingLedger, check
 from app.ai.service import (
     ConfigurationError,
@@ -448,7 +448,7 @@ def _store_refusal(
     bundle_id: int,
     bundle: EvidenceBundle,
     arm: GeneratorKind,
-    refusal: Any,
+    refusal: Refusal,
 ) -> RefusalRecord:
     """The attempt that was thrown away, kept as whatever survived of it."""
     row: int | None = None
