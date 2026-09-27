@@ -31,10 +31,30 @@ per rule, and the asymmetry is principled rather than an oversight: a
 finding is derived and regenerable from a seed, while a model call
 consumed money and produced one specific response. Two calls are two
 facts, and `db-007` says nothing is deleted.
+
+Two more, added 2026-09-27 and both found by building `ai-012`, the
+campaign that would be this module's first real caller.
+
+**The three-valued column had no writer for two of its three values.** The
+write hard-coded *not yet checked* and nothing came back afterwards, so a
+campaign would have stored every verdict it held in its hand nowhere. The
+typed absence was built correctly and then never filled, which is worse
+than the two-valued flag it replaced: the column now looks capable of the
+distinction while the data never makes it.
+
+**A row said which generator answered and not which arm was asked.** They
+differ exactly once, and it is the case that matters: when the model arm
+falls back, the stored template row is byte-identical to the template
+baseline's own row for the same bundle. Two identical rows, one of them the
+model arm's delivery, and nothing to tell them apart -- so a fallback is
+invisible in the data, the per-arm figures are ambiguous at the rows that
+carry the most weight, and `ai-010`'s screen indicator is unbuildable
+rather than merely unbuilt.
 """
 
 from __future__ import annotations
 
+import inspect
 from datetime import UTC, datetime
 from typing import Any
 
@@ -44,6 +64,7 @@ from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.orm import sessionmaker
 
 from alembic import command
+from app.ai.grounding import GroundingReport, check
 from app.ai.hypothesis import Confidence, Hypothesis
 from app.ai.service import GenerationResult, GeneratorKind, ModelCall, Usage
 from app.ai.template import generate as template_generate
@@ -52,11 +73,14 @@ from app.db.hypotheses import (
     GroundingStatus,
     HypothesisWriteError,
     ReviewStatus,
+    check_requested_arm,
     hypotheses_for_bundle,
+    record_grounding,
     save_hypothesis,
 )
 from app.db.migrations import alembic_config
 from tests.conftest import requires_database
+from tests.test_ai_grounding import citing
 from tests.test_ai_template import fault_bundle, zone_bundle
 from tests.test_evb_traceability import insert_rf
 
@@ -155,8 +179,8 @@ def neighbours(migrated_database: Engine, factory: sessionmaker) -> dict[str, in
     there = stored_bundles_for_run(factory, OTHER_RUN_ID)
     ids = {"first": here[0][0], "second": here[1][0], "other_run": there[0][0]}
 
-    save_hypothesis(factory, bundle_id=ids["second"], result=template_result())
-    save_hypothesis(factory, bundle_id=ids["other_run"], result=template_result())
+    store(factory, bundle_id=ids["second"], result=template_result())
+    store(factory, bundle_id=ids["other_run"], result=template_result())
     return ids
 
 
@@ -198,6 +222,40 @@ def hosted_result(**kw: Any) -> GenerationResult:
         generator=GeneratorKind.HOSTED,
         call=a_call(**kw),
     )
+
+
+def store(
+    factory: sessionmaker,
+    *,
+    bundle_id: int,
+    result: GenerationResult,
+    requested: GeneratorKind | None = None,
+) -> int:
+    """`save_hypothesis`, with the asked-for arm defaulting to the answering one.
+
+    The default lives **here and not in the writer**: the argument has no
+    default in `app/`, and a separate test holds that, because the one
+    caller most likely to get it wrong is the one where the two values
+    differ. In a test that is about something else, the two coincide, and
+    saying so twenty-one times would bury what each test is for.
+    """
+    return save_hypothesis(
+        factory,
+        bundle_id=bundle_id,
+        result=result,
+        requested_generator=result.generator if requested is None else requested,
+    )
+
+
+def passing_report() -> GroundingReport:
+    """A real verdict on a hypothesis that is grounded by construction."""
+    return check(a_hypothesis(), fault_bundle())
+
+
+def failing_report() -> GroundingReport:
+    """A real verdict on a hypothesis citing a rule the bundle does not carry."""
+    bundle = fault_bundle()
+    return check(citing(bundle, ("NOT-A-RULE", "not_a_finding")), bundle)
 
 
 def column_names(engine: Engine) -> set[str]:
@@ -291,7 +349,7 @@ def test_an_unknown_review_status_is_refused_by_the_database(
     # spec: db-002, FR-602 -- five review states are named in the
     # requirements and the column accepted any text at all, while the two
     # columns either side of it both carried check constraints.
-    save_hypothesis(factory, bundle_id=bundle_id, result=template_result())
+    store(factory, bundle_id=bundle_id, result=template_result())
 
     with pytest.raises(DBAPIError):
         with factory.begin() as session:
@@ -307,7 +365,7 @@ def test_every_named_review_state_is_accepted(
     # spec: db-002, FR-602 -- the other direction. A constraint that also
     # refuses a legitimate value is worse than none, because the first
     # person to hit it widens it to anything.
-    save_hypothesis(factory, bundle_id=bundle_id, result=template_result())
+    store(factory, bundle_id=bundle_id, result=template_result())
 
     with factory.begin() as session:
         session.execute(text("UPDATE hypotheses SET status = :s"), {"s": status})
@@ -365,7 +423,7 @@ def test_a_template_hypothesis_is_stored_with_no_model_behind_it(
     factory: sessionmaker, bundle_id: int
 ) -> None:
     # spec: db-002, ai-002
-    save_hypothesis(factory, bundle_id=bundle_id, result=template_result())
+    store(factory, bundle_id=bundle_id, result=template_result())
 
     stored = hypotheses_for_bundle(factory, bundle_id)
 
@@ -385,7 +443,7 @@ def test_a_model_hypothesis_stores_the_model_its_parameters_and_its_response(
     # reproducible, populated on write.
     result = hosted_result()
 
-    save_hypothesis(factory, bundle_id=bundle_id, result=result)
+    store(factory, bundle_id=bundle_id, result=result)
     stored = hypotheses_for_bundle(factory, bundle_id)[0]
 
     assert stored.generator is GeneratorKind.HOSTED
@@ -405,7 +463,7 @@ def test_the_raw_response_is_stored_verbatim_and_not_reserialised(
     # is deliberately NOT valid against the schema it came with.
     ragged = '  {"hypothesis_title": "x", "extra": 1}\n\n trailing prose  '
 
-    save_hypothesis(
+    store(
         factory, bundle_id=bundle_id, result=hosted_result(raw_response=ragged)
     )
 
@@ -422,7 +480,7 @@ def test_every_field_of_the_hypothesis_survives_the_round_trip(
     # name.
     result = template_result()
 
-    save_hypothesis(factory, bundle_id=bundle_id, result=result)
+    store(factory, bundle_id=bundle_id, result=result)
 
     assert hypotheses_for_bundle(factory, bundle_id)[0].hypothesis == result.hypothesis
 
@@ -435,7 +493,7 @@ def test_the_confidence_is_stored_as_one_of_the_three_words(
     # spec: db-002, ai-001, FR-715 -- the enum spellings were chosen to
     # match this column's check constraint, so a value that validates in
     # Python cannot be refused at write time.
-    save_hypothesis(factory, bundle_id=bundle_id, result=template_result())
+    store(factory, bundle_id=bundle_id, result=template_result())
 
     with factory.begin() as session:
         stored = session.execute(text("SELECT confidence FROM hypotheses")).scalar_one()
@@ -451,7 +509,7 @@ def test_a_new_row_starts_new_and_unchecked(
     # spec: db-002, FR-602, ai-008 -- "New" is a real initial state rather
     # than a placeholder, and "not checked" is the honest grounding value
     # for a row written before the check exists.
-    save_hypothesis(factory, bundle_id=bundle_id, result=template_result())
+    store(factory, bundle_id=bundle_id, result=template_result())
 
     stored = hypotheses_for_bundle(factory, bundle_id)[0]
 
@@ -467,7 +525,7 @@ def test_the_write_returns_the_identity_of_the_row_it_made(
     # spec: db-002 -- ai-008 has to attach a verdict to one hypothesis and
     # fbk-001 to attach an analyst's, so a write that does not say which
     # row it made forces both of them to guess.
-    made = save_hypothesis(factory, bundle_id=bundle_id, result=template_result())
+    made = store(factory, bundle_id=bundle_id, result=template_result())
 
     assert made == hypotheses_for_bundle(factory, bundle_id)[0].id
 
@@ -482,7 +540,7 @@ def test_a_template_row_stores_no_parameters_rather_than_a_json_null(
     # cannot tell them apart. They are different facts about the column --
     # "no parameter set was recorded" against "a parameter set was recorded
     # and it was null" -- and only the first is true of an arm with no model.
-    save_hypothesis(factory, bundle_id=bundle_id, result=template_result())
+    store(factory, bundle_id=bundle_id, result=template_result())
 
     with factory.begin() as session:
         sql_null, json_null = session.execute(text(
@@ -507,8 +565,8 @@ def test_two_hypotheses_for_one_bundle_are_both_kept(
     # consumed money and produced one specific response. Two calls are two
     # facts. One bundle legitimately carries a model hypothesis and the
     # template fallback that replaced it.
-    save_hypothesis(factory, bundle_id=bundle_id, result=hosted_result())
-    save_hypothesis(factory, bundle_id=bundle_id, result=template_result())
+    store(factory, bundle_id=bundle_id, result=hosted_result())
+    store(factory, bundle_id=bundle_id, result=template_result())
 
     stored = hypotheses_for_bundle(factory, bundle_id)
 
@@ -526,12 +584,12 @@ def test_a_second_call_to_the_same_arm_is_not_a_replacement(
     # spec: db-002, db-007 -- a retry is a second call with its own cost
     # and its own response, and ai-009 counts calls. Collapsing them would
     # lose the retry rate ai-007 is required to log.
-    save_hypothesis(
+    store(
         factory,
         bundle_id=bundle_id,
         result=hosted_result(raw_response='{"attempt": 1}'),
     )
-    save_hypothesis(
+    store(
         factory,
         bundle_id=bundle_id,
         result=hosted_result(raw_response='{"attempt": 2}'),
@@ -551,7 +609,7 @@ def test_only_this_bundle_s_hypotheses_come_back(
     # bundle in the database, so dropping the WHERE clause changed nothing
     # any of them could see. A hypothesis attached to the wrong event is not
     # malformed, it is wrong.
-    save_hypothesis(factory, bundle_id=neighbours["first"], result=template_result())
+    store(factory, bundle_id=neighbours["first"], result=template_result())
 
     stored = hypotheses_for_bundle(factory, neighbours["first"])
 
@@ -582,7 +640,7 @@ def test_hypotheses_come_back_in_the_order_they_were_written(
     # scan returns them in insertion order anyway, so dropping ORDER BY
     # changed nothing. Updating a row rewrites it to the end of the heap
     # under MVCC, which is what makes physical order differ from id order.
-    made = [save_hypothesis(factory, bundle_id=bundle_id, result=hosted_result(
+    made = [store(factory, bundle_id=bundle_id, result=hosted_result(
         raw_response=f'{{"attempt": {n}}}')) for n in range(4)]
 
     with factory.begin() as session:
@@ -620,7 +678,7 @@ def test_a_hypothesis_for_a_bundle_that_does_not_exist_is_refused(
     # spec: db-002 -- a hypothesis explains a bundle, and one pointing at
     # nothing asserts an explanation of an event nobody recorded.
     with pytest.raises((IntegrityError, HypothesisWriteError)):
-        save_hypothesis(factory, bundle_id=bundle_id + 9999, result=template_result())
+        store(factory, bundle_id=bundle_id + 9999, result=template_result())
 
 
 @pytest.mark.database
@@ -632,7 +690,7 @@ def test_nothing_is_written_when_the_write_is_refused(
     # refusal leaves the database exactly as it was, so a partial row is
     # never left behind to be read as a complete one.
     with pytest.raises(Exception):
-        save_hypothesis(factory, bundle_id=bundle_id + 9999, result=template_result())
+        store(factory, bundle_id=bundle_id + 9999, result=template_result())
 
     assert hypotheses_for_bundle(factory, bundle_id) == []
 
@@ -742,7 +800,7 @@ def test_each_grounding_state_maps_to_one_stored_value(
 def test_a_grounding_verdict_round_trips(factory: sessionmaker, bundle_id: int) -> None:
     # spec: db-002, ai-008 -- ai-008 will write this column, so the value
     # it writes has to come back as the state it meant.
-    made = save_hypothesis(factory, bundle_id=bundle_id, result=template_result())
+    made = store(factory, bundle_id=bundle_id, result=template_result())
 
     with factory.begin() as session:
         session.execute(
@@ -790,3 +848,320 @@ def test_exposing_the_identity_did_not_change_what_the_reader_returns(
     assert bundles_for_run(factory, RUN_ID) == [
         bundle for _, bundle in stored_bundles_for_run(factory, RUN_ID)
     ]
+
+
+# ------------------------------------------- which arm was asked, not only which answered
+
+
+@pytest.mark.database
+@requires_database
+def test_the_row_says_which_arm_was_asked(migrated_database: Engine) -> None:
+    # spec: db-002, ai-010, ai-012 -- the column the fallback is invisible
+    # without. NOT NULL and no default: a row that acquired the value by
+    # omission would say the arm asked was the one that answered, which is
+    # false precisely when it matters.
+    assert "requested_generator" in column_names(migrated_database)
+    assert not is_nullable(migrated_database, "requested_generator")
+
+
+@pytest.mark.database
+@requires_database
+def test_an_unknown_asked_for_arm_is_refused_by_the_database(
+    factory: sessionmaker, bundle_id: int
+) -> None:
+    # spec: db-002 -- the same vocabulary and the same kind of constraint
+    # the `generator` column beside it has carried since 0001. Semantics go
+    # at the repository boundary; the vocabulary goes here.
+    store(factory, bundle_id=bundle_id, result=template_result())
+
+    with pytest.raises(DBAPIError):
+        with factory.begin() as session:
+            session.execute(
+                text("UPDATE hypotheses SET requested_generator = 'gpt'")
+            )
+
+
+@pytest.mark.database
+@requires_database
+def test_every_generator_kind_is_accepted_as_the_arm_that_was_asked(
+    factory: sessionmaker, bundle_id: int
+) -> None:
+    # spec: db-002, ai-006 -- read off the enum rather than listed here, so
+    # a fourth arm fails this instead of being refused by the database at
+    # the moment a campaign runs.
+    store(factory, bundle_id=bundle_id, result=template_result())
+
+    for kind in GeneratorKind:
+        with factory.begin() as session:
+            session.execute(
+                text("UPDATE hypotheses SET requested_generator = :k"),
+                {"k": kind.value},
+            )
+
+
+def test_the_arm_that_was_asked_has_no_default() -> None:
+    # spec: db-002, ai-003 -- `GenerationConfig.model_id`'s rule. A default
+    # would be `result.generator`, which is right on every row except the
+    # fallback ones, and those are the only rows this column exists for.
+    parameter = inspect.signature(save_hypothesis).parameters["requested_generator"]
+
+    assert parameter.default is inspect.Parameter.empty
+
+
+@pytest.mark.database
+@requires_database
+def test_a_primary_arm_row_records_both_and_reports_no_fallback(
+    factory: sessionmaker, bundle_id: int
+) -> None:
+    # spec: db-002, ai-012 -- the ordinary case: the arm that was asked
+    # answered.
+    store(factory, bundle_id=bundle_id, result=hosted_result())
+
+    stored = hypotheses_for_bundle(factory, bundle_id)[0]
+
+    assert stored.generator is GeneratorKind.HOSTED
+    assert stored.requested_generator is GeneratorKind.HOSTED
+    assert stored.fell_back is False
+
+
+@pytest.mark.database
+@requires_database
+def test_a_fallback_row_records_the_arm_that_was_asked(
+    factory: sessionmaker, bundle_id: int
+) -> None:
+    # spec: db-002, ai-007, ai-012 -- the model was asked and the template
+    # answered, which is what a correctness fallback is. The value is not
+    # derived from the result, or this row would claim the template was the
+    # configured arm.
+    store(
+        factory,
+        bundle_id=bundle_id,
+        result=template_result(),
+        requested=GeneratorKind.HOSTED,
+    )
+
+    stored = hypotheses_for_bundle(factory, bundle_id)[0]
+
+    assert stored.generator is GeneratorKind.TEMPLATE
+    assert stored.requested_generator is GeneratorKind.HOSTED
+    assert stored.fell_back is True
+
+
+@pytest.mark.database
+@requires_database
+def test_a_fallback_is_distinguishable_from_the_baseline_that_shares_its_text(
+    factory: sessionmaker, bundle_id: int
+) -> None:
+    # spec: db-002, ai-012, eval-005 -- the defect this column exists for,
+    # written as the campaign will produce it. One bundle, two template
+    # rows: the hosted arm's delivery after a grounding failure, and the
+    # template arm's own baseline. The hypotheses are byte-identical because
+    # the same deterministic generator wrote both, so before this column
+    # the two rows differed in nothing at all and a per-arm count had to
+    # guess which was which.
+    store(
+        factory,
+        bundle_id=bundle_id,
+        result=template_result(),
+        requested=GeneratorKind.HOSTED,
+    )
+    store(factory, bundle_id=bundle_id, result=template_result())
+
+    fallback, baseline = hypotheses_for_bundle(factory, bundle_id)
+
+    assert fallback.hypothesis == baseline.hypothesis, "the texts are the same"
+    assert fallback.generator is baseline.generator is GeneratorKind.TEMPLATE
+    assert fallback.requested_generator is GeneratorKind.HOSTED
+    assert baseline.requested_generator is GeneratorKind.TEMPLATE
+    assert [row.fell_back for row in (fallback, baseline)] == [True, False]
+
+
+def test_the_template_cannot_be_the_arm_that_asked_a_model() -> None:
+    # spec: db-002, ai-009 -- the one direction that is not a fallback but
+    # nonsense. Both fallbacks run towards the template: ai-007 goes
+    # model-to-template and ai-006 hosted-to-local, and nothing falls back
+    # *from* an arm that makes no call. Refused at the boundary, where the
+    # combination is known, rather than in the database, which holds the
+    # vocabulary.
+    for answered in (GeneratorKind.HOSTED, GeneratorKind.LOCAL):
+        with pytest.raises(HypothesisWriteError, match="makes no call"):
+            check_requested_arm(
+                generator=answered, requested_generator=GeneratorKind.TEMPLATE
+            )
+
+
+def test_every_fallback_direction_that_can_really_happen_is_accepted() -> None:
+    # spec: db-002, ai-006, ai-007 -- a guard that refused these would
+    # refuse the rows the column was added for. ai-007 ends at the
+    # template from either model arm; ai-006 ends at the local arm from
+    # the hosted one.
+    for answered, asked in (
+        (GeneratorKind.TEMPLATE, GeneratorKind.HOSTED),
+        (GeneratorKind.TEMPLATE, GeneratorKind.LOCAL),
+        (GeneratorKind.LOCAL, GeneratorKind.HOSTED),
+        (GeneratorKind.HOSTED, GeneratorKind.HOSTED),
+        (GeneratorKind.TEMPLATE, GeneratorKind.TEMPLATE),
+    ):
+        check_requested_arm(generator=answered, requested_generator=asked)
+
+
+@pytest.mark.database
+@requires_database
+def test_a_row_claiming_the_template_asked_a_model_is_refused_before_it_is_written(
+    factory: sessionmaker, bundle_id: int
+) -> None:
+    # spec: db-002 -- the boundary refusal reached through the writer, not
+    # only through the function under it, and nothing left behind.
+    with pytest.raises(HypothesisWriteError):
+        save_hypothesis(
+            factory,
+            bundle_id=bundle_id,
+            result=hosted_result(),
+            requested_generator=GeneratorKind.TEMPLATE,
+        )
+
+    assert hypotheses_for_bundle(factory, bundle_id) == []
+
+
+@pytest.mark.database
+@requires_database
+def test_the_asked_for_arm_revision_is_reversible(migrated_database: Engine) -> None:
+    # spec: db-002, db-010 -- the target revision is NAMED rather than
+    # counted, because the equivalent test for evb-002 used "one step back
+    # from head" and silently began testing a different revision the moment
+    # a new one landed.
+    config = alembic_config()
+    config.set_main_option(
+        "sqlalchemy.url",
+        migrated_database.url.render_as_string(hide_password=False),
+    )
+    assert "requested_generator" in column_names(migrated_database)
+
+    command.downgrade(config, "0006_hypothesis_columns")
+
+    assert "requested_generator" not in column_names(migrated_database)
+    assert "hypotheses" in _tables(migrated_database), \
+        "the downgrade took the table with it"
+    assert "summary" in column_names(migrated_database), \
+        "the downgrade went further back than the revision it was given"
+
+    command.upgrade(config, "head")
+
+    assert "requested_generator" in column_names(migrated_database)
+
+
+# --------------------------------------------- the verdict, written where it belongs
+
+
+@pytest.mark.database
+@requires_database
+def test_a_passing_verdict_is_recorded_against_the_row(
+    factory: sessionmaker, bundle_id: int
+) -> None:
+    # spec: db-002, ai-008 -- the value the column could hold and nothing
+    # could write. Without this a campaign stores every verdict nowhere.
+    made = store(factory, bundle_id=bundle_id, result=template_result())
+
+    record_grounding(factory, hypothesis_id=made, report=passing_report())
+
+    assert hypotheses_for_bundle(factory, bundle_id)[0].grounding is (
+        GroundingStatus.PASSED
+    )
+
+
+@pytest.mark.database
+@requires_database
+def test_a_failing_verdict_is_recorded_as_failed_and_not_as_unchecked(
+    factory: sessionmaker, bundle_id: int
+) -> None:
+    # spec: db-002, ai-008, evb-001 -- the collapse this column exists to
+    # prevent, now reachable through the writer: a failed check must not
+    # arrive as "never checked", which is what `if not passed` would store.
+    made = store(factory, bundle_id=bundle_id, result=template_result())
+    report = failing_report()
+    assert not report.passed, "the fixture stopped exercising a failure"
+
+    record_grounding(factory, hypothesis_id=made, report=report)
+
+    assert hypotheses_for_bundle(factory, bundle_id)[0].grounding is (
+        GroundingStatus.FAILED
+    )
+
+
+@pytest.mark.database
+@requires_database
+def test_no_verdict_leaves_the_row_unchecked(
+    factory: sessionmaker, bundle_id: int
+) -> None:
+    # spec: db-002, ai-008 -- there is no third value to write, because the
+    # parameter is ai-008's report and a report has two outcomes. The spec
+    # asks for "not checked" to be refused; it is unconstructible instead,
+    # following ai-011's preference for the bad state that cannot be
+    # expressed over the one that is turned away.
+    for report in (passing_report(), failing_report()):
+        made = store(factory, bundle_id=bundle_id, result=template_result())
+
+        record_grounding(factory, hypothesis_id=made, report=report)
+
+        stored = {row.id: row for row in hypotheses_for_bundle(factory, bundle_id)}
+        assert stored[made].grounding is not GroundingStatus.NOT_CHECKED
+
+
+@pytest.mark.database
+@requires_database
+def test_a_verdict_touches_only_the_row_it_names(
+    factory: sessionmaker, bundle_id: int
+) -> None:
+    # spec: db-002 -- scoping, which is the family of gap a pass over this
+    # project has now found three times: the suites test thoroughly what
+    # goes in and barely what must stay out. An unscoped UPDATE would mark
+    # every hypothesis in the table with one bundle's verdict.
+    first = store(factory, bundle_id=bundle_id, result=template_result())
+    second = store(factory, bundle_id=bundle_id, result=hosted_result())
+
+    record_grounding(factory, hypothesis_id=first, report=failing_report())
+
+    rows = {row.id: row.grounding for row in hypotheses_for_bundle(factory, bundle_id)}
+    assert rows[first] is GroundingStatus.FAILED
+    assert rows[second] is GroundingStatus.NOT_CHECKED
+
+
+@pytest.mark.database
+@requires_database
+def test_a_verdict_against_a_row_that_does_not_exist_is_refused(
+    factory: sessionmaker, bundle_id: int
+) -> None:
+    # spec: db-002 -- a verdict written to no row and a verdict written are
+    # indistinguishable to the caller unless the writer says so, and the
+    # caller here is a campaign that has already spent the money.
+    made = store(factory, bundle_id=bundle_id, result=template_result())
+
+    with pytest.raises(HypothesisWriteError, match="no hypothesis"):
+        record_grounding(factory, hypothesis_id=made + 9999, report=passing_report())
+
+    assert hypotheses_for_bundle(factory, bundle_id)[0].grounding is (
+        GroundingStatus.NOT_CHECKED
+    )
+
+
+@pytest.mark.database
+@requires_database
+def test_a_verdict_does_not_disturb_the_review_status(
+    factory: sessionmaker, bundle_id: int
+) -> None:
+    # spec: db-002, FR-602, fbk-001 -- the grounding verdict is the
+    # machine's and the status is the analyst's. A write that reset the
+    # status would discard an analyst's judgement on any row the campaign
+    # re-checked.
+    made = store(factory, bundle_id=bundle_id, result=template_result())
+    with factory.begin() as session:
+        session.execute(
+            text("UPDATE hypotheses SET status = :s WHERE id = :i"),
+            {"s": ReviewStatus.CONFIRMED.value, "i": made},
+        )
+
+    record_grounding(factory, hypothesis_id=made, report=passing_report())
+
+    stored = hypotheses_for_bundle(factory, bundle_id)[0]
+    assert stored.status is ReviewStatus.CONFIRMED
+    assert stored.grounding is GroundingStatus.PASSED
