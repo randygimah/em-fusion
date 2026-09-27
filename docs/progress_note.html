@@ -393,7 +393,7 @@
 <div class="page">
 
   <header>
-    <div class="eyebrow">EM Fusion · Progress note · 18 September 2026</div>
+    <div class="eyebrow">EM Fusion · Progress note · 27 September 2026</div>
     <h1>EM Fusion in plain English</h1>
     <p class="standfirst">
       What the system is for, what has actually been built so far, and a worked example that follows
@@ -6518,6 +6518,187 @@ second pass   <b>5.060000171975998</b></div>
   </section>
 
   <section>
+    <h2>The run that asks twenty questions</h2>
+    <p class="standfirst">
+      Every part needed to ask <em>one</em> question now exists and is measured. What did not exist
+      was the job that asks twenty of them and comes out with an account honest enough to publish a
+      number from. Building that job is where the interesting failures were — not in the asking, but
+      in what gets kept.
+    </p>
+
+    <p>
+      The job is simple to describe. Take the twenty evidence packages chosen in advance. For each
+      one, ask the model and ask the mechanical writer. Save every answer. Attach to each saved
+      answer the verdict of the safeguard that checked it. Come out with a list of what was asked,
+      what answered, what it cost, and where each answer was put.
+    </p>
+
+    <h3>Answers get thrown away, and the thrown-away ones are the evidence</h3>
+    <p>
+      When a model's answer cites something the package does not contain, the safeguard rejects it,
+      the question is asked again, and if it fails a second time the mechanical writer stands in. The
+      analyst sees one explanation. But the <em>rejected</em> answer is the only evidence the
+      safeguard ever did anything — it is the row that says "a model claimed this, and it was not
+      true".
+    </p>
+    <p>
+      The interface every producer answers through hands back one explanation. That is the right
+      shape for a screen and the wrong shape for a campaign: asked through it, the rejected answers
+      simply vanish. And nothing complains. Every package still gets an explanation, the catch rate
+      still reports a number — a number with no records behind it. The fix is that the campaign asks
+      through the longer route that returns the full trail, and the object holding the assembled
+      producer now declares that route in its own description so the short one cannot quietly come
+      back.
+    </p>
+
+    <h3>Three faults in the store that two careful readings had missed</h3>
+    <p>
+      The table an explanation is saved in was designed twice before anything wrote to it — once
+      before the shape of an explanation was settled, and once six days ago when the two were
+      compared field by field and four problems fixed. Both passes were careful. Both were done by
+      <em>reading</em>. Building the first real writer found three more in an afternoon, and they
+      have a shape in common: each is something the table could express and no code could produce.
+    </p>
+    <div class="panel panel--warn">
+      <p class="lede"><b>The column with three states could only ever be given one of them.</b></p>
+      <p>
+        Whether a claim was checked has three honest answers: it passed, it failed, nobody has looked
+        yet. That third state was argued for at length and built deliberately, because a yes/no flag
+        makes <em>failed</em> and <em>not yet examined</em> the same value. The writer set it to "not
+        yet examined" and nothing ever came back to change it. A full run would have filled the table
+        with explanations whose verdicts the run held in its hand and stored nowhere — which is worse
+        than the flag it replaced, because the column now <em>looks</em> capable of the distinction
+        while the data never makes it, and anyone checking the design rather than the contents would
+        conclude it was being kept.
+      </p>
+    </div>
+    <p>
+      The third fault is the one no amount of reading could have found, because it only exists when
+      <b>both</b> producers answer the same package — which is what a scored run is and what nothing
+      before it did. When the model fails and the mechanical writer stands in, the saved row honestly
+      records that the mechanical writer produced the text. The run <em>also</em> asks the mechanical
+      writer for the baseline on that same package. Same writer, same input, no randomness: two rows
+      identical to the character, one of which is what the model arm delivered.
+    </p>
+    <p>
+      Nothing in either row said which. So the rate at which the model had to be replaced was a
+      number with no records behind it; the per-producer comparison was ambiguous at exactly the
+      packages carrying the most weight; and the planned screen warning — a degraded explanation must
+      look different from a real one, or the analyst cannot tell the layer has failed — was
+      <b>impossible</b> to build rather than merely unbuilt.
+    </p>
+    <p>
+      The remedy is a second column recording which producer was <em>asked</em>, beside the one
+      recording which answered. What it deliberately does <em>not</em> do is refuse rows where the two
+      differ: differing is what a fallback <em>is</em>. Only one combination is nonsense — the
+      mechanical writer named as the one asked while a model answered, since nothing falls back away
+      from the thing both fallbacks fall back to — and that one is refused. All of it was free because
+      the table still held no rows at all, which is the same window an earlier set of renames used,
+      and that window is now shut.
+    </p>
+
+    <h3>A count that is easy to double, and a rate that would have looked fine</h3>
+    <p>
+      How often the safeguard catches something is a <em>reported result</em> of this project, not a
+      maintenance statistic. Two ways of getting it wrong both produce a complete, plausible number.
+    </p>
+    <ul>
+      <li><b>Counting each answer twice.</b> The safeguard is already run once per attempt by the
+        machinery that decides whether to ask again. A run that then asked the same instrument for a
+        verdict to save would add a second entry for an answer it had just counted — doubling the
+        population and <b>halving</b> the published rate. The verdict that gets saved therefore comes
+        from a check that records nothing, and the count is fed from exactly one place per producer.</li>
+      <li><b>Counting the stand-in.</b> A mechanical explanation always passes, by construction. So
+        counting stand-ins against the model would dilute the model's rate with the baseline's — in
+        the direction that makes the model look <em>better the more often it failed</em>.</li>
+    </ul>
+    <p>
+      And the stand-in is not marked as checked at all, because nothing checked it: the fallback
+      deliberately does not examine what it falls back to. "Nobody has looked yet" is the true answer
+      there, and it is the first time that third state has carried real data.
+    </p>
+
+    <h3>What stops a run, and what it must survive</h3>
+    <p>
+      A package the model cannot answer is recorded and skipped, because a run that dies on the
+      fourteenth package of twenty has spent the money and kept nothing. But two things stop it
+      outright: hitting the spending guard, and sending a request the provider rejects. Both would
+      otherwise be caught by the machinery designed to recover from a bad answer, and the result would
+      be a run that quietly finished every remaining package on mechanical output while every saved
+      row reported itself as a model's. Stopping still hands back the account of what was already
+      saved — the same argument that makes a skipped package recorded rather than swallowed.
+    </p>
+    <p>
+      One more rule, and it is about honesty rather than mechanics. <b>The run cannot choose its own
+      packages.</b> The twenty are fixed in advance and handed in; a run able to select them could
+      select them after seeing how the first few turned out.
+    </p>
+  </section>
+
+  <section>
+    <h2>Asking the same question three times, and a limit that is not about money</h2>
+    <p class="standfirst">
+      The plan said each package goes to the model once. That rested on an assumption the first real
+      requests disproved, and replacing it turned into a decision about a consent form.
+    </p>
+    <p>
+      The original argument was clean: the model is pinned to its least-random setting with a fixed
+      seed, so asking twice returns the same words, and a second copy of an answer cannot inform a
+      score. Running the trial twice showed four of five repeated pairs came back <em>different</em> —
+      once with a different set of cited evidence, once with a caveat that had quietly gone missing.
+      So one answer is a <b>sample</b>, not the answer. And the variation lands squarely on two of the
+      five things the markers are asked to judge: what evidence an explanation leans on, and which
+      alternatives it raises.
+    </p>
+    <div class="panel panel--warn">
+      <p class="lede">
+        <b>The obvious fix was rejected, and the reason was not the bill.</b>
+      </p>
+      <p>
+        Marking all three answers is the statistically obvious move, and three passes over twenty
+        packages costs about <span class="num">80p</span> of the four pounds left. But it takes the
+        second marker from 40 explanations to 80, from 280 individual judgements to 560, and from
+        about ninety minutes to over three hours. <b>That ninety-minute figure is on the ethics
+        consent form.</b> Quietly tripling what a volunteer agreed to is a re-consent, not a setting —
+        so the money said yes and the consent form said no, and the consent form wins.
+      </p>
+    </div>
+    <p>
+      What was chosen instead: ask three times, <b>mark the first</b>, and measure the other two. The
+      marking corpus is untouched at twenty packages, forty explanations and 280 judgements, so
+      nothing quoted to the participant moves. The two unmarked answers become a measured answer to
+      "how much does this vary" — which was previously going to be either an assumption or a separate
+      probe over a handful of packages.
+    </p>
+    <p>
+      Two rules had to be fixed at the same moment, because both are worthless if decided later. The
+      marked answer is <b>the first</b> — not a random pick, and certainly not one chosen by any
+      measurement, which is cherry-picking with a procedure attached. And it is <b>not swapped when
+      the model failed</b>: if the first answer is one the mechanical writer had to stand in for, that
+      stands as the marked answer, because it is what the model arm delivered. Swapping in the second
+      would delete every failure from the marked set and flatter the system under test — a decision
+      that looks perfectly reasonable if you make it after noticing a package fell back, which is
+      exactly why it is written down first.
+    </p>
+    <p>
+      One consequence reaches the marker's own instructions. On a package where the model failed, both
+      explanations under it are the mechanical one, word for word. Told nothing, a marker meeting that
+      would assume the pack was broken. The handout now says two explanations under one package may be
+      identical, that this is expected, and to mark each on its own terms — the least that keeps the
+      instrument usable without hinting which is which.
+    </p>
+    <p>
+      <b>Both changes are written into the instrument's own change log, with their reasons, before a
+      single scored answer exists.</b> An instrument that demonstrably predates its results is the
+      whole point of writing it down in advance; one that is quietly wrong is worse than one that
+      records its own amendments. The same commit fixed a correction that had been owed for six days:
+      the plan described drawing five packages from each of four kinds of incident, which the built
+      system cannot do — five kinds of incident produce only <em>two</em> kinds of package, and one
+      of the four produces none at all.
+    </p>
+  </section>
+
+  <section>
     <h2>The rules the build follows</h2>
     <ul class="rules">
       <li><b>Nothing is written before it is specified and proven to fail.</b> Every capability gets a
@@ -6546,15 +6727,15 @@ second pass   <b>5.060000171975998</b></div>
 
     <div class="outcomes">
       <div class="outcome">
-        <h3>1,439</h3>
+        <h3>1,483</h3>
         <p>Tests passing in containers against a real database, from a database that was deleted first to prove nothing was left over.</p>
       </div>
       <div class="outcome">
-        <h3>99.86%</h3>
+        <h3>99.82%</h3>
         <p>Of the back-end code is exercised by those tests. The screens measure nothing of the kind — see below.</p>
       </div>
       <div class="outcome">
-        <h3>57 / 100</h3>
+        <h3>58 / 101</h3>
         <p>Numbered capabilities finished. The rest are specified and waiting, not vague.</p>
       </div>
     </div>
@@ -6680,17 +6861,17 @@ second pass   <b>5.060000171975998</b></div>
         <tbody>
           <tr><td class="key">Data Abstraction Layer</td><td class="n">4</td><td class="n">4</td><td class="why">Complete</td></tr>
           <tr><td class="key">Sources and adapters</td><td class="n">7</td><td class="n">8</td><td class="why">Real air traffic in and replayable on command; the tracks unsafe to stage an incident on are listed; invented radio readings now reach the store through the same front door; the third source to come</td></tr>
-          <tr><td class="key">Database</td><td class="n">10</td><td class="n">10</td><td class="why">Connected, shaped, written to, read back, and fenced off from everything but the one component allowed to touch it — and it now answers the two geographic questions it was chosen for, which is the first work that could not have been done with ordinary storage. It had also never been told to organise itself around which run a record belongs to, so every measurement was reading all twenty million records from the beginning; that is now fixed. <b>Complete.</b> The table an explanation lives in was built before anybody knew what an explanation contained, and has now been brought up to it — three fields renamed rather than translated, two that did not exist added, and the record of whether a claim was checked given a third state so that <em>failed</em> and <em>nobody looked yet</em> stop being the same value</td></tr>
+          <tr><td class="key">Database</td><td class="n">10</td><td class="n">10</td><td class="why">Connected, shaped, written to, read back, and fenced off from everything but the one component allowed to touch it — and it now answers the two geographic questions it was chosen for, which is the first work that could not have been done with ordinary storage. It had also never been told to organise itself around which run a record belongs to, so every measurement was reading all twenty million records from the beginning; that is now fixed. <b>Complete.</b> The table an explanation lives in was built before anybody knew what an explanation contained, and has now been brought up to it — three fields renamed rather than translated, two that did not exist added, and the record of whether a claim was checked given a third state so that <em>failed</em> and <em>nobody looked yet</em> stop being the same value — which then turned out to have no writer at all for two of its three values, found by building the first thing that would have needed them. A row now also records which producer was <em>asked</em>, not only which one answered, without which a stand-in and the baseline are the same row twice</td></tr>
           <tr><td class="key">Running and tooling</td><td class="n">2</td><td class="n">4</td><td class="why">Containers and commands done, and every measurement now runs through a named command rather than a hand-written one — which is how the hours came to be destroyed. The store is now fenced against the test suite by construction rather than by everyone remembering. No continuous integration</td></tr>
           <tr><td class="key">API</td><td class="n">5</td><td class="n">11</td><td class="why">A health check, the picture and the dashboard reading it, plus the two scenario endpoints and the screen reading those — a batch now starts from a button</td></tr>
           <tr><td class="key">Screens and map</td><td class="n">2</td><td class="n">16</td><td class="why">Three ways in, two of which lead to a screen; both read the real store, and the rail collapses to give the workspace its width back</td></tr>
           <tr><td class="key">Scenario generator</td><td class="n">8</td><td class="n">8</td><td class="why">Complete. Receiver positions fixed, an invented hour reproducible from one number, all five kinds of run staging what they should, twenty produced unattended from a single number by one command, the screen that will drive it, disruptions staged only on aircraft that are actually flying, a floor of five affected aircraft per hour so that no hour is unscoreable, and every hour now recording the number it was generated from so a batch can be reproduced rather than remembered</td></tr>
           <tr><td class="key">Anomaly detection</td><td class="n">9</td><td class="n">14</td><td class="why">What normal looks like, and a rule for each side of the picture — the radio and the aircraft. Findings are kept and grouped, and the evidence the final rules read has been settled: grouping alone could not separate a staged hour from a quiet one, so it was replaced by a local rate comparison — measured first, and chosen over turning up the scenario settings. The three answers the system may give are one decision asked in a fixed order; the order itself is now built and enforced, and two of the three tests with it. Marked against the answer key over three hundred regenerated hours: every one of the five kinds of hour decided correctly sixty times out of sixty, no event anywhere given two answers, and — since a blip lasting one reading stopped counting as an event — no false report anywhere at all. The third test, ruled out last time, is worth attempting again</td></tr>
           <tr><td class="key">Evidence bundles</td><td class="n">2</td><td class="n">2</td><td class="why">Complete. One event becomes one package, with the frequency dimension joined up here because nothing upstream joins it, and with every absence labelled by which of the three kinds it is rather than left as silence. Every statement's citations are then resolved against the store before the package is allowed to exist — which found that one citation in eleven had been pointing at a reconstructed instant rather than a stored reading, in a field that had been written and never read since the findings were first kept</td></tr>
-          <tr><td class="key">AI hypothesis layer</td><td class="n">8</td><td class="n">11</td><td class="why">The shape every explanation must take, and the first thing that produces one. The shape is a constraint on what a model is allowed to emit rather than a description of what it did, so each guarantee is checked on the translated version a model is actually handed as well as on the original. The producer built first has no model in it: it is both the fallback for when a model's answer cannot be trusted and the yardstick the models are measured against. Run over all forty-one real packages it produced forty-one explanations, refused none, and every one of its one hundred and sixty-four citations was found in the package it came from. Since then, the seam a model plugs into — defined before either model exists, so neither one's peculiarities leak into it — and the decision about what a person sees when a model's answer cannot be used: ask again a fixed number of times, then fall back to the mechanical account, and keep a record of why, plus the guard that counts what a run spends and stops it rather than letting it quietly continue. Then the producer the whole project is about: a model, handed the package and constrained so it cannot emit the wrong shape at all. And now the safeguard that constraint cannot be — every claim an explanation rests on is resolved against the package it came from, with citing an explanation the system itself rejected treated as its own kind of failure rather than lumped in with inventing one. Over the forty-one real packages it flagged none of one hundred and sixty-four honest citations, and caught all one hundred and sixty-four deliberate corruptions. And now the first real requests: eight explanations over three packages, read by hand. Every claim in every one of them traced back to its package; reading them found an instruction that had never been written, without which the blind marking would have been decided by citation count alone; and running the trial twice showed the answers do not reproduce word for word, which narrows a claim this project had been making about reproducibility and settles a question about whether asking a model again after a bad answer is a real mechanism. What remains is the scored run itself and the marking</td></tr>
+          <tr><td class="key">AI hypothesis layer</td><td class="n">9</td><td class="n">12</td><td class="why">The shape every explanation must take, and the first thing that produces one. The shape is a constraint on what a model is allowed to emit rather than a description of what it did, so each guarantee is checked on the translated version a model is actually handed as well as on the original. The producer built first has no model in it: it is both the fallback for when a model's answer cannot be trusted and the yardstick the models are measured against. Run over all forty-one real packages it produced forty-one explanations, refused none, and every one of its one hundred and sixty-four citations was found in the package it came from. Since then, the seam a model plugs into — defined before either model exists, so neither one's peculiarities leak into it — and the decision about what a person sees when a model's answer cannot be used: ask again a fixed number of times, then fall back to the mechanical account, and keep a record of why, plus the guard that counts what a run spends and stops it rather than letting it quietly continue. Then the producer the whole project is about: a model, handed the package and constrained so it cannot emit the wrong shape at all. And now the safeguard that constraint cannot be — every claim an explanation rests on is resolved against the package it came from, with citing an explanation the system itself rejected treated as its own kind of failure rather than lumped in with inventing one. Over the forty-one real packages it flagged none of one hundred and sixty-four honest citations, and caught all one hundred and sixty-four deliberate corruptions. And now the first real requests: eight explanations over three packages, read by hand. Every claim in every one of them traced back to its package; reading them found an instruction that had never been written, without which the blind marking would have been decided by citation count alone; and running the trial twice showed the answers do not reproduce word for word, which narrows a claim this project had been making about reproducibility and settles a question about whether asking a model again after a bad answer is a real mechanism. And now the job that asks twenty questions rather than one: it keeps the answers that were thrown away, because those are the only evidence the safeguard ever did anything, and it takes care that a rejected answer is counted once rather than twice and that a mechanical stand-in is never counted as the model's — a mistake that would make the model look better the more often it failed. What remains is choosing the twenty packages, the marking pack itself, and the marking</td></tr>
           <tr><td class="key">Hypothesis screen and feedback</td><td class="n">0</td><td class="n">6</td><td class="why">Specified, unbuilt</td></tr>
           <tr><td class="key">Evaluation</td><td class="n">0</td><td class="n">6</td><td class="why">Scoring instrument written and locked; harness unbuilt</td></tr>
-          <tr class="total"><td class="key">Total</td><td class="n">55</td><td class="n">99</td><td class="why">&nbsp;</td></tr>
+          <tr class="total"><td class="key">Total</td><td class="n">58</td><td class="n">101</td><td class="why">&nbsp;</td></tr>
         </tbody>
       </table>
     </div>
@@ -6758,10 +6939,11 @@ second pass   <b>5.060000171975998</b></div>
           project exists to make — is a model's explanation better than an honest mechanical one over
           identical evidence — needs two independent people scoring both, without knowing which is
           which. The instrument is written and frozen; nobody has used it.</li>
-        <li><b>An explanation can now be saved, and none has been.</b> The table is fixed and the
-          writing is tested; nothing has yet run the mechanical account across the packages and kept
-          the results. That is a deliberate ordering rather than an omission — the first thing worth
-          storing is a comparison, and there is nothing to compare against yet.</li>
+        <li><b>Everything needed to run the comparison exists, and it has not been run.</b> The
+          job that asks twenty packages of both producers and keeps every answer is built and tested
+          against a real database — but only ever against a scripted model, never a real one. Two
+          things stand between it and a result: the twenty packages have to be drawn and written down
+          <em>before</em> anything is asked, and then somebody has to spend about a pound.</li>
         <li><b>The hard cap at the service provider has not been set.</b> The guard inside the
           code is built — it counts every request, records what each one cost, and stops the run
           rather than quietly continuing. The second guard is a cap set in the provider's own
@@ -6817,18 +6999,19 @@ second pass   <b>5.060000171975998</b></div>
       <div class="tier">
         <div class="tier__name">Next</div>
         <div class="tier__what">
-          <b>The scored run, and the marking.</b> The trial answered what it was built to answer,
-          so what remains is the thing the whole project exists to produce: twenty packages through
-          each producer, then two people marking every explanation blind, without knowing which came
-          from a model and which from the mechanical writer.
+          <b>Choosing the twenty, then spending a pound.</b> The job that runs the comparison is
+          built. The two things in front of it are both small, and neither can be done in the wrong
+          order.
           <br><br>
-          Two pieces are missing and neither is large. Nothing yet <b>runs a batch</b> — the parts
-          that ask, count, check and fall back are assembled, and something has to walk the packages
-          and keep the results. And a decision has to be taken about <b>how many times each package
-          is put to the model</b>. It was going to be once, on the grounds that the settings made the
-          answer fixed; the trial showed the answer is not fixed, so asking more than once would now
-          measure something real. That is a change to a plan written down in advance, which is
-          exactly the kind of change that has to be argued for rather than made quietly.
+          First, <b>the twenty packages have to be drawn and written down</b> — ten of each kind,
+          picked by a rule anybody can re-run, and committed <em>before</em> a single question is
+          asked, because an instrument that provably predates its results is worth nothing if the
+          corpus does not. Nothing in the plan had owned producing that list, which is the kind of
+          gap that only appears when something finally needs it. Then the run: twenty packages, three
+          answers each from the model and one from the mechanical writer, about
+          <span class="num">80p</span>. Then <b>the marking</b> — two people scoring every
+          explanation blind, without knowing which came from a model and which from the mechanical
+          writer.
           <br><br>
           One thing is worth stating before the numbers exist. The safeguard's catch rate is a
           <em>result this project reports</em>, not a maintenance statistic — so whatever it comes
@@ -6882,7 +7065,7 @@ second pass   <b>5.060000171975998</b></div>
     </div>
     <div>
       EM Fusion · a human-in-the-loop AI prototype for explainable electromagnetic situational
-      awareness · progress note, 26 September 2026
+      awareness · progress note, 27 September 2026
     </div>
   </footer>
 
