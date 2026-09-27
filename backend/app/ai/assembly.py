@@ -55,12 +55,7 @@ from app.ai.budget import BudgetedGenerator, CallBudget
 from app.ai.fallback import CorrectnessFallback
 from app.ai.grounding import GroundingChecker, GroundingLedger
 from app.ai.registry import ProviderFactory, build_generator
-from app.ai.service import (
-    ConfigurationError,
-    GenerationConfig,
-    GeneratorKind,
-    HypothesisGenerator,
-)
+from app.ai.service import ConfigurationError, GenerationConfig, GeneratorKind
 
 #: The registry name of the generator both fallbacks fall back *to*. Looked
 #: up rather than imported, following `ai-007`: importing `ai-002` here
@@ -113,7 +108,18 @@ class AssembledArm:
 
     #: What a caller hands one bundle to. The outermost wrapper, so no
     #: caller ever sees the arm, the budget or the retry directly.
-    generator: HypothesisGenerator
+    #:
+    #: Typed as the **concrete** fallback and not as `ai-003`'s port, which
+    #: is a narrowing this item originally got wrong. The port's `generate`
+    #: returns the delivered hypothesis and drops the refusals -- and an
+    #: ungrounded refusal carries the parsed hypothesis `db-002` appends
+    #: with grounding FAILED beside the row that replaced it, so a campaign
+    #: reaching this through the port loses exactly the rows the catch rate
+    #: is made of, with no symptom: every bundle still gets an explanation.
+    #: `ai-012` therefore asks through `generate_recorded`, and typing the
+    #: field is what lets it. The port is not removed; it is simply not the
+    #: whole of what this object is.
+    generator: CorrectnessFallback
     budget: CallBudget
     ledger: GroundingLedger
     arm: GeneratorKind

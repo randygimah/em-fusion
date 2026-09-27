@@ -686,8 +686,9 @@ def test_the_lossy_method_still_works_and_still_loses_it():
     bundle = fault_bundle()
     arm = assembled(
         providers=registry(
-            _RecordingFactory(_ScriptedArm(*(model_result(
-                hypothesis=ungrounded(bundle)),) * 2))
+            _RecordingFactory(
+                _ScriptedArm(*(model_result(hypothesis=ungrounded(bundle)),) * 2)
+            )
         )
     )
 
