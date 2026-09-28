@@ -36,6 +36,7 @@ from app.detection.control import (
     Outcome,
     Producer,
     audit,
+    build_register,
 )
 from app.detection.fusion import ANOMALY_TYPE as INTERFERENCE
 from app.detection.fusion import RULE_ID as FUSION
@@ -64,9 +65,7 @@ SILENT_BY_DESIGN = Producer(
     kind=Kind.INTERMEDIATE,
     background=Background(low=0, high=2, runs=40),
 )
-SHOWN = Producer(
-    rule_id=SENSOR_FAULT, finding_type=FAULT_TYPE, kind=Kind.REPORTABLE
-)
+SHOWN = Producer(rule_id=SENSOR_FAULT, finding_type=FAULT_TYPE, kind=Kind.REPORTABLE)
 UNBUILT = Producer(
     rule_id="SOURCE-GAP",
     finding_type="possible_data_source_issue",
@@ -74,7 +73,7 @@ UNBUILT = Producer(
     built=False,
 )
 
-BENCH = {p.key: p for p in (NOISY, SILENT_BY_DESIGN, SHOWN, UNBUILT)}
+BENCH = build_register(NOISY, SILENT_BY_DESIGN, SHOWN, UNBUILT)
 FULL_ACCOUNT = {NOISY.key: 5, SILENT_BY_DESIGN.key: 0, SHOWN.key: 0}
 
 
@@ -266,7 +265,9 @@ def test_the_unbuilt_rule_is_registered_rather_than_absent() -> None:
 
 def test_the_two_built_reportable_rules_are_the_ones_with_modules() -> None:
     # spec: anom-008
-    built = {p.rule_id for p in REGISTER.values() if p.kind is Kind.REPORTABLE and p.built}
+    built = {
+        p.rule_id for p in REGISTER.values() if p.kind is Kind.REPORTABLE and p.built
+    }
     assert built == {SENSOR_FAULT, FUSION}
     assert {p.finding_type for p in REGISTER.values() if p.rule_id == FUSION} == {
         INTERFERENCE
@@ -304,3 +305,34 @@ def test_a_reportable_producer_given_a_band_is_refused() -> None:
             kind=Kind.REPORTABLE,
             background=Background(low=0, high=1, runs=40),
         )
+
+
+def test_a_band_with_a_negative_floor_is_refused() -> None:
+    # spec: anom-008
+    with pytest.raises(ControlError, match="negative"):
+        Background(low=-1, high=3, runs=20)
+
+
+def test_a_producer_registered_twice_is_refused() -> None:
+    # spec: anom-008 -- the register is a dict, so a repeated key would
+    # silently keep the last one written. Two bands for one producer is a
+    # merge conflict that survived, not a configuration.
+    with pytest.raises(ControlError, match="twice"):
+        build_register(SHOWN, SHOWN)
+
+
+def test_the_measured_floors_carry_the_asymmetry_the_item_turns_on() -> None:
+    # spec: anom-008 -- the values are deliberately not frozen here, since
+    # they are re-measured with the corpus. What is asserted is the shape
+    # the item rests on: the replayed track side must never be silent, and
+    # the synthetic RF side is expected to be. Flip either floor and the
+    # control starts failing correct runs, or stops noticing a detector
+    # that did not look.
+    floors = {
+        key: producer.background.low
+        for key, producer in REGISTER.items()
+        if producer.background is not None
+    }
+    assert floors[(RF_NOISE, RF_DEVIATION)] == 0
+    assert floors[(TRACK_GAP, CONTINUITY_GAP)] > 0
+    assert floors[("TRACK-CLUSTER", "track_gap_cluster")] > 0
