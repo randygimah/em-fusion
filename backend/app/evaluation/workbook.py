@@ -39,7 +39,7 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
 from app.ai.service import ConfigurationError
-from app.evaluation.pack import DIMENSIONS, JUDGEMENTS, PackItem
+from app.evaluation.pack import DIMENSIONS, GLOSSARY, JUDGEMENTS, PackItem
 
 #: What the sheet accepts, and it is the **whole** 1-5 range.
 #:
@@ -59,6 +59,11 @@ ANCHORED: tuple[int, ...] = (1, 3, 5)
 
 SHEET = "Scores"
 ANCHOR_SHEET = "How to score"
+#: The glossary, carried here as well as in the prose. This is the file
+#: that is open while a score is being entered, so a glossary living only
+#: in the other document is one the scorer has to leave the sheet to reach
+#: -- which is the interruption it exists to remove.
+TERMS_SHEET = "Terms"
 
 #: `docs/scoring_rubric.md` Part A, transcribed rather than paraphrased. The
 #: heading is what the scorer reads on the handout; the field name underneath
@@ -271,6 +276,7 @@ def score_sheet_workbook(
         ].width = 16
 
     _anchor_sheet(book, dimensions, judgements, scale)
+    _terms_sheet(book)
     return _bytes(book)
 
 
@@ -324,6 +330,23 @@ def _anchor_sheet(
     sheet.freeze_panes = "A2"
 
 
+def _terms_sheet(book: Workbook) -> None:
+    """Every term the packs use, on the sheet being scored in."""
+    sheet = book.create_sheet(TERMS_SHEET)
+    sheet.append(["Term", "What it refers to"])
+    for cell in sheet[1]:
+        cell.font, cell.fill, cell.alignment = _HEAD, _HEAD_FILL, _WRAP
+
+    for term, definition in GLOSSARY.items():
+        sheet.append([term, definition])
+
+    sheet.column_dimensions["A"].width = 26
+    sheet.column_dimensions["B"].width = 110
+    for row in sheet.iter_rows(min_row=2):
+        row[1].alignment = _WRAP
+    sheet.freeze_panes = "A2"
+
+
 def arm_key_workbook(items: Sequence[PackItem]) -> bytes:
     """The key, as its own file.
 
@@ -360,6 +383,7 @@ __all__ = [
     "ANCHOR_SHEET",
     "SCALE",
     "SHEET",
+    "TERMS_SHEET",
     "arm_key_workbook",
     "score_sheet_workbook",
 ]

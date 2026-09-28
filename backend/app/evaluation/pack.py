@@ -93,6 +93,137 @@ LABELS = ("A", "B")
 BLINDING_GIVEAWAYS: tuple[str, ...] = ("hosted", "template")
 
 
+#: Words that turn a definition into an interpretation. A glossary entry
+#: says what a term **denotes** and never what it **implies**.
+#:
+#: *"one aircraft's position reports stopping"* is a definition. *"...which
+#: indicates interference in the area"* is the answer to the question the
+#: marker is being paid to answer -- evidence use asks whether an
+#: explanation reasons from the findings, and cause correctness asks in pass
+#: two whether it identified what was happening. A glossary that supplies
+#: either has moved part of the instrument into the reference material,
+#: where nobody would look for it.
+#:
+#: This is `eval-007`'s summarising-pack failure in its most dangerous form,
+#: because prose reasoning does not look like a computation and so does not
+#: trip the "computes no new number" guard. Hence a list of its own, on
+#: `BLINDING_GIVEAWAYS`' pattern: the constant is the argument, it lives in
+#: one place, and every entry is checked against it.
+CAUSAL_CONNECTIVES: tuple[str, ...] = (
+    "because",
+    "caused by",
+    "due to",
+    "evidence of",
+    "implies",
+    "implying",
+    "indicates",
+    "indicating",
+    "likely",
+    "means that",
+    "points to",
+    "suggests",
+    "suggesting",
+    "therefore",
+    "which shows",
+)
+
+#: Every term a marker meets in these packs, defined denotatively.
+#:
+#: Keyed by exactly the string that appears in the pack -- a citation key is
+#: matched character for character by a marker checking a citation, so a
+#: glossary spelling it differently is a glossary they cannot use.
+#:
+#: Only the entries whose terms actually appear in an exported pack are
+#: rendered, and a citation key with no entry here is refused rather than
+#: omitted: a silently missing definition is how a marker meets an undefined
+#: rule mid-flow, with nothing about the page looking wrong.
+GLOSSARY: dict[str, str] = {
+    # --- the rules that produce findings
+    "RF-NOISE": (
+        "The rule that compares each radio reading against what that receiver "
+        "normally reads on that channel."
+    ),
+    "TRACK-GAP": (
+        "The rule that looks for aircraft whose position reports stop arriving."
+    ),
+    "SENSOR-FAULT": (
+        "The rule that compares one receiver against the receivers near it."
+    ),
+    "FUSION-SPATIAL": (
+        "The rule that reports when more than one receiver deviated in the same "
+        "area and the same window."
+    ),
+    # --- the conclusions a pack is about
+    "possible_interference_zone": (
+        "The conclusion that more than one receiver deviated at the same time in "
+        "the same area."
+    ),
+    "possible_sensor_fault": (
+        "The conclusion that one receiver deviated while the neighbours that "
+        "could be measured stayed within their normal range."
+    ),
+    # --- the findings themselves
+    "rf_noise_deviation": (
+        "One run of consecutive readings on one receiver and one channel that "
+        "sat far enough from that cell's normal to be recorded as an event."
+    ),
+    "track_continuity_gap": (
+        "One aircraft's position reports stopping for longer than the gap the "
+        "rule allows."
+    ),
+    "track_rate_excess": (
+        "How often aircraft dropped out inside the window, set against how often "
+        "they dropped out in the same area outside it."
+    ),
+    "neighbour_nominal": (
+        "A receiver near the one under examination that was measured and stayed "
+        "within its normal range."
+    ),
+    "channel_adjacency": (
+        "How many of a receiver's channels the deviation covered, out of the "
+        "total it watches."
+    ),
+    # --- words in the findings' own prose
+    "baseline": (
+        "The average and spread of what one receiver reads on one channel, "
+        "worked out from quiet periods only. Every receiver and channel has its "
+        "own; they are never pooled."
+    ),
+    "channel": (
+        "One slice of the radio spectrum. Each receiver watches several, "
+        "numbered from 0."
+    ),
+    "dB": (
+        "Decibel, the unit these readings use. It is a ratio on a logarithmic "
+        "scale: 3 dB is about double, 10 dB is ten times, 20 dB is a hundred "
+        "times."
+    ),
+    "power_dbm": "Received signal power, in decibels relative to one milliwatt.",
+    "nominal": "Within the normal range for that receiver and channel.",
+    "disc": (
+        "A circular area of the stated radius, centred on the event, used to "
+        "decide which aircraft count as near it."
+    ),
+    "discontinuity": "One break in one aircraft's stream of position reports.",
+    "reference period": (
+        "The time outside the event window, used as the comparison for a rate."
+    ),
+    "rate ratio": (
+        "The rate inside the window divided by the rate in the reference period."
+    ),
+    "smoothing constant": (
+        "A small fixed number added to both sides of a rate comparison so that a "
+        "division by zero cannot occur."
+    ),
+    "corroborate": (
+        "To look for agreement from the other half of the picture -- the "
+        "aircraft side for a radio finding, and the reverse. Recorded as one of "
+        "three values: corroborated, measured and not corroborated, or not "
+        "measurable."
+    ),
+}
+
+
 @dataclass(frozen=True, slots=True)
 class PackItem:
     """One hypothesis as the marker meets it, and what it really was."""
@@ -207,7 +338,13 @@ def build_pack(
         )
 
     return ScoringPack(
-        hypotheses_md=_preamble(len(scored)) + "\n---\n\n".join(sections),
+        hypotheses_md=(
+            _preamble(len(scored))
+            + _glossary(
+                [(b, held[b]) for b in ordered if b in held], "\n".join(sections)
+            )
+            + "\n---\n\n".join(sections)
+        ),
         score_sheet_csv=_sheet(items),
         arm_key_csv=_key(items),
         items=tuple(items),
@@ -241,6 +378,73 @@ def _scored_generations(
 # One renderer, used for both arms. Anything below that branched on the arm
 # would be a formatting leak, which is a *perfect* classifier where the prose
 # style the rubric already concedes is only a hint.
+
+
+def _glossary(bundles: Sequence[tuple[int, EvidenceBundle]], prose: str) -> str:
+    """The terms this pack actually uses, defined.
+
+    Filtered to what is present, because a definition for something the
+    marker will never meet is one more line to read past and twenty of them
+    is a page of them. A citation key with no entry is **refused**: omitted,
+    the page still looks complete and the marker meets an undefined rule
+    nineteen packs from the end.
+    """
+    keys: list[str] = []
+    for bundle_id, bundle in bundles:
+        for item in bundle.evidence:
+            for key in (item.rule_id, item.finding_type):
+                if key and key not in keys:
+                    keys.append(key)
+                    if key not in GLOSSARY:
+                        raise ConfigurationError(
+                            f"bundle {bundle_id} cites {key!r}, which has no "
+                            "glossary entry. Left out, the pack still reads as "
+                            "complete and the marker meets an undefined term "
+                            "mid-flow with nothing looking wrong -- so a rule "
+                            "added later is defined here or it is not exported."
+                        )
+
+    # Matched against **everything the marker reads**, the rendered
+    # explanations included -- `corroborate` appears only there, and a scan
+    # over the findings alone leaves out one of the words most likely to
+    # stop somebody mid-pack. Pooled across all twenty packs and both
+    # labels, so what the glossary holds says nothing about any one pack.
+    lowered = prose.lower()
+    for term in GLOSSARY:
+        if term not in keys and term.lower() in lowered:
+            keys.append(term)
+
+    lines = [
+        "## Terms used in these packs",
+        "",
+        "Definitions, not interpretations: each entry says what the word refers "
+        "to, and deliberately not what it would mean if you saw it. Judging "
+        "that is the job.",
+        "",
+        "| Term | What it refers to |",
+        "|---|---|",
+    ]
+    lines += [
+        f"| `{_cell(term)}` | {_cell(GLOSSARY[term])} |"
+        for term in sorted(keys, key=_glossary_order)
+    ]
+    return "\n".join(lines) + "\n\n---\n\n"
+
+
+def _glossary_order(term: str) -> tuple[int, str]:
+    """Rules first, then conclusions, then findings, then plain words.
+
+    A marker looking a term up has the citation key in front of them, so the
+    keys are grouped together rather than interleaved alphabetically with
+    ordinary words like *baseline*.
+    """
+    if term.isupper() or "-" in term and term.replace("-", "").isupper():
+        return (0, term)
+    if term.startswith("possible_"):
+        return (1, term)
+    if "_" in term:
+        return (2, term)
+    return (3, term)
 
 
 def _preamble(bundles: int) -> str:
@@ -587,6 +791,8 @@ def as_json(pack: ScoringPack) -> dict[str, Any]:
 
 __all__ = [
     "BLINDING_GIVEAWAYS",
+    "CAUSAL_CONNECTIVES",
+    "GLOSSARY",
     "DIMENSIONS",
     "JUDGEMENTS",
     "SCORED_ORDINAL",

@@ -129,7 +129,7 @@ def claim_for(source) -> Claim:
 
 def track_finding(pseudonym="AC-48089ab4e5a9", at=START) -> DetectionFinding:
     return DetectionFinding(
-        scenario_run_id=RUN, rule_id="TRACK-GAP", finding_type="track_discontinuity",
+        scenario_run_id=RUN, rule_id="TRACK-GAP", finding_type="track_continuity_gap",
         subject=pseudonym, started_at=at, ended_at=at + timedelta(seconds=120),
         location=HERE,
         evidence_refs=({"aircraft_id": pseudonym, "at": at.isoformat()},))
@@ -280,7 +280,7 @@ def test_every_evidence_item_carries_its_own_data_mode():
              for item in bundles[0].evidence}
     assert modes[("RF-NOISE", "rf_noise_deviation")] is DataMode.SYNTHETIC
     assert modes[("TRACK-GAP", "track_rate_excess")] is DataMode.REPLAYED
-    assert modes[("TRACK-GAP", "track_discontinuity")] is DataMode.REPLAYED
+    assert modes[("TRACK-GAP", "track_continuity_gap")] is DataMode.REPLAYED
     assert modes[("FUSION-SPATIAL", "possible_interference_zone")] is DataMode.SYNTHETIC
 
 
@@ -547,7 +547,7 @@ def test_a_track_finding_outside_the_window_does_not_reach_this_bundle():
     stale = track_finding(at=START - timedelta(seconds=900))
     bundles = build([claim_for(z)], zones=[z], tracks=[stale],
                     rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),)))
-    assert not any(item.finding_type == "track_discontinuity"
+    assert not any(item.finding_type == "track_continuity_gap"
                    for item in bundles[0].evidence)
 
 

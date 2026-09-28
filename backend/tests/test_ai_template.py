@@ -190,7 +190,7 @@ def test_grouping_is_on_the_pair_and_not_on_the_rule_alone():
     assert len(track) == 2
     assert {c.finding_type for c in track} == {
         "track_rate_excess",
-        "track_discontinuity",
+        "track_continuity_gap",
     }
 
 

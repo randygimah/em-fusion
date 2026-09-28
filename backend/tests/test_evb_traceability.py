@@ -560,7 +560,7 @@ def test_a_track_citation_resolves_on_its_own_coordinate(
     row_id = insert_track(migrated_database)
     item = EvidenceItem(
         source=AIRCRAFT, finding="reporting broke during the window",
-        rule_id="TRACK-GAP", finding_type="track_discontinuity",
+        rule_id="TRACK-GAP", finding_type="track_continuity_gap",
         grounding=Grounding.OBSERVED, data_mode=DataMode.REPLAYED,
         started_at=START, ended_at=END, refs=(track_ref(),))
     resolved = resolve_bundles(factory, [bundle(item)])
@@ -581,7 +581,7 @@ def test_track_resolution_is_scoped_to_the_run_as_well(
     insert_track(migrated_database, run_id=OTHER_RUN_ID)
     item = EvidenceItem(
         source=AIRCRAFT, finding="reporting broke during the window",
-        rule_id="TRACK-GAP", finding_type="track_discontinuity",
+        rule_id="TRACK-GAP", finding_type="track_continuity_gap",
         grounding=Grounding.OBSERVED, data_mode=DataMode.REPLAYED,
         started_at=START, ended_at=END, refs=(track_ref(),))
     resolved = resolve_bundles(factory, [bundle(item)])
@@ -597,7 +597,7 @@ def test_a_track_coordinate_only_in_another_run_is_refused(
     insert_track(migrated_database, run_id=OTHER_RUN_ID)
     item = EvidenceItem(
         source=AIRCRAFT, finding="reporting broke during the window",
-        rule_id="TRACK-GAP", finding_type="track_discontinuity",
+        rule_id="TRACK-GAP", finding_type="track_continuity_gap",
         grounding=Grounding.OBSERVED, data_mode=DataMode.REPLAYED,
         started_at=START, ended_at=END, refs=(track_ref(),))
     with pytest.raises(ResolutionError, match="no stored observation"):
@@ -656,7 +656,7 @@ def test_a_bundle_spanning_both_shapes_resolves_both(
     track_id = insert_track(migrated_database)
     track_item = EvidenceItem(
         source=AIRCRAFT, finding="reporting broke during the window",
-        rule_id="TRACK-GAP", finding_type="track_discontinuity",
+        rule_id="TRACK-GAP", finding_type="track_continuity_gap",
         grounding=Grounding.OBSERVED, data_mode=DataMode.REPLAYED,
         started_at=START, ended_at=END, refs=(track_ref(),))
     resolved = resolve_bundles(

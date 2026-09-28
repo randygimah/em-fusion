@@ -37,7 +37,6 @@ from app.evaluation.workbook import TERMS_SHEET, score_sheet_workbook
 from tests.test_ai_template import fault_bundle, zone_bundle
 from tests.test_eval_pack import one_bundle_campaign, packed
 
-
 # ------------------------------------------------------- what it must contain
 
 
@@ -61,9 +60,11 @@ def test_an_undefined_rule_is_refused_rather_than_omitted() -> None:
     bundle = zone_bundle()
     invented = bundle.with_evidence(
         [
-            item
-            if item.finding_type != "rf_noise_deviation"
-            else _retyped(item, "INVENTED-RULE", "invented_finding")
+            (
+                item
+                if item.finding_type != "rf_noise_deviation"
+                else _retyped(item, "INVENTED-RULE", "invented_finding")
+            )
             for item in bundle.evidence
         ]
     )
@@ -79,7 +80,9 @@ def test_only_terms_the_scorer_will_meet_are_listed() -> None:
     glossary = pack.hypotheses_md.split("## Evidence pack")[0]
 
     assert "SENSOR-FAULT" in glossary
-    assert "FUSION-SPATIAL" not in glossary, "a fault-only pack defined a rule it never shows"
+    assert (
+        "FUSION-SPATIAL" not in glossary
+    ), "a fault-only pack defined a rule it never shows"
 
 
 # ------------------------------------------------ what it must never contain
@@ -137,7 +140,9 @@ def test_the_glossary_travels_with_the_workbook_too() -> None:
 
     assert TERMS_SHEET in book.sheetnames
     listed = {
-        str(row[0].value) for row in book[TERMS_SHEET].iter_rows(min_row=2) if row[0].value
+        str(row[0].value)
+        for row in book[TERMS_SHEET].iter_rows(min_row=2)
+        if row[0].value
     }
     assert "TRACK-GAP" in listed
     assert listed <= set(GLOSSARY)
@@ -147,3 +152,36 @@ def _retyped(item, rule_id: str, finding_type: str):
     from dataclasses import replace
 
     return replace(item, rule_id=rule_id, finding_type=finding_type)
+
+
+def test_a_term_used_only_in_an_explanation_is_still_defined() -> None:
+    # spec: eval-009 -- the glossary is scanned over everything the marker
+    # reads, not only over the findings.
+    #
+    # `corroborate` is the case that proved it: it appears in the
+    # recommended action of an explanation and nowhere in any finding, so a
+    # scan over the evidence alone left out one of the words most likely to
+    # stop a scorer mid-pack. Pooled across twenty packs and both labels,
+    # what the glossary contains says nothing about any single pack.
+    hypothesis = _with_action(
+        "Corroborate the deviation against a source outside this system."
+    )
+    rows, _ = one_bundle_campaign(1)
+    pack = build_pack(
+        generations=rows,
+        bundles=[(1, fault_bundle())],
+        hypotheses={row.hypothesis_id: hypothesis for row in rows},
+        seed=11,
+    )
+    glossary = pack.hypotheses_md.split("## Evidence pack")[0]
+
+    assert "corroborate" in glossary
+
+
+def _with_action(action: str):
+    from app.ai.hypothesis import Hypothesis
+    from app.ai.template import generate
+
+    base = generate(fault_bundle()).model_dump()
+    base["recommended_human_action"] = action
+    return Hypothesis(**base)

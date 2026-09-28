@@ -10,6 +10,37 @@ Two explanations under one pack may occasionally be identical or nearly so. That
 
 ---
 
+## Terms used in these packs
+
+Definitions, not interpretations: each entry says what the word refers to, and deliberately not what it would mean if you saw it. Judging that is the job.
+
+| Term | What it refers to |
+|---|---|
+| `FUSION-SPATIAL` | The rule that reports when more than one receiver deviated in the same area and the same window. |
+| `RF-NOISE` | The rule that compares each radio reading against what that receiver normally reads on that channel. |
+| `SENSOR-FAULT` | The rule that compares one receiver against the receivers near it. |
+| `TRACK-GAP` | The rule that looks for aircraft whose position reports stop arriving. |
+| `possible_interference_zone` | The conclusion that more than one receiver deviated at the same time in the same area. |
+| `possible_sensor_fault` | The conclusion that one receiver deviated while the neighbours that could be measured stayed within their normal range. |
+| `channel_adjacency` | How many of a receiver's channels the deviation covered, out of the total it watches. |
+| `neighbour_nominal` | A receiver near the one under examination that was measured and stayed within its normal range. |
+| `power_dbm` | Received signal power, in decibels relative to one milliwatt. |
+| `rf_noise_deviation` | One run of consecutive readings on one receiver and one channel that sat far enough from that cell's normal to be recorded as an event. |
+| `track_continuity_gap` | One aircraft's position reports stopping for longer than the gap the rule allows. |
+| `track_rate_excess` | How often aircraft dropped out inside the window, set against how often they dropped out in the same area outside it. |
+| `baseline` | The average and spread of what one receiver reads on one channel, worked out from quiet periods only. Every receiver and channel has its own; they are never pooled. |
+| `channel` | One slice of the radio spectrum. Each receiver watches several, numbered from 0. |
+| `corroborate` | To look for agreement from the other half of the picture -- the aircraft side for a radio finding, and the reverse. Recorded as one of three values: corroborated, measured and not corroborated, or not measurable. |
+| `dB` | Decibel, the unit these readings use. It is a ratio on a logarithmic scale: 3 dB is about double, 10 dB is ten times, 20 dB is a hundred times. |
+| `disc` | A circular area of the stated radius, centred on the event, used to decide which aircraft count as near it. |
+| `discontinuity` | One break in one aircraft's stream of position reports. |
+| `nominal` | Within the normal range for that receiver and channel. |
+| `rate ratio` | The rate inside the window divided by the rate in the reference period. |
+| `reference period` | The time outside the event window, used as the comparison for a rate. |
+| `smoothing constant` | A small fixed number added to both sides of a rate comparison so that a division by zero cannot occur. |
+
+---
+
 ## Evidence pack 00248 -- 1 of 20
 
 | | |
