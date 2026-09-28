@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import csv
 import io
+import os
 import random
 from dataclasses import dataclass
 from typing import Any, Mapping, Sequence
@@ -304,61 +305,51 @@ def _section(
     position: int,
     total: int,
 ) -> str:
-    """One pack, as Markdown a renderer survives.
+    """One pack, written to be read rather than merely to be correct.
 
-    The first version emitted space-aligned plain text into a `.md` file.
-    Two spaces of indent is neither a fence nor a code block nor a list, so
-    every finding joined one paragraph and the alignment the layout rested
-    on collapsed -- legible in an editor, unreadable everywhere else.
+    Two rounds were needed and the first one's lesson is worth keeping. The
+    original emitted space-aligned plain text, which every renderer reflowed
+    into one paragraph. Fixing that produced valid Markdown that was still a
+    wall: fourteen table rows repeating *power_dbm deviated by X dB at its
+    peak* and fifteen repeating *reporting from this aircraft broke during
+    the window* carry one sentence and N values between them, and it is the
+    sentence the eye has to re-read. So the shared text is **factored** --
+    said once in the group's heading, with each row keeping only what
+    differs. Nothing is removed; the repetition is.
     """
     conclusion = _conclusion(bundle_id, bundle)
     start, end = bundle.time_window
+    channels = ", ".join(str(c) for c in bundle.affected_channels)
     lines = [
         f"## Evidence pack {bundle_id:05d} -- {position} of {total}",
         "",
         "| | |",
         "|---|---|",
-        f"| **Time window** | {start:%Y-%m-%d %H:%M} to {end:%H:%M} |",
-        f"| **Subject** | {_cell(bundle.subject)} |",
-        "| **Channels** | "
-        + _cell(", ".join(str(c) for c in bundle.affected_channels))
+        f"| **When** | {start:%Y-%m-%d %H:%M} to {end:%H:%M} |",
+        f"| **Where** | {_cell(bundle.subject)}"
+        + (f" &middot; channel {_cell(channels)}" if channels else "")
         + " |",
         "",
-        "**What the detection rules concluded**",
+        "### The conclusion being explained",
         "",
-        f"> **{conclusion.rule_id} / {conclusion.finding_type}**"
-        + (f" -- {_cell(conclusion.source)}" if conclusion.source else ""),
-        ">",
+        # Not bolded: a rule's conclusion can run to three lines, and three
+        # bold lines is a heavier signal than the blockquote already gives.
         f"> {_cell(conclusion.finding)}",
+        ">",
+        f"> *{conclusion.rule_id} / {conclusion.finding_type}*"
+        + (f" &middot; {_cell(conclusion.source)}" if conclusion.source else ""),
         "",
     ]
 
     rest = [item for item in bundle.evidence if item is not conclusion]
     if rest:
-        lines += ["**Findings behind that conclusion**", ""]
+        lines += ["### The evidence behind it", ""]
         for (rule_id, finding_type), group in _grouped(rest).items():
-            noun = "finding" if len(group) == 1 else "findings"
-            lines += [
-                f"*{rule_id} / {finding_type}* -- {len(group)} {noun}",
-                "",
-                "| Source | What it found |",
-                "|---|---|",
-            ]
-            # Every finding, individually. Grouping saves the re-reading; it
-            # must not do the reading. A pack that summarised its own
-            # findings would have done part of the work dimension 1 scores.
-            lines += [
-                f"| {_cell(item.source)} | {_cell(item.finding)} |" for item in group
-            ]
-            lines.append("")
+            lines += _group_block(rule_id, finding_type, group)
 
     if bundle.known_uncertainties:
-        lines += ["**What the rules could not determine**", ""]
-        for statement, (subject, times) in _counted(bundle.known_uncertainties).items():
-            raised = "" if times == 1 else f"(raised {times} times) "
-            named = f"**{_cell(subject)}** -- " if subject else ""
-            lines.append(f"- {named}{raised}{_cell(statement)}")
-        lines.append("")
+        lines += ["### What the rules could not determine", ""]
+        lines += _uncertainty_block(bundle.known_uncertainties)
 
     for item in items:
         lines.append(_rendered(item))
@@ -367,6 +358,146 @@ def _section(
     # B's block end in something A's does not, and a formatting difference
     # between the two labels is a perfect classifier.
     return "\n".join(lines)
+
+
+def _group_block(rule_id: str, finding_type: str, group: Sequence[Any]) -> list[str]:
+    """One kind of finding, with the sentence they share said once.
+
+    The rule and finding type **lead** the block, because that pair is
+    exactly how a hypothesis cites its evidence (`ai-001`) and checking a
+    citation against the pack is the first of the five scored dimensions.
+    Every block has the same three parts whatever its size, so a marker
+    learns the shape once -- and so nothing about the layout can vary with
+    what a block happens to contain.
+    """
+    noun = "finding" if len(group) == 1 else "findings"
+    lines = [f"**{rule_id} / {finding_type}** &middot; {len(group)} {noun}", ""]
+
+    shared, differing = _factored([finding.finding for finding in group])
+
+    if len(group) == 1:
+        finding = group[0]
+        source = f"**{_cell(finding.source)}** -- " if finding.source else ""
+        return lines + [f"{source}{_cell(finding.finding)}", ""]
+
+    # Gathered under the source rather than one row per finding: the source
+    # is a field on the item, so this reorders what is already there and
+    # computes nothing.
+    by_source: dict[str, list[str]] = {}
+    for finding, value in zip(group, differing):
+        by_source.setdefault(finding.source or "--", []).append(value)
+
+    if shared:
+        lines += [_cell(shared), ""]
+
+    if not any(value for value in differing):
+        # Identical wording: there is nothing left to put in a second
+        # column, and the sources alone are the group.
+        lines += [
+            " &middot; ".join(
+                source if len(values) == 1 else f"{source} (x{len(values)})"
+                for source, values in by_source.items()
+            ),
+            "",
+        ]
+        return lines
+
+    lines += ["| Source | |", "|---|---|"]
+    lines += [
+        f"| {_cell(source)} | {' &middot; '.join(_cell(v) for v in values)} |"
+        for source, values in by_source.items()
+    ]
+    lines.append("")
+    return lines
+
+
+def _uncertainty_block(uncertainties: Sequence[Any]) -> list[str]:
+    """What could not be determined, with near-identical wording collapsed.
+
+    Exact de-duplication is not enough and the real pack proved it: six
+    sentences differing only in which receiver they named are six distinct
+    strings, so they survived a de-duplication and filled six lines with one
+    fact. Grouping is therefore by *kind* and the wording is factored inside
+    it, which is the same mechanism the findings use.
+    """
+    lines: list[str] = []
+    by_kind: dict[Any, list[Any]] = {}
+    for uncertainty in uncertainties:
+        by_kind.setdefault(uncertainty.kind, []).append(uncertainty)
+
+    for group in by_kind.values():
+        counted = _counted(group)
+        statements = list(counted)
+        shared, differing = _factored(statements)
+        if len(statements) > 1 and shared and any(differing):
+            lines.append(f"- **{_cell(shared)}**")
+            named = " &middot; ".join(
+                (
+                    value
+                    if counted[statement][1] == 1
+                    else f"{value} (x{counted[statement][1]})"
+                )
+                for statement, value in zip(statements, differing)
+            )
+            lines.append(f"  {_cell(named)}")
+            continue
+        for statement in statements:
+            subject, times = counted[statement]
+            named = f"**{_cell(subject)}** -- " if subject else ""
+            raised = "" if times == 1 else f"(raised {times} times) "
+            lines.append(f"- {named}{raised}{_cell(statement)}")
+    lines.append("")
+    return lines
+
+
+#: How much shared wording makes factoring worth doing. Below this the
+#: heading is a fragment and the rows are whole sentences pretending to be
+#: values, which is less readable than leaving them alone.
+FACTOR_MINIMUM = 20
+
+
+def _factored(texts: Sequence[str]) -> tuple[str, list[str]]:
+    """The sentence a set of texts shares, and what each one adds to it.
+
+    Purely mechanical: the common prefix and suffix, trimmed to word
+    boundaries so a heading never ends mid-word. Returns the shared text
+    with an ellipsis where the difference goes, and the differences in the
+    order given. When there is too little in common it returns no shared
+    text and the texts unchanged, and the caller lists them instead.
+    """
+    if len(set(texts)) == 1:
+        return texts[0], ["" for _ in texts]
+
+    prefix = _word_bounded(os.path.commonprefix(list(texts)), texts)
+    rest = [text[len(prefix) :] for text in texts]
+    reversed_suffix = os.path.commonprefix([text[::-1] for text in rest])
+    suffix = _word_bounded(reversed_suffix[::-1], rest, from_end=True)
+
+    if len(prefix) + len(suffix) < FACTOR_MINIMUM:
+        return "", list(texts)
+
+    differing = [
+        text[len(prefix) : len(text) - len(suffix)] if suffix else text[len(prefix) :]
+        for text in texts
+    ]
+    shared = f"{prefix.rstrip()} ... {suffix.lstrip()}".strip()
+    return shared, [value.strip() for value in differing]
+
+
+def _word_bounded(common: str, texts: Sequence[str], *, from_end: bool = False) -> str:
+    """`common`, trimmed back to a word boundary.
+
+    The raw common prefix of *deviated by 13.43* and *deviated by 10.62* is
+    *deviated by 1*, which would leave `3.43` and `0.62` as the values --
+    numbers that are not the numbers the rules reported.
+    """
+    if not common or any(len(common) == len(text) for text in texts):
+        return common
+    if from_end:
+        cut = common.find(" ")
+        return common[cut:] if cut != -1 else ""
+    cut = common.rfind(" ")
+    return common[: cut + 1] if cut != -1 else ""
 
 
 def _grouped(findings: Sequence[Any]) -> dict[tuple[str, str], list[Any]]:
@@ -384,12 +515,7 @@ def _grouped(findings: Sequence[Any]) -> dict[tuple[str, str], list[Any]]:
 
 
 def _counted(uncertainties: Sequence[Any]) -> dict[str, tuple[str, int]]:
-    """Each distinct statement once, with how many times it was raised.
-
-    The first real pack carried the same one-reading RF-07 sentence three
-    times, verbatim and adjacent. Repeating it says nothing the count does
-    not, and it costs the marker three reads to learn that.
-    """
+    """Each distinct statement once, with how many times it was raised."""
     counted: dict[str, tuple[str, int]] = {}
     for uncertainty in uncertainties:
         subject, times = counted.get(uncertainty.statement, (uncertainty.subject, 0))

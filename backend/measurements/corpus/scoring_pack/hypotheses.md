@@ -14,52 +14,37 @@ Two explanations under one pack may occasionally be identical or nearly so. That
 
 | | |
 |---|---|
-| **Time window** | 2022-06-27 12:31 to 12:36 |
-| **Subject** | RF-06, RF-07 |
-| **Channels** | 4 |
+| **When** | 2022-06-27 12:31 to 12:36 |
+| **Where** | RF-06, RF-07 &middot; channel 4 |
 
-**What the detection rules concluded**
+### The conclusion being explained
 
-> **FUSION-SPATIAL / possible_interference_zone** -- RF-06, RF-07
->
 > the reference period holds no track findings, so its rate is nothing but the smoothing constant and the ratio compares one observed rate against an assumption. A disc with nothing in it is not a disc that showed no disruption.
+>
+> *FUSION-SPATIAL / possible_interference_zone* &middot; RF-06, RF-07
 
-**Findings behind that conclusion**
+### The evidence behind it
 
-*RF-NOISE / rf_noise_deviation* -- 8 findings
+**RF-NOISE / rf_noise_deviation** &middot; 8 findings
 
-| Source | What it found |
+power_dbm deviated by ... dB at its peak
+
+| Source | |
 |---|---|
-| RF-06:4 | power_dbm deviated by 9.51 dB at its peak |
-| RF-06:4 | power_dbm deviated by 11.62 dB at its peak |
-| RF-06:4 | power_dbm deviated by 11.45 dB at its peak |
-| RF-06:4 | power_dbm deviated by 8.81 dB at its peak |
-| RF-07:4 | power_dbm deviated by 8.51 dB at its peak |
-| RF-07:4 | power_dbm deviated by 11.63 dB at its peak |
-| RF-07:4 | power_dbm deviated by 10.91 dB at its peak |
-| RF-07:4 | power_dbm deviated by 12.76 dB at its peak |
+| RF-06:4 | 9.51 &middot; 11.62 &middot; 11.45 &middot; 8.81 |
+| RF-07:4 | 8.51 &middot; 11.63 &middot; 10.91 &middot; 12.76 |
 
-*TRACK-GAP / track_rate_excess* -- 1 finding
+**TRACK-GAP / track_rate_excess** &middot; 1 finding
 
-| Source | What it found |
-|---|---|
-| 60 km disc | 4 discontinuities during the window against 0 outside it, a rate ratio of 11.79 |
+**60 km disc** -- 4 discontinuities during the window against 0 outside it, a rate ratio of 11.79
 
-*TRACK-GAP / track_continuity_gap* -- 9 findings
+**TRACK-GAP / track_continuity_gap** &middot; 9 findings
 
-| Source | What it found |
-|---|---|
-| AC-13cbc9324e79 | reporting from this aircraft broke during the window |
-| AC-17d744f0ebea | reporting from this aircraft broke during the window |
-| AC-2b82be5f0101 | reporting from this aircraft broke during the window |
-| AC-a8823f7a2d0d | reporting from this aircraft broke during the window |
-| AC-d57a21bd0b31 | reporting from this aircraft broke during the window |
-| AC-d834848b9fb1 | reporting from this aircraft broke during the window |
-| AC-d834848b9fb1 | reporting from this aircraft broke during the window |
-| AC-e63feaae09bb | reporting from this aircraft broke during the window |
-| AC-ef10a00a0296 | reporting from this aircraft broke during the window |
+reporting from this aircraft broke during the window
 
-**What the rules could not determine**
+AC-13cbc9324e79 &middot; AC-17d744f0ebea &middot; AC-2b82be5f0101 &middot; AC-a8823f7a2d0d &middot; AC-d57a21bd0b31 &middot; AC-d834848b9fb1 (x2) &middot; AC-e63feaae09bb &middot; AC-ef10a00a0296
+
+### What the rules could not determine
 
 - **track** -- the local discontinuity rate could not be measured: the reference period outside this window held no track findings, so the ratio would consist of nothing but the smoothing constant and is not a comparison of two observed rates. This is the majority case, and it means the aircraft side neither supports nor contradicts the radio evidence here.
 - **RF-07:4** -- (raised 3 times) a deviation on channel 4 of RF-07 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
@@ -129,59 +114,38 @@ Check for independent reports of interference or outages from aircraft operators
 
 | | |
 |---|---|
-| **Time window** | 2022-06-27 12:10 to 12:15 |
-| **Subject** | RF-05, RF-06, RF-07 |
-| **Channels** | 4 |
+| **When** | 2022-06-27 12:10 to 12:15 |
+| **Where** | RF-05, RF-06, RF-07 &middot; channel 4 |
 
-**What the detection rules concluded**
+### The conclusion being explained
 
-> **FUSION-SPATIAL / possible_interference_zone** -- RF-05, RF-06, RF-07
->
 > track discontinuities ran 2.13 times their local rate during this window (4 inside against 3 outside), at or above the 1.58 the replication set
+>
+> *FUSION-SPATIAL / possible_interference_zone* &middot; RF-05, RF-06, RF-07
 
-**Findings behind that conclusion**
+### The evidence behind it
 
-*RF-NOISE / rf_noise_deviation* -- 10 findings
+**RF-NOISE / rf_noise_deviation** &middot; 10 findings
 
-| Source | What it found |
+power_dbm deviated by ... dB at its peak
+
+| Source | |
 |---|---|
-| RF-05:4 | power_dbm deviated by 14.27 dB at its peak |
-| RF-05:4 | power_dbm deviated by 8.06 dB at its peak |
-| RF-05:4 | power_dbm deviated by 12.33 dB at its peak |
-| RF-05:4 | power_dbm deviated by 11.35 dB at its peak |
-| RF-06:4 | power_dbm deviated by 11.79 dB at its peak |
-| RF-06:4 | power_dbm deviated by 11.24 dB at its peak |
-| RF-06:4 | power_dbm deviated by 11.09 dB at its peak |
-| RF-07:4 | power_dbm deviated by 10.63 dB at its peak |
-| RF-07:4 | power_dbm deviated by 11.44 dB at its peak |
-| RF-07:4 | power_dbm deviated by 11.61 dB at its peak |
+| RF-05:4 | 14.27 &middot; 8.06 &middot; 12.33 &middot; 11.35 |
+| RF-06:4 | 11.79 &middot; 11.24 &middot; 11.09 |
+| RF-07:4 | 10.63 &middot; 11.44 &middot; 11.61 |
 
-*TRACK-GAP / track_rate_excess* -- 1 finding
+**TRACK-GAP / track_rate_excess** &middot; 1 finding
 
-| Source | What it found |
-|---|---|
-| 60 km disc | 4 discontinuities during the window against 3 outside it, a rate ratio of 2.13 |
+**60 km disc** -- 4 discontinuities during the window against 3 outside it, a rate ratio of 2.13
 
-*TRACK-GAP / track_continuity_gap* -- 14 findings
+**TRACK-GAP / track_continuity_gap** &middot; 14 findings
 
-| Source | What it found |
-|---|---|
-| AC-1cb8598779ad | reporting from this aircraft broke during the window |
-| AC-60af3839251d | reporting from this aircraft broke during the window |
-| AC-61d1a0c50ecd | reporting from this aircraft broke during the window |
-| AC-7fe0246dd6aa | reporting from this aircraft broke during the window |
-| AC-8be51c7c091c | reporting from this aircraft broke during the window |
-| AC-8f8cdb56c96f | reporting from this aircraft broke during the window |
-| AC-9ac925d04c44 | reporting from this aircraft broke during the window |
-| AC-9ac925d04c44 | reporting from this aircraft broke during the window |
-| AC-9ac925d04c44 | reporting from this aircraft broke during the window |
-| AC-b21f734f5f47 | reporting from this aircraft broke during the window |
-| AC-c9216688d494 | reporting from this aircraft broke during the window |
-| AC-c9216688d494 | reporting from this aircraft broke during the window |
-| AC-c9216688d494 | reporting from this aircraft broke during the window |
-| AC-f66c16a03660 | reporting from this aircraft broke during the window |
+reporting from this aircraft broke during the window
 
-**What the rules could not determine**
+AC-1cb8598779ad &middot; AC-60af3839251d &middot; AC-61d1a0c50ecd &middot; AC-7fe0246dd6aa &middot; AC-8be51c7c091c &middot; AC-8f8cdb56c96f &middot; AC-9ac925d04c44 (x3) &middot; AC-b21f734f5f47 &middot; AC-c9216688d494 (x3) &middot; AC-f66c16a03660
+
+### What the rules could not determine
 
 - **RF-05:4** -- a deviation on channel 4 of RF-05 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
 
@@ -245,68 +209,42 @@ Corroborate the deviation at RF-05, RF-06, RF-07 against a source outside this s
 
 | | |
 |---|---|
-| **Time window** | 2022-06-27 12:38 to 12:43 |
-| **Subject** | RF-01, RF-02, RF-03 |
-| **Channels** | 4 |
+| **When** | 2022-06-27 12:38 to 12:43 |
+| **Where** | RF-01, RF-02, RF-03 &middot; channel 4 |
 
-**What the detection rules concluded**
+### The conclusion being explained
 
-> **FUSION-SPATIAL / possible_interference_zone** -- RF-01, RF-02, RF-03
->
 > the reference period holds no track findings, so its rate is nothing but the smoothing constant and the ratio compares one observed rate against an assumption. A disc with nothing in it is not a disc that showed no disruption.
+>
+> *FUSION-SPATIAL / possible_interference_zone* &middot; RF-01, RF-02, RF-03
 
-**Findings behind that conclusion**
+### The evidence behind it
 
-*RF-NOISE / rf_noise_deviation* -- 14 findings
+**RF-NOISE / rf_noise_deviation** &middot; 14 findings
 
-| Source | What it found |
+power_dbm deviated by ... dB at its peak
+
+| Source | |
 |---|---|
-| RF-01:4 | power_dbm deviated by 13.43 dB at its peak |
-| RF-01:4 | power_dbm deviated by 10.62 dB at its peak |
-| RF-01:4 | power_dbm deviated by 8.37 dB at its peak |
-| RF-01:4 | power_dbm deviated by 9.20 dB at its peak |
-| RF-01:4 | power_dbm deviated by 14.95 dB at its peak |
-| RF-02:4 | power_dbm deviated by 8.53 dB at its peak |
-| RF-02:4 | power_dbm deviated by 10.90 dB at its peak |
-| RF-02:4 | power_dbm deviated by 8.58 dB at its peak |
-| RF-02:4 | power_dbm deviated by 9.64 dB at its peak |
-| RF-02:4 | power_dbm deviated by 11.11 dB at its peak |
-| RF-03:4 | power_dbm deviated by 11.18 dB at its peak |
-| RF-03:4 | power_dbm deviated by 9.28 dB at its peak |
-| RF-03:4 | power_dbm deviated by 9.86 dB at its peak |
-| RF-03:4 | power_dbm deviated by 8.46 dB at its peak |
+| RF-01:4 | 13.43 &middot; 10.62 &middot; 8.37 &middot; 9.20 &middot; 14.95 |
+| RF-02:4 | 8.53 &middot; 10.90 &middot; 8.58 &middot; 9.64 &middot; 11.11 |
+| RF-03:4 | 11.18 &middot; 9.28 &middot; 9.86 &middot; 8.46 |
 
-*TRACK-GAP / track_rate_excess* -- 1 finding
+**TRACK-GAP / track_rate_excess** &middot; 1 finding
 
-| Source | What it found |
-|---|---|
-| 60 km disc | 6 discontinuities during the window against 0 outside it, a rate ratio of 18.23 |
+**60 km disc** -- 6 discontinuities during the window against 0 outside it, a rate ratio of 18.23
 
-*TRACK-GAP / track_continuity_gap* -- 14 findings
+**TRACK-GAP / track_continuity_gap** &middot; 14 findings
 
-| Source | What it found |
-|---|---|
-| AC-0ced9601dd53 | reporting from this aircraft broke during the window |
-| AC-195d53328027 | reporting from this aircraft broke during the window |
-| AC-38fa046f093c | reporting from this aircraft broke during the window |
-| AC-6070168602bf | reporting from this aircraft broke during the window |
-| AC-6d57956aee92 | reporting from this aircraft broke during the window |
-| AC-6d57956aee92 | reporting from this aircraft broke during the window |
-| AC-85a9bcf7e274 | reporting from this aircraft broke during the window |
-| AC-95c06f5715b6 | reporting from this aircraft broke during the window |
-| AC-b92c8fe3d0f0 | reporting from this aircraft broke during the window |
-| AC-c6191e183fc9 | reporting from this aircraft broke during the window |
-| AC-d834848b9fb1 | reporting from this aircraft broke during the window |
-| AC-f65bb79d61e9 | reporting from this aircraft broke during the window |
-| AC-f65bb79d61e9 | reporting from this aircraft broke during the window |
-| AC-f68b84990035 | reporting from this aircraft broke during the window |
+reporting from this aircraft broke during the window
 
-**What the rules could not determine**
+AC-0ced9601dd53 &middot; AC-195d53328027 &middot; AC-38fa046f093c &middot; AC-6070168602bf &middot; AC-6d57956aee92 (x2) &middot; AC-85a9bcf7e274 &middot; AC-95c06f5715b6 &middot; AC-b92c8fe3d0f0 &middot; AC-c6191e183fc9 &middot; AC-d834848b9fb1 &middot; AC-f65bb79d61e9 (x2) &middot; AC-f68b84990035
+
+### What the rules could not determine
 
 - **track** -- the local discontinuity rate could not be measured: the reference period outside this window held no track findings, so the ratio would consist of nothing but the smoothing constant and is not a comparison of two observed rates. This is the majority case, and it means the aircraft side neither supports nor contradicts the radio evidence here.
-- **RF-01:4** -- a deviation on channel 4 of RF-01 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
-- **RF-02:4** -- (raised 2 times) a deviation on channel 4 of RF-02 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
-- **RF-03:4** -- (raised 3 times) a deviation on channel 4 of RF-03 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
+- **a deviation on channel 4 of ... lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.**
+  RF-01 &middot; RF-02 (x2) &middot; RF-03 (x3)
 
 ### Hypothesis A
 
@@ -375,59 +313,37 @@ Check for independent reports of interference or technical issues from aircraft 
 
 | | |
 |---|---|
-| **Time window** | 2022-06-27 12:38 to 12:43 |
-| **Subject** | RF-06, RF-07 |
-| **Channels** | 4 |
+| **When** | 2022-06-27 12:38 to 12:43 |
+| **Where** | RF-06, RF-07 &middot; channel 4 |
 
-**What the detection rules concluded**
+### The conclusion being explained
 
-> **FUSION-SPATIAL / possible_interference_zone** -- RF-06, RF-07
->
 > the reference period holds no track findings, so its rate is nothing but the smoothing constant and the ratio compares one observed rate against an assumption. A disc with nothing in it is not a disc that showed no disruption.
+>
+> *FUSION-SPATIAL / possible_interference_zone* &middot; RF-06, RF-07
 
-**Findings behind that conclusion**
+### The evidence behind it
 
-*RF-NOISE / rf_noise_deviation* -- 9 findings
+**RF-NOISE / rf_noise_deviation** &middot; 9 findings
 
-| Source | What it found |
+power_dbm deviated by ... dB at its peak
+
+| Source | |
 |---|---|
-| RF-06:4 | power_dbm deviated by 13.50 dB at its peak |
-| RF-06:4 | power_dbm deviated by 10.25 dB at its peak |
-| RF-06:4 | power_dbm deviated by 7.07 dB at its peak |
-| RF-06:4 | power_dbm deviated by 13.59 dB at its peak |
-| RF-06:4 | power_dbm deviated by 10.17 dB at its peak |
-| RF-06:4 | power_dbm deviated by 9.47 dB at its peak |
-| RF-07:4 | power_dbm deviated by 11.65 dB at its peak |
-| RF-07:4 | power_dbm deviated by 8.72 dB at its peak |
-| RF-07:4 | power_dbm deviated by 13.20 dB at its peak |
+| RF-06:4 | 13.50 &middot; 10.25 &middot; 7.07 &middot; 13.59 &middot; 10.17 &middot; 9.47 |
+| RF-07:4 | 11.65 &middot; 8.72 &middot; 13.20 |
 
-*TRACK-GAP / track_rate_excess* -- 1 finding
+**TRACK-GAP / track_rate_excess** &middot; 1 finding
 
-| Source | What it found |
-|---|---|
-| 60 km disc | 4 discontinuities during the window against 0 outside it, a rate ratio of 11.47 |
+**60 km disc** -- 4 discontinuities during the window against 0 outside it, a rate ratio of 11.47
 
-*TRACK-GAP / track_continuity_gap* -- 15 findings
+**TRACK-GAP / track_continuity_gap** &middot; 15 findings
 
-| Source | What it found |
-|---|---|
-| AC-0ced9601dd53 | reporting from this aircraft broke during the window |
-| AC-195d53328027 | reporting from this aircraft broke during the window |
-| AC-38fa046f093c | reporting from this aircraft broke during the window |
-| AC-5b705c3f3d6a | reporting from this aircraft broke during the window |
-| AC-6070168602bf | reporting from this aircraft broke during the window |
-| AC-6d57956aee92 | reporting from this aircraft broke during the window |
-| AC-6d57956aee92 | reporting from this aircraft broke during the window |
-| AC-85a9bcf7e274 | reporting from this aircraft broke during the window |
-| AC-b726526b14f6 | reporting from this aircraft broke during the window |
-| AC-d834848b9fb1 | reporting from this aircraft broke during the window |
-| AC-dbf042c707b1 | reporting from this aircraft broke during the window |
-| AC-dbf042c707b1 | reporting from this aircraft broke during the window |
-| AC-e422e702fa25 | reporting from this aircraft broke during the window |
-| AC-f65bb79d61e9 | reporting from this aircraft broke during the window |
-| AC-f65bb79d61e9 | reporting from this aircraft broke during the window |
+reporting from this aircraft broke during the window
 
-**What the rules could not determine**
+AC-0ced9601dd53 &middot; AC-195d53328027 &middot; AC-38fa046f093c &middot; AC-5b705c3f3d6a &middot; AC-6070168602bf &middot; AC-6d57956aee92 (x2) &middot; AC-85a9bcf7e274 &middot; AC-b726526b14f6 &middot; AC-d834848b9fb1 &middot; AC-dbf042c707b1 (x2) &middot; AC-e422e702fa25 &middot; AC-f65bb79d61e9 (x2)
+
+### What the rules could not determine
 
 - **track** -- the local discontinuity rate could not be measured: the reference period outside this window held no track findings, so the ratio would consist of nothing but the smoothing constant and is not a comparison of two observed rates. This is the majority case, and it means the aircraft side neither supports nor contradicts the radio evidence here.
 - **RF-06:4** -- a deviation on channel 4 of RF-06 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
@@ -494,65 +410,42 @@ Corroborate the deviation at RF-06, RF-07 against a source outside this system -
 
 | | |
 |---|---|
-| **Time window** | 2022-06-27 12:23 to 12:28 |
-| **Subject** | RF-01, RF-02, RF-03 |
-| **Channels** | 4 |
+| **When** | 2022-06-27 12:23 to 12:28 |
+| **Where** | RF-01, RF-02, RF-03 &middot; channel 4 |
 
-**What the detection rules concluded**
+### The conclusion being explained
 
-> **FUSION-SPATIAL / possible_interference_zone** -- RF-01, RF-02, RF-03
->
 > the reference period holds no track findings, so its rate is nothing but the smoothing constant and the ratio compares one observed rate against an assumption. A disc with nothing in it is not a disc that showed no disruption.
+>
+> *FUSION-SPATIAL / possible_interference_zone* &middot; RF-01, RF-02, RF-03
 
-**Findings behind that conclusion**
+### The evidence behind it
 
-*RF-NOISE / rf_noise_deviation* -- 16 findings
+**RF-NOISE / rf_noise_deviation** &middot; 16 findings
 
-| Source | What it found |
+power_dbm deviated by ... dB at its peak
+
+| Source | |
 |---|---|
-| RF-01:4 | power_dbm deviated by 10.62 dB at its peak |
-| RF-01:4 | power_dbm deviated by 9.16 dB at its peak |
-| RF-01:4 | power_dbm deviated by 8.73 dB at its peak |
-| RF-01:4 | power_dbm deviated by 14.11 dB at its peak |
-| RF-01:4 | power_dbm deviated by 8.60 dB at its peak |
-| RF-01:4 | power_dbm deviated by 10.51 dB at its peak |
-| RF-01:4 | power_dbm deviated by 9.27 dB at its peak |
-| RF-02:4 | power_dbm deviated by 11.01 dB at its peak |
-| RF-02:4 | power_dbm deviated by 10.25 dB at its peak |
-| RF-02:4 | power_dbm deviated by 10.83 dB at its peak |
-| RF-02:4 | power_dbm deviated by 11.46 dB at its peak |
-| RF-02:4 | power_dbm deviated by 10.31 dB at its peak |
-| RF-03:4 | power_dbm deviated by 8.96 dB at its peak |
-| RF-03:4 | power_dbm deviated by 11.47 dB at its peak |
-| RF-03:4 | power_dbm deviated by 11.04 dB at its peak |
-| RF-03:4 | power_dbm deviated by 10.65 dB at its peak |
+| RF-01:4 | 10.62 &middot; 9.16 &middot; 8.73 &middot; 14.11 &middot; 8.60 &middot; 10.51 &middot; 9.27 |
+| RF-02:4 | 11.01 &middot; 10.25 &middot; 10.83 &middot; 11.46 &middot; 10.31 |
+| RF-03:4 | 8.96 &middot; 11.47 &middot; 11.04 &middot; 10.65 |
 
-*TRACK-GAP / track_rate_excess* -- 1 finding
+**TRACK-GAP / track_rate_excess** &middot; 1 finding
 
-| Source | What it found |
-|---|---|
-| 60 km disc | 4 discontinuities during the window against 0 outside it, a rate ratio of 11.47 |
+**60 km disc** -- 4 discontinuities during the window against 0 outside it, a rate ratio of 11.47
 
-*TRACK-GAP / track_continuity_gap* -- 9 findings
+**TRACK-GAP / track_continuity_gap** &middot; 9 findings
 
-| Source | What it found |
-|---|---|
-| AC-01df46f171f3 | reporting from this aircraft broke during the window |
-| AC-195d53328027 | reporting from this aircraft broke during the window |
-| AC-3ae425dee296 | reporting from this aircraft broke during the window |
-| AC-78979e3b3ff3 | reporting from this aircraft broke during the window |
-| AC-9c923c64bcc2 | reporting from this aircraft broke during the window |
-| AC-c157c480dc72 | reporting from this aircraft broke during the window |
-| AC-caa163be23a6 | reporting from this aircraft broke during the window |
-| AC-d834848b9fb1 | reporting from this aircraft broke during the window |
-| AC-dda8a23ab2cc | reporting from this aircraft broke during the window |
+reporting from this aircraft broke during the window
 
-**What the rules could not determine**
+AC-01df46f171f3 &middot; AC-195d53328027 &middot; AC-3ae425dee296 &middot; AC-78979e3b3ff3 &middot; AC-9c923c64bcc2 &middot; AC-c157c480dc72 &middot; AC-caa163be23a6 &middot; AC-d834848b9fb1 &middot; AC-dda8a23ab2cc
+
+### What the rules could not determine
 
 - **track** -- the local discontinuity rate could not be measured: the reference period outside this window held no track findings, so the ratio would consist of nothing but the smoothing constant and is not a comparison of two observed rates. This is the majority case, and it means the aircraft side neither supports nor contradicts the radio evidence here.
-- **RF-01:4** -- a deviation on channel 4 of RF-01 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
-- **RF-02:4** -- a deviation on channel 4 of RF-02 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
-- **RF-03:4** -- a deviation on channel 4 of RF-03 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
+- **a deviation on channel 4 of ... lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.**
+  RF-01 &middot; RF-02 &middot; RF-03
 
 ### Hypothesis A
 
@@ -618,59 +511,41 @@ Check for external reports of interference or outages in the affected area and t
 
 | | |
 |---|---|
-| **Time window** | 2022-06-27 12:30 to 12:36 |
-| **Subject** | RF-01, RF-03 |
-| **Channels** | 4 |
+| **When** | 2022-06-27 12:30 to 12:36 |
+| **Where** | RF-01, RF-03 &middot; channel 4 |
 
-**What the detection rules concluded**
+### The conclusion being explained
 
-> **FUSION-SPATIAL / possible_interference_zone** -- RF-01, RF-03
->
 > the reference period holds no track findings, so its rate is nothing but the smoothing constant and the ratio compares one observed rate against an assumption. A disc with nothing in it is not a disc that showed no disruption.
+>
+> *FUSION-SPATIAL / possible_interference_zone* &middot; RF-01, RF-03
 
-**Findings behind that conclusion**
+### The evidence behind it
 
-*RF-NOISE / rf_noise_deviation* -- 10 findings
+**RF-NOISE / rf_noise_deviation** &middot; 10 findings
 
-| Source | What it found |
+power_dbm deviated by ... dB at its peak
+
+| Source | |
 |---|---|
-| RF-01:4 | power_dbm deviated by 9.95 dB at its peak |
-| RF-01:4 | power_dbm deviated by 9.15 dB at its peak |
-| RF-01:4 | power_dbm deviated by 12.47 dB at its peak |
-| RF-01:4 | power_dbm deviated by 11.64 dB at its peak |
-| RF-01:4 | power_dbm deviated by 10.55 dB at its peak |
-| RF-03:4 | power_dbm deviated by 9.23 dB at its peak |
-| RF-03:4 | power_dbm deviated by 8.75 dB at its peak |
-| RF-03:4 | power_dbm deviated by 11.30 dB at its peak |
-| RF-03:4 | power_dbm deviated by 12.66 dB at its peak |
-| RF-03:4 | power_dbm deviated by 11.15 dB at its peak |
+| RF-01:4 | 9.95 &middot; 9.15 &middot; 12.47 &middot; 11.64 &middot; 10.55 |
+| RF-03:4 | 9.23 &middot; 8.75 &middot; 11.30 &middot; 12.66 &middot; 11.15 |
 
-*TRACK-GAP / track_rate_excess* -- 1 finding
+**TRACK-GAP / track_rate_excess** &middot; 1 finding
 
-| Source | What it found |
-|---|---|
-| 60 km disc | 4 discontinuities during the window against 0 outside it, a rate ratio of 11.47 |
+**60 km disc** -- 4 discontinuities during the window against 0 outside it, a rate ratio of 11.47
 
-*TRACK-GAP / track_continuity_gap* -- 10 findings
+**TRACK-GAP / track_continuity_gap** &middot; 10 findings
 
-| Source | What it found |
-|---|---|
-| AC-195d53328027 | reporting from this aircraft broke during the window |
-| AC-3ae425dee296 | reporting from this aircraft broke during the window |
-| AC-604973b41bd3 | reporting from this aircraft broke during the window |
-| AC-8fdbb17abd75 | reporting from this aircraft broke during the window |
-| AC-9d3106afb475 | reporting from this aircraft broke during the window |
-| AC-a8823f7a2d0d | reporting from this aircraft broke during the window |
-| AC-caa163be23a6 | reporting from this aircraft broke during the window |
-| AC-d57a21bd0b31 | reporting from this aircraft broke during the window |
-| AC-d834848b9fb1 | reporting from this aircraft broke during the window |
-| AC-e63feaae09bb | reporting from this aircraft broke during the window |
+reporting from this aircraft broke during the window
 
-**What the rules could not determine**
+AC-195d53328027 &middot; AC-3ae425dee296 &middot; AC-604973b41bd3 &middot; AC-8fdbb17abd75 &middot; AC-9d3106afb475 &middot; AC-a8823f7a2d0d &middot; AC-caa163be23a6 &middot; AC-d57a21bd0b31 &middot; AC-d834848b9fb1 &middot; AC-e63feaae09bb
+
+### What the rules could not determine
 
 - **track** -- the local discontinuity rate could not be measured: the reference period outside this window held no track findings, so the ratio would consist of nothing but the smoothing constant and is not a comparison of two observed rates. This is the majority case, and it means the aircraft side neither supports nor contradicts the radio evidence here.
-- **RF-01:4** -- a deviation on channel 4 of RF-01 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
-- **RF-03:4** -- (raised 2 times) a deviation on channel 4 of RF-03 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
+- **a deviation on channel 4 of ... lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.**
+  RF-01 &middot; RF-03 (x2)
 
 ### Hypothesis A
 
@@ -736,63 +611,42 @@ Corroborate the deviation at RF-01, RF-03 against a source outside this system -
 
 | | |
 |---|---|
-| **Time window** | 2022-06-27 12:36 to 12:41 |
-| **Subject** | RF-01, RF-02, RF-03 |
-| **Channels** | 4 |
+| **When** | 2022-06-27 12:36 to 12:41 |
+| **Where** | RF-01, RF-02, RF-03 &middot; channel 4 |
 
-**What the detection rules concluded**
+### The conclusion being explained
 
-> **FUSION-SPATIAL / possible_interference_zone** -- RF-01, RF-02, RF-03
->
 > the reference period holds no track findings, so its rate is nothing but the smoothing constant and the ratio compares one observed rate against an assumption. A disc with nothing in it is not a disc that showed no disruption.
+>
+> *FUSION-SPATIAL / possible_interference_zone* &middot; RF-01, RF-02, RF-03
 
-**Findings behind that conclusion**
+### The evidence behind it
 
-*RF-NOISE / rf_noise_deviation* -- 10 findings
+**RF-NOISE / rf_noise_deviation** &middot; 10 findings
 
-| Source | What it found |
+power_dbm deviated by ... dB at its peak
+
+| Source | |
 |---|---|
-| RF-01:4 | power_dbm deviated by 11.83 dB at its peak |
-| RF-01:4 | power_dbm deviated by 14.92 dB at its peak |
-| RF-01:4 | power_dbm deviated by 11.57 dB at its peak |
-| RF-01:4 | power_dbm deviated by 12.85 dB at its peak |
-| RF-02:4 | power_dbm deviated by 13.20 dB at its peak |
-| RF-02:4 | power_dbm deviated by 12.20 dB at its peak |
-| RF-03:4 | power_dbm deviated by 15.75 dB at its peak |
-| RF-03:4 | power_dbm deviated by 12.26 dB at its peak |
-| RF-03:4 | power_dbm deviated by 9.45 dB at its peak |
-| RF-03:4 | power_dbm deviated by 11.02 dB at its peak |
+| RF-01:4 | 11.83 &middot; 14.92 &middot; 11.57 &middot; 12.85 |
+| RF-02:4 | 13.20 &middot; 12.20 |
+| RF-03:4 | 15.75 &middot; 12.26 &middot; 9.45 &middot; 11.02 |
 
-*TRACK-GAP / track_rate_excess* -- 1 finding
+**TRACK-GAP / track_rate_excess** &middot; 1 finding
 
-| Source | What it found |
-|---|---|
-| 60 km disc | 3 discontinuities during the window against 0 outside it, a rate ratio of 8.85 |
+**60 km disc** -- 3 discontinuities during the window against 0 outside it, a rate ratio of 8.85
 
-*TRACK-GAP / track_continuity_gap* -- 14 findings
+**TRACK-GAP / track_continuity_gap** &middot; 14 findings
 
-| Source | What it found |
-|---|---|
-| AC-0ced9601dd53 | reporting from this aircraft broke during the window |
-| AC-195d53328027 | reporting from this aircraft broke during the window |
-| AC-19fea31858d7 | reporting from this aircraft broke during the window |
-| AC-1ac8c6bd2227 | reporting from this aircraft broke during the window |
-| AC-38fa046f093c | reporting from this aircraft broke during the window |
-| AC-6070168602bf | reporting from this aircraft broke during the window |
-| AC-6d57956aee92 | reporting from this aircraft broke during the window |
-| AC-6d57956aee92 | reporting from this aircraft broke during the window |
-| AC-85a9bcf7e274 | reporting from this aircraft broke during the window |
-| AC-a8823f7a2d0d | reporting from this aircraft broke during the window |
-| AC-caa163be23a6 | reporting from this aircraft broke during the window |
-| AC-d055f9d31e52 | reporting from this aircraft broke during the window |
-| AC-d834848b9fb1 | reporting from this aircraft broke during the window |
-| AC-d834848b9fb1 | reporting from this aircraft broke during the window |
+reporting from this aircraft broke during the window
 
-**What the rules could not determine**
+AC-0ced9601dd53 &middot; AC-195d53328027 &middot; AC-19fea31858d7 &middot; AC-1ac8c6bd2227 &middot; AC-38fa046f093c &middot; AC-6070168602bf &middot; AC-6d57956aee92 (x2) &middot; AC-85a9bcf7e274 &middot; AC-a8823f7a2d0d &middot; AC-caa163be23a6 &middot; AC-d055f9d31e52 &middot; AC-d834848b9fb1 (x2)
+
+### What the rules could not determine
 
 - **track** -- the local discontinuity rate could not be measured: the reference period outside this window held no track findings, so the ratio would consist of nothing but the smoothing constant and is not a comparison of two observed rates. This is the majority case, and it means the aircraft side neither supports nor contradicts the radio evidence here.
-- **RF-02:4** -- (raised 4 times) a deviation on channel 4 of RF-02 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
-- **RF-03:4** -- (raised 2 times) a deviation on channel 4 of RF-03 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
+- **a deviation on channel 4 of ... lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.**
+  RF-02 (x4) &middot; RF-03 (x2)
 
 ### Hypothesis A
 
@@ -861,60 +715,37 @@ Check for external reports of RF interference or outages in the area and time wi
 
 | | |
 |---|---|
-| **Time window** | 2022-06-27 12:09 to 12:14 |
-| **Subject** | RF-04, RF-05 |
-| **Channels** | 4 |
+| **When** | 2022-06-27 12:09 to 12:14 |
+| **Where** | RF-04, RF-05 &middot; channel 4 |
 
-**What the detection rules concluded**
+### The conclusion being explained
 
-> **FUSION-SPATIAL / possible_interference_zone** -- RF-04, RF-05
->
 > the reference period holds no track findings, so its rate is nothing but the smoothing constant and the ratio compares one observed rate against an assumption. A disc with nothing in it is not a disc that showed no disruption.
+>
+> *FUSION-SPATIAL / possible_interference_zone* &middot; RF-04, RF-05
 
-**Findings behind that conclusion**
+### The evidence behind it
 
-*RF-NOISE / rf_noise_deviation* -- 8 findings
+**RF-NOISE / rf_noise_deviation** &middot; 8 findings
 
-| Source | What it found |
+power_dbm deviated by ... dB at its peak
+
+| Source | |
 |---|---|
-| RF-04:4 | power_dbm deviated by 11.58 dB at its peak |
-| RF-04:4 | power_dbm deviated by 10.66 dB at its peak |
-| RF-04:4 | power_dbm deviated by 10.93 dB at its peak |
-| RF-04:4 | power_dbm deviated by 8.89 dB at its peak |
-| RF-04:4 | power_dbm deviated by 10.60 dB at its peak |
-| RF-05:4 | power_dbm deviated by 9.70 dB at its peak |
-| RF-05:4 | power_dbm deviated by 11.29 dB at its peak |
-| RF-05:4 | power_dbm deviated by 13.53 dB at its peak |
+| RF-04:4 | 11.58 &middot; 10.66 &middot; 10.93 &middot; 8.89 &middot; 10.60 |
+| RF-05:4 | 9.70 &middot; 11.29 &middot; 13.53 |
 
-*TRACK-GAP / track_rate_excess* -- 1 finding
+**TRACK-GAP / track_rate_excess** &middot; 1 finding
 
-| Source | What it found |
-|---|---|
-| 60 km disc | 6 discontinuities during the window against 0 outside it, a rate ratio of 18.23 |
+**60 km disc** -- 6 discontinuities during the window against 0 outside it, a rate ratio of 18.23
 
-*TRACK-GAP / track_continuity_gap* -- 17 findings
+**TRACK-GAP / track_continuity_gap** &middot; 17 findings
 
-| Source | What it found |
-|---|---|
-| AC-1cb8598779ad | reporting from this aircraft broke during the window |
-| AC-60af3839251d | reporting from this aircraft broke during the window |
-| AC-61d1a0c50ecd | reporting from this aircraft broke during the window |
-| AC-6647e5864ec5 | reporting from this aircraft broke during the window |
-| AC-75672d5dc92e | reporting from this aircraft broke during the window |
-| AC-7fe0246dd6aa | reporting from this aircraft broke during the window |
-| AC-9799698a3148 | reporting from this aircraft broke during the window |
-| AC-9ac925d04c44 | reporting from this aircraft broke during the window |
-| AC-9ac925d04c44 | reporting from this aircraft broke during the window |
-| AC-9ac925d04c44 | reporting from this aircraft broke during the window |
-| AC-9ac925d04c44 | reporting from this aircraft broke during the window |
-| AC-9ac925d04c44 | reporting from this aircraft broke during the window |
-| AC-b62a82cb4cb9 | reporting from this aircraft broke during the window |
-| AC-c9216688d494 | reporting from this aircraft broke during the window |
-| AC-c9216688d494 | reporting from this aircraft broke during the window |
-| AC-c9216688d494 | reporting from this aircraft broke during the window |
-| AC-f0f13c34444b | reporting from this aircraft broke during the window |
+reporting from this aircraft broke during the window
 
-**What the rules could not determine**
+AC-1cb8598779ad &middot; AC-60af3839251d &middot; AC-61d1a0c50ecd &middot; AC-6647e5864ec5 &middot; AC-75672d5dc92e &middot; AC-7fe0246dd6aa &middot; AC-9799698a3148 &middot; AC-9ac925d04c44 (x5) &middot; AC-b62a82cb4cb9 &middot; AC-c9216688d494 (x3) &middot; AC-f0f13c34444b
+
+### What the rules could not determine
 
 - **track** -- the local discontinuity rate could not be measured: the reference period outside this window held no track findings, so the ratio would consist of nothing but the smoothing constant and is not a comparison of two observed rates. This is the majority case, and it means the aircraft side neither supports nor contradicts the radio evidence here.
 - **RF-05:4** -- (raised 2 times) a deviation on channel 4 of RF-05 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
@@ -983,50 +814,37 @@ Corroborate the deviation at RF-04, RF-05 against a source outside this system -
 
 | | |
 |---|---|
-| **Time window** | 2022-06-27 12:24 to 12:30 |
-| **Subject** | RF-04, RF-05 |
-| **Channels** | 4 |
+| **When** | 2022-06-27 12:24 to 12:30 |
+| **Where** | RF-04, RF-05 &middot; channel 4 |
 
-**What the detection rules concluded**
+### The conclusion being explained
 
-> **FUSION-SPATIAL / possible_interference_zone** -- RF-04, RF-05
->
 > the reference period holds no track findings, so its rate is nothing but the smoothing constant and the ratio compares one observed rate against an assumption. A disc with nothing in it is not a disc that showed no disruption.
+>
+> *FUSION-SPATIAL / possible_interference_zone* &middot; RF-04, RF-05
 
-**Findings behind that conclusion**
+### The evidence behind it
 
-*RF-NOISE / rf_noise_deviation* -- 7 findings
+**RF-NOISE / rf_noise_deviation** &middot; 7 findings
 
-| Source | What it found |
+power_dbm deviated by ... dB at its peak
+
+| Source | |
 |---|---|
-| RF-04:4 | power_dbm deviated by 12.30 dB at its peak |
-| RF-04:4 | power_dbm deviated by 7.43 dB at its peak |
-| RF-04:4 | power_dbm deviated by 9.98 dB at its peak |
-| RF-04:4 | power_dbm deviated by 10.59 dB at its peak |
-| RF-05:4 | power_dbm deviated by 10.51 dB at its peak |
-| RF-05:4 | power_dbm deviated by 11.43 dB at its peak |
-| RF-05:4 | power_dbm deviated by 12.67 dB at its peak |
+| RF-04:4 | 12.30 &middot; 7.43 &middot; 9.98 &middot; 10.59 |
+| RF-05:4 | 10.51 &middot; 11.43 &middot; 12.67 |
 
-*TRACK-GAP / track_rate_excess* -- 1 finding
+**TRACK-GAP / track_rate_excess** &middot; 1 finding
 
-| Source | What it found |
-|---|---|
-| 60 km disc | 3 discontinuities during the window against 0 outside it, a rate ratio of 9.09 |
+**60 km disc** -- 3 discontinuities during the window against 0 outside it, a rate ratio of 9.09
 
-*TRACK-GAP / track_continuity_gap* -- 8 findings
+**TRACK-GAP / track_continuity_gap** &middot; 8 findings
 
-| Source | What it found |
-|---|---|
-| AC-01df46f171f3 | reporting from this aircraft broke during the window |
-| AC-06ce04b438f6 | reporting from this aircraft broke during the window |
-| AC-195d53328027 | reporting from this aircraft broke during the window |
-| AC-19fea31858d7 | reporting from this aircraft broke during the window |
-| AC-7466d670a158 | reporting from this aircraft broke during the window |
-| AC-c157c480dc72 | reporting from this aircraft broke during the window |
-| AC-d834848b9fb1 | reporting from this aircraft broke during the window |
-| AC-dc9c0d886a85 | reporting from this aircraft broke during the window |
+reporting from this aircraft broke during the window
 
-**What the rules could not determine**
+AC-01df46f171f3 &middot; AC-06ce04b438f6 &middot; AC-195d53328027 &middot; AC-19fea31858d7 &middot; AC-7466d670a158 &middot; AC-c157c480dc72 &middot; AC-d834848b9fb1 &middot; AC-dc9c0d886a85
+
+### What the rules could not determine
 
 - **track** -- the local discontinuity rate could not be measured: the reference period outside this window held no track findings, so the ratio would consist of nothing but the smoothing constant and is not a comparison of two observed rates. This is the majority case, and it means the aircraft side neither supports nor contradicts the radio evidence here.
 - **RF-05:4** -- (raised 3 times) a deviation on channel 4 of RF-05 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
@@ -1095,70 +913,38 @@ Corroborate the deviation at RF-04, RF-05 against a source outside this system -
 
 | | |
 |---|---|
-| **Time window** | 2022-06-27 12:44 to 12:50 |
-| **Subject** | RF-04, RF-05, RF-06 |
-| **Channels** | 4 |
+| **When** | 2022-06-27 12:44 to 12:50 |
+| **Where** | RF-04, RF-05, RF-06 &middot; channel 4 |
 
-**What the detection rules concluded**
+### The conclusion being explained
 
-> **FUSION-SPATIAL / possible_interference_zone** -- RF-04, RF-05, RF-06
->
 > the reference period holds no track findings, so its rate is nothing but the smoothing constant and the ratio compares one observed rate against an assumption. A disc with nothing in it is not a disc that showed no disruption.
+>
+> *FUSION-SPATIAL / possible_interference_zone* &middot; RF-04, RF-05, RF-06
 
-**Findings behind that conclusion**
+### The evidence behind it
 
-*RF-NOISE / rf_noise_deviation* -- 17 findings
+**RF-NOISE / rf_noise_deviation** &middot; 17 findings
 
-| Source | What it found |
+power_dbm deviated by ... dB at its peak
+
+| Source | |
 |---|---|
-| RF-04:4 | power_dbm deviated by 13.81 dB at its peak |
-| RF-04:4 | power_dbm deviated by 7.14 dB at its peak |
-| RF-04:4 | power_dbm deviated by 12.52 dB at its peak |
-| RF-04:4 | power_dbm deviated by 11.11 dB at its peak |
-| RF-04:4 | power_dbm deviated by 9.56 dB at its peak |
-| RF-04:4 | power_dbm deviated by 16.43 dB at its peak |
-| RF-04:4 | power_dbm deviated by 11.43 dB at its peak |
-| RF-05:4 | power_dbm deviated by 9.51 dB at its peak |
-| RF-05:4 | power_dbm deviated by 8.33 dB at its peak |
-| RF-05:4 | power_dbm deviated by 13.78 dB at its peak |
-| RF-05:4 | power_dbm deviated by 12.04 dB at its peak |
-| RF-05:4 | power_dbm deviated by 11.53 dB at its peak |
-| RF-06:4 | power_dbm deviated by 9.82 dB at its peak |
-| RF-06:4 | power_dbm deviated by 10.69 dB at its peak |
-| RF-06:4 | power_dbm deviated by 13.35 dB at its peak |
-| RF-06:4 | power_dbm deviated by 9.61 dB at its peak |
-| RF-06:4 | power_dbm deviated by 10.16 dB at its peak |
+| RF-04:4 | 13.81 &middot; 7.14 &middot; 12.52 &middot; 11.11 &middot; 9.56 &middot; 16.43 &middot; 11.43 |
+| RF-05:4 | 9.51 &middot; 8.33 &middot; 13.78 &middot; 12.04 &middot; 11.53 |
+| RF-06:4 | 9.82 &middot; 10.69 &middot; 13.35 &middot; 9.61 &middot; 10.16 |
 
-*TRACK-GAP / track_rate_excess* -- 1 finding
+**TRACK-GAP / track_rate_excess** &middot; 1 finding
 
-| Source | What it found |
-|---|---|
-| 60 km disc | 5 discontinuities during the window against 0 outside it, a rate ratio of 15.35 |
+**60 km disc** -- 5 discontinuities during the window against 0 outside it, a rate ratio of 15.35
 
-*TRACK-GAP / track_continuity_gap* -- 18 findings
+**TRACK-GAP / track_continuity_gap** &middot; 18 findings
 
-| Source | What it found |
-|---|---|
-| AC-5642295a8c20 | reporting from this aircraft broke during the window |
-| AC-593dc10d9de0 | reporting from this aircraft broke during the window |
-| AC-81fef006310b | reporting from this aircraft broke during the window |
-| AC-a7552640263d | reporting from this aircraft broke during the window |
-| AC-a9b23027455f | reporting from this aircraft broke during the window |
-| AC-a9b23027455f | reporting from this aircraft broke during the window |
-| AC-c2503f648dd8 | reporting from this aircraft broke during the window |
-| AC-c5ff24137199 | reporting from this aircraft broke during the window |
-| AC-c885475688d8 | reporting from this aircraft broke during the window |
-| AC-c91952508e7d | reporting from this aircraft broke during the window |
-| AC-d57f79591df7 | reporting from this aircraft broke during the window |
-| AC-d8fae9662ab2 | reporting from this aircraft broke during the window |
-| AC-f009c216d758 | reporting from this aircraft broke during the window |
-| AC-f65bb79d61e9 | reporting from this aircraft broke during the window |
-| AC-f65bb79d61e9 | reporting from this aircraft broke during the window |
-| AC-f65bb79d61e9 | reporting from this aircraft broke during the window |
-| AC-f65bb79d61e9 | reporting from this aircraft broke during the window |
-| AC-f81fe1d25c0f | reporting from this aircraft broke during the window |
+reporting from this aircraft broke during the window
 
-**What the rules could not determine**
+AC-5642295a8c20 &middot; AC-593dc10d9de0 &middot; AC-81fef006310b &middot; AC-a7552640263d &middot; AC-a9b23027455f (x2) &middot; AC-c2503f648dd8 &middot; AC-c5ff24137199 &middot; AC-c885475688d8 &middot; AC-c91952508e7d &middot; AC-d57f79591df7 &middot; AC-d8fae9662ab2 &middot; AC-f009c216d758 &middot; AC-f65bb79d61e9 (x4) &middot; AC-f81fe1d25c0f
+
+### What the rules could not determine
 
 - **track** -- the local discontinuity rate could not be measured: the reference period outside this window held no track findings, so the ratio would consist of nothing but the smoothing constant and is not a comparison of two observed rates. This is the majority case, and it means the aircraft side neither supports nor contradicts the radio evidence here.
 - **RF-06:4** -- (raised 3 times) a deviation on channel 4 of RF-06 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
@@ -1228,40 +1014,34 @@ Check for external reports of RF interference or outages in the affected area an
 
 | | |
 |---|---|
-| **Time window** | 2022-06-27 12:43 to 12:48 |
-| **Subject** | RF-07 |
-| **Channels** | 4 |
+| **When** | 2022-06-27 12:43 to 12:48 |
+| **Where** | RF-07 &middot; channel 4 |
 
-**What the detection rules concluded**
+### The conclusion being explained
 
-> **SENSOR-FAULT / possible_sensor_fault** -- RF-07
->
 > one receiver deviated while its measured neighbours stayed nominal, which attributes the deviation to the instrument
+>
+> *SENSOR-FAULT / possible_sensor_fault* &middot; RF-07
 
-**Findings behind that conclusion**
+### The evidence behind it
 
-*RF-NOISE / rf_noise_deviation* -- 4 findings
+**RF-NOISE / rf_noise_deviation** &middot; 4 findings
 
-| Source | What it found |
+power_dbm deviated by ... dB at its peak
+
+| Source | |
 |---|---|
-| RF-07:4 | power_dbm deviated by 11.53 dB at its peak |
-| RF-07:4 | power_dbm deviated by 13.59 dB at its peak |
-| RF-07:4 | power_dbm deviated by 9.68 dB at its peak |
-| RF-07:4 | power_dbm deviated by 11.72 dB at its peak |
+| RF-07:4 | 11.53 &middot; 13.59 &middot; 9.68 &middot; 11.72 |
 
-*SENSOR-FAULT / neighbour_nominal* -- 1 finding
+**SENSOR-FAULT / neighbour_nominal** &middot; 1 finding
 
-| Source | What it found |
-|---|---|
-| RF-06 | RF-06 was measured and stayed within 2.0 dB of its baseline |
+**RF-06** -- RF-06 was measured and stayed within 2.0 dB of its baseline
 
-*SENSOR-FAULT / channel_adjacency* -- 1 finding
+**SENSOR-FAULT / channel_adjacency** &middot; 1 finding
 
-| Source | What it found |
-|---|---|
-| RF-07 | the deviation is confined to 1 of 8 channels |
+**RF-07** -- the deviation is confined to 1 of 8 channels
 
-**What the rules could not determine**
+### What the rules could not determine
 
 - **track** -- the aircraft side was not consulted. A single-receiver fault verdict does not reach the fusion rule, so the absence of track evidence here is by design and is not a measurement that came back empty.
 - **RF-07:4** -- (raised 3 times) a deviation on channel 4 of RF-07 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
@@ -1331,39 +1111,34 @@ Check the receiver at RF-07 against its own maintenance record and its neighbour
 
 | | |
 |---|---|
-| **Time window** | 2022-06-27 12:38 to 12:43 |
-| **Subject** | RF-07 |
-| **Channels** | 4 |
+| **When** | 2022-06-27 12:38 to 12:43 |
+| **Where** | RF-07 &middot; channel 4 |
 
-**What the detection rules concluded**
+### The conclusion being explained
 
-> **SENSOR-FAULT / possible_sensor_fault** -- RF-07
->
 > one receiver deviated while its measured neighbours stayed nominal, which attributes the deviation to the instrument
+>
+> *SENSOR-FAULT / possible_sensor_fault* &middot; RF-07
 
-**Findings behind that conclusion**
+### The evidence behind it
 
-*RF-NOISE / rf_noise_deviation* -- 3 findings
+**RF-NOISE / rf_noise_deviation** &middot; 3 findings
 
-| Source | What it found |
+power_dbm deviated by ... dB at its peak
+
+| Source | |
 |---|---|
-| RF-07:4 | power_dbm deviated by 11.65 dB at its peak |
-| RF-07:4 | power_dbm deviated by 8.72 dB at its peak |
-| RF-07:4 | power_dbm deviated by 13.20 dB at its peak |
+| RF-07:4 | 11.65 &middot; 8.72 &middot; 13.20 |
 
-*SENSOR-FAULT / neighbour_nominal* -- 1 finding
+**SENSOR-FAULT / neighbour_nominal** &middot; 1 finding
 
-| Source | What it found |
-|---|---|
-| RF-06 | RF-06 was measured and stayed within 2.0 dB of its baseline |
+**RF-06** -- RF-06 was measured and stayed within 2.0 dB of its baseline
 
-*SENSOR-FAULT / channel_adjacency* -- 1 finding
+**SENSOR-FAULT / channel_adjacency** &middot; 1 finding
 
-| Source | What it found |
-|---|---|
-| RF-07 | the deviation is confined to 1 of 8 channels |
+**RF-07** -- the deviation is confined to 1 of 8 channels
 
-**What the rules could not determine**
+### What the rules could not determine
 
 - **track** -- the aircraft side was not consulted. A single-receiver fault verdict does not reach the fusion rule, so the absence of track evidence here is by design and is not a measurement that came back empty.
 
@@ -1428,41 +1203,34 @@ Physically inspect and test RF-07 channel 4 hardware for faults; if possible, co
 
 | | |
 |---|---|
-| **Time window** | 2022-06-27 12:09 to 12:14 |
-| **Subject** | RF-04 |
-| **Channels** | 4 |
+| **When** | 2022-06-27 12:09 to 12:14 |
+| **Where** | RF-04 &middot; channel 4 |
 
-**What the detection rules concluded**
+### The conclusion being explained
 
-> **SENSOR-FAULT / possible_sensor_fault** -- RF-04
->
 > one receiver deviated while its measured neighbours stayed nominal, which attributes the deviation to the instrument
+>
+> *SENSOR-FAULT / possible_sensor_fault* &middot; RF-04
 
-**Findings behind that conclusion**
+### The evidence behind it
 
-*RF-NOISE / rf_noise_deviation* -- 5 findings
+**RF-NOISE / rf_noise_deviation** &middot; 5 findings
 
-| Source | What it found |
+power_dbm deviated by ... dB at its peak
+
+| Source | |
 |---|---|
-| RF-04:4 | power_dbm deviated by 11.58 dB at its peak |
-| RF-04:4 | power_dbm deviated by 10.66 dB at its peak |
-| RF-04:4 | power_dbm deviated by 10.93 dB at its peak |
-| RF-04:4 | power_dbm deviated by 8.89 dB at its peak |
-| RF-04:4 | power_dbm deviated by 10.60 dB at its peak |
+| RF-04:4 | 11.58 &middot; 10.66 &middot; 10.93 &middot; 8.89 &middot; 10.60 |
 
-*SENSOR-FAULT / neighbour_nominal* -- 1 finding
+**SENSOR-FAULT / neighbour_nominal** &middot; 1 finding
 
-| Source | What it found |
-|---|---|
-| RF-05 | RF-05 was measured and stayed within 2.0 dB of its baseline |
+**RF-05** -- RF-05 was measured and stayed within 2.0 dB of its baseline
 
-*SENSOR-FAULT / channel_adjacency* -- 1 finding
+**SENSOR-FAULT / channel_adjacency** &middot; 1 finding
 
-| Source | What it found |
-|---|---|
-| RF-04 | the deviation is confined to 1 of 8 channels |
+**RF-04** -- the deviation is confined to 1 of 8 channels
 
-**What the rules could not determine**
+### What the rules could not determine
 
 - **track** -- the aircraft side was not consulted. A single-receiver fault verdict does not reach the fusion rule, so the absence of track evidence here is by design and is not a measurement that came back empty.
 
@@ -1527,41 +1295,39 @@ Physically inspect and test RF-04 channel 4 hardware to confirm or rule out a se
 
 | | |
 |---|---|
-| **Time window** | 2022-06-27 12:09 to 12:14 |
-| **Subject** | RF-06 |
-| **Channels** | 4 |
+| **When** | 2022-06-27 12:09 to 12:14 |
+| **Where** | RF-06 &middot; channel 4 |
 
-**What the detection rules concluded**
+### The conclusion being explained
 
-> **SENSOR-FAULT / possible_sensor_fault** -- RF-06
->
 > one receiver deviated while its measured neighbours stayed nominal, which attributes the deviation to the instrument
+>
+> *SENSOR-FAULT / possible_sensor_fault* &middot; RF-06
 
-**Findings behind that conclusion**
+### The evidence behind it
 
-*RF-NOISE / rf_noise_deviation* -- 4 findings
+**RF-NOISE / rf_noise_deviation** &middot; 4 findings
 
-| Source | What it found |
+power_dbm deviated by ... dB at its peak
+
+| Source | |
 |---|---|
-| RF-06:4 | power_dbm deviated by 8.66 dB at its peak |
-| RF-06:4 | power_dbm deviated by 13.42 dB at its peak |
-| RF-06:4 | power_dbm deviated by 8.40 dB at its peak |
-| RF-06:4 | power_dbm deviated by 10.68 dB at its peak |
+| RF-06:4 | 8.66 &middot; 13.42 &middot; 8.40 &middot; 10.68 |
 
-*SENSOR-FAULT / neighbour_nominal* -- 2 findings
+**SENSOR-FAULT / neighbour_nominal** &middot; 2 findings
 
-| Source | What it found |
+... was measured and stayed within 2.0 dB of its baseline
+
+| Source | |
 |---|---|
-| RF-07 | RF-07 was measured and stayed within 2.0 dB of its baseline |
-| RF-05 | RF-05 was measured and stayed within 2.0 dB of its baseline |
+| RF-07 | RF-07 |
+| RF-05 | RF-05 |
 
-*SENSOR-FAULT / channel_adjacency* -- 1 finding
+**SENSOR-FAULT / channel_adjacency** &middot; 1 finding
 
-| Source | What it found |
-|---|---|
-| RF-06 | the deviation is confined to 1 of 8 channels |
+**RF-06** -- the deviation is confined to 1 of 8 channels
 
-**What the rules could not determine**
+### What the rules could not determine
 
 - **track** -- the aircraft side was not consulted. A single-receiver fault verdict does not reach the fusion rule, so the absence of track evidence here is by design and is not a measurement that came back empty.
 - **RF-06:4** -- (raised 3 times) a deviation on channel 4 of RF-06 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
@@ -1631,38 +1397,34 @@ Check the receiver at RF-06 against its own maintenance record and its neighbour
 
 | | |
 |---|---|
-| **Time window** | 2022-06-27 12:26 to 12:30 |
-| **Subject** | RF-02 |
-| **Channels** | 4 |
+| **When** | 2022-06-27 12:26 to 12:30 |
+| **Where** | RF-02 &middot; channel 4 |
 
-**What the detection rules concluded**
+### The conclusion being explained
 
-> **SENSOR-FAULT / possible_sensor_fault** -- RF-02
->
 > one receiver deviated while its measured neighbours stayed nominal, which attributes the deviation to the instrument
+>
+> *SENSOR-FAULT / possible_sensor_fault* &middot; RF-02
 
-**Findings behind that conclusion**
+### The evidence behind it
 
-*RF-NOISE / rf_noise_deviation* -- 2 findings
+**RF-NOISE / rf_noise_deviation** &middot; 2 findings
 
-| Source | What it found |
+power_dbm deviated by ... dB at its peak
+
+| Source | |
 |---|---|
-| RF-02:4 | power_dbm deviated by 10.11 dB at its peak |
-| RF-02:4 | power_dbm deviated by 10.04 dB at its peak |
+| RF-02:4 | 10.11 &middot; 10.04 |
 
-*SENSOR-FAULT / neighbour_nominal* -- 1 finding
+**SENSOR-FAULT / neighbour_nominal** &middot; 1 finding
 
-| Source | What it found |
-|---|---|
-| RF-01 | RF-01 was measured and stayed within 2.0 dB of its baseline |
+**RF-01** -- RF-01 was measured and stayed within 2.0 dB of its baseline
 
-*SENSOR-FAULT / channel_adjacency* -- 1 finding
+**SENSOR-FAULT / channel_adjacency** &middot; 1 finding
 
-| Source | What it found |
-|---|---|
-| RF-02 | the deviation is confined to 1 of 8 channels |
+**RF-02** -- the deviation is confined to 1 of 8 channels
 
-**What the rules could not determine**
+### What the rules could not determine
 
 - **track** -- the aircraft side was not consulted. A single-receiver fault verdict does not reach the fusion rule, so the absence of track evidence here is by design and is not a measurement that came back empty.
 - **RF-02:4** -- (raised 3 times) a deviation on channel 4 of RF-02 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
@@ -1732,42 +1494,34 @@ Check the receiver at RF-02 against its own maintenance record and its neighbour
 
 | | |
 |---|---|
-| **Time window** | 2022-06-27 12:25 to 12:30 |
-| **Subject** | RF-02 |
-| **Channels** | 4 |
+| **When** | 2022-06-27 12:25 to 12:30 |
+| **Where** | RF-02 &middot; channel 4 |
 
-**What the detection rules concluded**
+### The conclusion being explained
 
-> **SENSOR-FAULT / possible_sensor_fault** -- RF-02
->
 > one receiver deviated while its measured neighbours stayed nominal, which attributes the deviation to the instrument
+>
+> *SENSOR-FAULT / possible_sensor_fault* &middot; RF-02
 
-**Findings behind that conclusion**
+### The evidence behind it
 
-*RF-NOISE / rf_noise_deviation* -- 6 findings
+**RF-NOISE / rf_noise_deviation** &middot; 6 findings
 
-| Source | What it found |
+power_dbm deviated by ... dB at its peak
+
+| Source | |
 |---|---|
-| RF-02:4 | power_dbm deviated by 10.73 dB at its peak |
-| RF-02:4 | power_dbm deviated by 10.40 dB at its peak |
-| RF-02:4 | power_dbm deviated by 11.28 dB at its peak |
-| RF-02:4 | power_dbm deviated by 9.93 dB at its peak |
-| RF-02:4 | power_dbm deviated by 11.07 dB at its peak |
-| RF-02:4 | power_dbm deviated by 10.53 dB at its peak |
+| RF-02:4 | 10.73 &middot; 10.40 &middot; 11.28 &middot; 9.93 &middot; 11.07 &middot; 10.53 |
 
-*SENSOR-FAULT / neighbour_nominal* -- 1 finding
+**SENSOR-FAULT / neighbour_nominal** &middot; 1 finding
 
-| Source | What it found |
-|---|---|
-| RF-01 | RF-01 was measured and stayed within 2.0 dB of its baseline |
+**RF-01** -- RF-01 was measured and stayed within 2.0 dB of its baseline
 
-*SENSOR-FAULT / channel_adjacency* -- 1 finding
+**SENSOR-FAULT / channel_adjacency** &middot; 1 finding
 
-| Source | What it found |
-|---|---|
-| RF-02 | the deviation is confined to 1 of 8 channels |
+**RF-02** -- the deviation is confined to 1 of 8 channels
 
-**What the rules could not determine**
+### What the rules could not determine
 
 - **track** -- the aircraft side was not consulted. A single-receiver fault verdict does not reach the fusion rule, so the absence of track evidence here is by design and is not a measurement that came back empty.
 - **RF-02:4** -- a deviation on channel 4 of RF-02 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
@@ -1835,40 +1589,34 @@ Inspect and test channel 4 hardware on RF-02 for faults; if possible, corroborat
 
 | | |
 |---|---|
-| **Time window** | 2022-06-27 12:31 to 12:36 |
-| **Subject** | RF-07 |
-| **Channels** | 4 |
+| **When** | 2022-06-27 12:31 to 12:36 |
+| **Where** | RF-07 &middot; channel 4 |
 
-**What the detection rules concluded**
+### The conclusion being explained
 
-> **SENSOR-FAULT / possible_sensor_fault** -- RF-07
->
 > one receiver deviated while its measured neighbours stayed nominal, which attributes the deviation to the instrument
+>
+> *SENSOR-FAULT / possible_sensor_fault* &middot; RF-07
 
-**Findings behind that conclusion**
+### The evidence behind it
 
-*RF-NOISE / rf_noise_deviation* -- 4 findings
+**RF-NOISE / rf_noise_deviation** &middot; 4 findings
 
-| Source | What it found |
+power_dbm deviated by ... dB at its peak
+
+| Source | |
 |---|---|
-| RF-07:4 | power_dbm deviated by 8.51 dB at its peak |
-| RF-07:4 | power_dbm deviated by 11.63 dB at its peak |
-| RF-07:4 | power_dbm deviated by 10.91 dB at its peak |
-| RF-07:4 | power_dbm deviated by 12.76 dB at its peak |
+| RF-07:4 | 8.51 &middot; 11.63 &middot; 10.91 &middot; 12.76 |
 
-*SENSOR-FAULT / neighbour_nominal* -- 1 finding
+**SENSOR-FAULT / neighbour_nominal** &middot; 1 finding
 
-| Source | What it found |
-|---|---|
-| RF-06 | RF-06 was measured and stayed within 2.0 dB of its baseline |
+**RF-06** -- RF-06 was measured and stayed within 2.0 dB of its baseline
 
-*SENSOR-FAULT / channel_adjacency* -- 1 finding
+**SENSOR-FAULT / channel_adjacency** &middot; 1 finding
 
-| Source | What it found |
-|---|---|
-| RF-07 | the deviation is confined to 1 of 8 channels |
+**RF-07** -- the deviation is confined to 1 of 8 channels
 
-**What the rules could not determine**
+### What the rules could not determine
 
 - **track** -- the aircraft side was not consulted. A single-receiver fault verdict does not reach the fusion rule, so the absence of track evidence here is by design and is not a measurement that came back empty.
 - **RF-07:4** -- (raised 3 times) a deviation on channel 4 of RF-07 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
@@ -1938,44 +1686,39 @@ Physically inspect and test RF-07 channel 4 hardware for faults; if possible, co
 
 | | |
 |---|---|
-| **Time window** | 2022-06-27 12:23 to 12:28 |
-| **Subject** | RF-01 |
-| **Channels** | 4 |
+| **When** | 2022-06-27 12:23 to 12:28 |
+| **Where** | RF-01 &middot; channel 4 |
 
-**What the detection rules concluded**
+### The conclusion being explained
 
-> **SENSOR-FAULT / possible_sensor_fault** -- RF-01
->
 > one receiver deviated while its measured neighbours stayed nominal, which attributes the deviation to the instrument
+>
+> *SENSOR-FAULT / possible_sensor_fault* &middot; RF-01
 
-**Findings behind that conclusion**
+### The evidence behind it
 
-*RF-NOISE / rf_noise_deviation* -- 7 findings
+**RF-NOISE / rf_noise_deviation** &middot; 7 findings
 
-| Source | What it found |
+power_dbm deviated by ... dB at its peak
+
+| Source | |
 |---|---|
-| RF-01:4 | power_dbm deviated by 10.62 dB at its peak |
-| RF-01:4 | power_dbm deviated by 9.16 dB at its peak |
-| RF-01:4 | power_dbm deviated by 8.73 dB at its peak |
-| RF-01:4 | power_dbm deviated by 14.11 dB at its peak |
-| RF-01:4 | power_dbm deviated by 8.60 dB at its peak |
-| RF-01:4 | power_dbm deviated by 10.51 dB at its peak |
-| RF-01:4 | power_dbm deviated by 9.27 dB at its peak |
+| RF-01:4 | 10.62 &middot; 9.16 &middot; 8.73 &middot; 14.11 &middot; 8.60 &middot; 10.51 &middot; 9.27 |
 
-*SENSOR-FAULT / neighbour_nominal* -- 2 findings
+**SENSOR-FAULT / neighbour_nominal** &middot; 2 findings
 
-| Source | What it found |
+... was measured and stayed within 2.0 dB of its baseline
+
+| Source | |
 |---|---|
-| RF-02 | RF-02 was measured and stayed within 2.0 dB of its baseline |
-| RF-03 | RF-03 was measured and stayed within 2.0 dB of its baseline |
+| RF-02 | RF-02 |
+| RF-03 | RF-03 |
 
-*SENSOR-FAULT / channel_adjacency* -- 1 finding
+**SENSOR-FAULT / channel_adjacency** &middot; 1 finding
 
-| Source | What it found |
-|---|---|
-| RF-01 | the deviation is confined to 1 of 8 channels |
+**RF-01** -- the deviation is confined to 1 of 8 channels
 
-**What the rules could not determine**
+### What the rules could not determine
 
 - **track** -- the aircraft side was not consulted. A single-receiver fault verdict does not reach the fusion rule, so the absence of track evidence here is by design and is not a measurement that came back empty.
 - **RF-01:4** -- a deviation on channel 4 of RF-01 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
@@ -2043,39 +1786,39 @@ Physically inspect and test channel 4 of RF-01 for hardware or calibration fault
 
 | | |
 |---|---|
-| **Time window** | 2022-06-27 12:09 to 12:13 |
-| **Subject** | RF-06 |
-| **Channels** | 4 |
+| **When** | 2022-06-27 12:09 to 12:13 |
+| **Where** | RF-06 &middot; channel 4 |
 
-**What the detection rules concluded**
+### The conclusion being explained
 
-> **SENSOR-FAULT / possible_sensor_fault** -- RF-06
->
 > one receiver deviated while its measured neighbours stayed nominal, which attributes the deviation to the instrument
+>
+> *SENSOR-FAULT / possible_sensor_fault* &middot; RF-06
 
-**Findings behind that conclusion**
+### The evidence behind it
 
-*RF-NOISE / rf_noise_deviation* -- 2 findings
+**RF-NOISE / rf_noise_deviation** &middot; 2 findings
 
-| Source | What it found |
+power_dbm deviated by ... dB at its peak
+
+| Source | |
 |---|---|
-| RF-06:4 | power_dbm deviated by 12.24 dB at its peak |
-| RF-06:4 | power_dbm deviated by 15.17 dB at its peak |
+| RF-06:4 | 12.24 &middot; 15.17 |
 
-*SENSOR-FAULT / neighbour_nominal* -- 2 findings
+**SENSOR-FAULT / neighbour_nominal** &middot; 2 findings
 
-| Source | What it found |
+... was measured and stayed within 2.0 dB of its baseline
+
+| Source | |
 |---|---|
-| RF-07 | RF-07 was measured and stayed within 2.0 dB of its baseline |
-| RF-05 | RF-05 was measured and stayed within 2.0 dB of its baseline |
+| RF-07 | RF-07 |
+| RF-05 | RF-05 |
 
-*SENSOR-FAULT / channel_adjacency* -- 1 finding
+**SENSOR-FAULT / channel_adjacency** &middot; 1 finding
 
-| Source | What it found |
-|---|---|
-| RF-06 | the deviation is confined to 1 of 8 channels |
+**RF-06** -- the deviation is confined to 1 of 8 channels
 
-**What the rules could not determine**
+### What the rules could not determine
 
 - **track** -- the aircraft side was not consulted. A single-receiver fault verdict does not reach the fusion rule, so the absence of track evidence here is by design and is not a measurement that came back empty.
 - **RF-06:4** -- (raised 2 times) a deviation on channel 4 of RF-06 lasted 1 reading(s), under the 10 s minimum, so it was observed and not called an event.
@@ -2144,41 +1887,39 @@ Inspect and test RF-06, especially channel 4, for hardware or calibration faults
 
 | | |
 |---|---|
-| **Time window** | 2022-06-27 12:37 to 12:42 |
-| **Subject** | RF-05 |
-| **Channels** | 4 |
+| **When** | 2022-06-27 12:37 to 12:42 |
+| **Where** | RF-05 &middot; channel 4 |
 
-**What the detection rules concluded**
+### The conclusion being explained
 
-> **SENSOR-FAULT / possible_sensor_fault** -- RF-05
->
 > one receiver deviated while its measured neighbours stayed nominal, which attributes the deviation to the instrument
+>
+> *SENSOR-FAULT / possible_sensor_fault* &middot; RF-05
 
-**Findings behind that conclusion**
+### The evidence behind it
 
-*RF-NOISE / rf_noise_deviation* -- 4 findings
+**RF-NOISE / rf_noise_deviation** &middot; 4 findings
 
-| Source | What it found |
+power_dbm deviated by ... dB at its peak
+
+| Source | |
 |---|---|
-| RF-05:4 | power_dbm deviated by 13.28 dB at its peak |
-| RF-05:4 | power_dbm deviated by 13.36 dB at its peak |
-| RF-05:4 | power_dbm deviated by 11.97 dB at its peak |
-| RF-05:4 | power_dbm deviated by 10.90 dB at its peak |
+| RF-05:4 | 13.28 &middot; 13.36 &middot; 11.97 &middot; 10.90 |
 
-*SENSOR-FAULT / neighbour_nominal* -- 2 findings
+**SENSOR-FAULT / neighbour_nominal** &middot; 2 findings
 
-| Source | What it found |
+... was measured and stayed within 2.0 dB of its baseline
+
+| Source | |
 |---|---|
-| RF-06 | RF-06 was measured and stayed within 2.0 dB of its baseline |
-| RF-04 | RF-04 was measured and stayed within 2.0 dB of its baseline |
+| RF-06 | RF-06 |
+| RF-04 | RF-04 |
 
-*SENSOR-FAULT / channel_adjacency* -- 1 finding
+**SENSOR-FAULT / channel_adjacency** &middot; 1 finding
 
-| Source | What it found |
-|---|---|
-| RF-05 | the deviation is confined to 1 of 8 channels |
+**RF-05** -- the deviation is confined to 1 of 8 channels
 
-**What the rules could not determine**
+### What the rules could not determine
 
 - **track** -- the aircraft side was not consulted. A single-receiver fault verdict does not reach the fusion rule, so the absence of track evidence here is by design and is not a measurement that came back empty.
 

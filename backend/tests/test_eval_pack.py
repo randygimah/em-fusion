@@ -409,27 +409,26 @@ def findings_of(bundle):
 def test_no_two_findings_are_rendered_into_the_same_block() -> None:
     # spec: eval-007 (a) -- the defect, stated as the renderer sees it.
     #
-    # The first pack indented its findings by two spaces, which is neither a
-    # fence nor a code block nor a list, so nineteen findings arrived as one
-    # paragraph with their column alignment collapsed. Asserting on the
-    # source would not have caught it; asserting on the rendered blocks does.
+    # Stated over *groups* rather than over findings, because the amended
+    # design gathers one group's values on purpose -- that is the fix, not a
+    # regression. What the original defect did was run findings from every
+    # rule together into one paragraph, and that is what this still forbids.
     bundle = zone_bundle()
     pack = packed(bundles=[(1, bundle)])
     pack_only = pack.hypotheses_md.split("### Hypothesis")[0]
 
-    findings = findings_of(bundle)
-    # Counted as blocks *carrying* a finding rather than by matching text to
-    # findings: two findings in this fixture have byte-identical wording from
-    # different sources, so matching on text cannot tell them apart. What the
-    # defect actually did was collapse all nineteen into one block.
-    carrying = [
-        block
-        for block in blocks(pack_only)
-        if any(finding.finding in block for finding in findings)
-    ]
-    assert len(carrying) == len(
-        findings
-    ), f"{len(findings)} findings rendered into {len(carrying)} block(s)"
+    keys = {(f.rule_id, f.finding_type) for f in findings_of(bundle)}
+    for block in blocks(pack_only):
+        present = {
+            key
+            for key in keys
+            if any(
+                f.finding in block
+                for f in findings_of(bundle)
+                if (f.rule_id, f.finding_type) == key
+            )
+        }
+        assert len(present) <= 1, f"{len(present)} rules share one block: {block!r}"
 
 
 def test_no_line_sits_in_markdowns_ambiguous_indent() -> None:
@@ -440,13 +439,19 @@ def test_no_line_sits_in_markdowns_ambiguous_indent() -> None:
         assert indent == 0 or indent >= 4, f"ambiguous indent {indent}: {line!r}"
 
 
-def test_every_finding_says_which_source_it_came_from() -> None:
-    # spec: eval-007 (d) -- the fault that is not cosmetic.
+def test_a_measurement_is_never_separated_from_its_source() -> None:
+    # spec: eval-007 (d) -- the fault that is not cosmetic, restated for the
+    # amended design.
     #
     # A hypothesis cites `RF-06:4`. The first pack rendered eight RF-NOISE
     # rows without naming a sensor on any of them, so evidence use -- the
-    # first of five dimensions -- was being scored against a pack that could
-    # not be checked against.
+    # first of five dimensions -- was scored against a pack its citations
+    # could not be checked against. Factoring the shared sentence out of a
+    # group is allowed; letting "13.43 dB" drift away from "RF-01:4" is not.
+    #
+    # Checked within the group's own block, because when every finding in a
+    # group is worded identically the measurement belongs to all of them and
+    # the sources are listed together beneath it.
     bundle = zone_bundle()
     pack = packed(bundles=[(1, bundle)])
     pack_only = pack.hypotheses_md.split("### Hypothesis")[0]
@@ -454,11 +459,24 @@ def test_every_finding_says_which_source_it_came_from() -> None:
     for finding in findings_of(bundle):
         if not finding.source:
             continue
-        rendered = [line for line in pack_only.splitlines() if finding.finding in line]
-        assert rendered, f"{finding.finding!r} not rendered at all"
-        assert any(
-            finding.source in line for line in rendered
-        ), f"{finding.finding!r} rendered without its source {finding.source!r}"
+        block = _block_for(pack_only, finding.rule_id, finding.finding_type)
+        assert finding.source in block, f"{finding.source!r} not in its own block"
+        for number in re.findall(r"\d+\.\d+", finding.finding):
+            assert (
+                number in block
+            ), f"{number} rendered outside the block naming {finding.source!r}"
+
+
+def _block_for(pack_only: str, rule_id: str, finding_type: str) -> str:
+    """One group's block, found by the citation key that leads it."""
+    heading = f"**{rule_id} / {finding_type}**"
+    assert heading in pack_only, f"no block led by {heading}"
+    rest = pack_only[pack_only.index(heading) + len(heading) :]
+    # Cut at the next block's own citation key, not at the next bold text --
+    # a single-finding block leads with its bolded source, which would
+    # otherwise end the block before its content.
+    following = re.search(r"\n\*\*[A-Z][A-Z0-9-]* / |\n### ", rest)
+    return rest[: following.start()] if following else rest
 
 
 def test_findings_are_grouped_by_the_citation_key() -> None:
@@ -493,6 +511,9 @@ def test_grouping_counts_the_findings_it_groups() -> None:
             if f"{rule_id} / {finding_type}" in line
         )
         assert str(n) in heading, f"{heading!r} does not carry its count of {n}"
+        # The citation key leads the block, because checking a citation
+        # against the pack is the first scored dimension.
+        assert heading.lstrip().startswith("**"), heading
 
 
 def test_grouping_does_not_replace_detail_with_summary() -> None:
@@ -601,4 +622,196 @@ def test_the_evidence_pack_renders_the_same_whichever_arm_got_label_a() -> None:
 
     assert one.hypotheses_md.split("### Hypothesis")[0] == (
         other.hypotheses_md.split("### Hypothesis")[0]
+    )
+
+
+# ------------------------------------------------ the pack after a human read it
+#
+# Spec: eval-007, amended. Valid Markdown turned out to be necessary and
+# nowhere near sufficient: fourteen rows repeating one sentence are a wall
+# whether or not each sits in its own table row. What follows is about the
+# *text*, not the structure.
+
+
+def test_a_group_states_its_shared_sentence_once() -> None:
+    # spec: eval-007 -- fourteen findings carry one sentence and fourteen
+    # values. The sentence is what the eye has to re-read, so it is factored
+    # into the group heading and each row keeps only what differs.
+    bundle = zone_bundle()
+    pack = packed(bundles=[(1, bundle)])
+    pack_only = pack.hypotheses_md.split("### Hypothesis")[0]
+
+    # Grouped on the citation key, not the rule: TRACK-GAP carries both
+    # the discontinuities and the rate excess, which is the collapse the
+    # two-part key exists to prevent -- and reading it wrong here made
+    # this test skip, which proves nothing.
+    groups: dict[tuple[str, str], list[str]] = {}
+    for finding in findings_of(bundle):
+        groups.setdefault((finding.rule_id, finding.finding_type), []).append(
+            finding.finding
+        )
+    repeated = [
+        texts for texts in groups.values() if len(texts) > 1 and len(set(texts)) == 1
+    ]
+    assert repeated, "fixture has no group of identically worded findings"
+    identical = set(repeated[0])
+
+    sentence = identical.pop()
+    assert pack_only.count(sentence) == 1, (
+        f"{len(repeated)} findings share one sentence and it is printed "
+        f"{pack_only.count(sentence)} times"
+    )
+
+
+def test_a_factored_group_still_names_every_source() -> None:
+    # spec: eval-007 -- factoring removes repeated words, never evidence.
+    bundle = zone_bundle()
+    pack = packed(bundles=[(1, bundle)])
+    pack_only = pack.hypotheses_md.split("### Hypothesis")[0]
+
+    for finding in findings_of(bundle):
+        if finding.source:
+            assert finding.source in pack_only, f"{finding.source!r} dropped"
+
+
+def test_a_factored_group_still_carries_every_value() -> None:
+    # spec: eval-007 -- the values are the evidence. Factoring the sentence
+    # around them must leave every one of them on the page.
+    deviations = [
+        _rf_finding("RF-01:4", "power_dbm deviated by 13.43 dB at its peak"),
+        _rf_finding("RF-01:4", "power_dbm deviated by 10.62 dB at its peak"),
+        _rf_finding("RF-02:4", "power_dbm deviated by 8.37 dB at its peak"),
+    ]
+    bundle = zone_bundle()
+    bundle = bundle.with_evidence(list(bundle.evidence) + deviations)
+    pack_only = packed(bundles=[(1, bundle)]).hypotheses_md.split("### Hypothesis")[0]
+
+    for value in ("13.43", "10.62", "8.37"):
+        assert value in pack_only, f"{value} was factored away"
+    # ...and the sentence around them exactly once.
+    assert pack_only.count("power_dbm deviated by") == 1
+
+
+def test_the_pack_introduces_no_number_of_its_own() -> None:
+    # spec: eval-007 -- the constraint that replaced "never summarise", and
+    # the reason it is mechanical: a minimum, a mean or a range is a
+    # synthesis an explanation could otherwise be credited for. The pack
+    # re-organises values and computes none.
+    #
+    # Counts of items the pack itself lists are the one exception, because
+    # the reader could count them and a marker checking "nine aircraft"
+    # against the pack needs to be able to.
+    bundle = zone_bundle()
+    pack = packed(bundles=[(1, bundle)])
+    pack_only = pack.hypotheses_md.split("### Hypothesis")[0]
+
+    sources = " ".join(
+        [item.finding for item in bundle.evidence]
+        + [item.source for item in bundle.evidence]
+        + [u.statement for u in bundle.known_uncertainties]
+        + [u.subject for u in bundle.known_uncertainties]
+        + [bundle.subject, str(bundle.affected_channels), str(bundle.time_window)]
+    )
+    allowed = set(re.findall(r"\d+(?:\.\d+)?", sources))
+    # Every group size, and every count of repeats, is countable from the page.
+    allowed |= {str(n) for n in range(0, len(bundle.evidence) + 2)}
+    # The heading carries the pack's identifier and its position, which are
+    # names rather than measurements -- and the marker needs the identifier
+    # to find the right row on the score sheet.
+    # Scoped to the evidence. The heading carries the pack's identifier and
+    # position and the table above it carries the window -- names and bundle
+    # metadata, not measurements, and the marker needs the identifier to
+    # find the right row on the score sheet.
+    body = pack_only[pack_only.index("### The conclusion") :]
+
+    for number in re.findall(r"\d+(?:\.\d+)?", body):
+        assert (
+            number in allowed
+        ), f"the pack introduced {number!r}, computed from nothing"
+
+
+def test_near_identical_uncertainties_collapse_to_one_statement() -> None:
+    # spec: eval-007 -- six sentences differing in one sensor name were six
+    # lines in the real pack. Exact de-duplication does not touch them,
+    # because they are not exactly equal.
+    statement = (
+        "a deviation on channel 4 of {} lasted 1 reading(s), under the 10 s "
+        "minimum, so it was observed and not called an event."
+    )
+    raised = tuple(
+        Uncertainty(
+            kind=UncertaintyKind.MEASURED_NEGATIVE,
+            statement=statement.format(sensor),
+            subject=sensor,
+        )
+        for sensor in ("RF-01", "RF-02", "RF-02", "RF-03", "RF-03", "RF-03")
+    )
+    bundle = replace(zone_bundle(), known_uncertainties=raised)
+    pack_only = packed(bundles=[(1, bundle)]).hypotheses_md.split("### Hypothesis")[0]
+
+    assert pack_only.count("under the 10 s") == 1, "the shared sentence repeats"
+    for sensor in ("RF-01", "RF-02", "RF-03"):
+        assert sensor in pack_only, f"{sensor} was factored away"
+
+
+def test_uncertainties_that_share_nothing_are_left_alone() -> None:
+    # spec: eval-007 -- factoring fires only on genuinely shared text.
+    # Forced onto unrelated sentences it would produce a heading that is the
+    # empty string and a list of whole sentences pretending to be values.
+    unrelated = (
+        Uncertainty(
+            kind=UncertaintyKind.NOT_MEASURABLE,
+            statement="the local discontinuity rate could not be measured here.",
+            subject="60 km disc",
+        ),
+        Uncertainty(
+            kind=UncertaintyKind.NOT_MEASURABLE,
+            statement="no baseline existed for this cell, so it was not judged.",
+            subject="RF-09:2",
+        ),
+    )
+    bundle = replace(zone_bundle(), known_uncertainties=unrelated)
+    pack_only = packed(bundles=[(1, bundle)]).hypotheses_md.split("### Hypothesis")[0]
+
+    for uncertainty in unrelated:
+        assert uncertainty.statement in pack_only
+
+
+def test_a_group_of_one_is_not_dressed_up_as_a_group() -> None:
+    # spec: eval-007 -- a single finding has no shared sentence to factor,
+    # and a heading plus a one-row table is three lines doing one line's job.
+    bundle = zone_bundle()
+    pack_only = packed(bundles=[(1, bundle)]).hypotheses_md.split("### Hypothesis")[0]
+
+    single = [
+        f
+        for f in findings_of(bundle)
+        if sum(
+            1
+            for other in findings_of(bundle)
+            if (other.rule_id, other.finding_type) == (f.rule_id, f.finding_type)
+        )
+        == 1
+    ]
+    if not single:
+        pytest.skip("fixture has no single-finding group")
+    for finding in single:
+        assert finding.finding in pack_only
+
+
+def _rf_finding(source: str, finding: str):
+    """An observed RF item, for building a group with shared wording."""
+    from app.detection.bundle import DataMode, EvidenceItem, Grounding
+
+    base = next(i for i in zone_bundle().evidence if i.refs)
+    return EvidenceItem(
+        source=source,
+        finding=finding,
+        rule_id="RF-NOISE",
+        finding_type="rf_noise_deviation",
+        data_mode=DataMode.SYNTHETIC,
+        started_at=base.started_at,
+        ended_at=base.ended_at,
+        grounding=Grounding.OBSERVED,
+        refs=base.refs,
     )
