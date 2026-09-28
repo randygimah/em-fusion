@@ -41,6 +41,30 @@ module is the outermost enclosing handler, one layer above where `ai-009`
 was worried about. Stopping still hands back the account of what was already
 stored, for exactly the reason skipping exists.
 
+**A run against a rate-limited provider must pace itself.** The first
+scored campaign made 60 calls as fast as it could against a 30,000
+tokens-per-minute ceiling with prompts averaging 4,909 tokens -- about six
+calls a minute -- and the provider refused five of them. `ai-004` maps a 429
+to `ProviderUnavailable`, which is a `GenerationError`, which this module
+records and skips: the right handling for a provider that is **down** and the
+wrong handling for one that is merely **busy**, since the refusal itself says
+*try again in 5.09s*. Two of the five were generation 1, so two of twenty
+bundles came out with no scored generation at all and the marking corpus
+silently went from 20 bundles to 18 -- against a figure quoted on an ethics
+approval form. That is the worst shape this failure could take: everything
+succeeded, every figure was reported, and the shortfall appears only when the
+pack is built.
+
+So there is a pause between model calls, and it is deliberately **not a
+retry**: retrying here would blur `ai-006`'s availability fallback into
+`ai-007`'s correctness one, which this whole layer is built to keep apart,
+and pacing prevents the condition rather than recovering from it. The pause
+falls between *attempts*, not between successes -- a refused call is still a
+call the provider counted, so pacing only the successes would accelerate into
+exactly the condition that caused the refusal. The template baseline is never
+paused: it makes no call, which is `ai-009`'s argument for keeping it out of
+the budget.
+
 **The sample is an input and is never invented here.** The corpus is fixed
 before the campaign runs (`docs/scoring_rubric.md`), and a runner able to
 choose its own bundles could choose them after seeing a result. Drawing it
@@ -59,7 +83,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass
-from typing import Any, Sequence
+from typing import Any, Callable, Sequence
 
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -260,6 +284,8 @@ def run_campaign(
     arm: AssembledArm,
     baseline: HypothesisGenerator,
     generations: int,
+    pause_seconds: float,
+    sleep: Callable[[float], None] = time.sleep,
 ) -> CampaignRecord:
     """Ask both arms about every bundle in the sample, and store every answer.
 
@@ -269,10 +295,18 @@ def run_campaign(
     it, so its repeatability is a property of the code rather than a claim
     about someone else's serving stack.
 
+    `pause_seconds` has **no default**, on `ai-007`'s `max_attempts` rule: how
+    fast a run may ask is a decision about the provider it is pointed at, and
+    one made by omission is one nobody chose -- here the cost of not choosing
+    is a corpus smaller than the pre-registered one, with nothing saying so.
+    Derive it from the provider's published limit and the measured prompt
+    size; `sleep` is injected so the suite can assert the pacing without
+    waiting for it.
+
     The budget and the grounding ledger come off `arm`, because they span a
     **run** and not an arm -- `ai-011` hands them back for this.
     """
-    _refuse_a_corpus_nobody_chose(sample, generations)
+    _refuse_a_corpus_nobody_chose(sample, generations, pause_seconds)
 
     # The baseline's own checker. A separate instance from the one inside
     # the fallback, declaring a different arm and sharing the ledger: the
@@ -291,8 +325,15 @@ def run_campaign(
             ledger=arm.ledger,
         )
 
+    asked = 0
     for bundle_id, bundle in sample:
         for ordinal in range(1, generations + 1):
+            # Between attempts, not between successes: a refused call is
+            # still a call the provider counted. And not before the first,
+            # which buys nothing and delays every run by the interval.
+            if asked:
+                sleep(pause_seconds)
+            asked += 1
             try:
                 made.append(
                     _model_generation(
@@ -361,9 +402,16 @@ def run_campaign(
 
 
 def _refuse_a_corpus_nobody_chose(
-    sample: Sequence[SampledBundle], generations: int
+    sample: Sequence[SampledBundle], generations: int, pause_seconds: float
 ) -> None:
-    """Three shapes that would report a campaign that did not happen."""
+    """Four shapes that would report a campaign that did not happen."""
+    if pause_seconds < 0:
+        raise ConfigurationError(
+            f"the campaign was configured to pause {pause_seconds} seconds "
+            "between model calls. Time does not run backwards, and a negative "
+            "interval is far more likely an arithmetic slip in a caller "
+            "deriving one from a rate limit than a deliberate choice."
+        )
     if not sample:
         raise ConfigurationError(
             "the campaign was given no bundles. It would succeed, cost "

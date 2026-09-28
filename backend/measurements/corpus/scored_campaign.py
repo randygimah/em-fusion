@@ -66,6 +66,16 @@ GENERATIONS = 3
 #: genuine chance of a different answer.
 MAX_ATTEMPTS = 2
 
+#: Seconds between model calls, **measured rather than guessed**. The first
+#: run of this script made 60 calls as fast as it could against the account's
+#: 30,000 tokens-per-minute ceiling and the provider refused five of them --
+#: two of which were generation 1, so two of twenty bundles came out with no
+#: scored generation and the marking corpus silently went from 20 to 18.
+#: Prompts measured at 294,527 tokens over 60 calls, so 4,909 each: 30,000 /
+#: 4,909 is 6.1 calls a minute, or 9.8 seconds apart. 11 for margin, which
+#: puts a 60-call run at about 11 minutes.
+PAUSE_SECONDS = 11.0
+
 #: 20 bundles x 3 generations x 2 attempts is 120 at the absolute worst, so
 #: ai-009's recommended 200 leaves headroom without leaving a loop unbounded.
 MAX_CALLS = 200
@@ -148,7 +158,8 @@ print(f"parameters {PARAMETERS}")
 print(f"prompt     sha256 {prompt_fingerprint()}")
 print(f"sample     {SAMPLE.name}, seed {drawn['seed']}, {len(wanted)} bundles")
 print(f"ceiling    {MAX_CALLS} calls, ${MAX_COST_USD} spend")
-print(f"generations {GENERATIONS} from the model arm, 1 from the baseline\n", flush=True)
+print(f"generations {GENERATIONS} from the model arm, 1 from the baseline")
+print(f"pacing     {PAUSE_SECONDS}s between model calls\n", flush=True)
 
 engine = create_engine(os.environ["DATABASE_URL"], pool_pre_ping=True)
 factory = sessionmaker(bind=engine, autoflush=False)
@@ -230,6 +241,7 @@ try:
         arm=arm,
         baseline=baseline,
         generations=GENERATIONS,
+        pause_seconds=PAUSE_SECONDS,
     )
     aborted = None
 except CampaignAborted as stopped:
