@@ -28,6 +28,7 @@ from __future__ import annotations
 import csv
 import io
 import re
+from dataclasses import replace
 
 import pytest
 
@@ -37,7 +38,7 @@ from app.ai.service import ConfigurationError, GeneratorKind
 from app.ai.template import generate
 from app.db.hypotheses import GroundingStatus
 from app.evaluation.pack import BLINDING_GIVEAWAYS, DIMENSIONS, build_pack
-from tests.test_ai_template import fault_bundle, zone_bundle
+from tests.test_ai_template import fault_bundle, verdict_of, zone_bundle
 
 HOSTED = GeneratorKind.HOSTED
 TEMPLATE = GeneratorKind.TEMPLATE
@@ -362,3 +363,215 @@ def test_no_real_aircraft_identifier_can_reach_the_pack() -> None:
 
     for token in re.findall(r"\b[0-9a-f]{6}\b", pack.hypotheses_md):
         pytest.fail(f"a bare 24-bit-looking address reached the pack: {token}")
+
+
+# ------------------------------------------- what a marker can actually read
+#
+# Spec: eval-007. Everything below is about the pack as a *document*. The
+# first version rendered space-aligned plain text into a `.md` file, which is
+# legible in an editor and reflows into one paragraph in anything that
+# renders Markdown -- so the tests that matter here simulate the renderer
+# rather than asserting on the source, which is what passed before.
+
+
+def blocks(markdown: str) -> list[str]:
+    """Markdown's own paragraph joining, applied.
+
+    A renderer joins consecutive non-blank lines into one paragraph unless a
+    line opens a block of its own -- a heading, a list item, a table row, a
+    rule or a fence. This is the minimum needed to show the difference
+    between a document that survives rendering and one that collapses, and
+    it is the check the first version of the pack would have failed.
+    """
+    out: list[str] = []
+    joining = False
+    for line in markdown.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            joining = False
+            continue
+        opens_block = stripped.startswith(("#", "-", "*", "|", ">", "```", "---"))
+        if joining and not opens_block:
+            out[-1] = f"{out[-1]} {stripped}"
+        else:
+            out.append(stripped)
+            joining = not opens_block
+    return out
+
+
+def findings_of(bundle):
+    """Every evidence item except the one carrying the bundle's conclusion."""
+    verdict = verdict_of(bundle)
+    return [item for item in bundle.evidence if item is not verdict]
+
+
+def test_no_two_findings_are_rendered_into_the_same_block() -> None:
+    # spec: eval-007 (a) -- the defect, stated as the renderer sees it.
+    #
+    # The first pack indented its findings by two spaces, which is neither a
+    # fence nor a code block nor a list, so nineteen findings arrived as one
+    # paragraph with their column alignment collapsed. Asserting on the
+    # source would not have caught it; asserting on the rendered blocks does.
+    bundle = zone_bundle()
+    pack = packed(bundles=[(1, bundle)])
+
+    for block in blocks(pack.hypotheses_md):
+        matched = [f for f in findings_of(bundle) if f.finding in block]
+        assert len(matched) <= 1, f"{len(matched)} findings share one block: {block!r}"
+
+
+def test_no_line_sits_in_markdowns_ambiguous_indent() -> None:
+    # spec: eval-007 (a) -- one to three spaces is neither a code block (four)
+    # nor a list continuation, and is what the first version emitted.
+    for line in packed().hypotheses_md.splitlines():
+        indent = len(line) - len(line.lstrip(" "))
+        assert indent == 0 or indent >= 4, f"ambiguous indent {indent}: {line!r}"
+
+
+def test_every_finding_says_which_subject_it_came_from() -> None:
+    # spec: eval-007 (d) -- the fault that is not cosmetic.
+    #
+    # A hypothesis cites `RF-06:4`. The first pack rendered eight RF-NOISE
+    # rows without naming a sensor on any of them, so evidence use -- the
+    # first of five dimensions -- was being scored against a pack that could
+    # not be checked against.
+    bundle = zone_bundle()
+    pack = packed(bundles=[(1, bundle)])
+    pack_only = pack.hypotheses_md.split("### Hypothesis")[0]
+
+    for finding in findings_of(bundle):
+        if not finding.subject:
+            continue
+        rendered = [line for line in pack_only.splitlines() if finding.finding in line]
+        assert rendered, f"{finding.finding!r} not rendered at all"
+        assert any(finding.subject in line for line in rendered), (
+            f"{finding.finding!r} rendered without its subject {finding.subject!r}"
+        )
+
+
+def test_findings_are_grouped_by_the_citation_key() -> None:
+    # spec: eval-007 (c) -- the (rule_id, finding_type) pair `ai-001` defines,
+    # which is what `ai-008` resolves and what `ai-002` groups on. No new
+    # vocabulary is invented here.
+    bundle = zone_bundle()
+    pack = packed(bundles=[(1, bundle)])
+    pack_only = pack.hypotheses_md.split("### Hypothesis")[0]
+
+    expected = {(f.rule_id, f.finding_type) for f in findings_of(bundle)}
+    for rule_id, finding_type in expected:
+        assert f"{rule_id} / {finding_type}" in pack_only
+
+
+def test_grouping_counts_the_findings_it_groups() -> None:
+    # spec: eval-007 (c) -- nine identical lines become one heading carrying
+    # the nine, which is the whole readability win.
+    bundle = zone_bundle()
+    pack = packed(bundles=[(1, bundle)])
+    pack_only = pack.hypotheses_md.split("### Hypothesis")[0]
+
+    counted = {}
+    for finding in findings_of(bundle):
+        key = (finding.rule_id, finding.finding_type)
+        counted[key] = counted.get(key, 0) + 1
+
+    for (rule_id, finding_type), n in counted.items():
+        heading = next(
+            line
+            for line in pack_only.splitlines()
+            if f"{rule_id} / {finding_type}" in line
+        )
+        assert str(n) in heading, f"{heading!r} does not carry its count of {n}"
+
+
+def test_grouping_does_not_replace_detail_with_summary() -> None:
+    # spec: eval-007 -- the item's hard constraint, and the one risk in
+    # fixing readability at all.
+    #
+    # A pack that summarised its own findings would have done part of the
+    # work dimension 1 scores, deflating the difference between the arms in
+    # the direction that flatters the weaker one. So every finding is still
+    # listed individually under its counted heading; only the scan cost goes.
+    bundle = zone_bundle()
+    pack = packed(bundles=[(1, bundle)])
+    pack_only = pack.hypotheses_md.split("### Hypothesis")[0]
+
+    for finding in findings_of(bundle):
+        assert pack_only.count(finding.finding) >= 1, f"{finding.finding!r} dropped"
+
+
+def test_the_bundles_own_conclusion_leads_the_pack() -> None:
+    # spec: eval-007 (b) -- the claim the pack is about sat tenth of nineteen.
+    bundle = zone_bundle()
+    pack = packed(bundles=[(1, bundle)])
+    pack_only = pack.hypotheses_md.split("### Hypothesis")[0]
+
+    verdict = verdict_of(bundle)
+    lead = pack_only.index(verdict.finding)
+    for finding in findings_of(bundle):
+        assert lead < pack_only.index(finding.finding), (
+            f"{finding.finding!r} is rendered before the bundle's own conclusion"
+        )
+
+
+def test_a_bundle_with_no_conclusion_of_its_own_is_refused() -> None:
+    # spec: eval-007 -- `ai-002`'s exactly-one rule, which is `evb-002`'s
+    # exactly-one-row rule a layer up. Rendered with an arbitrary lead, the
+    # marker would read whichever item the heap put first as the claim.
+    bundle = zone_bundle()
+    without = bundle.with_evidence(
+        [item for item in bundle.evidence if item.finding_type != bundle.anomaly_type]
+    )
+
+    with pytest.raises(ConfigurationError, match="conclusion"):
+        packed(bundles=[(1, without)])
+
+
+def test_a_bundle_with_two_conclusions_is_refused() -> None:
+    # spec: eval-007 -- the other direction of the same rule.
+    bundle = zone_bundle()
+    verdict = verdict_of(bundle)
+    doubled = bundle.with_evidence(list(bundle.evidence) + [verdict])
+
+    with pytest.raises(ConfigurationError, match="conclusion"):
+        packed(bundles=[(1, doubled)])
+
+
+def test_repeated_uncertainties_are_counted_rather_than_repeated() -> None:
+    # spec: eval-007 (e) -- the real pack carried the same RF-07 sentence
+    # three times, verbatim.
+    bundle = zone_bundle()
+    if not bundle.known_uncertainties:
+        pytest.skip("fixture carries no uncertainties to repeat")
+    doubled = replace(
+        bundle, known_uncertainties=tuple(bundle.known_uncertainties) * 3
+    )
+    pack = packed(bundles=[(1, doubled)])
+    pack_only = pack.hypotheses_md.split("### Hypothesis")[0]
+
+    statement = doubled.known_uncertainties[0].statement
+    assert pack_only.count(statement) == 1
+    assert "3" in next(
+        line for line in pack_only.splitlines() if statement in line
+    ), "a de-duplicated uncertainty must say how many times it was raised"
+
+
+def test_every_pack_says_where_it_sits_in_the_run() -> None:
+    # spec: eval-007 (f) -- a marker working through twenty needs to know
+    # which one they are on without counting headings.
+    pack = packed()
+
+    assert "1 of 2" in pack.hypotheses_md
+    assert "2 of 2" in pack.hypotheses_md
+
+
+def test_the_evidence_pack_renders_the_same_whichever_arm_got_label_a() -> None:
+    # spec: eval-007 -- the restructure is exactly where a formatting leak
+    # could be introduced by accident, and a formatting difference is a
+    # perfect classifier where prose style is only a hint (`eval-004`).
+    bundles = [(1, zone_bundle())]
+    one = packed(bundles=bundles, seed=1)
+    other = packed(bundles=bundles, seed=2)
+
+    assert one.hypotheses_md.split("### Hypothesis")[0] == (
+        other.hypotheses_md.split("### Hypothesis")[0]
+    )

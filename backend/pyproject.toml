@@ -8,6 +8,7 @@ dependencies = [
     "fastapi",
     "geoalchemy2",
     "openai>=3.18.0",
+    "openpyxl",
     "psycopg[binary]",
     "pyarrow",
     "pydantic",
