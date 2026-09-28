@@ -37,6 +37,7 @@ from app.ai.hypothesis import Hypothesis
 from app.ai.service import ConfigurationError, GeneratorKind
 from app.ai.template import generate
 from app.db.hypotheses import GroundingStatus
+from app.detection.bundle import Uncertainty, UncertaintyKind
 from app.evaluation.pack import BLINDING_GIVEAWAYS, DIMENSIONS, build_pack
 from tests.test_ai_template import fault_bundle, verdict_of, zone_bundle
 
@@ -414,10 +415,21 @@ def test_no_two_findings_are_rendered_into_the_same_block() -> None:
     # source would not have caught it; asserting on the rendered blocks does.
     bundle = zone_bundle()
     pack = packed(bundles=[(1, bundle)])
+    pack_only = pack.hypotheses_md.split("### Hypothesis")[0]
 
-    for block in blocks(pack.hypotheses_md):
-        matched = [f for f in findings_of(bundle) if f.finding in block]
-        assert len(matched) <= 1, f"{len(matched)} findings share one block: {block!r}"
+    findings = findings_of(bundle)
+    # Counted as blocks *carrying* a finding rather than by matching text to
+    # findings: two findings in this fixture have byte-identical wording from
+    # different sources, so matching on text cannot tell them apart. What the
+    # defect actually did was collapse all nineteen into one block.
+    carrying = [
+        block
+        for block in blocks(pack_only)
+        if any(finding.finding in block for finding in findings)
+    ]
+    assert len(carrying) == len(
+        findings
+    ), f"{len(findings)} findings rendered into {len(carrying)} block(s)"
 
 
 def test_no_line_sits_in_markdowns_ambiguous_indent() -> None:
@@ -428,7 +440,7 @@ def test_no_line_sits_in_markdowns_ambiguous_indent() -> None:
         assert indent == 0 or indent >= 4, f"ambiguous indent {indent}: {line!r}"
 
 
-def test_every_finding_says_which_subject_it_came_from() -> None:
+def test_every_finding_says_which_source_it_came_from() -> None:
     # spec: eval-007 (d) -- the fault that is not cosmetic.
     #
     # A hypothesis cites `RF-06:4`. The first pack rendered eight RF-NOISE
@@ -440,13 +452,13 @@ def test_every_finding_says_which_subject_it_came_from() -> None:
     pack_only = pack.hypotheses_md.split("### Hypothesis")[0]
 
     for finding in findings_of(bundle):
-        if not finding.subject:
+        if not finding.source:
             continue
         rendered = [line for line in pack_only.splitlines() if finding.finding in line]
         assert rendered, f"{finding.finding!r} not rendered at all"
-        assert any(finding.subject in line for line in rendered), (
-            f"{finding.finding!r} rendered without its subject {finding.subject!r}"
-        )
+        assert any(
+            finding.source in line for line in rendered
+        ), f"{finding.finding!r} rendered without its source {finding.source!r}"
 
 
 def test_findings_are_grouped_by_the_citation_key() -> None:
@@ -508,9 +520,9 @@ def test_the_bundles_own_conclusion_leads_the_pack() -> None:
     verdict = verdict_of(bundle)
     lead = pack_only.index(verdict.finding)
     for finding in findings_of(bundle):
-        assert lead < pack_only.index(finding.finding), (
-            f"{finding.finding!r} is rendered before the bundle's own conclusion"
-        )
+        assert lead < pack_only.index(
+            finding.finding
+        ), f"{finding.finding!r} is rendered before the bundle's own conclusion"
 
 
 def test_a_bundle_with_no_conclusion_of_its_own_is_refused() -> None:
@@ -539,20 +551,35 @@ def test_a_bundle_with_two_conclusions_is_refused() -> None:
 def test_repeated_uncertainties_are_counted_rather_than_repeated() -> None:
     # spec: eval-007 (e) -- the real pack carried the same RF-07 sentence
     # three times, verbatim.
-    bundle = zone_bundle()
-    if not bundle.known_uncertainties:
-        pytest.skip("fixture carries no uncertainties to repeat")
+    # Constructed rather than taken off a fixture: the real pack carried
+    # three byte-identical RF-07 sentences and the fixtures carry none, so a
+    # test reading the fixture would skip and prove nothing -- which is what
+    # the first version of this test did.
+    raised = Uncertainty(
+        kind=UncertaintyKind.MEASURED_NEGATIVE,
+        statement=(
+            "a deviation on channel 4 of RF-07 lasted 1 reading(s), under the "
+            "10 s minimum, so it was observed and not called an event."
+        ),
+        subject="RF-07:4",
+    )
+    alone = Uncertainty(
+        kind=UncertaintyKind.NOT_MEASURABLE,
+        statement="the local discontinuity rate could not be measured.",
+        subject="60 km disc",
+    )
     doubled = replace(
-        bundle, known_uncertainties=tuple(bundle.known_uncertainties) * 3
+        zone_bundle(), known_uncertainties=(raised, raised, raised, alone)
     )
     pack = packed(bundles=[(1, doubled)])
     pack_only = pack.hypotheses_md.split("### Hypothesis")[0]
 
-    statement = doubled.known_uncertainties[0].statement
-    assert pack_only.count(statement) == 1
+    assert pack_only.count(raised.statement) == 1
     assert "3" in next(
-        line for line in pack_only.splitlines() if statement in line
+        line for line in pack_only.splitlines() if raised.statement in line
     ), "a de-duplicated uncertainty must say how many times it was raised"
+    # and the one raised once is still there, unadorned.
+    assert pack_only.count(alone.statement) == 1
 
 
 def test_every_pack_says_where_it_sits_in_the_run() -> None:

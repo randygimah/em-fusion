@@ -18,6 +18,7 @@ document properties, which are a place a leak would be invisible on screen.
 
 from __future__ import annotations
 
+import contextlib
 import io
 
 import openpyxl
@@ -64,12 +65,9 @@ def test_the_workbook_and_the_csv_carry_the_same_rows() -> None:
     pack = packed()
     rows = sheet_of(pack)
 
-    from_sheet = [
-        rows.cell(row=n + 2, column=1).value for n in range(len(pack.items))
-    ]
+    from_sheet = [rows.cell(row=n + 2, column=1).value for n in range(len(pack.items))]
     from_csv = [
-        line.split(",")[0]
-        for line in pack.score_sheet_csv.strip().splitlines()[1:]
+        line.split(",")[0] for line in pack.score_sheet_csv.strip().splitlines()[1:]
     ]
     assert from_sheet == from_csv
 
@@ -208,8 +206,12 @@ def test_no_part_of_the_marker_workbook_names_an_arm() -> None:
     haystack = " ".join(
         [
             *book.sheetnames,
-            *(str(book.properties.creator or "")),
-            *(str(book.properties.title or "")),
+            # Whole strings, not unpacked into characters -- spread, a
+            # giveaway in a document property would join as "t e m p l a t e"
+            # and the scan would pass while the word sat in the file.
+            str(book.properties.creator or ""),
+            str(book.properties.title or ""),
+            str(book.properties.description or ""),
         ]
         + [
             str(cell.value)
@@ -246,3 +248,26 @@ def test_the_key_is_its_own_workbook_and_not_a_tab() -> None:
     )
     assert any(word in values for word in BLINDING_GIVEAWAYS)
     assert len(list(key.active.iter_rows())) == len(pack.items) + 1
+
+
+def test_a_dimension_missing_one_anchor_is_refused() -> None:
+    # spec: eval-008 -- a column with two of its three anchors is worse than
+    # one with none: the dropdown works, the scorer scores, and one of the
+    # three points has no agreed meaning behind it. Invisible in the results.
+    pack = packed()
+    half = {**ANCHORS["uncertainty"]}
+    half.pop(SCALE[-1])
+
+    with pytest.raises(ConfigurationError, match="missing the anchor"):
+        with _anchors_replaced("uncertainty", half):
+            score_sheet_workbook(pack.items)
+
+
+@contextlib.contextmanager
+def _anchors_replaced(name: str, anchor: dict):
+    original = ANCHORS[name]
+    ANCHORS[name] = anchor
+    try:
+        yield
+    finally:
+        ANCHORS[name] = original

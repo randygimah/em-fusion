@@ -35,6 +35,7 @@ from app.evaluation.pack import (
     as_json,
     build_pack,
 )
+from app.evaluation.workbook import arm_key_workbook, score_sheet_workbook
 
 #: Fixed here rather than passed in, and different from the sample's seed so
 #: that knowing one tells you nothing about the other. It decides which arm
@@ -42,6 +43,23 @@ from app.evaluation.pack import (
 #: exercise if it leaked into the marker's files -- it does not, and a test
 #: checks the vocabulary of what does.
 SHUFFLE_SEED = 20260929
+
+def _workbook_text(path: Path) -> str:
+    """Every word a marker could see in the workbook, including its notes."""
+    import openpyxl
+
+    book = openpyxl.load_workbook(path)
+    parts = [*book.sheetnames, str(book.properties.creator or "")]
+    parts.append(str(book.properties.title or ""))
+    for sheet in book:
+        for row in sheet.iter_rows():
+            for cell in row:
+                if cell.value is not None:
+                    parts.append(str(cell.value))
+                if cell.comment is not None:
+                    parts.append(str(cell.comment.text))
+    return " ".join(parts).lower()
+
 
 RECORD = Path(__file__).with_name("scored_campaign_record.json")
 OUT = Path(__file__).with_name("scoring_pack")
@@ -102,8 +120,13 @@ pack = build_pack(
 
 OUT.mkdir(exist_ok=True)
 (OUT / "hypotheses.md").write_text(pack.hypotheses_md)
+# The CSV stays as the archival and machine-readable form `eval-006`
+# ingests. The workbook is what the marker opens, rendered from the same
+# rows in the same pass, so the two cannot drift.
 (OUT / "score_sheet.csv").write_text(pack.score_sheet_csv)
 (OUT / "arm_key.csv").write_text(pack.arm_key_csv)
+(OUT / "score_sheet.xlsx").write_bytes(score_sheet_workbook(pack.items))
+(OUT / "arm_key.xlsx").write_bytes(arm_key_workbook(pack.items))
 
 shape = as_json(pack)
 print("=" * 78)
@@ -119,17 +142,25 @@ print(
     f"  has moved and the consent is no longer informed by the right number."
 )
 
-leaks = [w for w in BLINDING_GIVEAWAYS if w in pack.hypotheses_md.lower()]
+# Scanned over **both** files the marker receives. Scanning only the
+# prose would have left the guarantee covering one of two artefacts, which
+# is not a weaker guarantee but a relocated leak.
+marker_reads = pack.hypotheses_md.lower() + "\n" + _workbook_text(
+    OUT / "score_sheet.xlsx"
+)
+leaks = [w for w in BLINDING_GIVEAWAYS if w in marker_reads]
 print("\n" + "=" * 78)
 print("WHAT IS NOT IN WHAT THE MARKER READS")
 print("=" * 78)
-print(f"  arm vocabulary found in hypotheses.md: {leaks or 'none'}")
+print(f"  arm vocabulary in hypotheses.md + score_sheet.xlsx: {leaks or 'none'}")
 if leaks:
     raise SystemExit(
         f"the pack names the arms {leaks}. The comparison is blind and this "
         "would hand the marker a perfect classifier."
     )
-print("  arm key written to arm_key.csv, which the marker does not receive.")
+print("  arm key written to arm_key.csv / .xlsx, which the marker never receives.")
 
-print(f"\nwritten to {OUT.name}/ -- hypotheses.md and score_sheet.csv go to the")
-print("marker; arm_key.csv is held back until eval-006 ingests both sheets.")
+print(f"\nwritten to {OUT.name}/")
+print("  to the marker   hypotheses.md, score_sheet.xlsx")
+print("  held back       arm_key.csv, arm_key.xlsx")
+print("  archival        score_sheet.csv, ingested by eval-006")

@@ -95,6 +95,14 @@ show_error_codes = true
 module = "pyarrow.*"
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+# openpyxl ships no py.typed marker either. The stubs package exists but
+# lags the library, and this is one module writing one workbook shape --
+# the guarantees worth having here (the scale, the anchors, the blinding)
+# are asserted by tests against the written file, not by the type checker.
+module = "openpyxl.*"
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]

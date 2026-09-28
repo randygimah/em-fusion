@@ -147,7 +147,8 @@ def build_pack(
 
     items: list[PackItem] = []
     sections: list[str] = []
-    for bundle_id in sorted(scored):
+    ordered = sorted(scored)
+    for position, bundle_id in enumerate(ordered, start=1):
         arms = scored[bundle_id]
         if len(arms) < 2:
             raise ConfigurationError(
@@ -194,10 +195,18 @@ def build_pack(
                 )
             )
         items.extend(paired)
-        sections.append(_section(bundle_id, held[bundle_id], paired))
+        sections.append(
+            _section(
+                bundle_id,
+                held[bundle_id],
+                paired,
+                position=position,
+                total=len(ordered),
+            )
+        )
 
     return ScoringPack(
-        hypotheses_md=_preamble() + "\n".join(sections),
+        hypotheses_md=_preamble(len(scored)) + "\n---\n\n".join(sections),
         score_sheet_csv=_sheet(items),
         arm_key_csv=_key(items),
         items=tuple(items),
@@ -233,42 +242,159 @@ def _scored_generations(
 # style the rubric already concedes is only a hint.
 
 
-def _preamble() -> str:
+def _preamble(bundles: int) -> str:
     return (
         "# Hypothesis scoring pack\n\n"
-        "Under each evidence pack are two short explanations, labelled A and "
-        "B. They were produced by two different systems. You are not told "
-        "which is which, and the labels are reshuffled on every pack -- A "
-        "here has nothing to do with A on the next page.\n\n"
-        "Read the evidence pack first, then both explanations, then score "
-        "each one on its own terms against `score_sheet.csv`.\n\n"
+        f"{bundles} evidence packs. Under each one are two short "
+        "explanations, labelled A and B. They were produced by two different "
+        "systems. You are not told which is which, and **the labels are "
+        "reshuffled on every pack** -- A here has nothing to do with A on the "
+        "next one.\n\n"
+        "Each pack is laid out the same way: what the detection rules "
+        "concluded, the findings behind that conclusion, and what the rules "
+        "could not determine. Read the pack first, then both explanations, "
+        "then score each one **on its own terms** in the scoring workbook.\n\n"
+        "Findings are grouped by the rule that produced them, and every "
+        "finding is still listed individually under its group. The grouping "
+        "is there to save you re-reading near-identical lines; it is not a "
+        "summary, and nothing has been left out.\n\n"
         "Two explanations under one pack may occasionally be identical or "
         "nearly so. That is expected rather than a fault in the pack.\n\n"
         "---\n\n"
     )
 
 
-def _section(bundle_id: int, bundle: EvidenceBundle, items: Sequence[PackItem]) -> str:
-    lines = [f"## Evidence pack {bundle_id:05d}\n"]
-    start, end = bundle.time_window
-    lines.append(f"Time window:   {start:%Y-%m-%d %H:%M} to {end:%H:%M}")
-    lines.append(f"Subject:       {bundle.subject}")
-    lines.append(
-        f"Channels:      {', '.join(str(c) for c in bundle.affected_channels)}"
-    )
-    lines.append("\nFindings:")
-    for finding in bundle.evidence:
-        lines.append(
-            f"  {finding.rule_id:<20} {finding.finding_type:<28} {finding.finding}"
+def _cell(text: str) -> str:
+    """One value, safe to put in a Markdown table cell.
+
+    A pipe inside a finding would end the cell early and silently drop the
+    rest of the sentence -- which on an evidence pack is the marker reading
+    a truncated claim and scoring it.
+    """
+    return str(text).replace("|", "\\|").replace("\n", " ").strip()
+
+
+def _conclusion(bundle_id: int, bundle: EvidenceBundle) -> Any:
+    """The evidence item carrying the bundle's own conclusion.
+
+    Found by `finding_type == anomaly_type` and required to exist **exactly
+    once**, which is `ai-002`'s rule and `evb-002`'s exactly-one-row rule a
+    layer up. Rendered with an arbitrary lead instead, the marker reads
+    whichever item happened to come first as the claim under scrutiny.
+    """
+    found = [
+        item for item in bundle.evidence if item.finding_type == bundle.anomaly_type
+    ]
+    if len(found) != 1:
+        raise ConfigurationError(
+            f"bundle {bundle_id} carries {len(found)} evidence item(s) whose "
+            f"finding type is its own anomaly type {bundle.anomaly_type!r}, and "
+            "the pack leads with that conclusion. Exactly one is required: with "
+            "none there is nothing to lead with, and with several the marker "
+            "would read whichever came first as the conclusion under scrutiny."
         )
+    return found[0]
+
+
+def _section(
+    bundle_id: int,
+    bundle: EvidenceBundle,
+    items: Sequence[PackItem],
+    *,
+    position: int,
+    total: int,
+) -> str:
+    """One pack, as Markdown a renderer survives.
+
+    The first version emitted space-aligned plain text into a `.md` file.
+    Two spaces of indent is neither a fence nor a code block nor a list, so
+    every finding joined one paragraph and the alignment the layout rested
+    on collapsed -- legible in an editor, unreadable everywhere else.
+    """
+    conclusion = _conclusion(bundle_id, bundle)
+    start, end = bundle.time_window
+    lines = [
+        f"## Evidence pack {bundle_id:05d} -- {position} of {total}",
+        "",
+        "| | |",
+        "|---|---|",
+        f"| **Time window** | {start:%Y-%m-%d %H:%M} to {end:%H:%M} |",
+        f"| **Subject** | {_cell(bundle.subject)} |",
+        "| **Channels** | "
+        + _cell(", ".join(str(c) for c in bundle.affected_channels))
+        + " |",
+        "",
+        "**What the detection rules concluded**",
+        "",
+        f"> **{conclusion.rule_id} / {conclusion.finding_type}**"
+        + (f" -- {_cell(conclusion.source)}" if conclusion.source else ""),
+        ">",
+        f"> {_cell(conclusion.finding)}",
+        "",
+    ]
+
+    rest = [item for item in bundle.evidence if item is not conclusion]
+    if rest:
+        lines += ["**Findings behind that conclusion**", ""]
+        for (rule_id, finding_type), group in _grouped(rest).items():
+            noun = "finding" if len(group) == 1 else "findings"
+            lines += [
+                f"*{rule_id} / {finding_type}* -- {len(group)} {noun}",
+                "",
+                "| Source | What it found |",
+                "|---|---|",
+            ]
+            # Every finding, individually. Grouping saves the re-reading; it
+            # must not do the reading. A pack that summarised its own
+            # findings would have done part of the work dimension 1 scores.
+            lines += [
+                f"| {_cell(item.source)} | {_cell(item.finding)} |" for item in group
+            ]
+            lines.append("")
+
     if bundle.known_uncertainties:
-        lines.append("\nKnown uncertainties:")
-        for uncertainty in bundle.known_uncertainties:
-            lines.append(f"  {uncertainty.statement}")
-    lines.append("")
+        lines += ["**What the rules could not determine**", ""]
+        for statement, (subject, times) in _counted(bundle.known_uncertainties).items():
+            raised = "" if times == 1 else f"(raised {times} times) "
+            named = f"**{_cell(subject)}** -- " if subject else ""
+            lines.append(f"- {named}{raised}{_cell(statement)}")
+        lines.append("")
+
     for item in items:
         lines.append(_rendered(item))
+    # The rule between packs is joined *between* sections and never appended
+    # here. Appended, it lands after the last hypothesis only -- which makes
+    # B's block end in something A's does not, and a formatting difference
+    # between the two labels is a perfect classifier.
     return "\n".join(lines)
+
+
+def _grouped(findings: Sequence[Any]) -> dict[tuple[str, str], list[Any]]:
+    """Findings under the `(rule_id, finding_type)` pair `ai-001` defines.
+
+    The same pair `ai-008` resolves a citation on and `ai-002` groups its
+    own citations by, so this introduces no vocabulary of its own. The rule
+    id alone would collapse `anom-012`'s rate excess into `anom-010`'s
+    discontinuities, which is the confusion the two-part key exists for.
+    """
+    groups: dict[tuple[str, str], list[Any]] = {}
+    for finding in findings:
+        groups.setdefault((finding.rule_id, finding.finding_type), []).append(finding)
+    return groups
+
+
+def _counted(uncertainties: Sequence[Any]) -> dict[str, tuple[str, int]]:
+    """Each distinct statement once, with how many times it was raised.
+
+    The first real pack carried the same one-reading RF-07 sentence three
+    times, verbatim and adjacent. Repeating it says nothing the count does
+    not, and it costs the marker three reads to learn that.
+    """
+    counted: dict[str, tuple[str, int]] = {}
+    for uncertainty in uncertainties:
+        subject, times = counted.get(uncertainty.statement, (uncertainty.subject, 0))
+        counted[uncertainty.statement] = (subject, times + 1)
+    return counted
 
 
 def _rendered(item: PackItem) -> str:
@@ -277,21 +403,24 @@ def _rendered(item: PackItem) -> str:
     lines = [
         f"### Hypothesis {item.label}",
         "",
-        f"**{h.hypothesis_title}** — Confidence: {h.confidence.value}",
+        f"**{h.hypothesis_title}**",
+        "",
+        f"Stated confidence: **{h.confidence.value}**",
         "",
         h.summary,
         "",
         "*Supporting evidence:*",
+        "",
     ]
     lines += [
-        f"- {citation.rule_id} / {citation.finding_type}: {citation.statement}"
+        f"- **{citation.rule_id} / {citation.finding_type}** -- {citation.statement}"
         for citation in h.supporting_evidence
     ]
-    lines += ["", "*Uncertainty:*"]
+    lines += ["", "*Uncertainty:*", ""]
     lines += [f"- {line}" for line in h.evidence_against_or_uncertainty] or ["- none"]
-    lines += ["", "*Alternatives:*"]
+    lines += ["", "*Alternatives:*", ""]
     lines += [f"- {line}" for line in h.alternative_explanations]
-    lines += ["", "*Recommended action:*", h.recommended_human_action, ""]
+    lines += ["", "*Recommended action:*", "", h.recommended_human_action, ""]
     return "\n".join(lines)
 
 
