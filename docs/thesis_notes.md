@@ -7407,3 +7407,62 @@ something about how load-bearing those particular assertions were. The instrumen
 glossary for a human reader, which is a further instance of this project's recurring pattern: the
 defects that survive the tests are found by building the first thing that actually consumes the
 output.
+
+### Detection latency: defining a delay in a system that has no moment of noticing
+
+The scope document and the backlog both carried the same definition from the outset — detection
+latency is the simulated-time delta between *event onset* and *anomaly emission* — and it was
+listed as a Track 0 item to be fixed before any measurement code existed. That sequencing turned out
+to be the most valuable part of the item, because the definition does not survive contact with the
+system that was built.
+
+**The second term does not exist.** Detection here is batch. The rules read a completed run out of
+the store and emit findings over it; there is no instant during the run at which a rule notices
+anything. "When the anomaly was emitted" is not a property of the data. Had the measurement been
+written first, it would have reached for whichever timestamp was nearest to hand, produced a
+plausible number, and measured nothing — and the nearest one is a stored bundle's `created_at`,
+which is wall clock wearing a simulated-time costume and is precisely the failure the item names.
+
+**The definition adopted.** Detection latency is the simulated-time interval from the ground-truth
+onset of a staged incident to **the earliest simulated instant at which every piece of evidence the
+claiming rule required was available.** A rule demanding ten seconds of sustained deviation cannot
+honestly commit before ten seconds have elapsed, whatever its implementation; a rule needing a
+nominal neighbour cannot commit before that neighbour has been read. This is a property of the
+rule's *design* rather than of its implementation, it is the same quantity a streaming version would
+face, and it is therefore the figure a thesis about deterministic detection rules should report —
+provided it is never described as how fast the software is.
+
+**Four alternatives, each defensible until examined.**
+
+| Candidate | Why it was rejected |
+|---|---|
+| Claimed window start − onset | Measures how accurately a rule *reconstructs* a window, not how long it waits. Frequently zero or negative, since the sensor-fault rule takes its window from the readings themselves. Worth reporting separately as window reconstruction error; it is not latency |
+| First cited observation − onset | Approximately zero by construction — the first deviating reading is usually the first reading after onset. It would report instantaneous detection, truly and vacuously |
+| Wall clock | Forbidden by the item and by the reproducibility NFR. The stated failure case is a latency that changes on faster hardware |
+| A stored row's `created_at` | The same failure in disguise, and the most likely accident, because it is the only timestamp in the schema that reads like "when the system decided" |
+
+**Four consequences, all of which constrain how the figure may be reported.** The value is quantised
+to the run's sampling interval — ten seconds on this corpus — so the smallest representable non-zero
+latency is ten seconds and no individual measurement may carry sub-interval precision. A rule's
+minimum evidence requirement *is* its latency floor, so the ten-second minimum episode duration
+contributes ten seconds by construction; that is a measured cost of the threshold rather than an
+artefact to be subtracted out, and it is the first quantified price this project has put on that
+parameter. The value is signed and never clamped: a negative latency means a rule's evidence begins
+before the staged onset, which is evidence that it swept in readings from outside the incident, and
+clamping to zero would conceal exactly the defect worth finding. And it is measured per reported
+claim rather than per run, matched to its staged incident by subject, since the precedence ladder
+gives one event one zone while a run may stage two; an incident that was never reported has no
+latency, is excluded, and the exclusions are counted alongside the figure.
+
+**One implementation consequence follows, and it is the same lesson twice.** The decidable instant is
+declared by the rule that made the claim, not reconstructed afterwards by a measurement script. Each
+rule knows what evidence it required — an episode reaching its minimum duration, a neighbour measured
+nominal, a second receiver's episode overlapping the first — and a script inferring that from stored
+output would be producing a right number about the wrong object, which is the defect the egress
+payload module exists because of.
+
+**A threat to validity, stated in advance.** This figure is a *lower bound* on what a streaming
+implementation would achieve. It contains no ingest delay, no processing time and no queueing, because
+there is none to contain. It should be reported as what it is — the evidence a rule demands, expressed
+as time — and any sentence comparing it to an operational system's response time would be
+unsupported.

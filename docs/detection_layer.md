@@ -103,6 +103,8 @@ genuinely marginal evidence.
 | **Matched control** | The same hour, same seed, same aircraft, with nothing staged. Lets a staged hour be compared against its own counterfactual. |
 | **Seeded from truth** | A measurement that takes its centre and window from the answer key. Right for asking *does this signal exist*; invalid for choosing a parameter the rule will apply to detected inputs. |
 | **Mutation testing** | Breaking the code on purpose, one change at a time, to check the tests notice. Evidence the tests are load-bearing. |
+| **Detection latency** | How much of an event must elapse before the claiming rule has all the evidence it demands, in simulated time. **Not** how fast the code is -- detection is batch and there is no moment of noticing. Quantised to the 10 s sampling interval, signed, per claim. Definition fixed 2026-09-28 before any measurement code existed; see `anom-009` and `docs/qa.md` §104. |
+| **Decidable instant** | The earliest simulated moment a rule could honestly have committed. Declared by the rule itself, because only the rule knows what evidence it required. |
 
 ## What is blocking the rest
 

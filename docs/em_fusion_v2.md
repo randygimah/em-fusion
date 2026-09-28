@@ -152,7 +152,14 @@ Baselines are computed **per sensor per channel**. Frequency adjacency is a firs
 
 **Removed from v1:** Isolation Forest, DBSCAN, change-point detection. Deterministic methods are sufficient for the research questions, easier to explain, and easier to evaluate. ML detectors are future work.
 
-Detection latency is measured in **simulated scenario time** (event onset → anomaly emission), never wall clock. Fix this definition before writing measurement code.
+Detection latency is measured in **simulated scenario time**, never wall clock. *(Definition fixed
+2026-09-28, before any measurement code existed, per the Track 0 item. "Event onset → anomaly
+emission" was the wording here and it does not survive contact with the build: detection is
+**batch**, so there is no instant at which a rule emits, and the second term does not exist. The
+fixed definition is onset → the earliest simulated instant at which every piece of evidence the
+claiming rule required was available — a property of the rule's design rather than of its
+implementation. See `anom-009` for the definition, the four rejected alternatives and the four
+reporting constraints, and `docs/qa.md` §104 for what it means.)*
 
 #### 4. Evidence Bundle Builder
 

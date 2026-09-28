@@ -7031,6 +7031,49 @@ fixtures that **the detection layer has never emitted**. The real name is `track
 three test suites had been asserting against a vocabulary that does not exist in production, and the
 thing that noticed was a glossary.
 
+## 104. What is detection latency here, if the detector never runs while the event is happening?
+
+**It is how much of the event has to happen before the rule has enough evidence — not how long the
+software takes.**
+
+The intuitive definition is: something starts at 12:10, the system raises it at 12:11, latency is one
+minute. That assumes the detector is watching while it happens. **Ours is not.** It runs afterwards,
+over the whole recorded hour at once. There is no instant at which it notices, so *"when it noticed
+minus when it started"* has no second term.
+
+This was listed from the beginning as a thing to settle **before writing any measurement code**, and
+that ordering is what saved it. Written first, the code would have grabbed whichever timestamp was
+nearest and produced a number that looked entirely reasonable:
+
+| Tempting timestamp | What it would actually have measured |
+|---|---|
+| The stored bundle's `created_at` | **Wall clock.** The time the analysis script ran. It would change if you re-ran it tomorrow |
+| The start of the window the rule claims | How well the rule *reconstructs* the window. Often zero or negative, because the sensor-fault rule reads its window off the data |
+| The first cited reading | ≈ 0, always. The first deviating reading is the first reading after onset. "The system detects instantly" — true, and worthless |
+
+**The definition adopted:** the simulated time from the staged incident's true start to **the earliest
+instant at which every piece of evidence the rule needed was available.**
+
+A worked example makes it concrete. Interference is staged at 12:10. The radio rule needs ten seconds
+of *sustained* deviation before it will call an episode an event. The first deviating reading lands at
+12:10:10, the second at 12:10:20 — and only then is the ten-second minimum satisfied. **Latency: 20
+seconds.** Not because the computer was slow, but because the rule refuses to commit on one reading,
+which is a deliberate design decision with a measurable price.
+
+Four things follow, and they all constrain how the number may be written down.
+
+| | |
+|---|---|
+| **Quantised to 10 s** | That is the sampling interval. The smallest non-zero latency possible is 10 s. Writing "37.2 s" would be false precision on a 10 s grid |
+| **The rule's minimum *is* its floor** | The 10 s minimum episode length contributes 10 s by construction. This is the first time that threshold has had a price attached to it, and it is a result, not an artefact |
+| **Negative values are reported, not clamped** | A negative latency means the rule's evidence starts *before* the event did — it swept in readings from outside. Clamping to zero would hide exactly that |
+| **Per claim, not per run** | One event, one zone; a run can stage two. Incidents never reported have no latency, are excluded, and the exclusions are counted |
+
+**Worth recording as a limitation.** This is a *lower bound* on what a live system would achieve. It
+contains no ingest delay, no processing time, no queueing — because there is none. It measures the
+evidence a rule demands, expressed as time. Any sentence comparing it to an operational system's
+response time would be unsupported by it.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -7218,6 +7261,6 @@ thing that noticed was a glossary.
 | **Construction vs convention** | Whether a safety property holds because the code refuses, or because everybody types the right thing. They look identical until someone is in a hurry. The test: can I break this by typing something? See §84. |
 | **Development batch** | 60 runs generated to build the AI layer against real bundles, pinned to its own base seed and excluded from every corpus query by name. Not a corpus: no thesis figure may be measured from it. See §84. |
 | **Anchored point** | A score on the 1-5 scale that the rubric words explicitly — 1, 3 and 5. The rest are "anything in between" and are valid values, not gaps. See §100. |
-| **Group, never summarise** | The rule governing the evidence pack: findings are collected under the rule that produced them with a count, and every one is still listed. The reason originally given for it was wrong in direction and was withdrawn -- see §102. |\n| **Factoring** | Saying the sentence a group of findings shares once, in the group's heading, and leaving each row only what differs. Typography, not aggregation: no value is lost and none is computed. See §102. |\n| **Denotes, not implies** | The rule governing the pack's glossary: an entry says what a word refers to and never what it would mean if you saw it. The second is the marker's job and two of the seven scored judgements. See §103. |\n| **Computes none** | The replacement constraint on the pack: every measurement it renders must appear verbatim in a source, and the only arithmetic allowed is counting items it lists itself. Enforced by test rather than by judgement. See §102. |
+| **Group, never summarise** | The rule governing the evidence pack: findings are collected under the rule that produced them with a count, and every one is still listed. The reason originally given for it was wrong in direction and was withdrawn -- see §102. |\n| **Factoring** | Saying the sentence a group of findings shares once, in the group's heading, and leaving each row only what differs. Typography, not aggregation: no value is lost and none is computed. See §102. |\n| **Detection latency** | Simulated time from a staged incident's true start to the earliest instant at which the claiming rule had all the evidence it needed. A property of the rule's design, never of the software's speed. See §104. |\n| **Decidable instant** | The earliest moment a rule could honestly have committed, declared by the rule itself rather than reconstructed afterwards. See §104. |\n| **Denotes, not implies** | The rule governing the pack's glossary: an entry says what a word refers to and never what it would mean if you saw it. The second is the marker's job and two of the seven scored judgements. See §103. |\n| **Computes none** | The replacement constraint on the pack: every measurement it renders must appear verbatim in a source, and the only arithmetic allowed is counting items it lists itself. Enforced by test rather than by judgement. See §102. |
 | **Presentation change** | A change to how a pre-registered instrument is rendered, with no change to a dimension, anchor, scale, item or procedure. Safe only before any data is collected, and argued for in the change log either way. See §99. |
 | **No longer checkable** | What happens to a measurement when its data is deleted. Distinct from *no longer true*: the observation happened and the log is committed; what is lost is re-verification. See §84. |

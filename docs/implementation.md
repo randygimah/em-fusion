@@ -28,7 +28,13 @@ Scope v2 changes: three screens only (Operational Picture, Hypothesis Detail, Sc
 - [x] Download one hourly OpenSky state-vector file once, filter to the bounding box, and **archive the extract as Parquet locally — not committed** (`https://s3.opensky-network.org/data-samples/states/YYYY-MM-DD/HH/states_YYYY-MM-DD-HH.csv.tar`, ~120–180 MB, no account needed). **Amended 2026-08-13:** the extract was to be committed, but the OpenSky Data License Agreement §3(iii) forbids making the data available outside the licensee's institute. What is committed is the **manifest** (source URL, hour, download date, licence, attribution, SHA-256 of the original) and a **fetch-and-filter script**, so a fresh clone reproduces in one command once the reader accepts the same licence. `data/opensky/` is gitignored. Licence and attribution were recorded at download time and cannot be reconstructed later — see `docs/qa.md` §21. **Done 2026-08-19:** `states_2022-06-27-12.csv.tar`, SHA-256 `6e0d2278…91e2`; extract 133,634 rows, content checksum `7ce83881…be05`, built by `adp-004`/`adp-005`.
 - [x] **Choose the bounding box. Fixed 2026-08-19 at 49–54°N, 3–11°E** (~309,000 km²), covering Schiphol, Brussels, Frankfurt, Düsseldorf, Cologne, Luxembourg and Hamburg. Chosen on **usable event sites** — 263 ~20 km cells carrying ≥ 5 simultaneous aircraft, against a ceiling of 150 scenario runs — because coverage quality failed to discriminate: all eight candidates returned a p99 gap of exactly the 10 s cadence. The same box governs the Phase 4 PMTiles cut. See `docs/qa.md` §25.
 - [x] Run the coverage acceptance check on the extract: execute `Normal baseline` against it and confirm no dropouts appear before anything is injected. If they do, move the bounding box — genuine coverage gaps are indistinguishable from injected ones and would make the false-positive rate meaningless. **Done 2026-08-19, ahead of the scenario engine**, by measuring the extract directly rather than by running `Normal baseline` through it — the engine does not exist yet and the box decision could not wait for it. **The check does not pass cleanly, and the residue is carried forward:** 10 of 948 tracks (1.05%) hold a genuine interior airborne dropout, and seven of the ten fall in the 100–300 s band that scenario type 4 will inject into. Mitigation, owed before the type 4 campaign: the generator must refuse those tracks as injection sites, using the coverage report to identify them. Re-run this check as originally written once the scenario engine exists.
-- [ ] Define detection latency precisely (simulated scenario time, not wall clock) before any measurement code exists.
+- [x] Define detection latency precisely (simulated scenario time, not wall clock) before any
+      measurement code exists. **Settled 2026-09-28, and no measurement code existed at the
+      time, which was the point of the item.** Latency is the simulated-time interval from a
+      staged incident's ground-truth onset to the earliest simulated instant at which every
+      piece of evidence the claiming rule required was available. The definition, the four
+      rejected alternatives and the four reporting constraints are on `anom-009`; the reasoning
+      is in `docs/thesis_notes.md` and `docs/qa.md` §104.
 - [x] Write and pre-register `docs/scoring_rubric.md` — dimensions, worded 1/3/5 anchors, worked example, calibration procedure, adjudication rule, threats to validity. **Drafted 2026-08-07.**
 - [ ] Walk the second rater through Part A of `docs/scoring_rubric.md` and confirm the anchors read clearly to someone outside the project. Revise now if not — after the campaign starts it is frozen.
 - [ ] **Record the pre-registration commit hash** of `docs/scoring_rubric.md` immediately before the first scored generation, and cite it in the thesis. This is the whole value of pre-registering; an uncited rubric proves nothing about when it was fixed.
@@ -226,7 +232,7 @@ Three corrections were made to the backlog on picking the phase up, each recorde
 Two items do not sit in the sequence at all. **`anom-008` accumulates rather than lands**: its own
 text requires correct non-detection to be asserted for every detector, not once in aggregate, so a
 case is added as each detector arrives and the item closes when the last one does. And **`anom-009`
-is gated on Track 0**, which still owes a precise definition of detection latency *before* any
+was gated on Track 0**, which owed a precise definition of detection latency *before* any
 measurement code exists — the entire value of that item is that it is settled first.
 
 **The corpus-dropout conflict is the one thing to settle before writing tests.** `normal-baseline`
