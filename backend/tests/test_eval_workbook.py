@@ -27,6 +27,7 @@ import pytest
 from app.ai.service import ConfigurationError
 from app.evaluation.pack import BLINDING_GIVEAWAYS, DIMENSIONS, JUDGEMENTS
 from app.evaluation.workbook import (
+    ANCHORED,
     ANCHORS,
     SCALE,
     arm_key_workbook,
@@ -85,10 +86,16 @@ def test_the_header_is_worded_as_the_rubric_words_it() -> None:
 # ------------------------------------------------------- what it will accept
 
 
-def test_the_five_dimensions_offer_only_the_rubrics_scale() -> None:
-    # spec: eval-008 -- a sheet that accepts a 4 collects values the
-    # pre-registered analysis has no anchor for, and the anchors are the
-    # whole reason the scale is 1/3/5 rather than 1-5.
+def test_the_five_dimensions_offer_the_rubrics_whole_scale() -> None:
+    # spec: eval-008 -- and this test is the corrected one.
+    #
+    # It first asserted a 1/3/5 dropdown, which is what the module then
+    # built, so it passed while being wrong: the rubric says "use 2 and 4
+    # for anything in between". A sheet refusing a 4 refuses a value the
+    # pre-registered instrument invites, and `eval-006` reports
+    # quadratic-weighted kappa over the scale that was actually used -- so
+    # narrowing it changes the analysis rather than tightening the sheet.
+    # The test was green against the author's assumption, never the rubric.
     rows = sheet_of(packed())
     header = {cell.value: cell.column for cell in rows[1]}
 
@@ -151,7 +158,7 @@ def test_a_scale_the_rubric_does_not_use_is_refused() -> None:
     pack = packed()
 
     with pytest.raises(ConfigurationError, match="scale"):
-        score_sheet_workbook(pack.items, scale=(1, 2, 3, 4, 5))
+        score_sheet_workbook(pack.items, scale=(1, 3, 5))
 
 
 # ------------------------------------------------------ what it gives back
@@ -171,8 +178,11 @@ def test_the_anchors_travel_with_the_sheet() -> None:
         if cell.value
     )
     for name in DIMENSIONS:
-        for level in SCALE:
+        for level in ANCHORED:
             assert ANCHORS[name][level] in text, f"{name} anchor {level} missing"
+    # And the sheet says what the unworded points are for, or a scorer
+    # reading only this sheet would think 2 and 4 were not available.
+    assert "in between" in text
 
 
 def test_the_identifier_columns_cannot_be_typed_over() -> None:
@@ -256,7 +266,7 @@ def test_a_dimension_missing_one_anchor_is_refused() -> None:
     # three points has no agreed meaning behind it. Invisible in the results.
     pack = packed()
     half = {**ANCHORS["uncertainty"]}
-    half.pop(SCALE[-1])
+    half.pop(ANCHORED[-1])
 
     with pytest.raises(ConfigurationError, match="missing the anchor"):
         with _anchors_replaced("uncertainty", half):

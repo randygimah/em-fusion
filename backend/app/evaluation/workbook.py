@@ -41,10 +41,21 @@ from openpyxl.worksheet.datavalidation import DataValidation
 from app.ai.service import ConfigurationError
 from app.evaluation.pack import DIMENSIONS, JUDGEMENTS, PackItem
 
-#: The rubric's scale, and the reason it is 1/3/5 rather than 1-5: each of
-#: the three has a worded anchor and the even numbers deliberately do not,
-#: so a sheet accepting a 4 collects a value the analysis cannot interpret.
-SCALE: tuple[int, ...] = (1, 3, 5)
+#: What the sheet accepts, and it is the **whole** 1-5 range.
+#:
+#: Corrected before any scoring: an earlier version of this module offered
+#: only 1/3/5, on the reasoning that those are the points carrying a worded
+#: anchor. `docs/scoring_rubric.md` Part A says the opposite in as many
+#: words -- *"use 2 and 4 for anything in between"* -- so that dropdown
+#: would have refused values the pre-registered instrument invites, and
+#: `eval-006` reports **quadratic-weighted** kappa, which is computed over
+#: the scale actually used. A narrowed scale is therefore not a stricter
+#: sheet, it is a silent change to the pre-registered analysis.
+SCALE: tuple[int, ...] = (1, 2, 3, 4, 5)
+
+#: The three points the rubric words. The others are explicitly "anything in
+#: between", so they need no anchor and their absence is not a gap.
+ANCHORED: tuple[int, ...] = (1, 3, 5)
 
 SHEET = "Scores"
 ANCHOR_SHEET = "How to score"
@@ -156,10 +167,11 @@ def _checked(
     if tuple(scale) != SCALE:
         raise ConfigurationError(
             f"the scoring scale {tuple(scale)!r} is not the rubric's {SCALE!r}. "
-            "Every point on the pre-registered scale carries a worded anchor and "
-            "the values between them deliberately do not, so a sheet offering "
-            "another scale collects numbers the analysis has nothing to map back "
-            "to a description."
+            "A sheet offering another scale collects values the pre-registered "
+            "analysis was not specified over -- and since eval-006 reports "
+            "quadratic-weighted kappa, which is computed across the scale that "
+            "was used, narrowing it is a change to the analysis rather than a "
+            "stricter sheet."
         )
     for name in (*dimensions, *judgements):
         anchor = ANCHORS.get(name)
@@ -170,7 +182,10 @@ def _checked(
                 "nothing, which reads to the scorer as a broken file and to a "
                 "reader of the results as a dimension nobody scored."
             )
-        wanted = ["options"] if name in judgements else list(scale)
+        # Anchors are owed on the three worded points only. Demanding one
+        # for 2 and 4 would contradict the rubric, which calls them
+        # "anything in between" and words them on purpose not at all.
+        wanted = ["options"] if name in judgements else list(ANCHORED)
         missing = [key for key in wanted if key not in anchor]
         if missing:
             raise ConfigurationError(
@@ -268,7 +283,8 @@ def _note(name: str, scale: Sequence[int]) -> Any:
     if "options" in anchor:
         lines += [f"- {option}" for option in anchor["options"]]
     else:
-        lines += [f"{value} = {anchor[value]}" for value in scale]
+        lines += [f"{value} = {anchor[value]}" for value in ANCHORED]
+        lines.append("Use 2 and 4 for anything in between.")
     comment = Comment("\n".join(lines), "EM Fusion")
     comment.width, comment.height = 380, 200
     return comment
@@ -290,8 +306,9 @@ def _anchor_sheet(
         anchor = ANCHORS[name]
         sheet.append([str(anchor["heading"]), "", str(anchor["question"])])
         sheet.cell(row=sheet.max_row, column=1).font = Font(bold=True)
-        for value in scale:
+        for value in ANCHORED:
             sheet.append(["", value, str(anchor[value])])
+        sheet.append(["", "2 and 4", "Anything in between the worded points."])
     for name in judgements:
         anchor = ANCHORS[name]
         sheet.append([str(anchor["heading"]), "", str(anchor["question"])])
@@ -338,6 +355,7 @@ def _bytes(book: Workbook) -> bytes:
 
 
 __all__ = [
+    "ANCHORED",
     "ANCHORS",
     "ANCHOR_SHEET",
     "SCALE",
