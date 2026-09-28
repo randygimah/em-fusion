@@ -6738,6 +6738,50 @@ made the window longer; it was never the cause. The honest statement is that a l
 memory-constrained machine will sometimes be killed, and the recoverability matters more than the
 prevention.
 
+### The sample draw caught a promise that could not be kept, before the money was spent
+
+The corpus was destroyed on 19 September by a database-tier test run pointed at the application
+database. What survived was a 60-run development batch generated afterwards so the AI layer had real
+bundles to build against, and its own plan says in bold that no thesis figure may be measured from
+it.
+
+Nine days later, with everything built, the sampler drew twenty bundles from it — and printed what it
+had drawn, with the scenario type beside each row. Twenty rows, and not one of them
+`ambiguous-mixed-evidence`. The batch holds three scenario types, not five.
+
+**Two written promises were unsatisfiable on that corpus, and both would have been discovered after
+the campaign had run.** The evaluation-metrics item carries a correction, measured over sixty shared
+seeds, establishing that `rf-sensor-fault` and `ambiguous-mixed-evidence` stage the same receiver,
+the same elevation and the same window, and that their RF observation streams are identical byte for
+byte in sixty of sixty — so the pair is a controlled comparison differing in exactly one variable,
+and both arms being decided the same way is a positive result rather than a null one. It is recorded
+there as "a negative control living inside a positive one", explicitly so that it would not be
+dropped as a duplicate. The scored corpus dropped it. And the scoring item's own amendment promises
+that the producing scenario type is recorded on every sampled bundle *so that the rf-sensor-fault
+against ambiguous-mixed-evidence split can be examined afterwards without having been stratified on*
+— a promise about an afterwards that could not happen.
+
+What made it visible was a design decision taken for a different reason. The sampler records the
+scenario type beside each entry because that comparison needs it, and the script that runs the
+sampler prints the table rather than only writing the file. Twenty identical values in a column a
+reader is looking at is obvious; a sampler that returned twenty ids and wrote them to disk would have
+been silently correct and substantively wrong. **The habit of printing what a measurement chose,
+rather than only what it concluded, is what caught this** — which is the same property that made the
+three-bundle trial worth the eleven pence.
+
+The remedy was smaller than it first appeared, and the first framing of it was wrong. "Regenerate the
+corpus" sounds like three hundred runs; what the campaign needs is **twenty bundles**. One wave of
+the recorded plan — one base seed, five types, twenty runs each — restores the missing arm and
+supplies several times the bundles required, at roughly the cost of the development batch that
+already existed. Waves two and three remain owed and are what the detection metrics need; they are
+not what this needed.
+
+One correction fell out of doing it. The corpus plan says every measurement must be restricted to
+*ids 241–540* or selected by the recorded base seeds. The development batch took ids 21–80, so the
+regenerated wave lands at 81 onward and that id range never becomes true. The base-seed selector is
+now the only correct one — which is what the batch-provenance item was built for, and the first
+occasion on which a run's recorded provenance has been load-bearing rather than merely available.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;
