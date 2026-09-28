@@ -69,6 +69,42 @@ What the mixed hours **cannot** do yet is supply a second competing claim, becau
 of their evidence is exactly what the unbuilt test 2 would have read. That is why "no event received
 two answers" is not evidence the ordering works.
 
+## The other half: the hours where nothing was staged
+
+A catch rate can be driven to 100% by alarming on everything, so none of the numbers above mean
+anything until the layer can be shown to stay quiet on ordinary data. Over the 20 hours of this
+corpus with nothing staged: **no hour shows the analyst anything — 0 of 20.**
+
+Quote that with its coverage. The ladder has three answers and only two have tests behind them, so
+the figure is **0 false positives over two of the three reportable types**. Read as three, it
+credits the layer with the accuracy of the test that was never built.
+
+**Why this needed code at all.** Zero is the answer we want and also the answer a broken pipeline
+gives: detectors that ran and found nothing, detectors that never ran, detectors pointed at the
+wrong hours, and a filter that discarded everything upstream all produce an identical empty result.
+So the control is handed **an account of every detector by name** and refuses to grade an hour where
+one is missing from it. A detector that found nothing has to say so. That refusal, not a count, is
+what answers *did this detector look*.
+
+**The two halves of the data behave oppositely, and that is a measurement rather than a rule.** The
+aircraft tracks are real recordings and are full of ordinary dropouts, so a detector reporting none
+of them has not looked. The radio grid is synthetic and a quiet hour has nothing in it, so reporting
+nothing is correct. Each detector carries a band measured off the quiet hours and the comparison is
+the same for all of them — there is no rule name anywhere in it.
+
+| Detector | Band per quiet hour | Median | Its silence is |
+|---|---|---|---|
+| Radio deviation (synthetic) | 0–0 | 0 | correct |
+| Aircraft dropout (replayed) | 9–19 | 16.5 | **a failure** |
+| Dropout cluster (replayed) | 5–9 | 7 | **a failure** |
+| Dropout rate excess | 0–0 | 0 | correct — it is never invoked on a quiet hour |
+
+**What the bands cannot tell you.** They were measured on these 20 hours and are applied to them, so
+all 20 are inside by construction and "all within background" is not a result. They are a tripwire
+for a future corpus or a changed generator — the counts nothing else in the project quotes. And a
+`[min, max]` band over n hours puts roughly 2/(n+1) of fresh same-distribution hours outside it,
+about one in ten here, so a single out-of-band hour later is not yet a signal; the proportion is.
+
 ## The one fact almost every decision descends from
 
 > **The radio evidence is very strong. The aircraft evidence is weak.**
@@ -104,6 +140,9 @@ genuinely marginal evidence.
 | **Seeded from truth** | A measurement that takes its centre and window from the answer key. Right for asking *does this signal exist*; invalid for choosing a parameter the rule will apply to detected inputs. |
 | **Mutation testing** | Breaking the code on purpose, one change at a time, to check the tests notice. Evidence the tests are load-bearing. |
 | **Detection latency** | How much of an event must elapse before the claiming rule has all the evidence it demands, in simulated time. **Not** how fast the code is -- detection is batch and there is no moment of noticing. Quantised to the 10 s sampling interval, signed, per claim. Definition fixed 2026-09-28 before any measurement code existed; see `anom-009` and `docs/qa.md` §104. |
+| **Correct non-detection** | A required *behaviour*, not an absence: shown data with nothing staged, the layer must show the analyst nothing. Written as a behaviour because an empty result is also what a pipeline that never ran produces. |
+| **Background band** | The minimum and maximum an intermediate detector produced across the quiet hours, with the number of hours recorded. Membership in it, not zero-ness, is what a quiet hour is judged on. |
+| **Not exercised** | A third verdict beside clean and false-positive, for a ladder answer with no test behind it. Stops the absence of a test being reported as its accuracy. |
 | **Decidable instant** | The earliest simulated moment a rule could honestly have committed. Declared by the rule itself, because only the rule knows what evidence it required. |
 
 ## What is blocking the rest

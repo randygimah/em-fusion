@@ -7498,3 +7498,147 @@ result is believed, which no earlier harness in this project does. The campaign 
 lesson in a comment — a mutant producing an indentation error is killed by a syntax error rather than
 by a test, and scoring that as a pass credits the suite with a catch it did not make — but the check
 was never implemented there. The comment had been mistaken for the fix.
+
+### The quiet-run control: an instrument whose correct output and whose broken output are identical
+
+The false-positive rate is the figure on which every other detection figure
+depends. A catch rate can be driven to one by alarming on everything, so it
+says nothing until the layer can be shown to stay silent on data with nothing
+staged. The control that establishes this is, on the face of it, the simplest
+thing in the detection layer: run the detectors over the twenty quiet runs and
+assert that nothing reaches the analyst.
+
+It is in fact the hardest thing in the layer to build honestly, for one reason.
+**Zero is the answer we want and also the answer a broken pipeline gives.** The
+detectors running correctly, the detectors never running, the detectors running
+against the wrong observations, and a filter upstream discarding everything
+before the detectors, all produce an identical empty result. Three of those four
+are failures. No property of the output distinguishes them, because the property
+being asserted is an absence.
+
+The resolution was to change what the control receives rather than what it
+checks. It is handed an **account of every registered producer** — one entry per
+detector, keyed on the `(rule_id, finding_type)` pair — and it refuses to return
+a verdict at all when a registered producer is missing from that account. A
+detector that found nothing has to say so; it cannot simply fail to appear. That
+refusal, and not a count, is what answers *did this detector look*. It is the
+same move as the evidence bundle's typed absences one layer along: a stated
+absence is evidence, an unstated one is nothing. The generalisable form is worth
+recording, because the naive version of this test appears in almost every
+system: `assert len(anomalies) == 0` passes against a fixture that was never
+populated, and the assertion cannot tell you which it did.
+
+The pair key rather than the rule id is a second finding from the same reading.
+The rate-excess measurement borrows the continuity rule's identifier, so keyed on
+the rule alone the register holds one row where it needs two and one producer
+silently replaces the other. This is the third place in the project where that
+collision has had to be handled — the grounding check resolves on the pair, the
+scoring pack groups on it — which is enough recurrences to treat it as a
+property of the vocabulary rather than an accident of two rules.
+
+### The asymmetry between replayed and synthetic data, which a rule of thumb got backwards
+
+The item's own amendment of 14 September had established that the lower
+detectors must report *something* on a quiet run, on the reasoning that the
+corpus is known to contain discontinuities and a detector reporting none of them
+has not looked. That reasoning is correct and it was drawn entirely from the
+replayed track data.
+
+It does not hold on the other half of the system. The RF grid is synthetic: on a
+quiet run the generator injects nothing into it, so there is nothing to deviate
+from baseline. Measured over corpus v2's twenty quiet runs, the RF rule raises
+**zero episodes on twenty of twenty**. A blanket "must report something" rule
+would have failed every correct run in the corpus — and, being written into the
+control rather than into a detector, it would have failed them for a reason
+that looked like a detection defect.
+
+The fix is not an exception carved for one rule. It is to let the **measured
+band** carry the requirement: each producer's floor and ceiling come from the
+corpus, and the comparison is identical for all of them. The track side's floor
+is 9 and the cluster rule's is 5, so their silence fails. The RF side's floor is
+0, so its silence passes. The difference is a property of the data, and there is
+no rule identifier anywhere in the comparison. What answers *did the RF rule
+look* is then the accounting refusal above, which is uniform — which is the
+second argument for that mechanism, arrived at from the opposite direction.
+
+| Producer | Band per quiet run (n=20) | Median | Silence |
+|---|---|---|---|
+| RF deviation, synthetic grid | 0–0 | 0 | correct |
+| Track continuity gap, replayed | 9–19 | 16.5 | a failure |
+| Track gap cluster, replayed | 5–9 | 7 | a failure |
+| Track rate excess | 0–0 | 0 | correct, structurally |
+
+The last row is structural rather than statistical and is recorded as such: the
+rate excess is reached only through a zone the receiver-fault rule dismissed as
+environmental, so on a quiet run it is never invoked. A non-zero count there
+would mean an upstream rule had fired, which the reportable side reports too — a
+second guard at a different boundary rather than a redundant one.
+
+### Limitation: the false-positive rate covers two reportable types of three
+
+The result is that **no quiet run shows the analyst anything: 0 of 20**. That
+figure has to be quoted with its coverage.
+
+The precedence ladder declares three reportable anomaly types. Two have rules.
+The third, the data-source-issue rule, was attempted twice, measured, and closed
+— the signal is not separable with the corpus as generated, and the option that
+would work needs a third corpus generation that would invalidate every detection
+figure measured on v2. A control reporting "zero data-source issues across
+twenty quiet runs" would therefore be **quoting the absence of a rule as the
+accuracy of a rule**, which is the most flattering and most empty sentence the
+instrument could produce.
+
+The control registers that rule as present-but-unbuilt and gives it a verdict of
+*not exercised*, distinct from *clean*, and carries the coverage figure so the
+detection-metrics report has to state it. The correct reading is: zero false
+positives on 20 of 20 quiet runs, over two of the three reportable types. This
+is also why the control module is the only place in the application that names
+that rule's vocabulary at all — naming it there is the record that it is missing
+rather than forgotten.
+
+### Threat to validity: the background band cannot fail on the data that produced it
+
+Each intermediate producer's band is the minimum and maximum it produced across
+the twenty quiet runs of corpus v2, and it is then applied to those same runs.
+All twenty are inside their bands by construction. **As a test of whether the
+present figures are right, the band says nothing at all**, and it would be
+straightforwardly misleading to report "all producers within background" as
+though it were a result.
+
+Its value is entirely prospective. These are the findings that no reportable rule
+turns into an alarm and that no other measurement quotes, so if the corpus is
+regenerated, or the generator changes, or a policy threshold moves underneath
+the detectors, the counts move and nothing else in the project would show it.
+That is precisely what the spec item asks the number for.
+
+One property of the construction has to be read carefully when the band is next
+used. A `[min, max]` band over n runs means a fresh run from the same
+distribution falls outside it at roughly 2/(n+1) — about one in ten at n=20. A
+single quiet run scoring *outside background* on a future corpus is therefore not
+yet a signal. The figure to quote is the **proportion** of quiet runs in band,
+with the per-run verdict as its input rather than as a result.
+
+### The mutation pass, and the one thing it could not have been asked
+
+Twenty-nine mutants, all killed, no survivors. The interesting property is not
+the score but the shape of the mutants: **almost every one of them leaves the
+control reporting that the quiet runs were clean.** Disable the accounting
+refusal and it grades whatever it was handed; invert the set difference and it
+refuses a stray key while letting a missing producer through; drop the band's
+floor and every detector's silence becomes acceptable; report the unbuilt rule as
+clean and the coverage figure reads three of three. Each of those produces a
+result that is more flattering than the truth and looks exactly like the truth.
+
+That is a general property of controls rather than a fact about this one, and it
+is the argument for scoring this module by mutation rather than by coverage: the
+module reached 100% line coverage before two of its guards had any test at all,
+because the guards are `if` statements whose false branch every other test takes.
+
+The pass also had to reject one of its own mutants. Keying the register on the
+rule id alone broke the module at import, so no test ran and the harness scored
+it *inconclusive* rather than killed — correctly, since a mutant killed by an
+import error is killed by the language and not by the suite. It was replaced by
+one that produces the same defect without preventing collection. This is the
+same class as the unparseable-mutant check added with the latency harness, and
+it is the second time in two items that a mutant has appeared to be caught by a
+test that never ran.

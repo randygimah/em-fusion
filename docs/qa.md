@@ -7074,6 +7074,128 @@ contains no ingest delay, no processing time, no queueing — because there is n
 evidence a rule demands, expressed as time. Any sentence comparing it to an operational system's
 response time would be unsupported by it.
 
+## 105. How can a test for "nothing happened" ever fail? Isn't an empty list an empty list?
+
+**It can't — and that is the entire difficulty the quiet-run control exists to solve.**
+
+The control asks: over the runs where nothing was staged, does the detection
+layer show the analyst anything? The answer we want is zero. The problem is
+that **zero is also what you get from a broken pipeline**:
+
+| What happened | What the control sees |
+|---|---|
+| The detectors ran and correctly found nothing | zero |
+| The detectors never ran | zero |
+| The detectors ran on the wrong observations | zero |
+| A filter upstream discarded everything before the detectors | zero |
+
+Three of those four are failures, and no amount of counting separates them,
+because the thing being counted is absence. A control whose passing state and
+whose broken state produce identical output is not a control.
+
+The fix is to change what the control is *given*. It is handed an **account of
+every detector by name** — one entry per registered producer — and it refuses
+to grade a run where any registered producer is missing from that account. A
+detector that found nothing has to say so. It cannot simply not appear.
+
+That refusal, and not a count, is what answers *did this detector actually
+look*. It is the same move as `evb-001`'s typed absences one layer along: an
+absence that is stated is evidence, an absence that is merely present is
+nothing.
+
+Worth recording as a general trap: **every correct-non-detection test in any
+system has this shape**, and the usual version — `assert len(anomalies) == 0` —
+passes on a test fixture that was never populated.
+
+## 106. Why do some detectors have to report *something* on a quiet run, and others don't?
+
+**Because half the data is real and half is synthetic, and "quiet" means two
+different things in the two halves.**
+
+The aircraft tracks are **replayed OpenSky recordings**. Real flight data is
+full of discontinuities that have nothing to do with anything staged: aircraft
+leave receiver range, transponders go quiet, ground stations miss reports.
+Measured over corpus v2's twenty quiet runs, the continuity rule finds between
+9 and 19 gaps on every single one, median 16.5, and never zero. So a run where
+that detector reports nothing is not a quiet run — it is a detector that did
+not look, and the control has to fail it.
+
+The RF grid is **synthetic**. On a quiet run the generator injects nothing into
+it, so there is genuinely nothing to deviate from baseline. Measured over the
+same twenty runs, the RF rule raises **zero episodes on 20 of 20**. Requiring
+it to report something would fail every correct run in the corpus.
+
+| Producer | Measured band per quiet run | Its silence is |
+|---|---|---|
+| RF deviation (synthetic grid) | 0–0 | correct |
+| Track continuity gap (replayed) | 9–19 | a failure |
+| Track gap cluster (replayed) | 5–9 | a failure |
+| Track rate excess | 0–0 | correct, structurally |
+
+The important part is that **neither is a special case in the code**. There is
+no `if rule == "RF-NOISE"` anywhere. Each producer carries a band measured from
+the corpus, and the comparison is the same for all of them: is the count inside
+the band? The track side's floor happens to be above zero and the RF side's
+happens to be zero, and that difference is a property of the data rather than a
+rule somebody wrote down.
+
+The last row is different again and worth naming: the rate-excess measurement is
+reached **only** through a zone the receiver-fault rule dismissed as
+environmental, so on a quiet run it is never invoked at all. Its band is 0–0
+structurally rather than statistically — a non-zero count there means something
+upstream fired.
+
+## 107. If one of the three reportable rules was never built, doesn't the false-positive rate look better than it is?
+
+**Yes, and that is why the control reports the coverage alongside the rate.**
+
+There are three reportable anomaly types in the precedence ladder. Two have
+rules behind them. The third — the data-source-issue rule — was attempted
+twice, measured, and closed: the signal is not separable with the corpus as
+generated, and fixing it needs a third corpus generation that would invalidate
+the whole detection chapter.
+
+So a control that reported *"zero data-source issues across twenty quiet runs"*
+would be **quoting the absence of a rule as the accuracy of a rule**. It is the
+most flattering sentence the instrument could produce and it is entirely empty.
+
+The control therefore registers that rule as present-but-unbuilt, gives it a
+verdict of *not exercised* rather than *clean*, and carries a coverage figure —
+**two of three** — that the detection-metrics item has to quote next to the
+rate. The right reading of the result is: *zero false positives on 20 of 20
+quiet runs, over two of the three reportable types*. Read as three, it
+overstates the layer's coverage by exactly the rule that does not exist.
+
+This is also why the control is the only module in the application that names
+that rule's vocabulary at all. Naming it there is the record that it is
+**missing rather than forgotten**.
+
+## 108. The background band was measured on the same runs it is used to check. Isn't that circular?
+
+**Yes, and it is circular by design — but it is worth being precise about what
+that costs.**
+
+The band for each intermediate producer is the minimum and maximum it produced
+across corpus v2's twenty quiet runs. Applied back to those same twenty runs,
+all twenty are inside the band by construction. **It cannot fail on the data
+that produced it.** As a test of whether the present figures are right, it says
+nothing.
+
+What it is actually for is different: it is a **tripwire for drift**. If the
+corpus is regenerated, or the generator changes, or a policy threshold moves
+underneath the detectors, the intermediate counts move — and nothing else in
+the project would show it, because these are the findings no reportable rule
+turns into an alarm and no measurement currently quotes. That is what the
+spec item means by *"the number that would move if the corpus or the generator
+changed underneath the detectors and nothing else would show it"*.
+
+One consequence to read carefully. A band of `[min, max]` over n runs means a
+fresh run drawn from the same distribution falls outside it at roughly
+**2/(n+1)** — about one in ten at n=20. So a single quiet run scoring
+*outside background* on a future corpus is not yet a signal. The figure worth
+quoting is the **proportion** of quiet runs in band; the per-run verdict is
+that figure's input, not a result on its own.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -7261,6 +7383,16 @@ response time would be unsupported by it.
 | **Construction vs convention** | Whether a safety property holds because the code refuses, or because everybody types the right thing. They look identical until someone is in a hurry. The test: can I break this by typing something? See §84. |
 | **Development batch** | 60 runs generated to build the AI layer against real bundles, pinned to its own base seed and excluded from every corpus query by name. Not a corpus: no thesis figure may be measured from it. See §84. |
 | **Anchored point** | A score on the 1-5 scale that the rubric words explicitly — 1, 3 and 5. The rest are "anything in between" and are valid values, not gaps. See §100. |
-| **Group, never summarise** | The rule governing the evidence pack: findings are collected under the rule that produced them with a count, and every one is still listed. The reason originally given for it was wrong in direction and was withdrawn -- see §102. |\n| **Factoring** | Saying the sentence a group of findings shares once, in the group's heading, and leaving each row only what differs. Typography, not aggregation: no value is lost and none is computed. See §102. |\n| **Detection latency** | Simulated time from a staged incident's true start to the earliest instant at which the claiming rule had all the evidence it needed. A property of the rule's design, never of the software's speed. See §104. |\n| **Decidable instant** | The earliest moment a rule could honestly have committed, declared by the rule itself rather than reconstructed afterwards. See §104. |\n| **Denotes, not implies** | The rule governing the pack's glossary: an entry says what a word refers to and never what it would mean if you saw it. The second is the marker's job and two of the seven scored judgements. See §103. |\n| **Computes none** | The replacement constraint on the pack: every measurement it renders must appear verbatim in a source, and the only arithmetic allowed is counting items it lists itself. Enforced by test rather than by judgement. See §102. |
+| **Group, never summarise** | The rule governing the evidence pack: findings are collected under the rule that produced them with a count, and every one is still listed. The reason originally given for it was wrong in direction and was withdrawn -- see §102. |
+| **Factoring** | Saying the sentence a group of findings shares once, in the group's heading, and leaving each row only what differs. Typography, not aggregation: no value is lost and none is computed. See §102. |
+| **Detection latency** | Simulated time from a staged incident's true start to the earliest instant at which the claiming rule had all the evidence it needed. A property of the rule's design, never of the software's speed. See §104. |
+| **Decidable instant** | The earliest moment a rule could honestly have committed, declared by the rule itself rather than reconstructed afterwards. See §104. |
+| **Denotes, not implies** | The rule governing the pack's glossary: an entry says what a word refers to and never what it would mean if you saw it. The second is the marker's job and two of the seven scored judgements. See §103. |
+| **Computes none** | The replacement constraint on the pack: every measurement it renders must appear verbatim in a source, and the only arithmetic allowed is counting items it lists itself. Enforced by test rather than by judgement. See §102. |
 | **Presentation change** | A change to how a pre-registered instrument is rendered, with no change to a dimension, anchor, scale, item or procedure. Safe only before any data is collected, and argued for in the change log either way. See §99. |
 | **No longer checkable** | What happens to a measurement when its data is deleted. Distinct from *no longer true*: the observation happened and the log is committed; what is lost is re-verification. See §84. |
+| **Correct non-detection** | A required positive behaviour: the layer is shown data with nothing staged and must show the analyst nothing. Written as a behaviour rather than an absence because an empty result is also what a pipeline that never ran produces. See §105. |
+| **Account of every producer** | The input the quiet-run control grades against: one entry per registered detector, with a missing entry refused rather than skipped. It is what answers *did this detector look*, since on the reportable side counting cannot. See §105. |
+| **Background band** | The minimum and maximum an intermediate detector produced across the quiet runs, recorded with the number of runs behind it. Membership in the band, not zero-ness, is what a quiet run is judged on. See §106. |
+| **Not exercised** | A third verdict beside clean and false-positive, for a registered rule with no implementation. Keeps the absence of a rule from being reported as the accuracy of one. See §107. |
+| **Drift tripwire** | A figure measured on a corpus and applied to it, which therefore cannot fail on the data that produced it. Its value is entirely prospective: it moves when the corpus or the generator does. See §108. |

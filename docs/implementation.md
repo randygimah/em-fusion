@@ -235,6 +235,19 @@ case is added as each detector arrives and the item closes when the last one doe
 was gated on Track 0**, which owed a precise definition of detection latency *before* any
 measurement code exists — the entire value of that item is that it is settled first.
 
+*(**`anom-008` closed 2026-09-29**, and the accumulation prediction above was half right. The
+per-detector assertion did have to wait for the detectors, but it did not arrive as a case per
+detector — it arrived as a **register**, keyed on the `(rule_id, finding_type)` pair, holding all
+seven producers with an account demanded of every one of them. That shape came from the thing the
+item's own text could not have anticipated: **zero is the answer the control wants and also the
+answer a broken pipeline gives**, so a case per detector asserting emptiness would have passed on a
+fixture nobody populated. Result: **0 of 20 quiet runs show the analyst anything**, over two of the
+three reportable types — `anom-006` is registered as *not exercised* rather than clean, because
+reporting zero of a type no rule can emit quotes the absence of a rule as its accuracy. The
+"silence means the detector did not look" rule turned out to hold only on the replayed track side:
+the RF grid is synthetic and raises nothing on 20 of 20 quiet runs, so the floor is measured per
+producer rather than asserted. 28 tests, 100% on the module, mutation 29 of 29.)*
+
 **The corpus-dropout conflict is the one thing to settle before writing tests.** `normal-baseline`
 replays real corpus traffic, and the coverage check of 2026-08-19 found 10 of 948 tracks carrying a
 genuine interior airborne dropout, seven of them in the same 100–300 s band scenario type 4 injects
