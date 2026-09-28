@@ -1,0 +1,219 @@
+time="2026-09-28T17:01:20+01:00" level=warning msg="The \"PSEUDONYM_SEED\" variable is not set. Defaulting to a blank string."
+time="2026-09-28T17:01:20+01:00" level=warning msg="The \"PSEUDONYM_SEED\" variable is not set. Defaulting to a blank string."
+ Image em-fusion-backend Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 589B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 2.07kB done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/python:3.13.15-alpine
+#3 DONE 0.1s
+
+#4 [internal] load metadata for ghcr.io/astral-sh/uv:0.9.7-alpine
+#4 DONE 0.1s
+
+#5 [internal] load .dockerignore
+#5 transferring context: 81B done
+#5 DONE 0.0s
+
+#6 FROM ghcr.io/astral-sh/uv:0.9.7-alpine@sha256:ce2e7e691797f9bd2ee1b15fe59d272cb26d9662eda746e0fc1542c74a558064
+#6 resolve ghcr.io/astral-sh/uv:0.9.7-alpine@sha256:ce2e7e691797f9bd2ee1b15fe59d272cb26d9662eda746e0fc1542c74a558064 0.0s done
+#6 DONE 0.0s
+
+#7 [base 1/6] FROM docker.io/library/python:3.13.15-alpine@sha256:540c7d91f98ff6880174c40e99067bf5941eb54d818a7a5e094d188b196a934d
+#7 resolve docker.io/library/python:3.13.15-alpine@sha256:540c7d91f98ff6880174c40e99067bf5941eb54d818a7a5e094d188b196a934d 0.0s done
+#7 DONE 0.1s
+
+#8 [internal] load build context
+#8 transferring context: 11.91MB 0.4s done
+#8 DONE 0.4s
+
+#9 [base 2/6] COPY --from=ghcr.io/astral-sh/uv:0.9.7-alpine /usr/local/bin/uv /usr/local/bin/uv
+#9 CACHED
+
+#10 [base 3/6] WORKDIR /app
+#10 CACHED
+
+#11 [base 4/6] COPY pyproject.toml uv.lock ./
+#11 CACHED
+
+#12 [base 5/6] RUN uv sync --locked --no-install-project --no-dev
+#12 CACHED
+
+#13 [base 6/6] COPY . .
+#13 DONE 3.2s
+
+#14 [dev 1/1] RUN uv sync --locked --no-install-project
+#14 0.229 Resolved 50 packages in 2ms
+#14 0.423 Downloading pygments (1.2MiB)
+#14 0.434 Downloading mypy (2.6MiB)
+#14 0.473 Downloading ruff (10.4MiB)
+#14 0.473 Downloading ast-serialize (1.3MiB)
+#14 1.478  Downloading pygments
+#14 1.578  Downloading ast-serialize
+#14 1.870  Downloading mypy
+#14 3.119  Downloading ruff
+#14 3.119 Prepared 15 packages in 2.88s
+#14 3.290 Installed 15 packages in 170ms
+#14 3.290  + ast-serialize==0.8.0
+#14 3.290  + black==26.5.1
+#14 3.291  + coverage==7.15.4
+#14 3.291  + iniconfig==2.3.0
+#14 3.291  + librt==0.15.0
+#14 3.291  + mypy==2.3.0
+#14 3.291  + mypy-extensions==1.1.0
+#14 3.291  + pathspec==1.1.1
+#14 3.291  + platformdirs==4.11.2
+#14 3.291  + pluggy==1.6.0
+#14 3.291  + pygments==2.20.0
+#14 3.291  + pytest==9.1.1
+#14 3.291  + pytest-cov==7.1.0
+#14 3.291  + pytokens==0.4.1
+#14 3.291  + ruff==0.16.3
+#14 DONE 3.4s
+
+#15 exporting to image
+#15 exporting layers
+#15 exporting layers 8.2s done
+#15 exporting manifest sha256:98be7c405207dd4abf359ccb433e2308c3f42f46d1ab26e7daf1eb360b19dd57
+#15 exporting manifest sha256:98be7c405207dd4abf359ccb433e2308c3f42f46d1ab26e7daf1eb360b19dd57 0.0s done
+#15 exporting config sha256:618ca6c836c65e8f75e8c83404c97582f5b8f8c1008c46a25a242c09b521e0a3 0.0s done
+#15 exporting attestation manifest sha256:886f575b7f2795d086b1c65f8c0387e2706a7edc01108f3b1badf3c17780ebe2 0.0s done
+#15 exporting manifest list sha256:c5405086c4e82eb4298c86dbe1077ebdd490de4967217fed8b8976f9abed799c 0.0s done
+#15 naming to docker.io/library/em-fusion-backend:latest done
+#15 unpacking to docker.io/library/em-fusion-backend:latest
+#15 unpacking to docker.io/library/em-fusion-backend:latest 2.2s done
+#15 DONE 10.5s
+
+#16 resolving provenance for metadata file
+#16 DONE 0.0s
+ Image em-fusion-backend Built 
+docker compose run --rm --no-deps \
+		-e PYTHONPATH=/app -e CORPUS="v2" \
+		-e SMOKE_TEST_CONFIRM="" \
+		-e CAMPAIGN_CONFIRM="yes" \
+		backend python measurements/corpus/scored_campaign.py
+time="2026-09-28T17:01:39+01:00" level=warning msg="The \"PSEUDONYM_SEED\" variable is not set. Defaulting to a blank string."
+time="2026-09-28T17:01:39+01:00" level=warning msg="The \"PSEUDONYM_SEED\" variable is not set. Defaulting to a blank string."
+ Container em-fusion-backend-run-ae8440660253 Creating 
+ Container em-fusion-backend-run-ae8440660253 Created 
+corpus v2 -- one generator, 900 s runs, anom-014 and scn-007 active; base seeds 1412660662, 965530111, 655209063
+model      gpt-4.1-2025-04-14
+parameters {'temperature': 0.0, 'seed': 20260925, 'max_tokens': 1500}
+prompt     sha256 af153726a168ddcd9569ee76442efd4c0e740c4a77a9c665cbc3764558c8db0c
+sample     scored_sample.json, seed 20260928, 20 bundles
+ceiling    200 calls, $3.0 spend
+generations 3 from the model arm, 1 from the baseline
+pacing     11.0s between model calls
+
+schema     0007_hypothesis_requested_arm (checked before anything is asked)
+
+==============================================================================
+WHAT RAN
+==============================================================================
+  bundle    248  hosted    gen 1  row    76  passed       0 refusal(s)
+  bundle    248  hosted    gen 2  row    77  passed       0 refusal(s)
+  bundle    248  hosted    gen 3  row    78  passed       0 refusal(s)
+  bundle    248  template  gen 1  row    79  passed       0 refusal(s)
+  bundle    250  hosted    gen 1  row    80  passed       0 refusal(s)
+  bundle    250  hosted    gen 2  row    81  passed       0 refusal(s)
+  bundle    250  hosted    gen 3  row    82  passed       0 refusal(s)
+  bundle    250  template  gen 1  row    83  passed       0 refusal(s)
+  bundle    252  hosted    gen 1  row    84  passed       0 refusal(s)
+  bundle    252  hosted    gen 2  row    85  passed       0 refusal(s)
+  bundle    252  hosted    gen 3  row    86  passed       0 refusal(s)
+  bundle    252  template  gen 1  row    87  passed       0 refusal(s)
+  bundle    253  hosted    gen 1  row    88  passed       0 refusal(s)
+  bundle    253  hosted    gen 2  row    89  passed       0 refusal(s)
+  bundle    253  hosted    gen 3  row    90  passed       0 refusal(s)
+  bundle    253  template  gen 1  row    91  passed       0 refusal(s)
+  bundle    254  hosted    gen 1  row    92  passed       0 refusal(s)
+  bundle    254  hosted    gen 2  row    93  passed       0 refusal(s)
+  bundle    254  hosted    gen 3  row    94  passed       0 refusal(s)
+  bundle    254  template  gen 1  row    95  passed       0 refusal(s)
+  bundle    255  hosted    gen 1  row    96  passed       0 refusal(s)
+  bundle    255  hosted    gen 2  row    97  passed       0 refusal(s)
+  bundle    255  hosted    gen 3  row    98  passed       0 refusal(s)
+  bundle    255  template  gen 1  row    99  passed       0 refusal(s)
+  bundle    256  hosted    gen 1  row   100  passed       0 refusal(s)
+  bundle    256  hosted    gen 2  row   101  passed       0 refusal(s)
+  bundle    256  hosted    gen 3  row   102  passed       0 refusal(s)
+  bundle    256  template  gen 1  row   103  passed       0 refusal(s)
+  bundle    259  hosted    gen 1  row   104  passed       0 refusal(s)
+  bundle    259  hosted    gen 2  row   105  passed       0 refusal(s)
+  bundle    259  hosted    gen 3  row   106  passed       0 refusal(s)
+  bundle    259  template  gen 1  row   107  passed       0 refusal(s)
+  bundle    262  hosted    gen 1  row   108  passed       0 refusal(s)
+  bundle    262  hosted    gen 2  row   109  passed       0 refusal(s)
+  bundle    262  hosted    gen 3  row   110  passed       0 refusal(s)
+  bundle    262  template  gen 1  row   111  passed       0 refusal(s)
+  bundle    264  hosted    gen 1  row   112  passed       0 refusal(s)
+  bundle    264  hosted    gen 2  row   113  passed       0 refusal(s)
+  bundle    264  hosted    gen 3  row   114  passed       0 refusal(s)
+  bundle    264  template  gen 1  row   115  passed       0 refusal(s)
+  bundle    269  hosted    gen 1  row   116  passed       0 refusal(s)
+  bundle    269  hosted    gen 2  row   117  passed       0 refusal(s)
+  bundle    269  hosted    gen 3  row   118  passed       0 refusal(s)
+  bundle    269  template  gen 1  row   119  passed       0 refusal(s)
+  bundle    273  hosted    gen 1  row   120  passed       0 refusal(s)
+  bundle    273  hosted    gen 2  row   121  passed       0 refusal(s)
+  bundle    273  hosted    gen 3  row   122  passed       0 refusal(s)
+  bundle    273  template  gen 1  row   123  passed       0 refusal(s)
+  bundle    279  hosted    gen 1  row   124  passed       0 refusal(s)
+  bundle    279  hosted    gen 2  row   125  passed       0 refusal(s)
+  bundle    279  hosted    gen 3  row   126  passed       0 refusal(s)
+  bundle    279  template  gen 1  row   127  passed       0 refusal(s)
+  bundle    280  hosted    gen 1  row   128  passed       0 refusal(s)
+  bundle    280  hosted    gen 2  row   129  passed       0 refusal(s)
+  bundle    280  hosted    gen 3  row   130  passed       0 refusal(s)
+  bundle    280  template  gen 1  row   131  passed       0 refusal(s)
+  bundle    284  hosted    gen 1  row   132  passed       0 refusal(s)
+  bundle    284  hosted    gen 2  row   133  passed       0 refusal(s)
+  bundle    284  hosted    gen 3  row   134  passed       0 refusal(s)
+  bundle    284  template  gen 1  row   135  passed       0 refusal(s)
+  bundle    288  hosted    gen 1  row   136  passed       0 refusal(s)
+  bundle    288  hosted    gen 2  row   137  passed       0 refusal(s)
+  bundle    288  hosted    gen 3  row   138  passed       0 refusal(s)
+  bundle    288  template  gen 1  row   139  passed       0 refusal(s)
+  bundle    289  hosted    gen 1  row   140  passed       0 refusal(s)
+  bundle    289  hosted    gen 2  row   141  passed       0 refusal(s)
+  bundle    289  hosted    gen 3  row   142  passed       0 refusal(s)
+  bundle    289  template  gen 1  row   143  passed       0 refusal(s)
+  bundle    295  hosted    gen 1  row   144  passed       0 refusal(s)
+  bundle    295  hosted    gen 2  row   145  passed       0 refusal(s)
+  bundle    295  hosted    gen 3  row   146  passed       0 refusal(s)
+  bundle    295  template  gen 1  row   147  passed       0 refusal(s)
+  bundle    299  hosted    gen 1  row   148  passed       0 refusal(s)
+  bundle    299  hosted    gen 2  row   149  passed       0 refusal(s)
+  bundle    299  hosted    gen 3  row   150  passed       0 refusal(s)
+  bundle    299  template  gen 1  row   151  passed       0 refusal(s)
+  bundle    302  hosted    gen 1  row   152  passed       0 refusal(s)
+  bundle    302  hosted    gen 2  row   153  passed       0 refusal(s)
+  bundle    302  hosted    gen 3  row   154  passed       0 refusal(s)
+  bundle    302  template  gen 1  row   155  passed       0 refusal(s)
+
+==============================================================================
+WHAT IT COST
+==============================================================================
+  calls              60 of 200
+  prompt tokens      326106
+  completion tokens  25269
+  estimated spend    $0.8544
+  unpriced calls     0
+  total is complete  True
+
+==============================================================================
+WHAT THE SAFEGUARD SAID, PER ARM
+==============================================================================
+  template  checked  20  caught   0  rate 0.0
+  hosted    checked  60  caught   0  rate 0.0
+  local     checked   0  caught   0  rate None
+
+  The template's rate is the ORACLE: it is grounded by construction,
+  so anything flagged there is a defect in the check rather than in
+  the baseline. The hosted rate is the reported result.
+
+written to scored_campaign_record.json
