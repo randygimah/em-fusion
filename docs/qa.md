@@ -6950,6 +6950,44 @@ before the campaign could run.
 So the deferral is recorded with its trigger rather than left as an absence: **build it when both
 completed sheets exist, not before, and not between the first and the second.**
 
+## 102. Correction to §98: which way does a summarising evidence pack bias the result?
+
+**Neither, predictably — and §98 said it flatters the weaker arm, which is backwards.**
+
+§98 argued that if the evidence pack summarises its own findings, a weak explanation inherits that
+synthesis and scores better than it earned, narrowing the measured gap. The table in that entry gives
+the direction as "weak explanation looks better".
+
+That is wrong, and the reason is one line of evidence that was already on the page: **the template
+baseline's citations are themselves summaries.** It writes "8 findings of this kind across 2 sources
+between 12:31:32 and 12:36:22; for example…". So:
+
+| | Pack lists raw findings | Pack states the aggregate |
+|---|---|---|
+| The baseline, which aggregates and stops | Looks like it did something | Reads as pure restatement — scores **lower** |
+| The model, which aggregates and then reasons | Scores what it earned | Its aggregation now counts for nothing — also **lower** |
+| **The measured gap** | Unbiased | Moves by an unknown amount in an unknown direction |
+
+Both arms lose, by amounts that depend on how much of each one's output was aggregation. So the
+honest statement is not "it biases the comparison toward the null" but "**it perturbs both arms by
+amounts nobody can estimate**" — which is a *stronger* reason to forbid it, because a known bias can
+in principle be argued about and an unknown perturbation cannot.
+
+**The replacement rule is mechanical, and that is the real lesson.** "Do not summarise" is a
+judgement call, and a judgement call applied fourteen times by a tired person is applied
+inconsistently. The rule now is:
+
+> **The pack re-organises values and computes none.**
+
+Every measurement on the page must appear verbatim in a finding, an uncertainty, or the bundle's own
+metadata. The single exception is a count of items the pack itself lists — allowed because the reader
+could count them, and necessary because a marker checking a hypothesis that claims "nine aircraft"
+against the pack has to be able to. No minimum, maximum, mean, range, ratio or total may be
+introduced. A test extracts every number from the rendered evidence and fails on any that did not
+come from a source, so this is now enforced rather than remembered.
+
+§98's *conclusion* — group and label, never summarise away — stands. Its stated reason does not.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -7137,6 +7175,6 @@ completed sheets exist, not before, and not between the first and the second.**
 | **Construction vs convention** | Whether a safety property holds because the code refuses, or because everybody types the right thing. They look identical until someone is in a hurry. The test: can I break this by typing something? See §84. |
 | **Development batch** | 60 runs generated to build the AI layer against real bundles, pinned to its own base seed and excluded from every corpus query by name. Not a corpus: no thesis figure may be measured from it. See §84. |
 | **Anchored point** | A score on the 1-5 scale that the rubric words explicitly — 1, 3 and 5. The rest are "anything in between" and are valid values, not gaps. See §100. |
-| **Group, never summarise** | The rule governing the evidence pack: findings are collected under the rule that produced them with a count, and every one is still listed. A pack that synthesised its own findings would do part of the work dimension 1 scores. See §98. |
+| **Group, never summarise** | The rule governing the evidence pack: findings are collected under the rule that produced them with a count, and every one is still listed. The reason originally given for it was wrong in direction and was withdrawn -- see §102. |\n| **Factoring** | Saying the sentence a group of findings shares once, in the group's heading, and leaving each row only what differs. Typography, not aggregation: no value is lost and none is computed. See §102. |\n| **Computes none** | The replacement constraint on the pack: every measurement it renders must appear verbatim in a source, and the only arithmetic allowed is counting items it lists itself. Enforced by test rather than by judgement. See §102. |
 | **Presentation change** | A change to how a pre-registered instrument is rendered, with no change to a dimension, anchor, scale, item or procedure. Safe only before any data is collected, and argued for in the change log either way. See §99. |
 | **No longer checkable** | What happens to a measurement when its data is deleted. Distinct from *no longer true*: the observation happened and the log is committed; what is lost is re-verification. See §84. |

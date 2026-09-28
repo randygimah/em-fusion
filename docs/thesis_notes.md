@@ -7328,3 +7328,41 @@ the wrong reason, and the cheapest to generalise: **where a second artefact re-i
 pre-registered decision, the test must assert against the source document, not against the
 implementation's own constant.** The failure was caught by reading Part A while editing an unrelated
 sentence in it, which is not a method.
+
+### Reversal: the argument against a summarising evidence pack was wrong in direction
+
+The constraint placed on the rebuilt scoring pack was that grouping must never replace detail with a
+summary, and the reason recorded for it was that a summarising pack would perform part of the
+synthesis dimension 1 scores, shrinking the measured difference between the arms **in the direction
+that flatters the weaker one**.
+
+The conclusion was right and that reasoning is backwards, which is worth recording because the
+correction is more informative than either position. The template baseline's citations *are*
+summaries — it emits "8 findings of this kind across 2 sources between 12:31:32 and 12:36:22, for
+example…". So a pack that already states the aggregate makes the baseline read as pure restatement
+and scores it **lower**, widening the gap rather than narrowing it. The model arm also loses, for the
+same reason: where its hypothesis says "peak deviations ranging from 8.5 to 12.8 dB", a pack that
+states the range turns synthesis into repetition. Both arms move down, by amounts that depend on how
+much of each one's output was aggregation, and **the net effect on the measured difference is not
+predictable in advance**.
+
+That is a stronger argument for the constraint, not a weaker one: the objection is no longer "it
+biases the result in a known direction", which could in principle be corrected for, but "it perturbs
+both arms by unknown amounts", which cannot. The pack must not be in that business at all.
+
+The replacement constraint is mechanical rather than a matter of judgement, which is the second
+lesson. "Do not summarise" is a rule a careful person applies inconsistently; **"the pack
+re-organises values and computes none"** is a rule a test can enforce. Every measurement rendered
+must appear verbatim in a finding, an uncertainty, or the bundle's own metadata, and the only
+arithmetic permitted is a count of items the pack itself lists — permitted because the reader could
+perform it, and necessary because a marker checking a claim of "nine aircraft" against the pack has
+to be able to. A test extracts every numeric token from the rendered evidence and refuses any that
+did not come from a source. No minimum, maximum, mean, range, ratio or total can now be introduced
+without the suite failing.
+
+The occasion for the correction is also worth recording: the first restructure was reviewed by
+reading it, pronounced correct, and was still unreadable — fourteen table rows repeating one sentence
+are a wall whether or not each row is well-formed Markdown. The second pass factors the shared
+sentence into the group heading and leaves each row only what differs. One evidence pack went from
+roughly thirty-five lines to fifteen with every value intact, and the change exposed two aircraft
+that had dropped out twice each, invisible among fourteen identical lines.
