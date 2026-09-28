@@ -6819,6 +6819,137 @@ one is refused.
 It was added while the table still held no rows at all, which is the same free window an earlier set
 of renames used, and that window is now closed.
 
+## 97. The scoring pack is unreadable. Why does that matter beyond being annoying?
+
+**Because two of the four faults were measurement faults, not comfort faults.** A pack that is merely
+tiring to read costs the marker time. A pack missing information the marker is being asked to judge
+costs the study its first dimension.
+
+The four faults, and which kind each was:
+
+| Fault | Kind |
+|---|---|
+| Space-aligned plain text in a Markdown file, so every renderer reflowed nineteen findings into one paragraph | **Measurement.** The document a marker actually opens was not the document that was written |
+| Findings did not name the sensor or aircraft they came from | **Measurement.** The hypotheses above them cite `RF-06:4` by name, and *evidence use* is dimension 1 — the marker was asked to judge citations against a pack the citations could not be checked against |
+| Nine identical lines, one uncertainty printed three times | Comfort, but it compounds: a marker who skims one pack scores twenty of them tired |
+| The bundle's own conclusion sat tenth of nineteen | Comfort, tending toward measurement — the claim under scrutiny was buried in its own supporting material |
+
+The second row is the one that would have shown up in the results rather than in the marker's mood,
+and it would have shown up as *both* arms scoring lower on evidence use than they deserved, which is
+the kind of error that looks like a finding.
+
+**Worth recording as a limitation:** every automated check on the original pack passed. The blinding
+scan passed, the item count was right, the 280-value figure matched the consent form. What no test
+could ask was whether a human being could use it, and nothing in the workflow forces that question to
+be asked. The only reason it was asked at all is that somebody read one.
+
+## 98. Why can grouping the findings not just summarise them?
+
+**Because the summary would be part of the answer being scored.**
+
+Dimension 1 asks whether an explanation *reasons from* the findings rather than repeating them. Some
+of that reasoning is synthesis: noticing that eight separate deviations are really one event, that
+they split evenly across two sensors, that they range from 8.5 to 12.8 dB. If the evidence pack
+performs that synthesis first, then an explanation that performs it is no longer distinguishable from
+one that copied it — and a baseline that only restates the pack scores closer to a model that
+genuinely synthesised.
+
+The direction of the error is what makes it serious:
+
+| | With a summarising pack | With a listing pack |
+|---|---|---|
+| A weak explanation | Looks better — it inherits the pack's synthesis | Scores what it earned |
+| A strong explanation | Looks the same | Scores what it earned |
+| **The measured gap** | **Narrower than the truth** | Unbiased |
+
+A pack that flatters the weaker arm biases the study *toward its null hypothesis*, which is the
+direction that is hardest to argue your way out of afterwards.
+
+So the rule is **group and label, never summarise away**: findings are collected under the rule that
+produced them, the group carries a count, and every finding is still listed individually inside it.
+Nothing is removed; only the re-reading is. The rebuilt pack in fact exposed two facts the flat list
+had hidden — an even four/four split of deviations across two sensors, and one aircraft dropping out
+twice inside one window, invisible among nine lines that read identically.
+
+## 99. Why is the score sheet a spreadsheet rather than a CSV, and does that change the instrument?
+
+**It changes the presentation and not the instrument, and the distinction has to be argued rather
+than asserted.**
+
+What a CSV asks of a rater is: type a bare number into an unlabelled column, forty times, with the
+anchors describing what that number means in a different document that is not on screen. Two hundred
+pass-one values and eighty pass-two judgements later, the dominant error mode is not misjudgement but
+drift — scoring against a remembered anchor rather than the written one — and mis-rowing.
+
+The workbook changes four things, none of which is a dimension, an anchor, a scale, an item or a
+procedure:
+
+| | |
+|---|---|
+| Dropdowns | The rater picks rather than types |
+| Anchors on the sheet | Hover a heading, or read the second tab. The handout no longer has to be open beside it |
+| Frozen header, locked identifiers | The one edit that silently breaks the join between two raters' sheets and the key is now impossible |
+| A separate key workbook | The key is not a tab one click from the sheet being scored in |
+
+**What made this safe to do at all is that no marking had happened.** Both raters had scored nothing,
+and the second was unavailable until mid-October. Had one completed sheet existed, the right action
+would have been to leave the pack alone and record its legibility as a limitation — because a change
+to an instrument mid-collection means two populations of scores, and no note explaining it recovers
+the comparison.
+
+It is recorded in the rubric's change log with its reasoning, which is the standing rule for anything
+pre-registered: a change is argued for in the open or it is not made.
+
+## 100. The dropdown offered 1, 3 and 5. Why was that wrong, given those are the only anchored points?
+
+**Because the rubric says "use 2 and 4 for anything in between", and the analysis is computed over
+the scale that was actually used.**
+
+The reasoning behind the mistake was not stupid, which is why it is worth recording. Only 1, 3 and 5
+carry worded anchors; a 4 has no agreed meaning; therefore a form that refuses a 4 collects only
+interpretable values. Every step of that is true except the conclusion, because the instrument had
+already decided otherwise and said so in a sentence.
+
+The consequence was bigger than a missing option:
+
+- `eval-006` reports **quadratic-weighted Cohen's κ**, which weights disagreements by how far apart
+  they are on the scale. Restricting the scale changes the distribution the statistic is computed
+  over.
+- So a narrowed dropdown is a **silent amendment to the pre-registered analysis**, wearing the
+  appearance of a stricter data-entry form. It would not have looked like a change to anyone,
+  including its author.
+
+The unit test asserted the author's belief about the scale rather than the document that defines it,
+and was green throughout. The generalisable rule, which is now recorded in the change log: **where a
+second artefact re-implements a pre-registered decision, its test must assert against the source
+document, not against the implementation's own constant.**
+
+## 101. Why can the score ingest not be built now, ahead of the sheets arriving?
+
+**It could be built. It should not be, and the reason is not scheduling.**
+
+The ingest joins two completed score sheets to the arm key, applies the pre-registered adjudication
+rule where the raters disagree, and reports weighted κ. Everything except the sheets exists. So the
+temptation is to build it against invented sheets and have it ready.
+
+The argument against is that **the shape of a returned sheet is a fact about what two people did with
+a file, and it is not knowable in advance.** A rater may leave a cell blank, enter a value outside
+the dropdown by pasting, reorder rows while sorting, rename the file, return one sheet as CSV, or
+score the calibration items into the main sheet by mistake. An ingest built against a fixture the
+author also wrote encodes the author's model of a tidy return, and every one of those real cases then
+surfaces at ingest time — which is the moment the data is finally in hand and the least good moment
+to be discovering the format.
+
+There is a second reason, and it is the stronger one. The adjudication rule is pre-registered.
+Building the ingest while the sheets are unknown is safe; building it *while looking at the first
+returned sheet* is not, because at that point every implementation choice is a choice made with
+partial results visible. Deferring until **both** sheets are in keeps that boundary clean and
+observable — which is the same argument that made the bundle sample a separate script committed
+before the campaign could run.
+
+So the deferral is recorded with its trigger rather than left as an absence: **build it when both
+completed sheets exist, not before, and not between the first and the second.**
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -7005,4 +7136,7 @@ of renames used, and that window is now closed.
 | **Traceability** | The requirement that every piece of evidence in a bundle resolve to a stored row, checked against the database rather than asserted — so the grounding check downstream has a closed set to verify citations against. See §83. |
 | **Construction vs convention** | Whether a safety property holds because the code refuses, or because everybody types the right thing. They look identical until someone is in a hurry. The test: can I break this by typing something? See §84. |
 | **Development batch** | 60 runs generated to build the AI layer against real bundles, pinned to its own base seed and excluded from every corpus query by name. Not a corpus: no thesis figure may be measured from it. See §84. |
+| **Anchored point** | A score on the 1-5 scale that the rubric words explicitly — 1, 3 and 5. The rest are "anything in between" and are valid values, not gaps. See §100. |
+| **Group, never summarise** | The rule governing the evidence pack: findings are collected under the rule that produced them with a count, and every one is still listed. A pack that synthesised its own findings would do part of the work dimension 1 scores. See §98. |
+| **Presentation change** | A change to how a pre-registered instrument is rendered, with no change to a dimension, anchor, scale, item or procedure. Safe only before any data is collected, and argued for in the change log either way. See §99. |
 | **No longer checkable** | What happens to a measurement when its data is deleted. Distinct from *no longer true*: the observation happened and the log is committed; what is lost is re-verification. See §84. |
