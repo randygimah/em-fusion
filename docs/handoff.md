@@ -16,7 +16,7 @@ thesis notes, progress note and handoff up to date.
 
 ## Current state
 
-**The tree is clean and everything below is committed.** Backend suite: **1,301 passed, 288 skipped**
+**The tree is clean and everything below is committed.** Backend suite: **1,315 passed, 288 skipped**
 (the skips are the `database`-marked tests, which need `TEST_DATABASE_URL`). `app/evaluation` is at
 **100%** across all four modules. `ruff` and `mypy` clean; `black --check` still reports the known
 **12 files** of pre-existing formatting debt, none of them touched this session.
@@ -86,8 +86,8 @@ sheets exist, not before and not between the first and the second.**
 **The Docker image needs rebuilding** for anything running in-container that imports it; `make measure`
 rebuilds, and did.
 
-**Spec:** `eval-007`, `eval-008` and `eval-009` added and passing; `eval-007` amended once.
-Backlog is **63 of 104**.
+**Spec:** `eval-007`, `eval-008`, `eval-009` added and passing; `eval-007` amended once;
+**`anom-009` defined, refined, built and passing.** Backlog is **64 of 104**.
 
 ## Failed attempts
 
@@ -141,16 +141,23 @@ EOF). Verified by re-reading the file rather than trusting the exit code.
 
 ## Next step
 
-1. **Mutation harnesses for the four evaluation modules.** 104 tests across `sampling`,
+1. **`eval-002`, the detection metrics** — precision, recall, F1, FPR, FNR and latency per
+   scenario type, the largest remaining gap between the scope document and the build. `anom-009`
+   is now built and is its latency input. Its other two dependencies, `anom-008` (zero anomalies
+   on a clean run) and `anom-011` (track-gap recall), are still unbuilt — though both have been
+   *measured* by scripts in `measurements/corpus/`, which is the confusing part: the figures the
+   thesis quotes exist and the spec'd modules producing them do not. **Precision, F1 and latency
+   have never been computed at all.**
+2. **Mutation harnesses for the four evaluation modules.** 104 tests across `sampling`,
    `statistics`, `pack`, `workbook` and the glossary, with nothing yet establishing they are
    load-bearing. This session alone found
    a test asserting an assumption instead of the rubric, one that skipped, and one that could not tell
    two findings apart — the pattern is established and the figure should not be quoted until a pass
    has run. Note the scope lesson already recorded: a harness must run **every** suite that tests the
    module, or a mutant survives because its test lives in another file.
-2. **`eval-006`**, when both completed sheets exist. Mid-October.
-3. **Waves 2 and 3 of corpus v2**, owed for `eval-001` / `eval-002` (detection metrics).
-4. **`ai-011`'s harness has not been re-run** since its annotation changed — 36 anchors verified still
+3. **`eval-006`**, when both completed sheets exist. Mid-October.
+4. **Waves 2 and 3 of corpus v2**, owed for `eval-001` / `eval-002` (detection metrics).
+5. **`ai-011`'s harness has not been re-run** since its annotation changed — 36 anchors verified still
    matching, but not re-run.
 
 ### Open and unowned
@@ -158,6 +165,10 @@ EOF). Verified by re-reading the file rather than trusting the exit code.
 - Nothing applies migrations to the **application** database in the ordinary path. `make migrate`
   exists and nothing calls it. This cost one paid model call this session. Worth a spec item.
 - Six mutation harnesses lack the guard file + sentinel pattern.
+- **No harness but `mutate_anom009_latency.py` checks that a mutant parses.**
+  `mutate_ai012_campaign.py` records the lesson in a comment and never implemented it, so an
+  unparseable mutant is scored by a syntax error rather than by a test — a pass the suite did
+  not earn. The comment had been mistaken for the fix.
 - The credential loader is now a third copy; generalise it.
 - `ai-008`'s superseded case has no corpus demonstration.
 - The near-miss "rule under another finding type" bucket conflates two mistakes.

@@ -7466,3 +7466,35 @@ implementation would achieve. It contains no ingest delay, no processing time an
 there is none to contain. It should be reported as what it is — the evidence a rule demands, expressed
 as time — and any sentence comparing it to an operational system's response time would be
 unsupported.
+
+### What the latency mutation pass found, and why the tested case was the rare one
+
+The detection-latency module went through a mutation pass with fifteen deliberate defects, and
+fourteen were killed immediately. The survivor is worth recording because the test suite that missed
+it was not careless — it was systematically biased toward the easy case, in a way that would not have
+been visible by reading it.
+
+The module decides *when a rule's evidence became sufficient* by taking the **nth** receiver to
+qualify, n being what that rule requires: one for the broken-receiver rule, two for the interference
+rule. The surviving mutant replaced "the nth to qualify" with "the last to qualify". Every test
+passed against it.
+
+The reason is that every test had given a rule **exactly as many receivers as it required** — one
+receiver for the fault case, two for the interference case. Under that condition the nth and the last
+are the same element, and no assertion can separate them. The two readings differ only when a rule
+gets *more* evidence than it demanded, and that is not a corner case: the real corpus carries
+three-receiver interference zones, one of which sits in the scored evaluation sample. So the
+untested case was the common one, and the tested one was the exception.
+
+The general lesson is more useful than the fix. **A test suite constructed from the minimum inputs
+that satisfy each rule will systematically fail to distinguish "the threshold" from "the maximum",
+because at the minimum they coincide.** That is a whole class of defect invisible to coverage — the
+line was executed by every test, and the module sat at 100 per cent throughout — and it is the class
+mutation testing is uniquely suited to finding. It was closed with a three-receiver case before the
+pass was recorded, after which all fifteen mutants died.
+
+One process note attaches to the same pass. The harness enforces that a mutant **parses** before its
+result is believed, which no earlier harness in this project does. The campaign harness records the
+lesson in a comment — a mutant producing an indentation error is killed by a syntax error rather than
+by a test, and scoring that as a pass credits the suite with a catch it did not make — but the check
+was never implemented there. The comment had been mistaken for the fix.
