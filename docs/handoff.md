@@ -16,7 +16,7 @@ thesis notes, progress note and handoff up to date.
 
 ## Current state
 
-**The tree is clean and everything below is committed.** Backend suite: **1,285 passed, 288 skipped**
+**The tree is clean and everything below is committed.** Backend suite: **1,292 passed, 288 skipped**
 (the skips are the `database`-marked tests, which need `TEST_DATABASE_URL`). `app/evaluation` is at
 **100%** across all four modules. `ruff` and `mypy` clean; `black --check` still reports the known
 **12 files** of pre-existing formatting debt, none of them touched this session.
@@ -35,11 +35,19 @@ thesis notes, progress note and handoff up to date.
 60 calls of a 200 ceiling; 326,106 prompt + 25,269 completion tokens; **$0.8544**, 0 unpriced.
 20 of 20 complete scored pairs. Project spend to date ≈ **$1.75 of $5**.
 
-**The scoring pack has been rebuilt** and is what a marker would now receive:
+**The scoring pack has been rebuilt twice** and is what a marker would now receive:
 `backend/measurements/corpus/scoring_pack/` holds `hypotheses.md` and `score_sheet.xlsx` for the
 marker, `arm_key.csv` / `arm_key.xlsx` held back, and `score_sheet.csv` as the archival form the
 ingest will read. 20 packs, 40 explanations, **200 pass-one values**. A/B balance: A is template on
 12 packs, hosted on 8. The blinding scan is clean across **both** marker files.
+
+The second rebuild is the one that matters. The first produced valid Markdown that was **still a
+wall**: 14 table rows repeating *power_dbm deviated by X dB at its peak*, 14 repeating *reporting
+from this aircraft broke during the window*, and 6 uncertainties differing only in a sensor name,
+which exact de-duplication does not touch. A group now **factors the sentence its findings share** --
+said once in the heading, each row keeping only what differs, gathered under its source. One pack
+went from ~35 lines to 15 with every value intact, and it exposed two aircraft that had dropped out
+**twice** each.
 
 **`eval-006` is deferred with a stated trigger**, at the user's direction: the second rater is
 unavailable until mid-October, so no completed sheets exist. Recorded in `docs/qa.md` §101 with the
@@ -77,6 +85,21 @@ rebuilds, and did.
 
 ## Failed attempts
 
+**I recorded a claim about bias that was wrong in direction, in six documents.** The constraint on
+the rebuilt pack — group but never summarise — was justified by saying a summarising pack would
+flatter the weaker arm and narrow the measured gap. Backwards: `ai-002`'s citations **are** summaries,
+so a summarising pack makes the baseline read as pure restatement and scores it *lower*, widening the
+gap, while lowering the model for the same reason. The net effect is unpredictable, which is a
+stronger argument for the rule than the one I gave. Withdrawn and replaced in the rubric change log,
+`docs/evaluation_harness.md`, the repo map, `thesis_notes.md`, `qa.md` §102 and the progress note. The
+replacement is mechanical and tested: **the pack re-organises values and computes none.**
+
+**My first restructure was declared finished and was still unreadable.** I reviewed it by reading the
+diff and the rendered top of one pack, pronounced it fixed, and shipped it. It took the user pasting a
+screenshot to establish that 14 well-formed table rows repeating one sentence are the same wall as 14
+badly-formed ones. Structure was necessary and nowhere near sufficient, and nothing in my own checks
+could have told me — every test passed both times.
+
 **The workbook's dropdown offered 1/3/5, and that was wrong.** The reasoning — only those three carry
 worded anchors — is coherent and contradicts the rubric, which says *"use 2 and 4 for anything in
 between"*. Because the analysis reports **quadratic-weighted κ**, computed across the scale actually
@@ -105,7 +128,7 @@ EOF). Verified by re-reading the file rather than trusting the exit code.
 
 ## Next step
 
-1. **Mutation harnesses for the four evaluation modules.** 88 tests across `sampling`, `statistics`,
+1. **Mutation harnesses for the four evaluation modules.** 95 tests across `sampling`, `statistics`,
    `pack` and `workbook` with nothing yet establishing they are load-bearing. This session alone found
    a test asserting an assumption instead of the rubric, one that skipped, and one that could not tell
    two findings apart — the pattern is established and the figure should not be quoted until a pass
