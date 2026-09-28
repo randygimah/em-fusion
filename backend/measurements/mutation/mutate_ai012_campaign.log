@@ -1,0 +1,46 @@
+sentinel killed (1 failed, 68 passed in 38.38s) -- source edits reach the tests
+
+the arm is asked through the port, dropping every refusal          KILLED   8 failed, 61 passed in 37.69s
+the refused attempts are recorded but never stored                 KILLED   1 failed, 68 passed in 37.45s
+a malformed attempt is given a row anyway                          KILLED   1 failed, 68 passed in 37.89s
+the refusals are dropped from the record                           KILLED   2 failed, 67 passed in 37.26s
+the delivered hypothesis is never given a verdict                  KILLED   1 failed, 68 passed in 38.49s
+the replacement is marked as checked too                           KILLED   1 failed, 68 passed in 38.00s
+a failing verdict on a model answer is recorded as passing         SURVIVED 69 passed in 37.42s
+the row's verdict is not written, only the record's                KILLED   1 failed, 68 passed in 35.60s
+the refused row's verdict is never written                         KILLED   1 failed, 68 passed in 37.48s
+the refused row's verdict is checked against the delivered hypothesis KILLED   3 failed, 66 passed in 36.71s
+the baseline's verdict is never written to its row                 KILLED   2 failed, 67 passed in 36.15s
+the delivered hypothesis is re-checked through the ledger          KILLED   2 failed, 67 passed in 37.39s
+the replacement is counted against the arm that was asked          KILLED   1 failed, 68 passed in 38.24s
+the baseline is checked without the ledger, so its rate is never populated KILLED   4 failed, 65 passed in 37.94s
+the baseline is counted against the hosted arm                     KILLED   5 failed, 64 passed in 37.60s
+the baseline gets a ledger of its own                              KILLED   4 failed, 65 passed in 37.89s
+a flagged baseline raises instead of being recorded                KILLED   1 failed, 68 passed in 38.10s
+the model rows do not say which arm was asked                      KILLED   1 failed, 68 passed in 38.71s
+the refused rows are attributed to the template                    KILLED   3 failed, 66 passed in 36.91s
+the record reports the generator as the arm that was asked         KILLED   3 failed, 66 passed in 37.50s
+a fallback is never reported as one in the record                  KILLED   2 failed, 67 passed in 37.74s
+a budget exhaustion is skipped like any other failure              KILLED   3 failed, 66 passed in 37.73s
+only the budget stops the run, a misconfiguration is skipped       KILLED   1 failed, 68 passed in 38.29s
+an ordinary refusal stops the whole campaign                       KILLED   2 failed, 67 passed in 37.81s
+a skipped generation is swallowed rather than recorded             KILLED   2 failed, 67 passed in 38.36s
+an abort hands back nothing of what it had done                    KILLED   1 failed, 68 passed in 37.89s
+a skipped baseline is not recorded                                 KILLED   1 failed, 68 passed in 38.23s
+the abort does not say which of the two stopped it                 KILLED   2 failed, 67 passed in 38.13s
+an empty sample is accepted                                        KILLED   1 failed, 68 passed in 38.50s
+the same bundle twice is accepted                                  KILLED   1 failed, 68 passed in 38.38s
+zero generations is accepted                                       KILLED   1 failed, 68 passed in 38.58s
+the configured number of generations is ignored                    KILLED   6 failed, 63 passed in 37.18s
+the baseline is asked once per model generation                    KILLED   2 failed, 67 passed in 40.32s
+the ordinal is the same for every generation                       KILLED   1 failed, 68 passed in 53.51s
+a catch rate of nothing over nothing is reported as zero           KILLED   1 failed, 68 passed in 53.24s
+only the arms that ran are reported                                KILLED   1 failed, 68 passed in 52.41s
+the record is serialised without the skipped generations           SURVIVED 69 passed in 52.98s
+the budget total does not say whether it is complete               KILLED   1 failed, 68 passed in 53.90s
+the assembled arm is typed loosely again                           KILLED   1 failed, 68 passed in 52.74s
+
+restored
+
+37 killed of 39 valid mutants
+no unexpected survivors
