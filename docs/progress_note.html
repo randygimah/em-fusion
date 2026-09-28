@@ -6699,6 +6699,166 @@ second pass   <b>5.060000171975998</b></div>
   </section>
 
   <section>
+    <h2>Twenty questions, asked and paid for</h2>
+    <p class="standfirst">
+      The run happened. Eighty explanations, eighty-five pence, nothing lost. Two things went wrong
+      on the way that no amount of green tests would have caught, and the pack of reading the marker
+      was about to be handed turned out to be unusable by a human being.
+    </p>
+
+    <p>
+      Twenty packages were chosen from a single number that morning and written down before anything
+      was asked — which is the whole point of choosing them separately, because a set of questions
+      picked after seeing an answer is not a set of questions. Then each package went to the model
+      three times and to the mechanical writer once. <b>Eighty explanations, none skipped, twenty
+      complete pairs out of twenty.</b>
+    </p>
+
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>&nbsp;</th><th class="n">The model</th><th class="n">The mechanical writer</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="key">Explanations written</td><td class="n">60</td><td class="n">20</td></tr>
+          <tr><td class="key">Packages covered</td><td class="n">20</td><td class="n">20</td></tr>
+          <tr><td class="key">Lost or skipped</td><td class="n">0</td><td class="n">0</td></tr>
+          <tr><td class="key">Claims that did not check out</td><td class="n">0</td><td class="n">0</td></tr>
+          <tr><td class="key">Times it had to be stood in for</td><td class="n">0</td><td class="n">—</td></tr>
+          <tr><td class="key">Time taken</td><td class="n">334 s</td><td class="n">0.008 s</td></tr>
+          <tr><td class="key">Cost</td><td class="n">85p</td><td class="n">nothing</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="caption">
+      Sixty paid requests against a ceiling of two hundred. The project has now spent about
+      <span class="num">£1.40</span> of its four-pound budget, so cost has never been the constraint
+      on this study — the constraint is how much reading one volunteer can do carefully.
+    </p>
+
+    <div class="panel panel--warn">
+      <p class="lede"><b>The zero has to be read narrowly, and this is the most important sentence
+        on this page.</b></p>
+      <p>
+        "No claims that did not check out" means every rule an explanation named really did run on
+        that package. It does <em>not</em> mean the sentence attached to that name was true. An
+        explanation can cite a real finding and describe it wrongly, and the safeguard will pass it —
+        it matches names, not meanings. So this number is a <b>floor under how wrong things could
+        be</b>, not a measure of how right they are. Catching a real finding with a false sentence
+        attached to it is exactly what the human marking exists for, and it is why the marking was
+        never a nice-to-have on top of the automated check.
+      </p>
+    </div>
+
+    <h3>Two failures that a fully passing test suite could not have predicted</h3>
+    <p>
+      The first attempt died after one paid request, complaining about a column that did not exist.
+      <b>The store the system actually runs against was two updates behind.</b> The test suite builds
+      its own copy of the store from scratch every time, brings it fully up to date, and passes — so
+      fifteen hundred passing tests said precisely nothing about the one the real system opens.
+      There is now a check that compares the two <em>before</em> the first request is paid for,
+      because a check that runs afterwards is a note in a log, not a guard.
+    </p>
+    <p>
+      The second attempt lost five explanations, two of them from the marked set. The provider had
+      been turning requests away for coming too fast, and the system recorded that as "the provider
+      is unavailable" — which is wrong in a way that costs data. <b>The refusal literally said
+      "try again in five seconds".</b> Treating something temporary as permanent quietly shrank a set
+      of questions that had been fixed in advance, and nothing in the output said so.
+    </p>
+    <p>
+      The fix was to <b>slow down rather than to retry</b> — eleven seconds between requests — and
+      that choice is not laziness. The system keeps two quite different reasons for switching away
+      from the model firmly apart: <em>there was no answer</em>, and <em>the answer could not be
+      used</em>. Retrying inside the run would have smeared one into the other, and every per-producer
+      number this study reports depends on being able to tell them apart.
+    </p>
+
+    <h3>The reading pack was correct, and unreadable</h3>
+    <p>
+      With the run finished, the last step was the pack the marker reads: twenty packages of evidence,
+      two explanations under each, labelled A and B with no clue which is which. It was produced, it
+      passed every check written for it — and on being read by an actual person it turned out to be
+      close to unusable.
+    </p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>What was wrong</th><th>Why it mattered</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="key">The layout relied on lining text up with spaces, in a format that reflows
+              text</td>
+            <td class="why">Anything that displays the document properly ran nineteen separate
+              findings together into one paragraph. It was only legible in a raw text editor</td>
+          </tr>
+          <tr>
+            <td class="key">The findings never said which receiver or aircraft they came from</td>
+            <td class="why"><b>This is the serious one.</b> The explanations underneath name their
+              sources exactly. The very first thing a marker scores is whether an explanation uses
+              its evidence well — and they were being asked to judge that against a page where the
+              evidence could not be looked up</td>
+          </tr>
+          <tr>
+            <td class="key">Nine identical lines; the same caveat printed three times</td>
+            <td class="why">Twenty packages of that is a marker who is skimming by package five</td>
+          </tr>
+          <tr>
+            <td class="key">The conclusion under scrutiny sat tenth of nineteen</td>
+            <td class="why">The claim being judged was buried inside its own supporting material</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      The pack now leads with the conclusion, gathers findings under the rule that produced them with
+      a count, names every source, and says "raised three times" instead of saying the same thing
+      three times. The score sheet became a proper spreadsheet: pick a score from a list, hover a
+      column to see what each score means, and the identifying columns cannot be typed over by
+      accident.
+    </p>
+    <div class="panel">
+      <p class="lede"><b>There is one trap in tidying up evidence, and avoiding it shaped the whole
+        change.</b></p>
+      <p>
+        Gathering eight similar findings into a group is a small act of interpretation. Had the pack
+        gone one step further and <em>summarised</em> them — "eight deviations between 8.5 and 12.8
+        decibels" — it would have done a piece of the thinking the marker is there to score. And the
+        damage runs one way: it makes the weaker explanation look better, because the weaker
+        explanation is the one that was only going to repeat the evidence back. The measured gap
+        between the two writers would have narrowed, and the narrowing would have looked like a
+        result.
+      </p>
+      <p>
+        So the rule is <b>gather and label, never summarise</b>. Every finding is still there,
+        individually, inside its group; only the re-reading was removed. Tidying it up in fact
+        <em>revealed</em> two things the flat list had hidden: the interference had hit both receivers
+        exactly evenly, four findings each, and one aircraft had dropped out <em>twice</em> inside a
+        single window — invisible among nine lines that all read the same.
+      </p>
+    </div>
+    <p>
+      Changing the marker's pack means changing a document that was deliberately fixed in advance, so
+      it is written into that document's change log with its reasoning rather than quietly improved.
+      <b>It is defensible only because nobody has marked anything yet.</b> The second marker is away
+      until the middle of October, so not a single score exists to be invalidated. Had one sheet come
+      back, the right answer would have been to leave the pack alone and record its unreadability as
+      a limitation of the study.
+    </p>
+    <p>
+      One more near-miss is worth admitting, because it very nearly changed a result rather than a
+      layout. The new score sheet first offered only the three scores the instrument describes in
+      words — one, three and five. The instrument also says, in a sentence a few lines further down,
+      to use two and four for anything in between. Since the agreement between the two markers is
+      measured in a way that depends on <em>how far apart</em> their scores are, a form quietly
+      refusing the in-between values would have changed the headline statistic while looking like
+      nothing more than a tidier form. The test that was supposed to catch it had been written from
+      the same wrong memory as the code.
+    </p>
+  </section>
+
+  <section>
     <h2>The rules the build follows</h2>
     <ul class="rules">
       <li><b>Nothing is written before it is specified and proven to fail.</b> Every capability gets a
@@ -6870,8 +7030,8 @@ second pass   <b>5.060000171975998</b></div>
           <tr><td class="key">Evidence bundles</td><td class="n">2</td><td class="n">2</td><td class="why">Complete. One event becomes one package, with the frequency dimension joined up here because nothing upstream joins it, and with every absence labelled by which of the three kinds it is rather than left as silence. Every statement's citations are then resolved against the store before the package is allowed to exist — which found that one citation in eleven had been pointing at a reconstructed instant rather than a stored reading, in a field that had been written and never read since the findings were first kept</td></tr>
           <tr><td class="key">AI hypothesis layer</td><td class="n">9</td><td class="n">12</td><td class="why">The shape every explanation must take, and the first thing that produces one. The shape is a constraint on what a model is allowed to emit rather than a description of what it did, so each guarantee is checked on the translated version a model is actually handed as well as on the original. The producer built first has no model in it: it is both the fallback for when a model's answer cannot be trusted and the yardstick the models are measured against. Run over all forty-one real packages it produced forty-one explanations, refused none, and every one of its one hundred and sixty-four citations was found in the package it came from. Since then, the seam a model plugs into — defined before either model exists, so neither one's peculiarities leak into it — and the decision about what a person sees when a model's answer cannot be used: ask again a fixed number of times, then fall back to the mechanical account, and keep a record of why, plus the guard that counts what a run spends and stops it rather than letting it quietly continue. Then the producer the whole project is about: a model, handed the package and constrained so it cannot emit the wrong shape at all. And now the safeguard that constraint cannot be — every claim an explanation rests on is resolved against the package it came from, with citing an explanation the system itself rejected treated as its own kind of failure rather than lumped in with inventing one. Over the forty-one real packages it flagged none of one hundred and sixty-four honest citations, and caught all one hundred and sixty-four deliberate corruptions. And now the first real requests: eight explanations over three packages, read by hand. Every claim in every one of them traced back to its package; reading them found an instruction that had never been written, without which the blind marking would have been decided by citation count alone; and running the trial twice showed the answers do not reproduce word for word, which narrows a claim this project had been making about reproducibility and settles a question about whether asking a model again after a bad answer is a real mechanism. And now the job that asks twenty questions rather than one: it keeps the answers that were thrown away, because those are the only evidence the safeguard ever did anything, and it takes care that a rejected answer is counted once rather than twice and that a mechanical stand-in is never counted as the model's — a mistake that would make the model look better the more often it failed. What remains is choosing the twenty packages, the marking pack itself, and the marking</td></tr>
           <tr><td class="key">Hypothesis screen and feedback</td><td class="n">0</td><td class="n">6</td><td class="why">Specified, unbuilt</td></tr>
-          <tr><td class="key">Evaluation</td><td class="n">0</td><td class="n">6</td><td class="why">Scoring instrument written and locked; harness unbuilt</td></tr>
-          <tr class="total"><td class="key">Total</td><td class="n">58</td><td class="n">101</td><td class="why">&nbsp;</td></tr>
+          <tr><td class="key">Evaluation</td><td class="n">4</td><td class="n">8</td><td class="why">Scoring instrument written and locked, and amended twice in the open since — once because the sample it described could not exist on the built system, once because asking the model a single time rested on an assumption the first real requests disproved. The twenty packages are chosen from one number and written down; the run has happened and cost eighty-five pence; the per-producer figures are computed for each writer separately and never pooled, because the difference between them <em>is</em> the result. The pack the marker reads is built, and then rebuilt: correct by every automated check and unusable by a person, missing the one thing — which receiver each finding came from — that the first scored dimension depends on. What is left is the marking itself and the arithmetic over the returned sheets, and that waits on a person rather than on code</td></tr>
+          <tr class="total"><td class="key">Total</td><td class="n">62</td><td class="n">103</td><td class="why">&nbsp;</td></tr>
         </tbody>
       </table>
     </div>
