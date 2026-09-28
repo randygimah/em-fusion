@@ -7214,3 +7214,117 @@ The amendment changes the prompt fingerprint from `275187dc…` to `af153726…`
 rather than left to be inferred. It was made before any scored generation existed, which is the only
 moment at which it is free — the prompt is the experiment's largest variable, and altering it after a
 campaign has begun would mean two arms answering two different questions.
+
+### The scored campaign: what eighty generations bought, and how narrowly to read the zero
+
+The campaign ran once, on 28 September 2026, over the twenty bundles drawn and committed that
+morning. It produced eighty generations — sixty from the hosted arm at three per bundle, twenty from
+the template baseline at one — with **nothing skipped**, giving twenty of twenty complete scored
+pairs. Sixty calls were made against a ceiling of two hundred, consuming 326,106 prompt and 25,269
+completion tokens at a measured cost of **$0.8544**. Total project spend to that date was
+approximately $1.75 of the $5 budget, so the constraint on the study was never money.
+
+The grounding check flagged **nothing**: sixty of sixty on the hosted arm and twenty of twenty on the
+template, with no fallbacks and no refusals of either category. Wall time separated the arms by four
+orders of magnitude — 334.2 seconds against 0.008 — which is the clearest single figure the project
+has for what the hosted arm costs in latency, and it is one measurement under one set of network
+conditions rather than a characterisation.
+
+**The zero must be read narrowly, and stating how narrowly is more useful than the figure.** A catch
+rate of 0.0 says that every rule identifier the model cited exists in the bundle the model was given,
+resolved on the `(rule_id, finding_type)` pair rather than on the rule alone. It says nothing
+whatever about whether the sentence attached to each citation describes what that finding actually
+found. A real finding with a false sentence attached passes the check. The catch rate is therefore a
+**lower bound on ungroundedness**, not a measure of it, and *misdescribed reference* is left entirely
+to the human scoring pass — which is the reason that pass exists and is not a supplement to the
+automated one.
+
+The template's 0.0 is a different statement again. The baseline is grounded by construction, so it
+cannot fail the check, which is exactly why it is the oracle: the figure reports that the check found
+no defect in itself. Two identical numbers in the same table meaning two different things is a
+presentational hazard, and the per-arm report carries an `is_oracle` flag for that reason.
+
+### Two production failures a green suite could not have predicted
+
+Both surfaced on the first real campaign attempt, and both are Implementation-chapter material
+because the mechanism that hid them is more interesting than the faults.
+
+**The application database was two migrations behind.** The test fixtures migrate the *test*
+database; nothing in the ordinary path migrated the application one. The suite was at 1,540 tests and
+99.88% coverage, entirely green, against a schema the running system did not have. The campaign
+opened, made one paid model call, and died writing the row with `UndefinedColumn`. The general lesson
+is worth stating in the write-up as a finding rather than as an embarrassment: **a green test suite
+makes no claim about the schema the system actually runs against**, because the fixtures build their
+own. The fix was a pre-flight comparison of the live revision against head, placed deliberately
+*before* the first billed call — a check that runs after the money is spent is a log line, not a
+guard.
+
+**Rate limiting was misclassified as unavailability, and silently shrank a pre-registered corpus.**
+The provider returned HTTP 429 and the campaign's availability fallback recorded it as "the provider
+is unavailable", losing five generations of which two were scored — eighteen of twenty complete pairs
+rather than twenty. But a 429 is not unavailability; the response body says *try again in 5.09
+seconds*. Treating a retryable condition as permanent is the failure, and its consequence was a
+corpus smaller than the pre-registration specified with nothing in the output saying so.
+
+The fix is the part worth recording: **pacing, not retrying.** An eleven-second gap between calls,
+with the sleep injected so the suite need not spend eleven seconds proving it. Retrying inside the
+campaign was rejected, and not on grounds of effort — the availability fallback and the correctness
+fallback are two code paths kept deliberately distinct, because one exception type for both would
+make the system unable to tell "there was no answer" from "the answer was unusable". A retry loop
+inside the campaign would have blurred exactly that boundary, which is the distinction every per-arm
+figure in the evaluation rests on.
+
+### The scoring pack was unreadable, and every automated check on it passed
+
+The pack that the campaign produced was correct by every test written against it and unusable by a
+human being, which makes it the clearest example this project has of a defect that only contact with
+the artefact's actual purpose can find.
+
+Four faults. It was emitted as **space-aligned plain text into a Markdown file** — findings indented
+by two spaces, which is neither a fence, nor a code block, nor a list, so any renderer reflowed
+nineteen findings into a single paragraph and collapsed the column alignment the entire layout
+depended on. The findings **did not name the source they came from**, while the hypotheses rendered
+directly beneath them cite `RF-06:4` by name; since *evidence use* is the first of the five scoring
+dimensions, the instrument was asking a marker to judge whether citations were well used against a
+pack in which those citations could not be checked. Repetition was printed verbatim — nine identical
+track-gap lines, one uncertainty three times. And the bundle's own conclusion, the claim under
+scrutiny, sat tenth of nineteen, buried in its own supporting material.
+
+The restructure groups findings on the `(rule_id, finding_type)` pair already used as the citation
+key throughout the system, leads with the conclusion, names every source, and de-duplicates
+uncertainties with a count.
+
+**The governing constraint is the interesting part, because it is a threat to validity created by the
+fix rather than removed by it.** Grouping must not replace detail with summary. A pack that
+summarised its own findings — "eight deviations between 8.5 and 12.8 dB" — would have performed part
+of the synthesis that dimension 1 exists to score, and the effect would be to *shrink* the measured
+difference between the arms, in the direction that flatters the weaker one. So every finding remains
+listed individually inside its counted group: the change removes re-reading and no information. The
+rebuilt pack in fact **exposed** two facts the flat list had concealed — that the RF deviations split
+evenly four and four across the two sensors, and that one aircraft dropped out twice within a single
+window among nine lines that had read identically.
+
+Because this alters a pre-registered instrument's presentation, it is recorded in the rubric's change
+log with its argument rather than made quietly. It is defensible only because no marking had
+happened: both raters had scored nothing, so no collected value was invalidated. Had a single sheet
+been returned, the correct action would have been to leave the pack alone and record its legibility
+as a limitation.
+
+### A pre-registered scale re-implemented from memory, and caught by reading the document
+
+Building the scoring workbook required transcribing the rubric's scale into a validated dropdown. The
+dropdown was built offering **1, 3 and 5** — the three points that carry worded anchors — on the
+reasoning that a value with no anchor behind it cannot be interpreted. That reasoning is coherent and
+contradicts the instrument: Part A of the rubric says *"use 2 and 4 for anything in between"*.
+
+The consequence was larger than a missing option. The pre-registered analysis reports
+**quadratic-weighted Cohen's κ**, which is computed across the scale actually used, so a sheet
+refusing a 4 would have changed the distribution of scores the statistic is calculated over. It would
+have been a silent amendment to the analysis, wearing the appearance of a stricter data-entry form.
+
+The unit test asserted the scale the author believed in rather than the scale the document specifies,
+and was green throughout. This is the third instance this project has recorded of a test passing for
+the wrong reason, and the cheapest to generalise: **where a second artefact re-implements a
+pre-registered decision, the test must assert against the source document, not against the
+implementation's own constant.** The failure was caught by reading Part A while editing an unrelated
+sentence in it, which is not a method.
