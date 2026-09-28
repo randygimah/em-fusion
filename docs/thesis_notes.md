@@ -6710,6 +6710,34 @@ the failure is silent in the direction that wastes work — it manufactures gaps
 them, so it costs an investigation rather than a defect, but an investigator who believed the first
 report would have written a duplicate test.
 
+### A mitigation that proved itself, and the assumption it disproved on the way
+
+Six days earlier the operating-system memory killer stopped a mutation pass partway and left a
+mutated source file on disk, looking exactly like ordinary uncommitted work. Two mitigations were
+recorded. Run passes against committed code, so recovery is a one-line `git` operation. And have the
+harness write a guard file holding the originals before the first mutant, so that a later run
+detects it, restores from it, and *refuses to score* until somebody has looked.
+
+The same thing happened again on the re-run of this item's pass, which is the first time either
+mitigation has been exercised in anger, and both held. The mutant left behind was
+`if True:` in place of a condition deciding whether a delivered hypothesis gets a grounding verdict
+— not a crash, but a plausible-looking database of rows claiming a check that never ran. Re-running
+the harness restored it and refused, exactly as designed.
+
+What is worth recording is how the two mitigations divided the work, because it was not as
+predicted. The guard file did the restoring; the *committed code* did the verifying. Because the
+implementation was already committed, `git diff` showed exactly one changed line, so the guard's
+claim to have put everything back could be checked rather than believed. A guard that silently
+rewrites source files is itself a thing to be suspicious of, and the only reason to trust it here is
+that something independent could confirm it.
+
+And it disproved an assumption recorded with the original incident. That incident was attributed to
+continuous Docker image rebuilds — 2.5 minutes per mutant, two hours of building — and the remedy
+was to stop rebuilding. This pass did **no** image builds at all and was killed anyway. The rebuild
+made the window longer; it was never the cause. The honest statement is that a long pass on a
+memory-constrained machine will sometimes be killed, and the recoverability matters more than the
+prevention.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;
