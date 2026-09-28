@@ -35,6 +35,7 @@ import sys
 from pathlib import Path
 
 import _corpus
+from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
@@ -47,6 +48,7 @@ from app.ai.providers.openai import API_KEY_VARIABLE
 from app.ai.registry import build_generator
 from app.ai.service import GenerationConfig, GeneratorKind
 from app.db.bundles import stored_bundles_for_run
+from app.db.migrations import alembic_config
 
 #: The same model, prices and parameters the trial ran against. Repeated here
 #: rather than imported from the smoke test: these are campaign facts
@@ -150,6 +152,30 @@ print(f"generations {GENERATIONS} from the model arm, 1 from the baseline\n", fl
 
 engine = create_engine(os.environ["DATABASE_URL"], pool_pre_ping=True)
 factory = sessionmaker(bind=engine, autoflush=False)
+
+# --- the schema, checked BEFORE the first billed call ------------------------
+#
+# Added after this script spent a real request and then failed to store the
+# answer: the application database was two revisions behind, because the test
+# fixtures migrate the *test* database and nothing migrates this one on the
+# way in. The write is the last thing that happens to a generation, so a
+# schema gap costs a paid call per bundle and stores none of them -- the one
+# shape of failure this script's other refusals all exist to prevent, arriving
+# through the one door that had no check on it.
+#
+# Every other precondition here is checked before the credential is even read.
+# This one has to wait for a connection, so it is the first thing done with one.
+with engine.connect() as connection:
+    at = connection.execute(text("SELECT version_num FROM alembic_version")).scalar()
+head = ScriptDirectory.from_config(alembic_config()).get_current_head()
+if at != head:
+    raise SystemExit(
+        f"the database is at revision {at!r} and the code expects {head!r}. "
+        "A generation is written after it is paid for, so running now would "
+        "spend a request per bundle and store none of them. Bring it up "
+        "first:\n\n    make migrate\n"
+    )
+print(f"schema     {head} (checked before anything is asked)\n", flush=True)
 
 with factory.begin() as session:
     run_ids = [
