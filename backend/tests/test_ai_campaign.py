@@ -34,6 +34,7 @@ They make no network call: the arm is injected through `ai-011`'s registry.
 
 from __future__ import annotations
 
+import inspect
 import json
 
 import pytest
@@ -161,7 +162,21 @@ def baseline() -> TemplateGenerator:
 def campaign(sample, *, generations=1, **kw) -> CampaignRecord:
     kw.setdefault("arm", arm())
     kw.setdefault("baseline", baseline())
+    # No pause in the suite, and the sleeper is injected so pacing can be
+    # asserted without waiting for it. The production argument has no
+    # default -- a separate test holds that.
+    kw.setdefault("pause_seconds", 0.0)
     return run_campaign(kw.pop("factory"), sample=sample, generations=generations, **kw)
+
+
+class _Clock:
+    """Stands in for `time.sleep`, recording what it was asked to wait."""
+
+    def __init__(self) -> None:
+        self.waits: list[float] = []
+
+    def __call__(self, seconds: float) -> None:
+        self.waits.append(seconds)
 
 
 def for_arm(record: CampaignRecord, kind: GeneratorKind) -> list[GenerationRecord]:
@@ -486,6 +501,89 @@ def test_the_replacement_is_never_counted_against_the_model_arm(
     assert ledger.caught(GeneratorKind.HOSTED) == 2
     assert ledger.catch_rate(GeneratorKind.HOSTED) == 1.0
     assert ledger.checked(GeneratorKind.TEMPLATE) == 1, "the baseline, not the stand-in"
+
+
+# --------------------------------------------------- pacing, so nothing is lost
+
+
+@pytest.mark.database
+@requires_database
+def test_the_run_pauses_between_model_calls(
+    factory: sessionmaker, sample: list
+) -> None:
+    # spec: ai-012 -- the first scored campaign made 60 calls as fast as it
+    # could against a 30,000 tokens-per-minute ceiling, and the provider
+    # refused five. Two were generation 1, so two of twenty bundles came out
+    # with no scored hosted generation and the marking corpus silently went
+    # from 20 bundles to 18 -- against a figure on the ethics form.
+    clock = _Clock()
+
+    campaign(sample, factory=factory, generations=2, pause_seconds=9.5, sleep=clock)
+
+    # Four model generations over two bundles, and a pause before each one
+    # except the first: pausing before the first buys nothing and delays
+    # every run by the interval.
+    assert clock.waits == [9.5, 9.5, 9.5]
+
+
+@pytest.mark.database
+@requires_database
+def test_the_baseline_is_never_paused(factory: sessionmaker, sample: list) -> None:
+    # spec: ai-012, ai-009 -- it makes no call, so it cannot outrun anything.
+    # Pausing it would add a minute per twenty bundles for nothing, which is
+    # the same argument that keeps it out of the budget.
+    clock = _Clock()
+
+    campaign(
+        [sample[0]], factory=factory, generations=1, pause_seconds=9.5, sleep=clock
+    )
+
+    assert clock.waits == [], "one model generation and one baseline, no pause"
+
+
+@pytest.mark.database
+@requires_database
+def test_a_refused_call_still_paces_the_next_one(
+    factory: sessionmaker, sample: list
+) -> None:
+    # spec: ai-012 -- a refused call is still a call the provider counted, so
+    # a run pacing only its successes would accelerate into exactly the
+    # condition that caused the refusal.
+    clock = _Clock()
+
+    campaign(
+        sample,
+        factory=factory,
+        arm=arm(ProviderUnavailable("rate limited")),
+        pause_seconds=9.5,
+        sleep=clock,
+    )
+
+    assert clock.waits == [9.5], "two model generations: one refused, one served"
+
+
+def test_the_pause_has_no_default() -> None:
+    # spec: ai-012, ai-007 -- `max_attempts`' rule. How fast a run may ask is
+    # a decision about the provider it is pointed at, and one made by
+    # omission is one nobody chose -- here the cost of not choosing is a
+    # corpus smaller than the pre-registered one, with nothing saying so.
+    parameter = inspect.signature(run_campaign).parameters["pause_seconds"]
+
+    assert parameter.default is inspect.Parameter.empty
+
+
+def test_a_negative_pause_is_refused() -> None:
+    # spec: ai-012 -- far more likely an arithmetic slip in a caller deriving
+    # an interval from a rate limit than a deliberate choice.
+    with pytest.raises(ConfigurationError, match="pause"):
+        run_campaign(
+            None,
+            sample=[(1, fault_bundle())],
+            arm=arm(),
+            baseline=baseline(),
+            generations=1,
+            pause_seconds=-1.0,
+        )
 
 
 # ------------------------------------------------- what is skipped, what stops
