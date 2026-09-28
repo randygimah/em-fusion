@@ -1,31 +1,51 @@
-a model arm may omit its model id                          KILLED   2 failed, 39 passed in 48.32s
-a model arm may omit its raw response                      KILLED   2 failed, 39 passed in 48.36s
-a template row may name a model                            KILLED   1 failed, 40 passed in 48.44s
-the guard checks only the template direction               KILLED   2 failed, 39 passed in 48.08s
-a blank model id counts as present                         KILLED   1 failed, 40 passed in 48.72s
-the generator is not recorded from the result              KILLED   2 failed, 39 passed in 48.67s
-the raw response is re-serialised rather than stored verbatim KILLED   3 failed, 38 passed in 49.13s
-an absent parameter set is stored as a JSON null           KILLED   1 failed, 40 passed in 48.27s
-the summary is not stored                                  KILLED   12 failed, 29 passed in 48.49s
-the recommended action is not stored                       KILLED   12 failed, 29 passed in 48.25s
-the alternatives land in the uncertainty column            KILLED   1 failed, 40 passed in 48.74s
-a new row starts under review rather than new              KILLED   1 failed, 40 passed in 49.13s
-a new row claims the grounding check passed                KILLED   1 failed, 40 passed in 48.54s
-the write does not say which row it made                   KILLED   18 failed, 20 passed, 3 errors in 47.50s
-not-checked is stored as failed                            KILLED   2 failed, 39 passed in 48.49s
-a stored null reads back as failed                         KILLED   2 failed, 39 passed in 48.30s
-passed and failed are swapped                              KILLED   3 failed, 38 passed in 48.36s
-hypotheses come back in whatever order the heap gives      KILLED   1 failed, 40 passed in 47.96s
-another bundle's hypotheses are returned too               KILLED   2 failed, 39 passed in 48.44s
-the two added columns are nullable                         KILLED   1 failed, 40 passed in 48.28s
-the grounding column stays two-valued                      KILLED   19 failed, 19 passed, 3 errors in 49.95s
-the review status keeps accepting any text                 KILLED   2 failed, 39 passed in 48.27s
-one column keeps its old name                              KILLED   22 failed, 16 passed, 3 errors in 49.86s
-a review state the requirements name is left out           KILLED   1 failed, 40 passed in 48.47s
-stored bundles come back without their ids                 KILLED   18 failed, 20 passed, 3 errors in 50.65s
-the new reader is not scoped to the run                    KILLED   2 failed, 39 passed in 48.59s
+sentinel killed (6 failed, 52 passed in 76.49s (0:01:16)) -- source edits reach the tests
+
+a model arm may omit its model id                          KILLED   2 failed, 56 passed in 74.02s (0:01:14)
+a model arm may omit its raw response                      KILLED   2 failed, 56 passed in 74.32s (0:01:14)
+a template row may name a model                            KILLED   1 failed, 57 passed in 76.14s (0:01:16)
+the guard checks only the template direction               KILLED   2 failed, 56 passed in 78.86s (0:01:18)
+a blank model id counts as present                         KILLED   1 failed, 57 passed in 75.83s (0:01:15)
+the generator is not recorded from the result              KILLED   3 failed, 55 passed in 76.15s (0:01:16)
+the raw response is re-serialised rather than stored verbatim KILLED   3 failed, 55 passed in 80.88s (0:01:20)
+an absent parameter set is stored as a JSON null           KILLED   1 failed, 57 passed in 80.72s (0:01:20)
+the summary is not stored                                  KILLED   21 failed, 37 passed in 74.59s (0:01:14)
+the recommended action is not stored                       KILLED   21 failed, 37 passed in 88.63s (0:01:28)
+the alternatives land in the uncertainty column            KILLED   1 failed, 57 passed in 77.45s (0:01:17)
+a new row starts under review rather than new              KILLED   1 failed, 57 passed in 75.80s (0:01:15)
+a new row claims the grounding check passed                KILLED   3 failed, 55 passed in 76.62s (0:01:16)
+the write does not say which row it made                   KILLED   29 failed, 26 passed, 3 errors in 76.18s (0:01:16)
+not-checked is stored as failed                            KILLED   4 failed, 54 passed in 76.43s (0:01:16)
+a stored null reads back as failed                         KILLED   4 failed, 54 passed in 76.21s (0:01:16)
+passed and failed are swapped                              KILLED   7 failed, 51 passed in 75.13s (0:01:15)
+hypotheses come back in whatever order the heap gives      KILLED   1 failed, 57 passed in 74.26s (0:01:14)
+another bundle's hypotheses are returned too               KILLED   2 failed, 56 passed in 76.15s (0:01:16)
+the two added columns are nullable                         KILLED   1 failed, 57 passed in 77.98s (0:01:17)
+the grounding column stays two-valued                      KILLED   30 failed, 25 passed, 3 errors in 77.78s (0:01:17)
+the review status keeps accepting any text                 KILLED   2 failed, 56 passed in 73.78s (0:01:13)
+one column keeps its old name                              KILLED   34 failed, 21 passed, 3 errors in 77.99s (0:01:17)
+a review state the requirements name is left out           KILLED   1 failed, 57 passed in 77.95s (0:01:17)
+stored bundles come back without their ids                 KILLED   29 failed, 26 passed, 3 errors in 78.46s (0:01:18)
+the new reader is not scoped to the run                    KILLED   2 failed, 56 passed in 75.60s (0:01:15)
+a failing verdict is recorded as passed                    KILLED   2 failed, 56 passed in 74.84s (0:01:14)
+a failing verdict is recorded as never checked             KILLED   3 failed, 55 passed in 74.40s (0:01:14)
+the two verdicts are swapped                               KILLED   4 failed, 54 passed in 73.57s (0:01:13)
+the verdict is written to every row                        KILLED   3 failed, 55 passed in 73.35s (0:01:13)
+the verdict resets the analyst's review status             KILLED   1 failed, 57 passed in 72.95s (0:01:12)
+a verdict against no row is reported as written            KILLED   1 failed, 57 passed in 72.70s (0:01:12)
+a verdict against several rows is accepted                 KILLED   1 failed, 57 passed in 73.04s (0:01:13)
+the asked-for arm is derived from the one that answered    KILLED   2 failed, 56 passed in 73.31s (0:01:13)
+the asked-for arm is hard-coded to the template            KILLED   3 failed, 55 passed in 73.00s (0:01:13)
+the asked-for arm is not read back                         KILLED   2 failed, 56 passed in 72.74s (0:01:12)
+a fallback is never reported as one                        KILLED   2 failed, 56 passed in 72.52s (0:01:12)
+the impossible direction is accepted                       KILLED   2 failed, 56 passed in 73.11s (0:01:13)
+every disagreement is refused, fallbacks included          KILLED   3 failed, 55 passed in 72.62s (0:01:12)
+the direction guard is never reached from the writer       KILLED   1 failed, 57 passed in 72.93s (0:01:12)
+the asked-for arm column is nullable                       KILLED   1 failed, 57 passed in 74.02s (0:01:14)
+the asked-for arm accepts any text                         KILLED   3 failed, 55 passed in 71.86s (0:01:11)
+one generator kind is left out of the vocabulary           KILLED   1 failed, 57 passed in 72.69s (0:01:12)
+the column is added and never dropped again                KILLED   2 failed, 56 passed in 72.31s (0:01:12)
 
 restored
 
-26 killed of 26 valid mutants
+44 killed of 44 valid mutants
 no unexpected survivors

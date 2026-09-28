@@ -29,14 +29,31 @@ have permitted.
 is nullable when it should not be, or missing a constraint, is not
 detectable from the Python at all.
 
-**This harness drives `make test-backend` from the repository root.** Two
-harnesses in this directory did it from `backend/`, where the target does
-not exist, so `make` failed, so every mutant was scored KILLED without a
-test having run. See the README. A non-zero exit code alone is not
-evidence a test noticed anything, so the summary below also reports how
-many tests ran.
+**This harness drives `make test-backend-nobuild` from the repository
+root.** Two things in that sentence are lessons rather than detail. From the
+*root*, because two harnesses in this directory ran it from `backend/` where
+the target does not exist, so `make` failed, so every mutant was scored
+KILLED without a test having run. And `-nobuild`, because rebuilding the
+image once per mutant is what exhausted memory and had the OOM killer stop
+two passes mid-run, leaving a mutant on disk -- the backend service
+bind-mounts `./backend`, so a source edit is already visible inside the
+container and the rebuild was never doing anything. Run `make build-backend`
+once before a pass. A non-zero exit code alone is not evidence a test
+noticed anything, so the summary below also reports how many tests ran.
+
+**Extended 2026-09-27** for the two additions `ai-012` forced, and the
+guard file and sentinel were added at the same time -- this harness had
+neither, which was recorded as owed. Two surfaces are new. The verdict
+writer, where the interesting mutants are not "does it write" but "does it
+write to the row it was given, does it write nothing else, and can it be
+made to write the third state that would undo the whole point of a nullable
+column". And the asked-for arm, where every mutant still stores a row: the
+campaign runs both arms over one bundle, so a mutant that derives the
+asked-for arm from the answering one produces a database in which a
+fallback and the baseline are again indistinguishable, and nothing raises.
 """
 
+import json
 import os
 import re
 import subprocess
@@ -46,6 +63,7 @@ ROOT = Path(__file__).resolve().parents[3]  # the repository root
 BACKEND = ROOT / "backend"
 MODULE = BACKEND / "app/db/hypotheses.py"
 MIGRATION = BACKEND / "alembic/versions/0006_hypothesis_columns.py"
+ASKED = BACKEND / "alembic/versions/0007_hypothesis_requested_arm.py"
 BUNDLES = BACKEND / "app/db/bundles.py"
 TESTS = "tests/test_db_hypotheses.py"
 
@@ -165,6 +183,96 @@ M = {
         "            .all()\n"
         "        )\n"
         '    return [(row["id"], _bundle(row)) for row in rows]'),
+
+    # --- the verdict, which had no writer at all -----------------------------
+    "a failing verdict is recorded as passed": (
+        MODULE,
+        "    status = GroundingStatus.PASSED if report.passed else GroundingStatus.FAILED",
+        "    status = GroundingStatus.PASSED"),
+    "a failing verdict is recorded as never checked": (
+        MODULE,
+        "    status = GroundingStatus.PASSED if report.passed else GroundingStatus.FAILED",
+        "    status = (\n"
+        "        GroundingStatus.PASSED if report.passed else GroundingStatus.NOT_CHECKED\n"
+        "    )"),
+    "the two verdicts are swapped": (
+        MODULE,
+        "    status = GroundingStatus.PASSED if report.passed else GroundingStatus.FAILED",
+        "    status = GroundingStatus.FAILED if report.passed else GroundingStatus.PASSED"),
+    "the verdict is written to every row": (
+        MODULE,
+        '            text("UPDATE hypotheses SET grounding_passed = :passed WHERE id = :id"),\n'
+        '            {"passed": status.to_stored(), "id": hypothesis_id},',
+        '            text("UPDATE hypotheses SET grounding_passed = :passed"),\n'
+        '            {"passed": status.to_stored()},'),
+    "the verdict resets the analyst's review status": (
+        MODULE,
+        '            text("UPDATE hypotheses SET grounding_passed = :passed WHERE id = :id"),',
+        '            text(\n'
+        '                "UPDATE hypotheses SET grounding_passed = :passed, "\n'
+        "                \"status = 'New' WHERE id = :id\"\n"
+        "            ),"),
+    "a verdict against no row is reported as written": (
+        MODULE, "        if result.rowcount != 1:", "        if False:"),
+    "a verdict against several rows is accepted": (
+        MODULE, "        if result.rowcount != 1:", "        if result.rowcount > 1:"),
+
+    # --- which arm was asked -------------------------------------------------
+    "the asked-for arm is derived from the one that answered": (
+        MODULE,
+        '                    "requested_generator": requested_generator.value,',
+        '                    "requested_generator": result.generator.value,'),
+    "the asked-for arm is hard-coded to the template": (
+        MODULE,
+        '                    "requested_generator": requested_generator.value,',
+        '                    "requested_generator": "template",'),
+    "the asked-for arm is not read back": (
+        MODULE,
+        '        requested_generator=GeneratorKind(row["requested_generator"]),',
+        "        requested_generator=GeneratorKind(row[\"generator\"]),"),
+    "a fallback is never reported as one": (
+        MODULE,
+        "        return self.generator is not self.requested_generator",
+        "        return False"),
+    "the impossible direction is accepted": (
+        MODULE,
+        "    if (\n"
+        "        requested_generator is GeneratorKind.TEMPLATE\n"
+        "        and generator is not GeneratorKind.TEMPLATE\n"
+        "    ):",
+        "    if False:"),
+    "every disagreement is refused, fallbacks included": (
+        MODULE,
+        "    if (\n"
+        "        requested_generator is GeneratorKind.TEMPLATE\n"
+        "        and generator is not GeneratorKind.TEMPLATE\n"
+        "    ):",
+        "    if requested_generator is not generator:"),
+    "the direction guard is never reached from the writer": (
+        MODULE,
+        "    check_requested_arm(\n"
+        "        generator=result.generator, requested_generator=requested_generator\n"
+        "    )",
+        "    pass"),
+
+    # --- 0007, which Python cannot check ------------------------------------
+    "the asked-for arm column is nullable": (
+        ASKED,
+        '        "hypotheses", sa.Column("requested_generator", sa.Text, nullable=False)',
+        '        "hypotheses", sa.Column("requested_generator", sa.Text, nullable=True)'),
+    "the asked-for arm accepts any text": (
+        ASKED,
+        "    quoted = \", \".join(f\"'{value}'\" for value in GENERATOR_VALUES)\n"
+        "    op.create_check_constraint(",
+        "    quoted = \", \".join(f\"'{value}'\" for value in GENERATOR_VALUES)\n"
+        "    if quoted and False:\n"
+        "        op.create_check_constraint("),
+    "one generator kind is left out of the vocabulary": (
+        ASKED,
+        'GENERATOR_VALUES = ("template", "local", "hosted")',
+        'GENERATOR_VALUES = ("template", "hosted")'),
+    "the column is added and never dropped again": (
+        ASKED, '    op.drop_column("hypotheses", "requested_generator")', "    pass"),
 }
 
 EXPECTED_EQUIVALENT: set[str] = set()
@@ -172,6 +280,55 @@ EXPECTED_EQUIVALENT: set[str] = set()
 RAN = re.compile(r"(\d+) (?:passed|failed)")
 
 originals = {path: path.read_text() for path in {p for p, _, _ in M.values()}}
+
+# A crash between writing a mutant and restoring it leaves a mutated source
+# on disk, where the next thing to read it is a measurement. The guard file
+# holds the originals so a later run can put them back and refuse to score.
+GUARD = Path(__file__).with_suffix(".in-progress.json")
+if GUARD.exists():
+    for name, text in json.loads(GUARD.read_text()).items():
+        Path(name).write_text(text)
+    GUARD.unlink()
+    raise SystemExit(
+        "a previous run did not finish and had left a mutant in the source. "
+        "The originals have been put back from the guard file. Check "
+        "`git diff` is clean, then run again."
+    )
+GUARD.write_text(json.dumps({str(k): v for k, v in originals.items()}))
+
+
+def _suite() -> tuple[int, str, bool]:
+    p = subprocess.run(
+        ["make", "test-backend-nobuild", f"PYTEST_ARGS={TESTS} -q --no-cov"],
+        cwd=str(ROOT), capture_output=True, text=True, env=os.environ.copy())
+    tail = [line for line in p.stdout.splitlines()
+            if "passed" in line or "failed" in line or "error" in line]
+    summary = tail[-1] if tail else "NO TEST SUMMARY -- did the suite run?"
+    return p.returncode, summary, bool(RAN.search(summary))
+
+
+# --- the sentinel ---------------------------------------------------------
+# A deliberately broken edit that must fail. Two harnesses in this directory
+# once scored a perfect pass without running a test at all, so a score is
+# only believable if a known-bad edit is shown to reach the suite first.
+_from = '                    "generator": result.generator.value,'
+_original = originals[MODULE]
+assert _original.count(_from) == 1
+MODULE.write_text(_original.replace(_from, '                    "generator": "local",', 1))
+_code, _summary, _ran = _suite()
+MODULE.write_text(_original)
+if not _ran:
+    GUARD.unlink(missing_ok=True)
+    raise SystemExit(f"the suite did not run at all: {_summary}")
+if not _code:
+    GUARD.unlink(missing_ok=True)
+    raise SystemExit(
+        "SENTINEL SURVIVED. A deliberately broken source edit left the suite "
+        f"green ({_summary}), so edits are not reaching the tests and no score "
+        "from this harness can be believed."
+    )
+print(f"sentinel killed ({_summary}) -- source edits reach the tests\n", flush=True)
+
 res: dict[str, str] = {}
 try:
     for n, (path, o, w) in M.items():
@@ -181,25 +338,20 @@ try:
             print(f"{n:58} {res[n]}", flush=True)
             continue
         path.write_text(orig.replace(o, w, 1))
-        p = subprocess.run(
-            ["make", "test-backend", f"PYTEST_ARGS={TESTS} -q --no-cov"],
-            cwd=str(ROOT), capture_output=True, text=True, env=os.environ.copy())
-        tail = [line for line in p.stdout.splitlines()
-                if "passed" in line or "failed" in line or "error" in line]
-        summary = tail[-1] if tail else "NO TEST SUMMARY -- did the suite run?"
         # A non-zero exit alone is not evidence a test noticed anything: a
         # harness that could not tell a failed test from a failed invocation
         # scored every mutant as killed. See the module docstring.
-        ran = bool(RAN.search(summary))
+        code, summary, ran = _suite()
         if not ran:
             res[n] = f"INCONCLUSIVE -- {summary}"
         else:
-            res[n] = ("KILLED   " if p.returncode else "SURVIVED ") + summary
+            res[n] = ("KILLED   " if code else "SURVIVED ") + summary
         print(f"{n:58} {res[n]}", flush=True)
         path.write_text(orig)
 finally:
     for path, text in originals.items():
         path.write_text(text)
+    GUARD.unlink(missing_ok=True)
     print("\nrestored")
 
 killed = sum(1 for v in res.values() if v.startswith("KILLED"))
