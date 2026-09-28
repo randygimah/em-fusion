@@ -288,3 +288,33 @@ def test_the_minimum_is_not_a_second_copy_of_the_threshold() -> None:
     source = inspect.getsource(latency)
     assert "DEFAULT_MINIMUM_DURATION" in source
     assert "seconds=10" not in source
+
+
+def test_a_third_receiver_does_not_delay_a_rule_that_needed_two() -> None:
+    # spec: anom-009 -- found by the mutation pass, and the gap was real.
+    #
+    # Every case above gave a rule exactly as many receivers as it required,
+    # which makes "the second to qualify" and "the last to qualify"
+    # indistinguishable. Real zones are not like that: the corpus carries
+    # three-receiver interference zones, and there the distinction is the
+    # measurement. The rule claims that *more than one* deviated together,
+    # so it could commit the moment the second one's evidence matured; a
+    # third arriving later is corroboration it did not need and must not be
+    # charged for.
+    from app.detection.latency import measure
+
+    measured = measure(
+        claim(FUSION, started=at(10)),
+        sensors=("RF-01", "RF-02", "RF-03"),
+        onset=ONSET,
+        episodes=[
+            episode("RF-01", 4, started=at(10), ended=at(300)),
+            episode("RF-02", 4, started=at(40), ended=at(300)),
+            episode("RF-03", 4, started=at(200), ended=at(300)),
+        ],
+        minimum=MINIMUM,
+    )
+
+    assert measured.decidable_at == at(50)
+    assert measured.latency == timedelta(seconds=50)
+    assert measured.contributing == ("RF-01", "RF-02")

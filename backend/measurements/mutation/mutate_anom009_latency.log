@@ -1,0 +1,22 @@
+sentinel killed (1 failed, 13 passed in 0.11s) -- source edits reach the tests
+
+interference is measured as though one receiver sufficed       KILLED   4 failed, 10 passed in 0.13s
+a broken receiver is measured as though two were needed        KILLED   4 failed, 10 passed in 0.12s
+the nth qualification becomes the first                        KILLED   2 failed, 12 passed in 0.12s
+the nth qualification becomes the last                         KILLED   1 failed, 13 passed in 0.11s
+the minimum is dropped, so evidence starting counts as evidence enough KILLED   1 failed, 13 passed in 0.11s
+the episode's end is taken instead of its start                KILLED   7 failed, 7 passed in 0.14s
+the minimum is counted twice                                   KILLED   7 failed, 7 passed in 0.13s
+a receiver qualifies on its latest episode rather than its earliest KILLED   1 failed, 13 passed in 0.12s
+a negative latency is clamped to zero                          KILLED   1 failed, 13 passed in 0.11s
+the subtraction runs the other way                             KILLED   5 failed, 9 passed in 0.13s
+every receiver's episodes count, not only this claim's         KILLED   1 failed, 13 passed in 0.11s
+an undeclared rule defaults to one receiver                    KILLED   1 failed, 13 passed in 0.11s
+too little evidence is measured anyway                         KILLED   2 failed, 12 passed in 0.12s
+a negative minimum is accepted                                 KILLED   1 failed, 13 passed in 0.11s
+the resolution is dropped from the report                      KILLED   1 failed, 13 passed in 0.11s
+
+restored
+
+15 killed of 15 valid mutants
+no unexpected survivors
