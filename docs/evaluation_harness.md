@@ -194,6 +194,16 @@ the marker from working out which arm wrote what:
 4. **An automated scan** over everything the marker receives — the prose *and* the workbook's cells,
    headings, sheet names, notes and document properties — looking for the arm vocabulary.
 
+The pack also opens with a **glossary** — every rule name, conclusion label and domain word a
+marker will meet, on the page and again as a tab in the workbook they score in. Its one rule is that
+a definition says what a term *denotes* and never what it *implies*: *"one aircraft's position
+reports stopping"* is a definition, *"…which can indicate interference"* is the answer to the question
+being asked. That is the summarising-pack failure in its most dangerous form, because prose reasoning
+does not look like a computation, so it is guarded by a named list of causal connectives no
+definition may contain. A citation key with no entry is refused rather than omitted — a guard which,
+the first time it ran, found that the bundle test fixtures had been using a finding type the
+detection layer never emits.
+
 The blinding is **honestly imperfect and the imperfection is stated**: the template's prose is
 stylistically distinctive and a marker may well recognise it. That residual threat is recorded in the
 Evaluation chapter rather than claimed away. What the four mechanisms prevent is *adding* a

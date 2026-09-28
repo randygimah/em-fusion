@@ -6988,6 +6988,49 @@ come from a source, so this is now enforced rather than remembered.
 
 §98's *conclusion* — group and label, never summarise away — stands. Its stated reason does not.
 
+## 103. Why not just define the terms in the scoring pack? What could go wrong with a glossary?
+
+**Nothing, if it defines words. A great deal, if it explains findings.**
+
+The packs use `track_rate_excess`, `smoothing constant`, `nominal`, `disc`, `power_dbm` and
+`corroborate` without defining any of them. A rater meeting those for the first time has two options,
+and the second is the dangerous one:
+
+| What they do | Cost |
+|---|---|
+| Stop and ask | The session loses its rhythm, and the answer is not on the record with the scores |
+| Guess | **Invisible.** The returned sheet looks identical either way |
+
+So a glossary is straightforwardly worth having. The trap is in what goes in it.
+
+**The line: a definition says what a term *denotes*, never what it *implies*.**
+
+| | |
+|---|---|
+| ✅ "One aircraft's position reports stopping for longer than the gap the rule allows." | Says what the words refer to |
+| ❌ "...which can indicate interference in the area." | Is the **answer** |
+
+The second version hands the marker the causal link that *evidence use* exists to test in pass one,
+and that *cause correctness* exists to test again in pass two. An explanation that supplies it would
+be earning a 5; a glossary that supplies it first means nobody can tell whether the explanation
+earned anything. **It moves part of the instrument into the reference material, where nobody would
+think to look for it.**
+
+This is the same failure as a summarising evidence pack (§102) in its most dangerous form, and worth
+separating from it for one reason: a summary is arithmetic and trips the "computes no new number"
+guard. **Reasoning in prose does not look like a computation**, so it needs a guard of its own — a
+named list of causal connectives (`because`, `indicates`, `suggests`, `due to`, `points to`,
+`likely`, …) that no definition may contain, asserted over every entry rather than over whichever
+ones a test fixture happens to render, and fired at a real violation so the guard is known to bite.
+
+**One further rule, and it found a defect immediately.** A citation key appearing in an exported pack
+with no glossary entry is **refused**, not omitted — because an omission leaves the page looking
+complete while a marker meets an undefined rule nineteen packs from the end. The first time that
+guard ran it failed, on `track_discontinuity`: a finding type used throughout the bundle test
+fixtures that **the detection layer has never emitted**. The real name is `track_continuity_gap`. So
+three test suites had been asserting against a vocabulary that does not exist in production, and the
+thing that noticed was a glossary.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -7175,6 +7218,6 @@ come from a source, so this is now enforced rather than remembered.
 | **Construction vs convention** | Whether a safety property holds because the code refuses, or because everybody types the right thing. They look identical until someone is in a hurry. The test: can I break this by typing something? See §84. |
 | **Development batch** | 60 runs generated to build the AI layer against real bundles, pinned to its own base seed and excluded from every corpus query by name. Not a corpus: no thesis figure may be measured from it. See §84. |
 | **Anchored point** | A score on the 1-5 scale that the rubric words explicitly — 1, 3 and 5. The rest are "anything in between" and are valid values, not gaps. See §100. |
-| **Group, never summarise** | The rule governing the evidence pack: findings are collected under the rule that produced them with a count, and every one is still listed. The reason originally given for it was wrong in direction and was withdrawn -- see §102. |\n| **Factoring** | Saying the sentence a group of findings shares once, in the group's heading, and leaving each row only what differs. Typography, not aggregation: no value is lost and none is computed. See §102. |\n| **Computes none** | The replacement constraint on the pack: every measurement it renders must appear verbatim in a source, and the only arithmetic allowed is counting items it lists itself. Enforced by test rather than by judgement. See §102. |
+| **Group, never summarise** | The rule governing the evidence pack: findings are collected under the rule that produced them with a count, and every one is still listed. The reason originally given for it was wrong in direction and was withdrawn -- see §102. |\n| **Factoring** | Saying the sentence a group of findings shares once, in the group's heading, and leaving each row only what differs. Typography, not aggregation: no value is lost and none is computed. See §102. |\n| **Denotes, not implies** | The rule governing the pack's glossary: an entry says what a word refers to and never what it would mean if you saw it. The second is the marker's job and two of the seven scored judgements. See §103. |\n| **Computes none** | The replacement constraint on the pack: every measurement it renders must appear verbatim in a source, and the only arithmetic allowed is counting items it lists itself. Enforced by test rather than by judgement. See §102. |
 | **Presentation change** | A change to how a pre-registered instrument is rendered, with no change to a dimension, anchor, scale, item or procedure. Safe only before any data is collected, and argued for in the change log either way. See §99. |
 | **No longer checkable** | What happens to a measurement when its data is deleted. Distinct from *no longer true*: the observation happened and the log is committed; what is lost is re-verification. See §84. |

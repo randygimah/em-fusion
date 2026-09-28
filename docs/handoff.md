@@ -16,7 +16,7 @@ thesis notes, progress note and handoff up to date.
 
 ## Current state
 
-**The tree is clean and everything below is committed.** Backend suite: **1,292 passed, 288 skipped**
+**The tree is clean and everything below is committed.** Backend suite: **1,301 passed, 288 skipped**
 (the skips are the `database`-marked tests, which need `TEST_DATABASE_URL`). `app/evaluation` is at
 **100%** across all four modules. `ruff` and `mypy` clean; `black --check` still reports the known
 **12 files** of pre-existing formatting debt, none of them touched this session.
@@ -48,6 +48,11 @@ which exact de-duplication does not touch. A group now **factors the sentence it
 said once in the heading, each row keeping only what differs, gathered under its source. One pack
 went from ~35 lines to 15 with every value intact, and it exposed two aircraft that had dropped out
 **twice** each.
+
+**The pack now carries a glossary** (`eval-009`): 22 terms at the head of `hypotheses.md` and on a
+**Terms** tab in the workbook, so it is reachable both where the evidence is read and where the score
+is entered. Definitions state what a term denotes and never what it implies, guarded by
+`CAUSAL_CONNECTIVES` asserted over every entry. A citation key with no entry is refused.
 
 **`eval-006` is deferred with a stated trigger**, at the user's direction: the second rater is
 unavailable until mid-October, so no completed sheets exist. Recorded in `docs/qa.md` §101 with the
@@ -81,9 +86,17 @@ sheets exist, not before and not between the first and the second.**
 **The Docker image needs rebuilding** for anything running in-container that imports it; `make measure`
 rebuilds, and did.
 
-**Spec:** `eval-007` and `eval-008` added and passing. Backlog is **62 of 103**.
+**Spec:** `eval-007`, `eval-008` and `eval-009` added and passing; `eval-007` amended once.
+Backlog is **63 of 104**.
 
 ## Failed attempts
+
+**The bundle test fixtures used a finding type that does not exist**, and it took a glossary to
+notice. `track_discontinuity` appears eight times across `test_evb_bundle.py`,
+`test_evb_traceability.py` and `test_ai_template.py`; `app/` has never emitted it — the real name is
+`track_continuity_gap`. Found by `eval-009`'s refusal on an undefined citation key. Renamed across the
+three suites, and **nothing failed**, which is its own comment on how load-bearing those assertions
+were. Worth a mutation pass on `evb-*` at some point.
 
 **I recorded a claim about bias that was wrong in direction, in six documents.** The constraint on
 the rebuilt pack — group but never summarise — was justified by saying a summarising pack would
@@ -128,8 +141,9 @@ EOF). Verified by re-reading the file rather than trusting the exit code.
 
 ## Next step
 
-1. **Mutation harnesses for the four evaluation modules.** 95 tests across `sampling`, `statistics`,
-   `pack` and `workbook` with nothing yet establishing they are load-bearing. This session alone found
+1. **Mutation harnesses for the four evaluation modules.** 104 tests across `sampling`,
+   `statistics`, `pack`, `workbook` and the glossary, with nothing yet establishing they are
+   load-bearing. This session alone found
    a test asserting an assumption instead of the rubric, one that skipped, and one that could not tell
    two findings apart — the pattern is established and the figure should not be quoted until a pass
    has run. Note the scope lesson already recorded: a harness must run **every** suite that tests the

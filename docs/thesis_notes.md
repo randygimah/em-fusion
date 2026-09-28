@@ -7366,3 +7366,44 @@ are a wall whether or not each row is well-formed Markdown. The second pass fact
 sentence into the group heading and leaves each row only what differs. One evidence pack went from
 roughly thirty-five lines to fifteen with every value intact, and the change exposed two aircraft
 that had dropped out twice each, invisible among fourteen identical lines.
+
+### A glossary for the scorer, and the line between defining a word and answering the question
+
+The scoring packs use `track_rate_excess`, `smoothing constant`, `nominal`, `disc`, `power_dbm` and
+`corroborate` without defining any of them. A second rater meeting those terms for the first time can
+interrupt the session to ask, or guess — and the guess is the worse outcome precisely because it is
+invisible: the returned sheet is identical either way, so an uninterpretable score is indistinguish-
+able from a considered one. A glossary is therefore straightforwardly owed, and it was added to the
+head of the prose document and again as a tab in the workbook, on the reasoning that the prose is
+where the evidence is read while the workbook is what is open when a score is entered.
+
+**The methodological risk is larger than the change looks, and it is worth recording as a threat that
+was designed out rather than discovered.** A glossary entry that explains what a rule *implies*
+rather than what it *denotes* supplies the marker with the causal link that the first scored
+dimension exists to test. "One aircraft's position reports stopping for longer than the gap the rule
+allows" is a definition. "…which can indicate interference in the area" is the answer: it is what an
+explanation scoring 5 on evidence use would have had to construct for itself, and it is what pass
+two's *cause correctness* judgement asks about independently. A glossary carrying it would move part
+of the instrument into the reference material, where no reader of the results would think to look for
+it.
+
+This is the same failure class as a summarising evidence pack, and the reason it needs a separate
+guard is instructive: a summary is arithmetic, and the constraint already in place — the pack
+re-organises values and computes none — is enforced by extracting every number from the rendered page
+and refusing any that came from nowhere. **Prose reasoning produces no number.** It passes that check
+untouched. So the glossary is guarded by a named list of causal connectives that no definition may
+contain, asserted over every entry in the constant rather than over whichever entries a test fixture
+happens to render, and fired at a deliberately tempting violation so that the guard is known to bite
+rather than merely known to pass.
+
+**A second rule, and the defect it found on its first run.** A citation key present in an exported
+pack with no glossary entry is refused rather than quietly omitted, because an omission leaves the
+document looking complete while a marker meets an undefined rule nineteen packs from the end. The
+first execution of that guard failed — on `track_discontinuity`, a finding type used throughout the
+evidence-bundle and template test fixtures that **the detection layer has never emitted**; the real
+name is `track_continuity_gap`. Three test suites had been asserting behaviour against a vocabulary
+that does not exist in production, and none of them failed when the name was corrected, which says
+something about how load-bearing those particular assertions were. The instrument that noticed was a
+glossary for a human reader, which is a further instance of this project's recurring pattern: the
+defects that survive the tests are found by building the first thing that actually consumes the
+output.
