@@ -83,7 +83,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass
-from typing import Any, Callable, Sequence
+from typing import Any, Callable, Mapping, Sequence
 
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -265,6 +265,55 @@ class CampaignRecord:
                 for arm in GeneratorKind
             },
         }
+
+
+def generations_from_json(written: Mapping[str, Any]) -> tuple[GenerationRecord, ...]:
+    """Read back what `CampaignRecord.as_json` wrote, for the generations.
+
+    **The generations only, and deliberately not a whole record.** The
+    budget and the ledger are serialised as *figures* rather than as their
+    contents -- `spent_usd` and a catch rate, not the individual calls and
+    checks behind them -- so a faithful round trip of the whole object is
+    not possible and a function claiming to do one would be lying about
+    three quarters of it. What does round-trip exactly is the part
+    `eval-004` needs, and a test holds that.
+
+    `fell_back` is not read: it is derived from the two arms, and a stored
+    copy is a second place for one fact to live.
+    """
+    return tuple(
+        GenerationRecord(
+            bundle_id=entry["bundle_id"],
+            ordinal=entry["ordinal"],
+            requested_arm=GeneratorKind(entry["requested_arm"]),
+            generator=GeneratorKind(entry["generator"]),
+            hypothesis_id=entry["hypothesis_id"],
+            grounding=GroundingStatus(entry["grounding"]),
+            refusals=tuple(
+                RefusalRecord(
+                    attempt=refusal["attempt"],
+                    category=RefusalCategory(refusal["category"]),
+                    reason=refusal["reason"],
+                    hypothesis_id=refusal["hypothesis_id"],
+                    usage=_usage_from_json(refusal["usage"]),
+                )
+                for refusal in entry["refusals"]
+            ),
+            usage=_usage_from_json(entry["usage"]),
+            seconds=entry["seconds"],
+        )
+        for entry in written["generations"]
+    )
+
+
+def _usage_from_json(written: Mapping[str, Any] | None) -> Usage | None:
+    if written is None:
+        return None
+    return Usage(
+        prompt_tokens=written["prompt_tokens"],
+        completion_tokens=written["completion_tokens"],
+        cost_usd=written["cost_usd"],
+    )
 
 
 def _usage_json(usage: Usage | None) -> dict[str, Any] | None:
@@ -577,5 +626,6 @@ __all__ = [
     "RefusalRecord",
     "SampledBundle",
     "SkippedGeneration",
+    "generations_from_json",
     "run_campaign",
 ]

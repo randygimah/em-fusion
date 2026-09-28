@@ -31,15 +31,13 @@ import re
 
 import pytest
 
-from app.ai.campaign import CampaignRecord, GenerationRecord
-from app.ai.grounding import GroundingLedger
+from app.ai.campaign import GenerationRecord
 from app.ai.hypothesis import Hypothesis
 from app.ai.service import ConfigurationError, GeneratorKind
 from app.ai.template import generate
 from app.db.hypotheses import GroundingStatus
-from app.evaluation.pack import DIMENSIONS, build_pack
+from app.evaluation.pack import BLINDING_GIVEAWAYS, DIMENSIONS, build_pack
 from tests.test_ai_template import fault_bundle, zone_bundle
-from tests.test_eval_statistics import budget
 
 HOSTED = GeneratorKind.HOSTED
 TEMPLATE = GeneratorKind.TEMPLATE
@@ -68,15 +66,6 @@ def generation(bundle_id, ordinal, arm, row, **kw) -> GenerationRecord:
         requested_arm=arm,
         hypothesis_id=row,
         **kw,
-    )
-
-
-def a_record(generations) -> CampaignRecord:
-    return CampaignRecord(
-        generations=tuple(generations),
-        skipped=(),
-        budget=budget(),
-        ledger=GroundingLedger(),
     )
 
 
@@ -111,7 +100,7 @@ def packed(bundles=None, **kw):
         r, h = one_bundle_campaign(bundle_id)
         rows += r
         hypotheses.update(h)
-    kw.setdefault("record", a_record(rows))
+    kw.setdefault("generations", rows)
     kw.setdefault("bundles", bundles)
     kw.setdefault("hypotheses", hypotheses)
     kw.setdefault("seed", SEED)
@@ -132,20 +121,25 @@ def test_the_pack_holds_two_labelled_explanations_under_every_package() -> None:
 
 
 def test_the_arm_is_nowhere_in_what_the_marker_reads() -> None:
-    # spec: eval-004 -- the whole comparison rests on this. The vocabulary is
-    # read off the enum rather than spelled here, so a fourth arm cannot be
-    # added without this noticing.
+    # spec: eval-004 -- the whole comparison rests on this.
     #
-    # Deliberately NOT checking for "model" or "baseline": an explanation may
-    # legitimately say "a propagation model", and a check that forbade it
-    # would fail on honest prose while catching nothing a marker could use.
-    # The first version of this test did forbid them and failed on its own
-    # fixture, which is the same defect one step earlier.
+    # The list is NOT the arm vocabulary, and getting that wrong twice is why
+    # it is a named constant. "model" and "baseline" were excluded first,
+    # because an explanation may honestly say "a propagation model". Then
+    # this test checked all three GeneratorKind values, passed on fixtures
+    # that never used the word "local", and fired on the first real pack --
+    # where the baseline says "the local discontinuity rate could not be
+    # measured" and the model says "caused by local equipment malfunction".
+    # A check that fires on honest prose is not a stricter check, it is one
+    # somebody switches off.
     pack = packed()
 
-    for giveaway in [kind.value for kind in GeneratorKind] + ["generator", "arm key"]:
+    for giveaway in [*BLINDING_GIVEAWAYS, "generator", "arm key"]:
         assert giveaway not in pack.hypotheses_md.lower(), giveaway
         assert giveaway not in pack.score_sheet_csv.lower(), giveaway
+    assert (
+        "local" not in BLINDING_GIVEAWAYS
+    ), "an arm name that is also ordinary English cannot be searched for"
 
 
 def test_the_key_is_a_separate_artefact() -> None:
@@ -198,7 +192,7 @@ def test_both_arms_are_rendered_by_the_same_code() -> None:
     hypotheses = {row.hypothesis_id: same for row in rows}
 
     pack = build_pack(
-        record=a_record(rows),
+        generations=rows,
         bundles=[(1, fault_bundle())],
         hypotheses=hypotheses,
         seed=SEED,
@@ -221,7 +215,7 @@ def test_the_labels_are_reshuffled_between_packages() -> None:
         hypotheses.update(h)
 
     pack = build_pack(
-        record=a_record(rows), bundles=bundles, hypotheses=hypotheses, seed=SEED
+        generations=rows, bundles=bundles, hypotheses=hypotheses, seed=SEED
     )
 
     first_labels = {
@@ -258,7 +252,7 @@ def test_the_scored_generation_is_the_first_and_is_taken_by_its_ordinal() -> Non
     # whose rows were written in another order.
     rows, hypotheses = one_bundle_campaign(1, first_title="THE SCORED ONE")
     pack = build_pack(
-        record=a_record(list(reversed(rows))),
+        generations=list(reversed(rows)),
         bundles=[(1, fault_bundle())],
         hypotheses=hypotheses,
         seed=SEED,
@@ -276,7 +270,7 @@ def test_a_fallback_is_exported_as_what_the_arm_delivered() -> None:
     # under test -- an omission invisible in the results.
     rows, hypotheses = one_bundle_campaign(1, fell_back=True)
     pack = build_pack(
-        record=a_record(rows),
+        generations=rows,
         bundles=[(1, fault_bundle())],
         hypotheses=hypotheses,
         seed=SEED,
@@ -301,7 +295,7 @@ def test_a_bundle_with_only_one_arm_is_refused() -> None:
 
     with pytest.raises(ConfigurationError, match="only one arm"):
         build_pack(
-            record=a_record(rows),
+            generations=rows,
             bundles=[(1, fault_bundle())],
             hypotheses={11: a_hypothesis()},
             seed=SEED,
@@ -314,7 +308,7 @@ def test_a_bundle_in_the_campaign_but_not_supplied_is_refused() -> None:
     rows, hypotheses = one_bundle_campaign(1)
 
     with pytest.raises(ConfigurationError, match="no evidence bundle"):
-        build_pack(record=a_record(rows), bundles=[], hypotheses=hypotheses, seed=SEED)
+        build_pack(generations=rows, bundles=[], hypotheses=hypotheses, seed=SEED)
 
 
 def test_a_missing_hypothesis_is_refused_rather_than_left_blank() -> None:
@@ -326,7 +320,7 @@ def test_a_missing_hypothesis_is_refused_rather_than_left_blank() -> None:
 
     with pytest.raises(ConfigurationError, match="no hypothesis"):
         build_pack(
-            record=a_record(rows),
+            generations=rows,
             bundles=[(1, fault_bundle())],
             hypotheses=hypotheses,
             seed=SEED,

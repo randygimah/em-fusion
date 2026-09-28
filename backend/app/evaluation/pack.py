@@ -39,7 +39,7 @@ import random
 from dataclasses import dataclass
 from typing import Any, Mapping, Sequence
 
-from app.ai.campaign import CampaignRecord
+from app.ai.campaign import GenerationRecord
 from app.ai.hypothesis import Hypothesis
 from app.ai.service import ConfigurationError, GeneratorKind
 from app.detection.bundle import EvidenceBundle
@@ -66,6 +66,30 @@ JUDGEMENTS: tuple[str, ...] = ("cause_correctness", "confidence_calibration")
 SCORED_ORDINAL = 1
 
 LABELS = ("A", "B")
+
+#: Words that would name an arm in the marker's own files, and **not** simply
+#: the arm vocabulary. `GeneratorKind` has three values and only two of them
+#: are safe to search for.
+#:
+#: `local` is excluded because it is ordinary English in this domain, and the
+#: first real pack proved it: *"the local discontinuity rate could not be
+#: measured"* is `anom-012`'s own language in the baseline, and *"caused by
+#: local equipment malfunction"* came from the model. A check that fires on
+#: honest prose is not a weaker check, it is a broken one -- it would have to
+#: be switched off, and then it guards nothing.
+#:
+#: `model` and `baseline` are excluded on the same argument: an explanation
+#: may honestly say *"a propagation model"*. The first version of the test
+#: forbade them and failed on its own fixture; this version forbade `local`
+#: and passed on fixtures that never used the word, then fired on the first
+#: real pack. Both are the same mistake, and the second one is the reason
+#: this list is a named constant rather than a literal in two places.
+#:
+#: **The real guarantee is structural, and this is a canary.** The renderer
+#: reads only the hypothesis's own fields; the arm lives on `PackItem` and is
+#: written to the key alone. If that ever stops being true, these two words
+#: are what would show it.
+BLINDING_GIVEAWAYS: tuple[str, ...] = ("hosted", "template")
 
 
 @dataclass(frozen=True, slots=True)
@@ -104,14 +128,22 @@ class ScoringPack:
 
 def build_pack(
     *,
-    record: CampaignRecord,
+    generations: Sequence[GenerationRecord],
     bundles: Sequence[tuple[int, EvidenceBundle]],
     hypotheses: Mapping[int, Hypothesis],
     seed: int,
 ) -> ScoringPack:
-    """Render the pack, the blank sheet, and the key held separately."""
+    """Render the pack, the blank sheet, and the key held separately.
+
+    Takes the **generations** rather than a whole `CampaignRecord`, because
+    that is all it uses: a campaign's budget and grounding ledger are
+    `eval-005`'s and have no bearing on what a marker reads. It also means a
+    caller reading a stored record off disk hands over what it loaded rather
+    than assembling a record around it with two empty fields -- which is the
+    hand-written-object hazard `ai-004`'s payload module exists because of.
+    """
     held = dict(bundles)
-    scored = _scored_generations(record)
+    scored = _scored_generations(generations)
 
     items: list[PackItem] = []
     sections: list[str] = []
@@ -175,7 +207,7 @@ def build_pack(
 
 
 def _scored_generations(
-    record: CampaignRecord,
+    generations: Sequence[GenerationRecord],
 ) -> dict[int, dict[GeneratorKind, int]]:
     """Each bundle's scored row per arm, taken by **ordinal**.
 
@@ -185,7 +217,7 @@ def _scored_generations(
     the substitution the pre-registration forbids.
     """
     found: dict[int, dict[GeneratorKind, int]] = {}
-    for generation in record.generations:
+    for generation in generations:
         if generation.ordinal != SCORED_ORDINAL:
             continue
         found.setdefault(generation.bundle_id, {})[
@@ -299,6 +331,7 @@ def as_json(pack: ScoringPack) -> dict[str, Any]:
 
 
 __all__ = [
+    "BLINDING_GIVEAWAYS",
     "DIMENSIONS",
     "JUDGEMENTS",
     "SCORED_ORDINAL",

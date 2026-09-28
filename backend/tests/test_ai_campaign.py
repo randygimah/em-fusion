@@ -47,6 +47,7 @@ from app.ai.campaign import (
     CampaignAborted,
     CampaignRecord,
     GenerationRecord,
+    generations_from_json,
     run_campaign,
 )
 from app.ai.grounding import GroundingLedger
@@ -819,6 +820,46 @@ def test_an_unpriced_call_makes_the_reported_total_a_lower_bound(
     assert written["budget"]["cost_is_complete"] is False
     assert record.generations[0].usage is not None
     assert record.generations[0].usage.cost_usd is None
+
+
+@pytest.mark.database
+@requires_database
+def test_the_generations_survive_a_round_trip_through_json(
+    factory: sessionmaker, sample: list
+) -> None:
+    # spec: ai-012, eval-004 -- the record is an artefact kept on disk, and
+    # eval-004's export reads it back days later. A loader that quietly
+    # dropped or coerced a field would export a different generation than
+    # the one that ran, which is the class of defect this whole item exists
+    # to make impossible. The budget and the ledger are serialised as
+    # *figures* rather than contents, so only this half round-trips -- and
+    # saying so is better than a loader pretending otherwise.
+    record = campaign(sample, factory=factory, generations=2)
+
+    read_back = generations_from_json(json.loads(json.dumps(record.as_json())))
+
+    assert read_back == record.generations
+
+
+@pytest.mark.database
+@requires_database
+def test_a_refusal_survives_the_round_trip_with_its_row_and_its_reason(
+    factory: sessionmaker, sample: list
+) -> None:
+    # spec: ai-012, db-002 -- the asymmetry is the fiddly part: an ungrounded
+    # refusal carries a row id and a malformed one carries None, and a
+    # loader defaulting either way would invent a row or lose one.
+    _, bundle = sample[0]
+    record = campaign(
+        [sample[0]],
+        factory=factory,
+        arm=arm(*(model_result(hypothesis=ungrounded(bundle)) for _ in range(2))),
+    )
+
+    read_back = generations_from_json(json.loads(json.dumps(record.as_json())))
+
+    assert read_back == record.generations
+    assert [r.hypothesis_id is not None for r in read_back[0].refusals] == [True, True]
 
 
 @pytest.mark.database
