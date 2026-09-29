@@ -23,49 +23,58 @@ sized for the AI campaign only, and **no detection measurement was re-run agains
 eleven days the logs described a corpus that was not in the database and every automated check
 passed, because a committed log is a text file and nothing compares it to anything.
 
-Wave 2 generated: base seed **965530111**, 100 runs, **ids 181–280**, ~6m40s. Corpus v2 is now
-**200 runs in two independently seeded waves** (1412660662 → ids 81–180, 965530111 → ids 181–280).
-Wave 3 (`655209063`) is still owed. The 60-run development batch (695081452, ids 21–80) is separate
-and no thesis figure may come from it.
+Waves 2 and 3 generated, ~6m40s each. **Corpus v2 is complete: 300 runs in three independently
+seeded waves** — `1412660662` (ids 81–180), `965530111` (181–280), `655209063` (281–380). It was
+finished deliberately **before** `eval-002` computes anything, so the headline metrics are taken
+once on a frozen corpus rather than computed and recomputed with results in view. The 60-run
+development batch (695081452, ids 21–80) is separate and no thesis figure may come from it.
 
-All six protocol scripts re-run and diffed. **Every conclusion replicated; every per-arm count went
-from 60 to 40.**
+All six protocol scripts re-run and diffed at both wave 2 and wave 3. **Every conclusion replicated,
+and at the completed corpus size six of the ten headline figures are identical to the destroyed
+corpus's** — on seeds drawn independently of the originals, so replication rather than recovery.
 
-| Measurement | Destroyed corpus | Corpus v2, two waves |
+| Measurement | Destroyed corpus | Corpus v2, complete |
 |---|---|---|
-| Sensor fault claimed on its own arm | 60 of 60 | **40 of 40** |
-| Interference misattributed as fault | 0 of 60 | **0 of 40** |
-| Ladder: every arm decided correctly | 60 of 60 | **40 of 40** |
-| Fusion candidate raised on interference | 60 of 60 | **40 of 40** |
-| Rate-excess ratio, median | 9.61 | **8.85** |
-| Clearing the 1.58 bar | 58 of 60 | **39 of 40** |
-| Staged beats its own control | 57 of 60, 3 ties | **40 of 40, 0 ties** |
-| Zones with no measurable track evidence | 41 of 60 | **26 of 40** |
-| Quiet runs showing the analyst anything | 0 of 20 | **0 of 40** |
+| Sensor fault claimed on its own arm | 60 of 60 | **60 of 60** |
+| Interference misattributed as fault | 0 of 60 | **0 of 60** |
+| Ladder: every arm decided correctly | 60 of 60 | **60 of 60** |
+| Fusion candidate raised on interference | 60 of 60 | **60 of 60** |
+| Rate-excess ratio, median | 9.61 | **9.90** |
+| Clearing the 1.58 bar | 58 of 60 | **58 of 60** |
+| Staged beats its own control | 57 of 60, 3 ties | **59 of 60, 1 tie** |
+| Zones with no measurable track evidence | 41 of 60 | **41 of 60** |
+| Quiet runs showing the analyst anything | 0 of 20 | **0 of 60** |
 
-Three moved in the project's favour (perfect staged/control separation, fewer unmeasurable zones, no
-empty-disc run) and two against (median ratio 9.61 → 8.85; **minimum ratio now 0.39**, a run with
-*fewer* dropouts during the incident than outside it, which had no counterpart before — one
-observation at n=40, worth following up).
+The two that differ move in opposite directions. Separation improved to 59 of 60 with one tie. And
+the **minimum rate-excess ratio is 0.39** where the old corpus's was 1.00 — a run with *fewer*
+dropouts inside the incident window than outside it. It appeared at n=40 and survived to n=60
+**without a second example**, so it is one observation rather than a tail. Worth following up.
 
-**`anom-008`** — 29 tests, 100% coverage, mutation **30 of 30**. Bands re-measured at n=40: RF
-**0–0** (still 40 of 40 zeros), track continuity **8–22**, clusters **4–10**, rate excess **0–0**.
-The asymmetry the control rests on replicated on an independent seed rather than holding by accident
-on one. Result: **0 of 40 quiet runs show the analyst anything, over two of the three reportable
-types** — `anom-006` has no rule and is reported *not exercised*, never clean.
+**`anom-008`** — 29 tests, 100% coverage, mutation **30 of 30**. Bands at n=60: RF **0–0** (60 of 60
+zeros), track continuity **8–22**, clusters **4–10**, rate excess **0–0**. Wave 2 widened two of the
+four and **wave 3 moved none at all** — the bands have converged, and the RF floor held at zero
+through two further independently seeded waves rather than by accident on one. Result: **0 of 60
+quiet runs show the analyst anything, over two of the three reportable types** — `anom-006` has no rule and is reported *not exercised*, never clean.
 
 **`anom-011`** — recall against the answer key, both waves and combined:
 
-| Type | Wave 1 | Wave 2 | Combined |
-|---|---|---|---|
-| `gnss-degradation` | 83% | 81% | **82%** |
-| `aircraft-coverage-gap` | 64% | 59% | **62%** |
-| `ambiguous-mixed-evidence` | 64% | 59% | **62%** |
-| All (600 staged aircraft) | 70% | 66% | **68%** |
+| Type | Wave 1 | Wave 2 | Wave 3 | Combined |
+|---|---|---|---|---|
+| `gnss-degradation` | 83% | 81% | 83% | **82%** |
+| `aircraft-coverage-gap` | 64% | 59% | 53% | **59%** |
+| `ambiguous-mixed-evidence` | 64% | 59% | 53% | **59%** |
+| All (900 staged aircraft) | 70% | 66% | 63% | **67%** |
 
-Loss account closes exactly: **81 on ground, 88 below threshold, 21 contact not fresh, and zero to
+**The third wave separated a stable mechanism from a variable one, and that is the result rather
+than the average.** The navigation arm replicates almost exactly (83/81/83), so 82% is a property of
+the frozen-position mechanism. The suppression arms spread eleven points (64/59/53) and account for
+the whole drift in the combined row — so a single-wave figure for them carries about ±5 points. One
+wave would have stated both with equal confidence, which is what the two-batch constraint exists to
+prevent, now demonstrated rather than asserted.
+
+Loss account closes exactly: **136 on ground, 132 below threshold, 33 contact not fresh, and zero to
 the interior filter, zero absent, zero unbracketed.** Two of the four suspected causes account for
-everything, two for nothing. 10 of 600 answer-key aircraft parked (was 209 of 381 pre-`scn-006`); no
+everything, two for nothing. 16 of 900 answer-key aircraft parked (was 209 of 381 pre-`scn-006`); no
 run staged nothing, so `eval-002`'s exclusion count is zero on this corpus. Mutation **14 of 14**.
 
 **The two suppression arms are byte-identical in every column** — same mode at a shared seed. One
@@ -79,7 +88,7 @@ still says N=1; **12 files not Black-formatted** (`make format` fixes them; it i
 
 ## Files in flight
 
-None. Tree clean at `5768a30`.
+None. Tree clean at `59f963e`. Progress note published, v18.
 
 Added this session: `backend/app/detection/control.py`, `backend/tests/test_anom_control.py`,
 `measurements/corpus/quiet_run_background.py` + `.log`,
@@ -100,6 +109,8 @@ Added this session: `backend/app/detection/control.py`, `backend/tests/test_anom
 | `f8dc29b` | `measure: corpus v2 wave 2 generated, and the whole protocol re-run` |
 | `75ae8ea` | `feat(anom-011): track-gap recall on two independently seeded batches - tests pass` |
 | `5768a30` | `docs: progress note corrected after the re-measurement` |
+| `f60f16a` | `docs: handoff after anom-008 and anom-011` |
+| `59f963e` | `measure: corpus v2 wave 3 — the corpus is complete and frozen` |
 
 Documents: `spec.jsonl` (`anom-008` refined + passing, `anom-011` amended + passing), `qa.md`
 (§105–109, eight glossary terms, **five run-together rows repaired** — a previous session wrote
@@ -149,10 +160,8 @@ which had never been in it), `progress_note.html` (published, v17).
 
 Open and unowned:
 
-- **Corpus v2 wave 3** (`655209063`), owed by the original plan. Generating it invalidates every
-  figure above again — decide before or after `eval-002`, not during.
-- **The 0.39 rate-excess run** on wave 2: dropouts *less* frequent during the incident than outside
-  it. One observation, no counterpart on the old corpus.
+- **The 0.39 rate-excess run**: dropouts *less* frequent during the incident than outside it. It
+  survived from n=40 to n=60 with no second example, so it is a singleton rather than a tail.
 - Mutation harnesses for the four evaluation modules — 104 tests with nothing establishing they are
   load-bearing.
 - Only `mutate_anom009_latency.py` and `mutate_anom008_control.py` check that a mutant parses.
