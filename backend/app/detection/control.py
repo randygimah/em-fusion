@@ -315,7 +315,7 @@ class Verdict:
             "finding_type": self.producer.finding_type,
             "kind": self.producer.kind.value,
             "observed": self.observed,
-            "background": None if band is None else [band.low, band.high],
+            "background": None if band is None else [band.low, band.high, band.runs],
             "outcome": self.outcome.value,
         }
 

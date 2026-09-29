@@ -336,3 +336,24 @@ def test_the_measured_floors_carry_the_asymmetry_the_item_turns_on() -> None:
     assert floors[(RF_NOISE, RF_DEVIATION)] == 0
     assert floors[(TRACK_GAP, CONTINUITY_GAP)] > 0
     assert floors[("TRACK-CLUSTER", "track_gap_cluster")] > 0
+
+
+def test_an_exported_band_carries_the_population_behind_it() -> None:
+    # spec: anom-008 -- `Background` refuses to exist without its n, on the
+    # grounds that a band without the population behind it is a memory. An
+    # export that drops n reintroduces exactly that at the boundary
+    # eval-002 reads, where the band is no longer beside the object that
+    # insisted on it. It is also what sets the ~2/(n+1) rate at which a
+    # fresh run falls outside the band, so a reader without n cannot tell a
+    # band drawn from twenty runs from one drawn from two.
+    control = graded(FULL_ACCOUNT)
+    exported = {
+        (v["rule_id"], v["finding_type"]): v["background"]
+        for v in control.as_json()["verdicts"]
+    }
+    assert exported[NOISY.key] == [
+        NOISY.background.low,
+        NOISY.background.high,
+        NOISY.background.runs,
+    ]
+    assert exported[SHOWN.key] is None

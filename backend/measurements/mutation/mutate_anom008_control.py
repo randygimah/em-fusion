@@ -153,6 +153,11 @@ M = {
         "        if producer.key in by_key:",
         "        if False:"),
 
+    "the exported band loses the population behind it": (
+        "            \"background\": None if band is None else "
+        "[band.low, band.high, band.runs],",
+        "            \"background\": None if band is None else [band.low, band.high],"),
+
     # --- the key -------------------------------------------------------------
     "the register is keyed on the rule alone": (
         "        by_key[producer.key] = producer",

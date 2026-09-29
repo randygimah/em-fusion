@@ -7196,6 +7196,121 @@ fresh run drawn from the same distribution falls outside it at roughly
 quoting is the **proportion** of quiet runs in band; the per-run verdict is
 that figure's input, not a result on its own.
 
+## 109. In `backend/app/detection/control.py` can you explain the `build_register` function, especially the `low`, `high`, `runs` numbers within the `Producer`?
+
+**`build_register` turns a list of detectors into the lookup the control grades
+against, and refuses a repeated one. The three numbers are not settings — every
+one of them was read off a measurement log.**
+
+### What the function does
+
+Mechanically it is four lines: take `Producer` objects, return a mapping keyed
+on each one's `(rule_id, finding_type)` pair, raise if the same key appears
+twice.
+
+```python
+by_key[producer.key] = producer   # producer.key == (rule_id, finding_type)
+```
+
+It is a function rather than a dictionary literal for two reasons, and both are
+about failures that would be invisible.
+
+**The key cannot be typed wrongly.** Written as a literal the identity would be
+spelled twice — once as the dictionary key, once inside the `Producer` — and a
+mismatch between the two would not fail anywhere. The lookup would use one
+spelling and the producer would report the other. Deriving the key *from* the
+producer means the identity exists in exactly one place.
+
+**A repeated producer raises instead of winning.** A dictionary literal silently
+keeps the last of two entries sharing a key, which is what a merge conflict
+looks like after it has been resolved badly: two bands for one detector, one of
+them discarded with nothing said. The mutation harness carries a mutant for
+precisely this (`a producer registered twice silently replaces the first`).
+
+It is public rather than private because the test suite builds **its own**
+register, so the assertions do not move when the bands are re-measured — and a
+register assembled some other way in tests would not be the one the refusals are
+actually proved on.
+
+### Where the three numbers come from
+
+`measurements/corpus/quiet_run_background.py`, run over corpus v2's twenty
+normal-baseline runs. `low` is the observed minimum, `high` the observed
+maximum, `runs` the size of the population they were taken over. The log of
+record:
+
+```
+  rule           finding type               min   median    max   zeros
+  RF-NOISE       rf_noise_deviation           0      0.0      0      20/20
+  TRACK-CLUSTER  track_gap_cluster            5      7.0      9       0/20
+  TRACK-GAP      track_continuity_gap         9     16.5     19       0/20
+  TRACK-GAP      track_rate_excess            0      0.0      0      20/20
+```
+
+| Producer | `low`–`high` | What it says |
+|---|---|---|
+| `RF-NOISE` / `rf_noise_deviation` | **0–0** | across 20 quiet runs the RF rule raised nothing at all |
+| `TRACK-GAP` / `track_continuity_gap` | **9–19** | the quietest run still had 9 gaps, the busiest 19 |
+| `TRACK-CLUSTER` / `track_gap_cluster` | **5–9** | those gaps always grouped into between 5 and 9 clusters |
+| `TRACK-GAP` / `track_rate_excess` | **0–0** | never invoked — it runs only downstream of a fired rule |
+
+### How `low` and `high` are used
+
+`Background.holds()` is the entire comparison:
+
+```python
+return self.low <= observed <= self.high
+```
+
+Inclusive at both ends, following `anom-014`'s rule that a boundary belongs to
+the measured value and not to the comparison. A run producing 9 continuity gaps
+or 19 of them is inside; 8 or 20 is `OUTSIDE_BACKGROUND` and the control does
+not hold.
+
+**`low` is where the item's substance lives.** It is what makes *"silence means
+the detector did not look"* a measurement rather than a slogan:
+
+- Continuity gaps come in at `low=9`, so an observed **0 is below the floor and
+  fails**. Replayed flight data genuinely contains dropouts, so a run reporting
+  none of them is a detector that stopped working.
+- RF deviations come in at `low=0`, so an observed **0 is inside the band and
+  passes**. The grid is synthetic and a quiet run has nothing injected into it.
+
+Both go through the identical line of code. There is no rule identifier anywhere
+in the comparison, and that is deliberate: the difference between the two halves
+is a property of the data, not a special case somebody wrote down. It is the
+thing to preserve if this is ever refactored.
+
+### What `runs` is for
+
+**Provenance, not arithmetic.** Nothing computes with it — `holds()` touches only
+`low` and `high`. It is mandatory (a `runs` below 1 raises) for the same reason
+`anom-011`'s `Conditions` is mandatory: a band without the population behind it
+is a memory rather than a measurement, and this project has already been caught
+quoting a figure whose conditions no longer existed.
+
+It also carries the caveat. A `[min, max]` band over n runs means a fresh run
+from the same distribution lands outside it at roughly **2/(n+1)** — about one in
+ten at n=20. So a single future quiet run scoring *outside background* is not yet
+a signal; the figure worth quoting is the **proportion** of quiet runs in band.
+That sentence is only sayable if the reader knows n, which is the field's whole
+job.
+
+### One defect this explanation found, and it was in the export
+
+Writing the above surfaced an inconsistency. `Verdict.as_json` serialised the
+band as `[low, high]` and **dropped `runs`**. So the JSON that `eval-002` reads
+carried the band without the population behind it — reintroducing, at the one
+boundary where the band leaves the object that insisted on it, exactly what
+`Background` refuses to be constructed without. A reader of the exported metrics
+could not tell a band drawn from twenty runs from one drawn from two.
+
+Fixed to `[low, high, runs]`. Worth recording is *how* it was invisible: the
+suite was green before the fix and green after it, because nothing asserted the
+exported shape at all. A test now pins it and the mutation harness carries a
+mutant that removes `runs` again, so the fix is load-bearing rather than merely
+present — 30 of 30 killed.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -7396,3 +7511,6 @@ that figure's input, not a result on its own.
 | **Background band** | The minimum and maximum an intermediate detector produced across the quiet runs, recorded with the number of runs behind it. Membership in the band, not zero-ness, is what a quiet run is judged on. See §106. |
 | **Not exercised** | A third verdict beside clean and false-positive, for a registered rule with no implementation. Keeps the absence of a rule from being reported as the accuracy of one. See §107. |
 | **Drift tripwire** | A figure measured on a corpus and applied to it, which therefore cannot fail on the data that produced it. Its value is entirely prospective: it moves when the corpus or the generator does. See §108. |
+| **Register** | A constant mapping every detector the control knows about to what a quiet run should get from it. Keyed on the `(rule_id, finding_type)` pair, assembled by a function rather than written as a literal so the key is derived from the producer and a repeat raises. See §109. |
+| **Derived key** | An identifier computed from the object it names rather than typed beside it. Removes the class of defect where a lookup key and the thing it points at disagree and nothing fails. See §109. |
+| **Provenance field** | A value recorded with a measurement that nothing computes from — the population size behind a band, the policy a figure was taken under. It is what lets the figure be read correctly later, which is why it is mandatory rather than optional. See §109. |
