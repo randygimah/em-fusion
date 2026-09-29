@@ -20,7 +20,7 @@ appearance of a check.
 **The band, which carries "zero fails".** Dropping the floor makes every
 detector's silence acceptable and removes the only thing standing between
 this control and a pipeline that stopped looking. Raising the RF floor does
-the opposite and fails forty of forty correct runs -- the mistake the
+the opposite and fails sixty of sixty correct runs -- the mistake the
 measurement corrected, since the RF grid is synthetic and a quiet run has
 nothing in it. Both directions are here.
 
@@ -90,13 +90,13 @@ M = {
     "the ceiling stops belonging to the band": (
         "        return self.low <= observed <= self.high",
         "        return self.low <= observed < self.high"),
-    "the RF floor is raised, failing forty of forty correct runs": (
-        "            low=0,\n            high=0,\n            runs=40,\n"
-        "            note=(\n                \"zero on 40 of 40, over two "
-        "independently seeded batches. The RF \"",
-        "            low=1,\n            high=1,\n            runs=40,\n"
-        "            note=(\n                \"zero on 40 of 40, over two "
-        "independently seeded batches. The RF \""),
+    "the RF floor is raised, failing sixty of sixty correct runs": (
+        "            low=0,\n            high=0,\n            runs=60,\n"
+        "            note=(\n                \"zero on 60 of 60, over three "
+        "independently seeded waves. The RF \"",
+        "            low=1,\n            high=1,\n            runs=60,\n"
+        "            note=(\n                \"zero on 60 of 60, over three "
+        "independently seeded waves. The RF \""),
     "the track floor drops to zero, so a silent detector passes": (
         "            low=8,\n            high=22,",
         "            low=0,\n            high=22,"),

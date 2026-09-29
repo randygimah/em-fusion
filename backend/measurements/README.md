@@ -2,7 +2,7 @@
 
 The instruments behind the numbers in `docs/thesis_notes.md`.
 
-Every detection figure this project quotes — `anom-007`'s 40 of 40, `anom-012`'s trade-off curve,
+Every detection figure this project quotes — `anom-007`'s 60 of 60, `anom-012`'s trade-off curve,
 `anom-005`'s gating decision, `anom-006`'s ceiling — was produced by a script, and until now those
 scripts lived in a session-scoped temporary directory while only their *conclusions* were committed.
 The reasoning survived and the reproduction did not. This directory closes that gap: a claim in the
@@ -59,9 +59,11 @@ Three practical things, each learned the hard way:
 
 > **Re-measured 2026-09-29, and every count below moved.** The 300-run corpus these figures were
 > first taken on was destroyed on 2026-09-19 (`ops-004`). Wave 1 of corpus v2 was regenerated on
-> 2026-09-28 for the AI campaign and wave 2 on 2026-09-29, and the whole protocol was then re-run
-> over the 200 runs that now exist: **every conclusion replicated and every per-arm count went from
-> 60 to 40.** Between those two dates the committed logs described a corpus that was not in the
+> 2026-09-28 for the AI campaign and waves 2 and 3 on 2026-09-29, and the whole protocol was then
+> re-run over the **300 runs** that now exist: **every conclusion replicated, and at the same corpus
+> size the figures came back within a point or two of the ones that were lost** -- on independently
+> drawn seeds, so replication rather than recovery. The corpus was finished deliberately before
+> `eval-002` computes anything, so the headline metrics are taken once, on a frozen corpus. Between those two dates the committed logs described a corpus that was not in the
 > database, and nothing in the repository said so — which is the argument for diffing a re-run
 > against its log rather than trusting that a log exists.
 
@@ -89,7 +91,7 @@ said**; a script with no log is marked, and its figure lives in `docs/thesis_not
 
 | Script | The question it answers | Figure of record |
 |---|---|---|
-| `sensor_fault_catch_rate.py` | Does `SENSOR-FAULT` claim the runs whose truth is a broken receiver — and does it claim anything else? The assumption the whole rule ordering rests on. | 40 of 40 claimed, on the right receiver inside the right window; **0 of 40** interference runs misattributed; 1.13 faults per run at a median span of exactly the staged 300 s. *(no log survived)* |
+| `sensor_fault_catch_rate.py` | Does `SENSOR-FAULT` claim the runs whose truth is a broken receiver — and does it claim anything else? The assumption the whole rule ordering rests on. | 60 of 60 claimed, on the right receiver inside the right window; **0 of 60** interference runs misattributed; 1.13 faults per run at a median span of exactly the staged 300 s. *(no log survived)* |
 | `sensor_fault_fragmentation.py` | Why does a receiver with loud neighbours read as isolated? | One 300 s incident arrives as a **median of six episodes**: the 8 dB injection is scaled per tick by `1 + 0.25·N(0,1)` against a 6 dB threshold, so ~1 tick in 6 falls short. Neighbours sat 2.51 dB (p5) to 4.46 dB (median) above their own baselines and **not one of 37 crossed 6 dB**. *(no log survived)* |
 | `sensor_fault_neighbour_candidates.py` | Tolerance, or readings? Two candidate repairs measured **before either was written**. | Readings win. Also the source of the 2 dB bar: touched neighbours 2.51 dB at p5, untouched 1.58 dB at p95, and the choice is a plateau. *(no log survived)* |
 
@@ -161,7 +163,7 @@ said**; a script with no log is marked, and its figure lives in `docs/thesis_not
 | `cluster_background.py` | Does the quiet-run background ever cluster into something reportable? | The largest cluster on a staged run **equals** the largest on its own seed-matched control, in eight triples of eight. This is why `anom-004` carries no severity. *(no log survived)* |
 | `cluster_leak_into_fusion.py` | How exposed is the fusion rule to background track clusters on a run whose truth is a broken receiver? | See `docs/thesis_notes.md`. *(no log survived)* |
 | `cluster_separation_after_scn006.py` | `scn-006` restored 55% of the signal. Does that change `anom-004`'s answer? | See `docs/thesis_notes.md`. *(no log survived)* |
-| `track_gap_recall.py` | **Where do the staged aircraft go?** `anom-011`'s deliverable, scored against the answer key `scn-002` recorded at generation time rather than against the detector's own output -- a staged aircraft the rule said nothing about is a miss, not an absence from the denominator. Batches are now selected **by base seed** via `_corpus`, not by the `RUN_LO`/`RUN_HI` id range it used to take: an id range was how batches were addressed before `scn-008` put the seed on the row, and it is correct exactly until a corpus is regenerated. Knobs: `CORPUS`, and `BASE_SEED` for one batch. | **Corpus v2, base seed 1412660662: 70% overall, 83% `gnss-degradation`, 64% on the two suppression arms** (`.log`). 0 runs excluded for staging nothing, and 6 of 300 answer-key aircraft parked, against 209 of 381 before `scn-006`. Losses: 39 on ground, 35 below threshold, 15 contact not fresh, and **nothing at all** to the interior filter, to an absent aircraft, or to an unbracketed absence. The two suppression arms are byte-identical because `tracks.py` gives them the same mode at a shared seed, so they are one measurement reported twice rather than two. Corpus v1's figures (25/69/81% over three batches) are quoted on `anom-011` and **no log of them survived**; that corpus no longer exists. |
+| `track_gap_recall.py` | **Where do the staged aircraft go?** `anom-011`'s deliverable, scored against the answer key `scn-002` recorded at generation time rather than against the detector's own output -- a staged aircraft the rule said nothing about is a miss, not an absence from the denominator. Batches are now selected **by base seed** via `_corpus`, not by the `RUN_LO`/`RUN_HI` id range it used to take: an id range was how batches were addressed before `scn-008` put the seed on the row, and it is correct exactly until a corpus is regenerated. Knobs: `CORPUS`, and `BASE_SEED` for one batch. | **Corpus v2, three waves: 82% `gnss-degradation`, 59% on each suppression arm, 67% over 900 staged aircraft** (`.log`, per wave and combined). The waves separate two things a single figure hides: the navigation arm replicates almost exactly (83, 81, 83), so 82% is a property of that mechanism, while the suppression arms spread eleven points (64, 59, 53) and account for the whole of the drift in the combined row -- the frozen-position mechanism is a stable detector and the not-heard mechanism varies with which aircraft a wave staged on. One wave would have reported either as a fact. 0 runs excluded for staging nothing; 16 of 900 answer-key aircraft parked, against 209 of 381 before `scn-006`. Losses: 136 on ground, 132 below threshold, 33 contact not fresh, and **nothing at all** to the interior filter, to an absent aircraft, or to an unbracketed absence. The two suppression arms are byte-identical because `tracks.py` gives them the same mode at a shared seed, so they are one measurement reported twice rather than two. Corpus v1's figures (25/69/81% over three batches) are quoted on `anom-011` and **no log of them survived**; that corpus no longer exists. |
 | `track_gap_hit_rate.py` | Does `TRACK-GAP` find the aircraft the run staged on? Separates a detector that never saw the injection from clustering that cannot discriminate. | See `docs/thesis_notes.md`. *(no log survived)* |
 | `track_gap_policy_sweep.py` | Is 21% recall a property of the system, or of the policy I guessed? | See `docs/thesis_notes.md`. *(no log survived)* |
 | `staging_on_ground.py` | Is 90% `on_ground` real, or an artefact of how the reasons were ranked? | Real. **55% of every injection was landing on a parked aircraft**, which is what `scn-006`'s airborne gate exists to fix. *(no log survived)* |

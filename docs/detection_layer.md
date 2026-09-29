@@ -27,13 +27,13 @@ later test is offered it.
 
 | | Question | Answer | State |
 |---|---|---|---|
-| 1 | One receiver off-normal, neighbours normal? | that receiver is broken | **Built** — 40 of 40, and no longer fires anywhere it shouldn't |
+| 1 | One receiver off-normal, neighbours normal? | that receiver is broken | **Built** — 60 of 60, and no longer fires anywhere it shouldn't |
 | 2 | Aircraft dropouts, no radio anomaly nearby? | we are not hearing aircraft here | **Ruled out, twice** — the regeneration reopened it and the measurement closed it again |
-| 3 | Several receivers off-normal together? | something is interfering | **Built** — 40 of 40 |
+| 3 | Several receivers off-normal together? | something is interfering | **Built** — 60 of 60 |
 
-Over all 120 staged hours, **no event anywhere received two different answers** — and every arm is now decided correctly 40 times out of 40, with no spurious firing anywhere at all.
+Over all 180 staged hours, **no event anywhere received two different answers** — and every arm is now decided correctly 60 times out of 60, with no spurious firing anywhere at all.
 
-**These are not the figures this page carried until 29 September 2026, and the difference is the corpus rather than the rules.** The 300-hour corpus every detection figure had been measured on was destroyed on 19 September by a test run pointed at the live store. One wave of 100 hours was regenerated on 28 September for the AI campaign, a second on 29 September, and the whole measurement protocol was re-run over the 200 that now exist. **Every conclusion replicated and every count moved from 60 per arm to 40.**
+**These are not the figures this page carried until 29 September 2026, and the difference is the corpus rather than the rules.** The 300-hour corpus every detection figure had been measured on was destroyed on 19 September by a test run pointed at the live store. One wave of 100 hours was regenerated on 28 September for the AI campaign and the remaining two on 29 September, and the whole measurement protocol was re-run over the 300 that now exist. **Every conclusion replicated, and at the same corpus size the figures came back within a point or two of the ones that were lost** — on independently drawn seeds, which is replication rather than recovery.
 
 **Read that precisely.** It is not evidence that the ordering resolves conflicts, because on every
 arm of this corpus **exactly one test bids**. The broken-receiver test answers the single-receiver
@@ -62,7 +62,7 @@ from the beginning.
 quiet hours differ as above. The mixed hours and the broken-receiver hours look identical in output —
 both *that receiver is broken*, 60/60 — but measured at every shared seed they stage the same
 receiver, the same size of fault, the same window, and an **identical radio stream, byte for byte, in
-40 of 40 pairs**. The single difference is that the mixed hour also removes five aircraft. So the
+60 of 60 pairs**. The single difference is that the mixed hour also removes five aircraft. So the
 answer not changing is a result, not an absence of one: a simultaneous disturbance to the aircraft
 picture does not perturb the radio verdict. The broken-receiver hours alone cannot show that, having
 no disturbance to be immune to.
@@ -75,23 +75,25 @@ two answers" is not evidence the ordering works.
 
 Every rule above the aircraft-dropout detector assumes that when an hour disrupts an aircraft, the
 detector notices. Measured against the answer key written at generation time — so an aircraft the
-rule said nothing about is a miss, not an absence from the denominator — across both waves and 600
+rule said nothing about is a miss, not an absence from the denominator — across all three waves and 900
 staged aircraft:
 
-| Hour type | Wave 1 | Wave 2 | Combined |
-|---|---|---|---|
-| Navigation degradation | 83% | 81% | **82%** |
-| Aircraft coverage gap | 64% | 59% | **62%** |
-| Mixed evidence | 64% | 59% | **62%** |
-| All | 70% | 66% | **68%** |
+| Hour type | Wave 1 | Wave 2 | Wave 3 | Combined |
+|---|---|---|---|---|
+| Navigation degradation | 83% | 81% | 83% | **82%** |
+| Aircraft coverage gap | 64% | 59% | 53% | **59%** |
+| Mixed evidence | 64% | 59% | 53% | **59%** |
+| All | 70% | 66% | 63% | **67%** |
 
-The two waves are independently seeded and the figures replicate within a few points, which is what
-the item required before any of this could be called a property of the detector rather than of one
-batch. The two suppression arms are identical in every column because the generator gives them the
+**The three waves separate two things a single figure hides.** The navigation arm replicates almost
+exactly — 83, 81, 83 — so 82% is a property of that mechanism. The two suppression arms spread
+eleven points, 64 down to 53, and that spread is the whole of the drift in the combined row. The
+frozen-position mechanism is a stable detector; the not-heard mechanism varies with which aircraft a
+wave happened to stage on. One wave would have reported either as a fact. The two suppression arms are identical in every column because the generator gives them the
 same mode at a shared seed — one measurement reported twice, not two.
 
-**Where the missing third goes is fully accounted for.** 81 aircraft on the ground, 88 below the
-staleness threshold, 21 without a fresh enough contact — and **zero** lost to the interior-to-box
+**Where the missing third goes is fully accounted for.** 136 aircraft on the ground, 132 below the
+staleness threshold, 33 without a fresh enough contact — and **zero** lost to the interior-to-box
 filter, zero absent from the hour, zero to an absence with no report bracketing it. Of the four
 places suspected when the item was written, two account for everything and two for nothing. The
 on-ground remainder is aircraft taking off or landing inside the window rather than aircraft parked
@@ -100,8 +102,8 @@ throughout, which is the detector being right.
 ## The other half: the hours where nothing was staged
 
 A catch rate can be driven to 100% by alarming on everything, so none of the numbers above mean
-anything until the layer can be shown to stay quiet on ordinary data. Over the 20 hours of this
-corpus with nothing staged: **no hour shows the analyst anything — 0 of 20.**
+anything until the layer can be shown to stay quiet on ordinary data. Over the 60 hours of this
+corpus with nothing staged: **no hour shows the analyst anything — 0 of 60.**
 
 Quote that with its coverage. The ladder has three answers and only two have tests behind them, so
 the figure is **0 false positives over two of the three reportable types**. Read as three, it
@@ -123,15 +125,18 @@ the same for all of them — there is no rule name anywhere in it.
 | Detector | Band per quiet hour | Median | Its silence is |
 |---|---|---|---|
 | Radio deviation (synthetic) | 0–0 | 0 | correct |
-| Aircraft dropout (replayed) | 9–19 | 16.5 | **a failure** |
-| Dropout cluster (replayed) | 5–9 | 7 | **a failure** |
+| Aircraft dropout (replayed) | 8–22 | 15 | **a failure** |
+| Dropout cluster (replayed) | 4–10 | 7 | **a failure** |
 | Dropout rate excess | 0–0 | 0 | correct — it is never invoked on a quiet hour |
 
-**What the bands cannot tell you.** They were measured on these 20 hours and are applied to them, so
-all 20 are inside by construction and "all within background" is not a result. They are a tripwire
+**What the bands cannot tell you.** They were measured on these 60 hours and are applied to them, so
+all 60 are inside by construction and "all within background" is not a result. Wave 2 widened two of
+the four bands and **wave 3 moved none of them**, which is the more useful fact: they have
+converged, and the radio floor stayed at zero on two further independently seeded waves rather than
+holding by accident on one. They are a tripwire
 for a future corpus or a changed generator — the counts nothing else in the project quotes. And a
 `[min, max]` band over n hours puts roughly 2/(n+1) of fresh same-distribution hours outside it,
-about one in ten here, so a single out-of-band hour later is not yet a signal; the proportion is.
+about one in thirty here, so a single out-of-band hour later is not yet a signal; the proportion is.
 
 ## The one fact almost every decision descends from
 
@@ -179,11 +184,12 @@ Since staging was restricted to aircraft actually in flight, a staged hour affec
 aircraft**, and **11 of 40 affect none at all**. That single number is why:
 
 - the coverage test cannot be built — its signal is 1 extra dropout against a background of 15;
-- the aircraft evidence is unmeasurable in **26 of 40** reported zones.
+- the aircraft evidence is unmeasurable in **41 of 60** reported zones.
 
-**Both fixes are built, and the hours have been regenerated.** The corpus is now 200 hours made by
-one generator, all the same length, in two independently seeded waves with the seeds that produced
-them written on every row. A third wave is planned and not yet made.
+**Both fixes are built, and the hours have been regenerated.** The corpus is now **300 hours** made by
+one generator, all the same length, in three independently seeded waves with the seeds that produced
+them written on every row. It is complete, and was finished deliberately **before** the evaluation
+figures are computed rather than after.
 
 | Fix | What it does | What it actually changed |
 |---|---|---|
@@ -191,10 +197,10 @@ them written on every row. A third wave is planned and not yet made.
 | `scn-007` | At least five aircraft affected per hour | **0 hours now affect nobody**, against 11 in 40 before |
 
 The aircraft side got materially stronger: the dropout-rate signal roughly doubled (median 3.87 →
-8.85), and 39 of 40 interference hours now clear the bar where 26 of 40 did.
+9.90), and 58 of 60 interference hours now clear the bar where 26 of 40 did.
 
-**The limitation that did not go away.** 26 of 40 reported places still have *no measurable aircraft
-evidence at all* — 65%, against 77% before the generator was repaired, and the same sentence: this is the radio evidence with an
+**The limitation that did not go away.** 41 of 60 reported places still have *no measurable aircraft
+evidence at all* — 68%, against 77% before the generator was repaired, and the same sentence: this is the radio evidence with an
 occasional corroborating note, not two sources agreeing.
 
 **The coverage test was tried again, and it fails.** It had been ruled out because scoring a place
@@ -217,7 +223,7 @@ The last row is what closes it. A test that fires more often on interference tha
 gaps it exists to find is not a weak detector, it is a misleading one — and because it sits *above*
 the interference test in the ladder, a wrong answer there does not simply add noise, it can take the
 event before the interference test is offered it. That would put the one arm the system currently
-gets right 40 times out of 40 at risk, to catch a seventh of an arm nothing looks at today.
+gets right 60 times out of 60 at risk, to catch a seventh of an arm nothing looks at today.
 
 **Why it fails is worth keeping.** Score every place on an hour and take the worst, and the worst
 score on a perfectly quiet hour is indistinguishable from the worst on a staged one — both reach the

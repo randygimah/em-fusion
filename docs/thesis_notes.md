@@ -7668,56 +7668,78 @@ instrument that would have caught it is the one the re-measurement protocol alre
 which had not been run: diff a re-run against the committed log.
 
 Wave 2 was generated (base seed `965530111`, 100 runs, ids 181–280) and all six protocol scripts
-re-run over the 200 runs that now exist.
+re-run. Wave 3 (`655209063`, ids 281–380) followed the same day, completing corpus v2 at 300 runs.
+That ordering was deliberate: `eval-002` is the headline results table, and adding data to the
+corpus *after* seeing a precision/recall/F1 table and then recomputing is the shape of validity
+problem this project has been careful about elsewhere — the pre-registered rubric, the scored sample
+committed before the campaign ran, the scoring arithmetic deliberately not built ahead of the
+returned sheets. Finishing the corpus first means the metrics are computed once, on a frozen corpus,
+and that is a sentence the write-up can state plainly.
 
 ### What moved when the whole protocol was re-run, including what moved in the project's favour
 
-**Every conclusion replicated and every per-arm count went from 60 to 40**, which is the corpus being
-two thirds the size rather than any rule behaving differently.
+**Every conclusion replicated.** At the intermediate two-wave stage every per-arm count read 40
+rather than 60, which was the corpus being two thirds the size and nothing else. With the corpus
+complete the counts are back at 60 — and the more interesting fact is that the *values* came back
+within a point or two of the figures that were lost, on independently drawn seeds. That is
+replication rather than recovery: the destroyed corpus's base seeds are not known (only batch 3's
+`20260917` survives anywhere), so these are different draws from the same generator landing in the
+same place.
 
-| Measurement | On the destroyed corpus | On corpus v2, two waves |
+| Measurement | Destroyed corpus | Corpus v2, complete |
 |---|---|---|
-| Sensor fault claimed on its own arm | 60 of 60 | **40 of 40** |
-| Interference runs misattributed as faults | 0 of 60 | **0 of 40** |
-| Every arm decided correctly by the ladder | 60 of 60 | **40 of 40** |
+| Sensor fault claimed on its own arm | 60 of 60 | **60 of 60** |
+| Interference runs misattributed as faults | 0 of 60 | **0 of 60** |
+| Every arm decided correctly by the ladder | 60 of 60 | **60 of 60** |
 | Events given two different answers | 0 | **0** |
-| Interference runs producing a fusion candidate | 60 of 60 | **40 of 40** |
-| Rate-excess ratio, median | 9.61 | **8.85** |
-| Interference runs clearing the 1.58 bar | 58 of 60 | **39 of 40** |
-| Staged beats its own control | 57 of 60, 3 ties | **40 of 40, 0 ties** |
-| Zones with no measurable aircraft evidence | 41 of 60 (68%) | **26 of 40 (65%)** |
-| Quiet runs showing the analyst anything | 0 of 20 | **0 of 40** |
+| Interference runs producing a fusion candidate | 60 of 60 | **60 of 60** |
+| Rate-excess ratio, median | 9.61 | **9.90** |
+| Interference runs clearing the 1.58 bar | 58 of 60 | **58 of 60** |
+| Staged beats its own control | 57 of 60, 3 ties | **59 of 60, 1 tie** |
+| Zones with no measurable aircraft evidence | 41 of 60 (68%) | **41 of 60 (68%)** |
+| Quiet runs showing the analyst anything | 0 of 20 | **0 of 60** |
 
-Three of those moved in the project's favour and are recorded here for that reason. The staged-run
-separation is now **perfect** where it had three ties; the proportion of zones with no measurable
-aircraft evidence fell slightly; and a run that had produced no findings in the disc at all now has
-none. Two moved against it: the median rate-excess ratio fell from 9.61 to 8.85, and the minimum
-ratio is now **0.39** where it had been 1.00 — a run in which dropouts were *less* frequent during
-the incident window than outside it, which had no counterpart on the old corpus. That single run is
-worth following up; at n=40 it is one observation and no more than that.
+Six of the ten are identical and the rest are within a point or two. Two differences are worth
+keeping. The staged-run separation improved from 57 of 60 with three ties to **59 of 60 with one**.
+And the minimum rate-excess ratio is **0.39** where the old corpus's was 1.00 — a run in which
+dropouts were *less* frequent inside the incident window than outside it, which had no counterpart
+before. It appeared at n=40 and survived to n=60 without a second example, so it is one observation
+rather than a tail, and it is recorded here because a single run behaving backwards is the kind of
+thing that is easy not to mention.
 
-`anom-008`'s bands were re-measured at n=40 and two of the four widened — track continuity 9–19 to
-**8–22**, clusters 5–9 to **4–10**. The RF band stayed at **0–0, now 40 of 40**. That the asymmetry
-the control rests on replicated on an independently seeded batch rather than holding by accident on
-one is the more useful result than the widening: the design would have been wrong if the RF floor
-had moved off zero.
+`anom-008`'s bands were re-measured twice. Wave 2 widened two of the four — track continuity 9–19 to
+**8–22**, clusters 5–9 to **4–10** — and **wave 3 moved none of them at all**. That second result is
+the more useful one: the bands have converged, so they are a property of the corpus rather than an
+artefact of how many quiet runs happened to be in it. The RF band stayed at **0–0 across 60 of 60**
+through both additions, which is the asymmetry the whole control rests on holding up under two
+further independently seeded waves rather than by accident on one.
 
 ### Recall, and the two candidate causes that account for nothing at all
 
 Per-aircraft recall against the answer key, on the two waves separately and combined:
 
-| Hour type | Wave 1 | Wave 2 | Combined |
-|---|---|---|---|
-| `gnss-degradation` | 83% | 81% | **82%** |
-| `aircraft-coverage-gap` | 64% | 59% | **62%** |
-| `ambiguous-mixed-evidence` | 64% | 59% | **62%** |
-| All, over 600 staged aircraft | 70% | 66% | **68%** |
+| Hour type | Wave 1 | Wave 2 | Wave 3 | Combined |
+|---|---|---|---|---|
+| `gnss-degradation` | 83% | 81% | 83% | **82%** |
+| `aircraft-coverage-gap` | 64% | 59% | 53% | **59%** |
+| `ambiguous-mixed-evidence` | 64% | 59% | 53% | **59%** |
+| All, over 900 staged aircraft | 70% | 66% | 63% | **67%** |
+
+**The third wave separated two things the combined row hides, and that separation is the result
+rather than the average.** The navigation arm replicates almost exactly — 83, 81, 83 — so 82 per
+cent is a property of the frozen-position mechanism and can be quoted as one. The two suppression
+arms spread eleven points — 64, 59, 53 — and account for the entire drift in the combined row, so
+the not-heard mechanism's recall varies with which aircraft a wave happened to stage on and a
+single-wave figure for it carries about ±5 points. One wave would have reported either of them as a
+fact with equal confidence. This is what the item's two-batch constraint was written to prevent, now
+demonstrated rather than asserted — and it is an argument for the constraint being about *variance*
+and not merely about sample size.
 
 The item asked not only for the figure but for an account of where the undetected aircraft go, and
 named four candidates: the generator's choice of records, the airborne filter, the interior-to-box
 filter, and the requirement for a report either side of an absence. The account closes exactly, and
-the shape of it is the finding: **81 on ground, 88 below threshold, 21 contact not fresh, and zero to
-the interior filter, zero to an aircraft absent from the run, zero to an unbracketed absence.** Two
+the shape of it is the finding: **136 on ground, 132 below threshold, 33 contact not fresh, and zero
+to the interior filter, zero to an aircraft absent from the run, zero to an unbracketed absence.** Two
 of the four suspects account for everything and two for nothing whatever. The on-ground remainder is
 aircraft taking off or landing inside the window rather than aircraft parked throughout, which is
 the detector being correct rather than a loss to recover.

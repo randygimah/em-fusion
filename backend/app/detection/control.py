@@ -30,7 +30,7 @@ item's amendment of 2026-09-14 justified the non-zero requirement entirely
 from replayed track data, which genuinely contains gaps -- and it does not
 hold on the RF side, where the grid is synthetic and a quiet run has nothing
 injected into it. Measured over corpus v2's quiet runs, `anom-001` raises
-**nothing at all on 40 of 40**, so a blanket non-zero rule would have failed
+**nothing at all on 60 of 60**, so a blanket non-zero rule would have failed
 every one of them for being right. The floor is therefore measured per
 producer: above zero on the track side, so its silence fails; zero on the RF
 side, so its silence passes. Neither is a special case, and the difference
@@ -53,7 +53,7 @@ drift tripwire for a later corpus or a changed generator, which is the
 purpose `anom-008` states for them, and not an independent test of the
 present figures. A band is the observed minimum and maximum, so a fresh run
 from the same distribution falls outside it at roughly 2/(n+1) -- about one
-in twenty at n=40. The per-run verdict is therefore an input, and the figure
+in thirty at n=60. The per-run verdict is therefore an input, and the figure
 worth quoting is the proportion of quiet runs in band.
 """
 
@@ -212,11 +212,12 @@ def build_register(*producers: Producer) -> Mapping[Key, Producer]:
 
 
 #: Every detector the control knows about. Bands measured over corpus v2's
-#: forty quiet runs, across its two generated batches -- see
+#: sixty quiet runs, across all three of its waves -- see
 #: `measurements/corpus/quiet_run_background.log`. Wave 2 widened the two
-#: track bands (9-19 to 8-22, 5-9 to 4-10) and left the RF band at 0-0,
-#: which is the asymmetry this register rests on replicating rather than
-#: holding by accident on one batch.
+#: track bands (9-19 to 8-22, 5-9 to 4-10) and wave 3 moved **none of the
+#: four**, which is the more useful result than the widening: the bands have
+#: converged, and the RF floor stayed at zero on an independently seeded
+#: wave rather than holding by accident on one.
 REGISTER: Mapping[Key, Producer] = build_register(
     Producer(
         rule_id=RF_RULE,
@@ -225,9 +226,9 @@ REGISTER: Mapping[Key, Producer] = build_register(
         background=Background(
             low=0,
             high=0,
-            runs=40,
+            runs=60,
             note=(
-                "zero on 40 of 40, over two independently seeded batches. The RF "
+                "zero on 60 of 60, over three independently seeded waves. The RF "
                 "grid is synthetic and a quiet run has "
                 "nothing injected into it, so silence here is the correct answer "
                 "and not a detector that failed to look."
@@ -241,7 +242,7 @@ REGISTER: Mapping[Key, Producer] = build_register(
         background=Background(
             low=8,
             high=22,
-            runs=40,
+            runs=60,
             note=(
                 "median 15, never zero. Replayed flight data genuinely "
                 "contains discontinuities, so a run reporting none of them is a "
@@ -256,7 +257,7 @@ REGISTER: Mapping[Key, Producer] = build_register(
         background=Background(
             low=4,
             high=10,
-            runs=40,
+            runs=60,
             note=(
                 "median 7, never zero. Registered although no reportable rule "
                 "consumes it -- anom-005 reads anom-012's rate excess instead of "
@@ -273,9 +274,9 @@ REGISTER: Mapping[Key, Producer] = build_register(
         background=Background(
             low=0,
             high=0,
-            runs=40,
+            runs=60,
             note=(
-                "zero on 40 of 40, structurally rather than statistically: "
+                "zero on 60 of 60, structurally rather than statistically: "
                 "anom-012 is reached only through a zone anom-007 dismissed as "
                 "environmental, so on a quiet run it is never invoked. A "
                 "non-zero count means an upstream rule fired, which the "

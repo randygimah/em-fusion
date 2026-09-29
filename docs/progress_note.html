@@ -5076,7 +5076,7 @@ second pass   <b>5.060000171975998</b></div>
         cannot tell those apart. Worse, this test sits <em>above</em> the interference test in the
         declared order, so a wrong answer here does not merely add a wrong finding: it can claim the
         event before the interference test is ever offered it. Building it would put the one kind of
-        hour the system currently gets right forty times out of forty at risk, in order to catch a
+        hour the system currently gets right sixty times out of sixty at risk, in order to catch a
         seventh of a kind nothing looks at today. Whether those places would actually collide was not
         measured — the hazard is established and its size is not.
       </p>
@@ -5209,7 +5209,7 @@ second pass   <b>5.060000171975998</b></div>
       <p>
         So the pair differs in exactly one variable, and the answer not changing is the finding, not
         the absence of one: <b>a simultaneous disturbance to the aircraft picture does not corrupt the
-        radio verdict</b>, forty times out of forty. The broken-receiver hours alone cannot show that,
+        radio verdict</b>, sixty times out of sixty. The broken-receiver hours alone cannot show that,
         because they have no disturbance to be immune to. That is a negative control living inside a
         positive one, and it is worth keeping and worth reporting as such.
       </p>
@@ -6934,12 +6934,13 @@ second pass   <b>5.060000171975998</b></div>
       <p>
         <b>A correction that applies to every detection figure on this page.</b> The three hundred
         hours all of them were first measured on were destroyed on 19 September by a test run pointed
-        at the live store. A hundred were remade on 28 September for the model comparison, a second
-        hundred on 29 September, and every measurement was then re-run over the two hundred that now
-        exist. <b>Every conclusion held and every count changed</b> — what read "sixty times out of
-        sixty" now reads "forty times out of forty", because the corpus is two thirds the size and
-        not because anything behaves differently. Three figures moved in the project's favour and two
-        against it; they are all listed in the working notes rather than only the flattering ones.
+        at the live store. A hundred were remade on 28 September for the model comparison and the
+        remaining two hundred on 29 September, and every measurement was then re-run over the three
+        hundred that now exist. <b>Every conclusion held, and at the same corpus size the figures
+        came back within a point or two of the ones that were lost</b> — on seeds drawn
+        independently of the originals, so this is the results reproducing rather than being
+        recovered. Six of the ten headline figures are identical. The two that are not moved in
+        opposite directions and both are in the working notes, not just the flattering one.
       </p>
       <p>
         Worth admitting plainly: for eleven days the measurement logs in this repository described a
@@ -6985,7 +6986,7 @@ second pass   <b>5.060000171975998</b></div>
     <p>
       Everything the detection chapter claims depends on one unglamorous number: how often the system
       raises an alarm when nothing was staged. Without it, a catch rate means nothing — you can catch
-      everything by alarming at everything. So there are forty hours in the corpus with nothing
+      everything by alarming at everything. So there are sixty hours in the corpus with nothing
       staged in them, and the requirement is that none of them produce anything an analyst would be
       shown.
     </p>
@@ -7041,7 +7042,7 @@ second pass   <b>5.060000171975998</b></div>
       and not any count, is what answers <em>did this detector actually look</em>.
     </p>
     <p>
-      <b>The result: none of the forty quiet hours produces anything an analyst would be shown.</b>
+      <b>The result: none of the sixty quiet hours produces anything an analyst would be shown.</b>
       That is the number every catch rate in the project is quoted against.
     </p>
 
@@ -7058,7 +7059,7 @@ second pass   <b>5.060000171975998</b></div>
       That rule was nearly written into the check as a blanket one, and it would have been wrong for
       half the system. <b>The radio grid is invented rather than recorded.</b> On a quiet hour
       nothing is injected into it, so there is genuinely nothing there to deviate — and, measured,
-      the radio rule finds nothing on forty hours out of forty. A blanket "you must find something"
+      the radio rule finds nothing on sixty hours out of sixty. A blanket "you must find something"
       rule would have failed every correct hour in the corpus, and failed them in a way that looks
       like a detection fault rather than a rule written too broadly.
     </p>
@@ -7085,8 +7086,10 @@ second pass   <b>5.060000171975998</b></div>
 
     <p>
       Those ranges come with a caveat that has to be said out loud, because it is easy to quote them
-      as if they proved something. They were measured on these forty hours and are applied to these
-      forty hours, so all forty are inside their range <em>by construction</em>. As evidence that
+      as if they proved something. They were measured on these sixty hours and are applied to these
+      sixty hours, so all sixty are inside their range <em>by construction</em>. The second batch of
+      twenty widened two of the four ranges and the third moved none of them at all, which is the
+      more useful fact: they have settled. As evidence that
       anything is currently right, they are worth nothing. Their value is entirely for later: these
       are the counts nothing else in the project reports, so if the hours are regenerated or a
       setting moves underneath the detectors, this is the only place it would show.
@@ -7101,11 +7104,11 @@ second pass   <b>5.060000171975998</b></div>
       figure re-measured.
     </p>
     <p>
-      So a report saying <em>zero of these across forty quiet hours</em> would be quoting the
+      So a report saying <em>zero of these across sixty quiet hours</em> would be quoting the
       absence of a test as the accuracy of a test. It is the most flattering sentence the instrument
       could produce and it is completely empty. The check therefore lists that answer as
       <b>not exercised</b> rather than as clean, and carries the coverage figure alongside the
-      result, so the honest reading is forced: <b>no false alarms on forty of forty quiet hours,
+      result, so the honest reading is forced: <b>no false alarms on sixty of sixty quiet hours,
       across two of the three answers the system can give</b>.
     </p>
   </section>
@@ -7278,7 +7281,7 @@ second pass   <b>5.060000171975998</b></div>
           <tr><td class="key">API</td><td class="n">5</td><td class="n">11</td><td class="why">A health check, the picture and the dashboard reading it, plus the two scenario endpoints and the screen reading those — a batch now starts from a button</td></tr>
           <tr><td class="key">Screens and map</td><td class="n">2</td><td class="n">16</td><td class="why">Three ways in, two of which lead to a screen; both read the real store, and the rail collapses to give the workspace its width back</td></tr>
           <tr><td class="key">Scenario generator</td><td class="n">8</td><td class="n">8</td><td class="why">Complete. Receiver positions fixed, an invented hour reproducible from one number, all five kinds of run staging what they should, twenty produced unattended from a single number by one command, the screen that will drive it, disruptions staged only on aircraft that are actually flying, a floor of five affected aircraft per hour so that no hour is unscoreable, and every hour now recording the number it was generated from so a batch can be reproduced rather than remembered</td></tr>
-          <tr><td class="key">Anomaly detection</td><td class="n">11</td><td class="n">14</td><td class="why">What normal looks like, and a rule for each side of the picture — the radio and the aircraft. Findings are kept and grouped, and the evidence the final rules read has been settled: grouping alone could not separate a staged hour from a quiet one, so it was replaced by a local rate comparison — measured first, and chosen over turning up the scenario settings. The three answers the system may give are one decision asked in a fixed order; the order itself is now built and enforced, and two of the three tests with it. Marked against the answer key over two hundred regenerated hours in two independently seeded waves: every one of the five kinds of hour decided correctly forty times out of forty, no event anywhere given two answers, and — since a blip lasting one reading stopped counting as an event — no false report anywhere at all. The third test, ruled out last time, is worth attempting again. Two things have since been settled that the chapter cannot be written without: how long an incident must run before a rule has the evidence it demands — a property of the rule rather than a measure of how fast the software is, since nothing here notices anything while it is happening — and the other half of the testing, the hours with nothing staged in them, where <b>none of the twenty produces anything an analyst would be shown</b>. That second check turned out to need real care: an empty result is also what a machine that never ran produces, so it is given an account of every detector by name and refuses to grade an hour where one is missing. And how much of what is staged the aircraft side actually sees is now measured on two independently seeded waves rather than on one: 82 per cent of disrupted aircraft found on the navigation arm, 62 on the two suppression arms, with every missing aircraft accounted for and two of the four suspected causes accounting for none of them at all</td></tr>
+          <tr><td class="key">Anomaly detection</td><td class="n">11</td><td class="n">14</td><td class="why">What normal looks like, and a rule for each side of the picture — the radio and the aircraft. Findings are kept and grouped, and the evidence the final rules read has been settled: grouping alone could not separate a staged hour from a quiet one, so it was replaced by a local rate comparison — measured first, and chosen over turning up the scenario settings. The three answers the system may give are one decision asked in a fixed order; the order itself is now built and enforced, and two of the three tests with it. Marked against the answer key over three hundred regenerated hours in three independently seeded waves: every one of the five kinds of hour decided correctly sixty times out of sixty, no event anywhere given two answers, and — since a blip lasting one reading stopped counting as an event — no false report anywhere at all. The third test, ruled out last time, is worth attempting again. Two things have since been settled that the chapter cannot be written without: how long an incident must run before a rule has the evidence it demands — a property of the rule rather than a measure of how fast the software is, since nothing here notices anything while it is happening — and the other half of the testing, the hours with nothing staged in them, where <b>none of the twenty produces anything an analyst would be shown</b>. That second check turned out to need real care: an empty result is also what a machine that never ran produces, so it is given an account of every detector by name and refuses to grade an hour where one is missing. And how much of what is staged the aircraft side actually sees is now measured on two independently seeded waves rather than on one: 82 per cent of disrupted aircraft found on the navigation arm, 59 on the two suppression arms, with every missing aircraft accounted for and two of the four suspected causes accounting for none of them at all. Three waves rather than one is what makes that reportable: the navigation arm gives 83, 81 and 83 per cent and the suppression arms give 64, 59 and 53, so one is a property of the mechanism and the other varies with which aircraft a wave happened to disrupt — and a single batch would have stated both with the same confidence</td></tr>
           <tr><td class="key">Evidence bundles</td><td class="n">2</td><td class="n">2</td><td class="why">Complete. One event becomes one package, with the frequency dimension joined up here because nothing upstream joins it, and with every absence labelled by which of the three kinds it is rather than left as silence. Every statement's citations are then resolved against the store before the package is allowed to exist — which found that one citation in eleven had been pointing at a reconstructed instant rather than a stored reading, in a field that had been written and never read since the findings were first kept</td></tr>
           <tr><td class="key">AI hypothesis layer</td><td class="n">9</td><td class="n">12</td><td class="why">The shape every explanation must take, and the first thing that produces one. The shape is a constraint on what a model is allowed to emit rather than a description of what it did, so each guarantee is checked on the translated version a model is actually handed as well as on the original. The producer built first has no model in it: it is both the fallback for when a model's answer cannot be trusted and the yardstick the models are measured against. Run over all forty-one real packages it produced forty-one explanations, refused none, and every one of its one hundred and sixty-four citations was found in the package it came from. Since then, the seam a model plugs into — defined before either model exists, so neither one's peculiarities leak into it — and the decision about what a person sees when a model's answer cannot be used: ask again a fixed number of times, then fall back to the mechanical account, and keep a record of why, plus the guard that counts what a run spends and stops it rather than letting it quietly continue. Then the producer the whole project is about: a model, handed the package and constrained so it cannot emit the wrong shape at all. And now the safeguard that constraint cannot be — every claim an explanation rests on is resolved against the package it came from, with citing an explanation the system itself rejected treated as its own kind of failure rather than lumped in with inventing one. Over the forty-one real packages it flagged none of one hundred and sixty-four honest citations, and caught all one hundred and sixty-four deliberate corruptions. And now the first real requests: eight explanations over three packages, read by hand. Every claim in every one of them traced back to its package; reading them found an instruction that had never been written, without which the blind marking would have been decided by citation count alone; and running the trial twice showed the answers do not reproduce word for word, which narrows a claim this project had been making about reproducibility and settles a question about whether asking a model again after a bad answer is a real mechanism. And now the job that asks twenty questions rather than one: it keeps the answers that were thrown away, because those are the only evidence the safeguard ever did anything, and it takes care that a rejected answer is counted once rather than twice and that a mechanical stand-in is never counted as the model's — a mistake that would make the model look better the more often it failed. What remains is choosing the twenty packages, the marking pack itself, and the marking</td></tr>
           <tr><td class="key">Hypothesis screen and feedback</td><td class="n">0</td><td class="n">6</td><td class="why">Specified, unbuilt</td></tr>
@@ -7313,7 +7316,7 @@ second pass   <b>5.060000171975998</b></div>
           detect, which interacts directly with the spread described above, so it is a decision to
           take deliberately rather than by default.</li>
         <li><b>No explanation has ever been scored.</b> The detection half is now marked against
-          the answer key — every kind of hour decided correctly forty times out of forty. What has
+          the answer key — every kind of hour decided correctly sixty times out of sixty. What has
           never been scored is the half the project is actually about: the quality of a written
           explanation, which needs a hypothesis layer to produce one and a second marker to judge
           it. The instrument for that is written and locked; nothing has been put through it.</li>
@@ -7441,11 +7444,12 @@ second pass   <b>5.060000171975998</b></div>
           One piece of code can proceed while that waits, and it is the table of detection figures —
           how often the system is right, how often it is wrong in each of the two directions, and how
           long each answer takes to become available. Two of its three inputs now exist: the delay,
-          and the false-alarm side, which is zero across forty quiet hours over two of the three
-          answers. The third is how many staged aircraft the dropout rule actually catches, which
-          needs measuring on a second independently generated batch before it can be quoted as a
-          property of the rule rather than of one batch. Nothing in that table has ever been
-          computed; three of its six columns have never been computed at all.
+          and the false-alarm side, which is zero across sixty quiet hours over two of the three
+          answers. The third — how many disrupted aircraft the dropout rule actually catches — is now measured
+          on three independently generated batches and is 82 per cent on the navigation arm and 59
+          on the suppression arms. The set of hours was deliberately finished first, so the table is
+          computed once on a fixed corpus rather than computed, extended and recomputed with results
+          already in view. Three of its six columns have never been computed at all.
         </div>
       </div>
       <div class="tier">

@@ -1,17 +1,17 @@
 corpus v2 -- one generator, 900 s runs, anom-014 and scn-007 active; base seeds 1412660662, 965530111, 655209063
-seeds with both arms: 40 of 40
+seeds with both arms: 60 of 60
 
-matched pairs: 40
-runs staging nothing at all: 0 of 40
+matched pairs: 60
+runs staging nothing at all: 0 of 60
 staged aircraft per run: mean 5.0, max 5
 
                          coverage-gap   its control
-findings per run, mean           17.8          14.9
-staged beats control               40 of 40   (ties 0)
+findings per run, mean           17.0          14.2
+staged beats control               59 of 60   (ties 1)
 
-detected staged dropouts per run: 3.17 against a background of 14.9
+detected staged dropouts per run: 3.02 against a background of 14.2
 
-restricted to the 40 runs that staged anything:
-  staged beats control: 40 of 40
-  detected staged per run: 3.17
-  recall on staged aircraft: 127/200
+restricted to the 60 runs that staged anything:
+  staged beats control: 59 of 60
+  detected staged per run: 3.02
+  recall on staged aircraft: 181/300
