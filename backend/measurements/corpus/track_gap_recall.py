@@ -1,9 +1,27 @@
-"""anom-011 deliverable, per batch. RUN_LO/RUN_HI bound the batch."""
+"""anom-011 deliverable: where do the staged aircraft go? Spec: anom-011.
+
+Scored against the **answer key** `scn-002` recorded at generation time, never
+against the detector's own output: a staged aircraft the rule said nothing
+about is a miss, not an absence from the denominator.
+
+**Batches are selected by base seed, not by id range.** This script used to
+take `RUN_LO`/`RUN_HI`, which was how batches were addressed before `scn-008`
+put the base seed on every run row -- and an id range is exactly the hazard
+`_corpus.py` exists to prevent, being correct until a corpus is regenerated and
+silently wrong afterwards with no error. The figures this script produced under
+the old scheme were measured on corpus v1, which no longer exists, and no log
+of any of those runs survived.
+
+Knobs: `CORPUS` (v1/v2/dev), and `BASE_SEED` to score one batch of the current
+corpus rather than all of it.
+"""
 from __future__ import annotations
 
 import os
 from collections import Counter
 from datetime import timedelta
+
+import _corpus
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
@@ -16,9 +34,15 @@ from app.detection.track_gap import BoundingBox, GapPolicy
 BOX = BoundingBox(lat_min=49.0, lat_max=54.0, lon_min=3.0, lon_max=11.0)
 POLICY = GapPolicy(threshold=timedelta(seconds=100),
                    contact_fresh_within=timedelta(seconds=30), box=BOX)
-LO = int(os.environ.get("RUN_LO", "1"))
-HI = int(os.environ.get("RUN_HI", "999999"))
-LABEL = os.environ.get("BATCH_LABEL", f"runs {LO}-{HI}")
+ONE_BATCH = os.environ.get("BASE_SEED", "")
+if ONE_BATCH:
+    SELECT = f"(parameters->>'base_seed')::bigint = {int(ONE_BATCH)}"
+    LABEL = f"{_corpus.which()}, base seed {ONE_BATCH}"
+else:
+    SELECT = _corpus.run_filter()
+    LABEL = f"{_corpus.which()}, every batch"
+
+print(_corpus.describe())
 
 engine = create_engine(os.environ["DATABASE_URL"], pool_pre_ping=True)
 factory = sessionmaker(bind=engine, autoflush=False)
@@ -43,8 +67,8 @@ with factory.begin() as s:
     runs = s.execute(text(
         "SELECT id, scenario_type, ground_truth->'aircraft' AS ac FROM scenario_runs "
         "WHERE scenario_type IN ('gnss-degradation','aircraft-coverage-gap',"
-        "'ambiguous-mixed-evidence') AND id BETWEEN :lo AND :hi "
-        "ORDER BY scenario_type, id"), {"lo": LO, "hi": HI}).mappings().all()
+        f"'ambiguous-mixed-evidence') AND {SELECT} "
+        "ORDER BY scenario_type, id")).mappings().all()
 
 per_type: dict[str, dict] = {}
 skipped = 0
