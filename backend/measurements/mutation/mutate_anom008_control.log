@@ -1,35 +1,35 @@
-sentinel killed (1 failed, 28 passed in 0.14s) -- source edits reach the tests
+sentinel killed (1 failed, 28 passed in 0.15s) -- source edits reach the tests
 
-a partial account is graded rather than refused                KILLED   2 failed, 27 passed in 0.15s
-the difference runs the wrong way, so a missing producer passes KILLED   3 failed, 26 passed in 0.16s
+a partial account is graded rather than refused                KILLED   2 failed, 27 passed in 0.14s
+the difference runs the wrong way, so a missing producer passes KILLED   3 failed, 26 passed in 0.15s
 an unregistered producer is graded                             KILLED   1 failed, 28 passed in 0.13s
 counts from a rule with no implementation are accepted         KILLED   1 failed, 28 passed in 0.13s
-unbuilt producers are expected in the account too              KILLED   12 failed, 17 passed in 0.22s
-a negative count is accepted                                   KILLED   1 failed, 28 passed in 0.13s
+unbuilt producers are expected in the account too              KILLED   12 failed, 17 passed in 0.20s
+a negative count is accepted                                   KILLED   1 failed, 28 passed in 0.12s
 a staged run is graded as a quiet one                          KILLED   1 failed, 28 passed in 0.13s
-only staged runs are graded                                    KILLED   16 failed, 13 passed in 0.23s
+only staged runs are graded                                    KILLED   16 failed, 13 passed in 0.22s
 the floor is dropped, so every detector's silence is acceptable KILLED   1 failed, 28 passed in 0.13s
-the ceiling is dropped, so drift is invisible                  KILLED   1 failed, 28 passed in 0.14s
+the ceiling is dropped, so drift is invisible                  KILLED   1 failed, 28 passed in 0.13s
 the floor stops belonging to the band                          KILLED   4 failed, 25 passed in 0.15s
-the ceiling stops belonging to the band                        KILLED   1 failed, 28 passed in 0.13s
-the RF floor is raised, failing twenty of twenty correct runs  KILLED   1 failed, 28 passed in 0.13s
-the track floor drops to zero, so a silent detector passes     KILLED   1 failed, 28 passed in 0.14s
+the ceiling stops belonging to the band                        KILLED   4 failed, 25 passed in 0.14s
+the RF floor is raised, failing forty of forty correct runs    KILLED   1 failed, 28 passed in 0.12s
+the track floor drops to zero, so a silent detector passes     KILLED   1 failed, 28 passed in 0.13s
 any number of reportable claims is clean                       KILLED   1 failed, 28 passed in 0.13s
-the reportable verdict inverts                                 KILLED   4 failed, 25 passed in 0.15s
+the reportable verdict inverts                                 KILLED   4 failed, 25 passed in 0.14s
 a false positive no longer fails the control                   KILLED   1 failed, 28 passed in 0.13s
 a count outside the background no longer fails the control     KILLED   2 failed, 27 passed in 0.14s
-an unbuilt rule fails the control                              KILLED   3 failed, 26 passed in 0.15s
+an unbuilt rule fails the control                              KILLED   3 failed, 26 passed in 0.14s
 false_positives reports the wrong outcome                      KILLED   1 failed, 28 passed in 0.13s
 the absent rule is reported as clean                           KILLED   1 failed, 28 passed in 0.13s
-the absent rule is dropped from the register                   KILLED   2 failed, 27 passed in 0.14s
-coverage counts the rule that does not exist                   KILLED   1 failed, 28 passed in 0.14s
-an intermediate producer may carry no band                     KILLED   1 failed, 28 passed in 0.13s
+the absent rule is dropped from the register                   KILLED   2 failed, 27 passed in 0.15s
+coverage counts the rule that does not exist                   KILLED   1 failed, 28 passed in 0.13s
+an intermediate producer may carry no band                     KILLED   1 failed, 28 passed in 0.12s
 a reportable producer may carry a band                         KILLED   1 failed, 28 passed in 0.13s
 a band whose top is below its floor is accepted                KILLED   1 failed, 28 passed in 0.13s
-a band with no population behind it is accepted                KILLED   1 failed, 28 passed in 0.14s
+a band with no population behind it is accepted                KILLED   1 failed, 28 passed in 0.12s
 a producer registered twice silently replaces the first        KILLED   1 failed, 28 passed in 0.13s
-the exported band loses the population behind it               KILLED   1 failed, 28 passed in 0.14s
-the register is keyed on the rule alone                        KILLED   17 failed, 12 passed in 0.24s
+the exported band loses the population behind it               KILLED   1 failed, 28 passed in 0.13s
+the register is keyed on the rule alone                        KILLED   17 failed, 12 passed in 0.23s
 
 restored
 

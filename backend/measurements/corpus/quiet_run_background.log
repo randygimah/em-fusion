@@ -1,29 +1,29 @@
 corpus v2 -- one generator, 900 s runs, anom-014 and scn-007 active; base seeds 1412660662, 965530111, 655209063
-baseline and population are the same 20 quiet runs
+baseline and population are the same 40 quiet runs
 
 INTERMEDIATE PRODUCERS -- the measured background, per quiet run
   rule           finding type               min   median    max   zeros
-  RF-NOISE       rf_noise_deviation           0      0.0      0      20/20
-  TRACK-CLUSTER  track_gap_cluster            5      7.0      9       0/20
-  TRACK-GAP      track_continuity_gap         9     16.5     19       0/20
-  TRACK-GAP      track_rate_excess            0      0.0      0      20/20
+  RF-NOISE       rf_noise_deviation           0      0.0      0      40/40
+  TRACK-CLUSTER  track_gap_cluster            4      7.0     10       0/40
+  TRACK-GAP      track_continuity_gap         8     15.0     22       0/40
+  TRACK-GAP      track_rate_excess            0      0.0      0      40/40
 
 REPORTABLE RULES -- the requirement, not a measurement
   rule           anomaly type               min   median    max   zeros
-  FUSION-SPATIAL possible_interference_zone     0      0.0      0      20/20
-  SENSOR-FAULT   possible_sensor_fault        0      0.0      0      20/20
+  FUSION-SPATIAL possible_interference_zone     0      0.0      0      40/40
+  SENSOR-FAULT   possible_sensor_fault        0      0.0      0      40/40
   SOURCE-GAP     possible_data_source_issue   -- no rule: anom-006 unbuilt
 
-BANDS FOR THE REGISTER (min..max over n=20)
-  ('RF-NOISE', 'rf_noise_deviation'): Background(low=0, high=0, runs=20)
-  ('TRACK-CLUSTER', 'track_gap_cluster'): Background(low=5, high=9, runs=20)
-  ('TRACK-GAP', 'track_continuity_gap'): Background(low=9, high=19, runs=20)
-  ('TRACK-GAP', 'track_rate_excess'): Background(low=0, high=0, runs=20)
+BANDS FOR THE REGISTER (min..max over n=40)
+  ('RF-NOISE', 'rf_noise_deviation'): Background(low=0, high=0, runs=40)
+  ('TRACK-CLUSTER', 'track_gap_cluster'): Background(low=4, high=10, runs=40)
+  ('TRACK-GAP', 'track_continuity_gap'): Background(low=8, high=22, runs=40)
+  ('TRACK-GAP', 'track_rate_excess'): Background(low=0, high=0, runs=40)
 
 Which producers' silence fails, and which passes, from the measured floor:
   RF-NOISE       rf_noise_deviation       floor   0  silence passes
-  TRACK-CLUSTER  track_gap_cluster        floor   5  silence FAILS
-  TRACK-GAP      track_continuity_gap     floor   9  silence FAILS
+  TRACK-CLUSTER  track_gap_cluster        floor   4  silence FAILS
+  TRACK-GAP      track_continuity_gap     floor   8  silence FAILS
   TRACK-GAP      track_rate_excess        floor   0  silence passes
 
-quiet runs showing the analyst anything: 0 of 20
+quiet runs showing the analyst anything: 0 of 40

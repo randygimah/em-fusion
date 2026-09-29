@@ -1,5 +1,5 @@
 corpus v2 -- one generator, 900 s runs, anom-014 and scn-007 active; base seeds 1412660662, 965530111, 655209063
-v2, every batch
+v2, base seed 1412660662
   threshold 100 s, contact fresh within 30 s, interior margin 0.25 deg
   0 runs excluded for staging nothing
   parked aircraft in the answer key: 6/300 = 2%
@@ -10,3 +10,29 @@ aircraft-coverage-gap         20     100     64    64%          0          0    
 ambiguous-mixed-evidence      20     100     64    64%          0          0          0         18          4         14          0
 gnss-degradation              20     100     83    83%          0          0          0          3          7          7          0
 ALL                                  300    211    70%          0          0          0         39         15         35          0
+
+corpus v2 -- one generator, 900 s runs, anom-014 and scn-007 active; base seeds 1412660662, 965530111, 655209063
+v2, base seed 965530111
+  threshold 100 s, contact fresh within 30 s, interior margin 0.25 deg
+  0 runs excluded for staging nothing
+  parked aircraft in the answer key: 4/300 = 1%
+
+scenario                    runs  staged  found  recall  not_in_ru    no_pair  not_inter  on_ground  contact_n  below_thr  position_
+------------------------------------------------------------------------------------------------------------------------------------
+aircraft-coverage-gap         20     100     59    59%          0          0          0         20          2         19          0
+ambiguous-mixed-evidence      20     100     59    59%          0          0          0         20          2         19          0
+gnss-degradation              20     100     81    81%          0          0          0          2          2         15          0
+ALL                                  300    199    66%          0          0          0         42          6         53          0
+
+corpus v2 -- one generator, 900 s runs, anom-014 and scn-007 active; base seeds 1412660662, 965530111, 655209063
+v2, every batch
+  threshold 100 s, contact fresh within 30 s, interior margin 0.25 deg
+  0 runs excluded for staging nothing
+  parked aircraft in the answer key: 10/600 = 2%
+
+scenario                    runs  staged  found  recall  not_in_ru    no_pair  not_inter  on_ground  contact_n  below_thr  position_
+------------------------------------------------------------------------------------------------------------------------------------
+aircraft-coverage-gap         40     200    123    62%          0          0          0         38          6         33          0
+ambiguous-mixed-evidence      40     200    123    62%          0          0          0         38          6         33          0
+gnss-degradation              40     200    164    82%          0          0          0          5          9         22          0
+ALL                                  600    410    68%          0          0          0         81         21         88          0

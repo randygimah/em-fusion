@@ -1,11 +1,10 @@
 corpus v2 -- one generator, 900 s runs, anom-014 and scn-007 active; base seeds 1412660662, 965530111, 655209063
-baseline from 60 quiet runs of this corpus
-n=60
-  min=1.00  p25=3.87  median=9.61  p75=14.09  max=26.84
-  >= 1.58: 58
-  no findings in the disc at all: 1
+baseline from 40 quiet runs of this corpus
+n=40
+  min=0.39  p25=3.78  median=8.85  p75=14.09  max=26.84
+  >= 1.58: 39
+  no findings in the disc at all: 0
   findings present but below 1.58: 1
 
 the 14 that would be lost to a gate, lowest first:
-    ratio= 1.00  findings during=  0 outside=  0
-    ratio= 1.15  findings during=  2 outside=  3
+    ratio= 0.39  findings during=  0 outside=  1

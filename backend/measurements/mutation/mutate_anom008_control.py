@@ -20,7 +20,7 @@ appearance of a check.
 **The band, which carries "zero fails".** Dropping the floor makes every
 detector's silence acceptable and removes the only thing standing between
 this control and a pipeline that stopped looking. Raising the RF floor does
-the opposite and fails twenty of twenty correct runs -- the mistake the
+the opposite and fails forty of forty correct runs -- the mistake the
 measurement corrected, since the RF grid is synthetic and a quiet run has
 nothing in it. Both directions are here.
 
@@ -90,16 +90,16 @@ M = {
     "the ceiling stops belonging to the band": (
         "        return self.low <= observed <= self.high",
         "        return self.low <= observed < self.high"),
-    "the RF floor is raised, failing twenty of twenty correct runs": (
-        "        background=Background(\n            low=0,\n            high=0,\n"
-        "            runs=20,\n            note=(\n                \"zero on 20 of 20. "
-        "The RF grid is synthetic and a quiet run has \"",
-        "        background=Background(\n            low=1,\n            high=1,\n"
-        "            runs=20,\n            note=(\n                \"zero on 20 of 20. "
-        "The RF grid is synthetic and a quiet run has \""),
+    "the RF floor is raised, failing forty of forty correct runs": (
+        "            low=0,\n            high=0,\n            runs=40,\n"
+        "            note=(\n                \"zero on 40 of 40, over two "
+        "independently seeded batches. The RF \"",
+        "            low=1,\n            high=1,\n            runs=40,\n"
+        "            note=(\n                \"zero on 40 of 40, over two "
+        "independently seeded batches. The RF \""),
     "the track floor drops to zero, so a silent detector passes": (
-        "            low=9,\n            high=19,",
-        "            low=0,\n            high=19,"),
+        "            low=8,\n            high=22,",
+        "            low=0,\n            high=22,"),
 
     # --- the reportable side -------------------------------------------------
     "any number of reportable claims is clean": (

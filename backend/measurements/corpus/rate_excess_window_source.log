@@ -1,26 +1,26 @@
 corpus v2 -- one generator, 900 s runs, anom-014 and scn-007 active; base seeds 1412660662, 965530111, 655209063
-baseline from 60 quiet runs of this corpus
+baseline from 40 quiet runs of this corpus
 baseline over 56 cells
 
 window length, seconds (staged incident is 300):
-  truth     n=180 min=  300 median=  300 max=  300
-  episode   n=180 min=   20 median=   90 max=  220
-  assessed  n= 60 min=  140 median=  320 max=  360
+  truth     n=120 min=  300 median=  300 max=  300
+  episode   n=120 min=   20 median=   90 max=  220
+  assessed  n= 40 min=  290 median=  320 max=  360
 
 centre error vs the staged centre, km: median=0.0 max=0.0
 
-runs producing a fusion candidate at all: {'gnss-degradation': 60}
+runs producing a fusion candidate at all: {'gnss-degradation': 40}
 windows unusable (zero length, divides by zero): {}
 
 source      radius    gnss-degradati    aircraft-cover    rf-sensor-faul
-truth           30          40/60                    -           7/60   
-truth           45          51/60                    -          11/60   
-truth           60          56/60                    -          19/60   
-episode         30          36/60                    -           5/60   
-episode         45          51/60                    -           8/60   
-episode         60          58/60                    -          13/60   
-assessed        30          36/60                    -                 -
-assessed        45          51/60                    -                 -
-assessed        60          58/60                    -                 -
+truth           30          24/40                    -           3/40   
+truth           45          34/40                    -           5/40   
+truth           60          37/40                    -          10/40   
+episode         30          27/40                    -           3/40   
+episode         45          32/40                    -           5/40   
+episode         60          39/40                    -           8/40   
+assessed        30          28/40                    -                 -
+assessed        45          35/40                    -                 -
+assessed        60          39/40                    -                 -
 
 (counts are runs whose excess reached the pre-registered threshold; a dash means no run of that arm reached fusion at all)

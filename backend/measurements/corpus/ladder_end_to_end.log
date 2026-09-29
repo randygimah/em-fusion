@@ -1,17 +1,17 @@
 corpus v2 -- one generator, 900 s runs, anom-014 and scn-007 active; base seeds 1412660662, 965530111, 655209063
-baseline from 60 quiet runs of this corpus
+baseline from 40 quiet runs of this corpus
 scenario                    runs  decided correctly  silent  conflicting
-aircraft-coverage-gap         60                 60      60            0
-ambiguous-mixed-evidence      60                 60       0            0
-gnss-degradation              60                 60       0            0
-normal-baseline               60                 60      60            0
-rf-sensor-fault               60                 60       0            0
+aircraft-coverage-gap         40                 40      40            0
+ambiguous-mixed-evidence      40                 40       0            0
+gnss-degradation              40                 40       0            0
+normal-baseline               40                 40      40            0
+rf-sensor-fault               40                 40       0            0
 
 what each arm was actually reported as:
-  ambiguous-mixed-evidence   {'possible_sensor_fault': 60}
-  gnss-degradation           {'possible_interference_zone': 60}
-  rf-sensor-fault            {'possible_sensor_fault': 60}
+  ambiguous-mixed-evidence   {'possible_sensor_fault': 40}
+  gnss-degradation           {'possible_interference_zone': 40}
+  rf-sensor-fault            {'possible_sensor_fault': 40}
 
-corroboration across every interference zone raised: {'corroborated': 18, 'not_measurable': 41, 'not_corroborated': 1}
+corroboration across every interference zone raised: {'corroborated': 14, 'not_measurable': 26}
 
 NOTE: aircraft-coverage-gap can only be a correct non-detection here, because anom-006 is unbuilt (scn-007 blocks it).

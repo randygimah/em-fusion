@@ -1,17 +1,17 @@
 corpus v2 -- one generator, 900 s runs, anom-014 and scn-007 active; base seeds 1412660662, 965530111, 655209063
-baseline from 60 quiet runs of this corpus
+baseline from 40 quiet runs of this corpus
 scenario                    runs  reach step 3  measurable
-aircraft-coverage-gap         60             0           0
-ambiguous-mixed-evidence      60             0           0
-gnss-degradation              60            60          60
-normal-baseline               60             0           0
-rf-sensor-fault               60             0           0
+aircraft-coverage-gap         40             0           0
+ambiguous-mixed-evidence      40             0           0
+gnss-degradation              40            40          40
+normal-baseline               40             0           0
+rf-sensor-fault               40             0           0
 
 Among the zones that reach step three, at 60 km:
 scenario                      n   >= 1.58  no track evidence   median
-gnss-degradation             60        58                  1     9.61
+gnss-degradation             40        39                  0     8.85
 
 unusable windows: {}
 
 What each design would report, over the zones reaching step three:
-  gnss-degradation           A(gate on excess)= 58  B(gate on any)= 59  C(no gate)= 60
+  gnss-degradation           A(gate on excess)= 39  B(gate on any)= 40  C(no gate)= 40
