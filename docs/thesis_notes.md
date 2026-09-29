@@ -7642,3 +7642,108 @@ one that produces the same defect without preventing collection. This is the
 same class as the unparseable-mutant check added with the latency harness, and
 it is the second time in two items that a mutant has appeared to be caught by a
 test that never ran.
+
+### The detection evidence base was measured on a corpus that no longer existed, and nothing said so
+
+Closing `anom-011` required its recall figure on at least two independently seeded batches, which is
+a constraint the item imposed on itself so that a sensitivity result could be reported as a property
+of the detector rather than of one draw. Checking whether that constraint was met turned up
+something larger than the item.
+
+The figures on record — 25, 69 and 81 per cent across three batches — were taken on corpus v1, which
+was **destroyed on 19 September 2026** by a database-tier test run pointed at the application store,
+the incident `ops-004` was written in response to. The measurement logs did not survive either. The
+figures therefore existed only as prose, in this document and on the spec item, with nothing in the
+repository they could be re-derived from. That is precisely the failure the item's own *"a
+measurement without its conditions is a memory"* rule was written against, arriving from the one
+direction nobody had watched: not a figure quoted without its conditions, but a figure whose
+conditions were carefully recorded and whose **data** was gone.
+
+It reached further than one item. Corpus v2's wave 1 was regenerated on 28 September sized for the
+AI campaign and nothing else, and no detection measurement was re-run against it. So for eleven days
+every committed log in `measurements/corpus/` described a 300-run corpus that was not in the
+database, while the database held 100 runs — and every automated check in the project passed
+throughout, because a committed log is a text file and nothing compares it to anything. The only
+instrument that would have caught it is the one the re-measurement protocol already specifies and
+which had not been run: diff a re-run against the committed log.
+
+Wave 2 was generated (base seed `965530111`, 100 runs, ids 181–280) and all six protocol scripts
+re-run over the 200 runs that now exist.
+
+### What moved when the whole protocol was re-run, including what moved in the project's favour
+
+**Every conclusion replicated and every per-arm count went from 60 to 40**, which is the corpus being
+two thirds the size rather than any rule behaving differently.
+
+| Measurement | On the destroyed corpus | On corpus v2, two waves |
+|---|---|---|
+| Sensor fault claimed on its own arm | 60 of 60 | **40 of 40** |
+| Interference runs misattributed as faults | 0 of 60 | **0 of 40** |
+| Every arm decided correctly by the ladder | 60 of 60 | **40 of 40** |
+| Events given two different answers | 0 | **0** |
+| Interference runs producing a fusion candidate | 60 of 60 | **40 of 40** |
+| Rate-excess ratio, median | 9.61 | **8.85** |
+| Interference runs clearing the 1.58 bar | 58 of 60 | **39 of 40** |
+| Staged beats its own control | 57 of 60, 3 ties | **40 of 40, 0 ties** |
+| Zones with no measurable aircraft evidence | 41 of 60 (68%) | **26 of 40 (65%)** |
+| Quiet runs showing the analyst anything | 0 of 20 | **0 of 40** |
+
+Three of those moved in the project's favour and are recorded here for that reason. The staged-run
+separation is now **perfect** where it had three ties; the proportion of zones with no measurable
+aircraft evidence fell slightly; and a run that had produced no findings in the disc at all now has
+none. Two moved against it: the median rate-excess ratio fell from 9.61 to 8.85, and the minimum
+ratio is now **0.39** where it had been 1.00 — a run in which dropouts were *less* frequent during
+the incident window than outside it, which had no counterpart on the old corpus. That single run is
+worth following up; at n=40 it is one observation and no more than that.
+
+`anom-008`'s bands were re-measured at n=40 and two of the four widened — track continuity 9–19 to
+**8–22**, clusters 5–9 to **4–10**. The RF band stayed at **0–0, now 40 of 40**. That the asymmetry
+the control rests on replicated on an independently seeded batch rather than holding by accident on
+one is the more useful result than the widening: the design would have been wrong if the RF floor
+had moved off zero.
+
+### Recall, and the two candidate causes that account for nothing at all
+
+Per-aircraft recall against the answer key, on the two waves separately and combined:
+
+| Hour type | Wave 1 | Wave 2 | Combined |
+|---|---|---|---|
+| `gnss-degradation` | 83% | 81% | **82%** |
+| `aircraft-coverage-gap` | 64% | 59% | **62%** |
+| `ambiguous-mixed-evidence` | 64% | 59% | **62%** |
+| All, over 600 staged aircraft | 70% | 66% | **68%** |
+
+The item asked not only for the figure but for an account of where the undetected aircraft go, and
+named four candidates: the generator's choice of records, the airborne filter, the interior-to-box
+filter, and the requirement for a report either side of an absence. The account closes exactly, and
+the shape of it is the finding: **81 on ground, 88 below threshold, 21 contact not fresh, and zero to
+the interior filter, zero to an aircraft absent from the run, zero to an unbracketed absence.** Two
+of the four suspects account for everything and two for nothing whatever. The on-ground remainder is
+aircraft taking off or landing inside the window rather than aircraft parked throughout, which is
+the detector being correct rather than a loss to recover.
+
+One thing the table must not be read as replication: `aircraft-coverage-gap` and
+`ambiguous-mixed-evidence` are **byte-identical in every column**, including the loss split. That is
+not two arms agreeing. `tracks.py` gives them the same SUPPRESS mode, so at a shared seed their
+track findings are the same findings, and this is one measurement printed twice.
+
+### A mutation survivor that was not one
+
+`anom-011`'s mutation harness reported 13 of 14 with one survivor: *absent aircraft dropped from
+denominator*. The mutant replaced `set(staged_aircraft)` with `{a for a in staged_aircraft}`. Those
+are the same expression — the mutant was the original, could not be killed by any test, and had been
+sitting in the harness uncontested.
+
+This is worse than a missing mutant and the difference is worth stating. A survivor is a **claim
+about the test suite**: it asserts that a real defect would go unnoticed. Acted on, it sends somebody
+to write a test for a case that is already covered — here the covering assertion existed and was
+eleven lines long — and the new test then passes for a reason unrelated to the mutant. A gap is an
+absence of evidence; a false survivor is evidence of the wrong thing.
+
+It is also not catchable by the check added for the previous hazard. Comparing the mutated syntax
+tree against the original would not flag it: a set comprehension and a `set()` call are different
+trees meaning the same thing, and semantic equivalence is undecidable in general. What catches it is
+reading the mutant's replacement text before believing its verdict — which is how both earlier
+hazards in this series were found, and neither of those was found by a tool either. Rewritten to
+intersect the answer key with the aircraft that actually appear, the mutant is killed and the pass is
+14 of 14.

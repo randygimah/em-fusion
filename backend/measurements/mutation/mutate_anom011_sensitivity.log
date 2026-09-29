@@ -1,0 +1,18 @@
+tally check removed                            KILLED   1 failed, 13 passed in 0.28s
+tally check uses <=                            KILLED   1 failed, 13 passed in 0.27s
+empty-staged guard removed                     KILLED   1 failed, 16 passed in 0.27s
+absent aircraft dropped from denominator       KILLED   1 failed, 11 passed in 0.30s
+absent aircraft not counted as a loss          KILLED   1 failed, 11 passed in 0.27s
+conditions trusted from the caller             KILLED   1 failed, 17 passed in 0.30s
+loss taken from the least informative reason   KILLED   1 failed, 9 passed in 0.43s
+verdict always says detected                   KILLED   1 failed, 8 passed in 0.27s
+no-pair case dropped                           KILLED   1 failed, 6 passed in 0.29s
+pair reasons not collected                     KILLED   1 failed, 4 passed in 0.26s
+report reasons not collected                   KILLED   1 failed, 7 passed in 0.29s
+interior guard inverted in the shared judge    KILLED   1 failed in 0.27s
+contact-fresh guard dropped from the shared judge KILLED   1 failed, 7 passed in 0.25s
+an aircraft can be missing from the verdicts   KILLED   1 failed, 1 passed in 0.26s
+
+restored
+
+14/14 killed

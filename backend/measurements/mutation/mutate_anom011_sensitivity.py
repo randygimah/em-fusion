@@ -14,9 +14,15 @@ MUTANTS = {
     "empty-staged guard removed": (SN,
         "    if not staged:\n        raise ValueError(",
         "    if False:\n        raise ValueError("),
+    # Written 2026-09-29 to replace a version that named this defect and
+    # implemented none: `staged = {a for a in staged_aircraft}` is exactly
+    # `set(staged_aircraft)`, so the "mutant" was the original and could
+    # only ever survive. It was reported as a survivor for two days and
+    # sent a reader looking for a test that was already there.
     "absent aircraft dropped from denominator": (SN,
-        "    staged = set(staged_aircraft)",
-        "    staged = {a for a in staged_aircraft}\n    _all = staged"),
+        "    detected = 0\n    losses: Counter[Loss] = Counter()",
+        "    detected = 0\n    losses: Counter[Loss] = Counter()\n"
+        "    staged = staged & set(verdicts)"),
     "absent aircraft not counted as a loss": (SN,
         "            losses[Loss.NOT_IN_RUN] += 1", "            detected += 0"),
     "conditions trusted from the caller": (SN,

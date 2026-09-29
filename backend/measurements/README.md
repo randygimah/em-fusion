@@ -2,7 +2,7 @@
 
 The instruments behind the numbers in `docs/thesis_notes.md`.
 
-Every detection figure this project quotes — `anom-007`'s 60 of 60, `anom-012`'s trade-off curve,
+Every detection figure this project quotes — `anom-007`'s 40 of 40, `anom-012`'s trade-off curve,
 `anom-005`'s gating decision, `anom-006`'s ceiling — was produced by a script, and until now those
 scripts lived in a session-scoped temporary directory while only their *conclusions* were committed.
 The reasoning survived and the reproduction did not. This directory closes that gap: a claim in the
@@ -57,6 +57,14 @@ Three practical things, each learned the hard way:
 
 ## `corpus/` — measurements over stored runs
 
+> **Re-measured 2026-09-29, and every count below moved.** The 300-run corpus these figures were
+> first taken on was destroyed on 2026-09-19 (`ops-004`). Wave 1 of corpus v2 was regenerated on
+> 2026-09-28 for the AI campaign and wave 2 on 2026-09-29, and the whole protocol was then re-run
+> over the 200 runs that now exist: **every conclusion replicated and every per-arm count went from
+> 60 to 40.** Between those two dates the committed logs described a corpus that was not in the
+> database, and nothing in the repository said so — which is the argument for diffing a re-run
+> against its log rather than trusting that a log exists.
+
 **The database holds two corpora, and every script here must say which one it means.**
 `corpus/_corpus.py` is the selector: import it rather than hardcoding an id range.
 
@@ -81,7 +89,7 @@ said**; a script with no log is marked, and its figure lives in `docs/thesis_not
 
 | Script | The question it answers | Figure of record |
 |---|---|---|
-| `sensor_fault_catch_rate.py` | Does `SENSOR-FAULT` claim the runs whose truth is a broken receiver — and does it claim anything else? The assumption the whole rule ordering rests on. | 60 of 60 claimed, on the right receiver inside the right window; **0 of 60** interference runs misattributed; 1.13 faults per run at a median span of exactly the staged 300 s. *(no log survived)* |
+| `sensor_fault_catch_rate.py` | Does `SENSOR-FAULT` claim the runs whose truth is a broken receiver — and does it claim anything else? The assumption the whole rule ordering rests on. | 40 of 40 claimed, on the right receiver inside the right window; **0 of 40** interference runs misattributed; 1.13 faults per run at a median span of exactly the staged 300 s. *(no log survived)* |
 | `sensor_fault_fragmentation.py` | Why does a receiver with loud neighbours read as isolated? | One 300 s incident arrives as a **median of six episodes**: the 8 dB injection is scaled per tick by `1 + 0.25·N(0,1)` against a 6 dB threshold, so ~1 tick in 6 falls short. Neighbours sat 2.51 dB (p5) to 4.46 dB (median) above their own baselines and **not one of 37 crossed 6 dB**. *(no log survived)* |
 | `sensor_fault_neighbour_candidates.py` | Tolerance, or readings? Two candidate repairs measured **before either was written**. | Readings win. Also the source of the 2 dB bar: touched neighbours 2.51 dB at p5, untouched 1.58 dB at p95, and the choice is a plateau. *(no log survived)* |
 
@@ -118,6 +126,7 @@ said**; a script with no log is marked, and its figure lives in `docs/thesis_not
 |---|---|---|
 | `source_gap_ceiling.py` | **Can this rule be built on this corpus at all?** Measures the ceiling, not a design. | No. Over 40 seed-matched pairs: 16.1 findings against the control's 15.1 and **never fewer** (23 greater, 17 tied, **0 lower**) — real beyond doubt, and one in fifteen. Root cause: **1.7 staged aircraft per run, 11 of 40 staging nothing at all.** This is the measurement that forced `scn-007`. |
 | `source_gap_zone_scoring.py` | Does a staged gap **concentrate** anywhere a detector could find? | No — **at chance**: 7:3, 5:4, 4:2 at 20/40/60 km cluster radii. The machinery destroys a signal raw counting preserves. |
+| `mutation/mutate_anom011_sensitivity.py` | **Would the tests notice a recall figure that is wrong in the flattering direction?** Scores `sensitivity.py` and the `track_gap.py` verdict path it reads, over four surfaces: the tally that refuses a loss account which does not add up, the refusal to score a run that staged nothing, the conditions being trusted from the caller rather than taken from the policy actually run, and the denominator. | **14 of 14 killed** (`.log`, recorded 2026-09-29). Its first run reported 13 of 14 with one survivor, `absent aircraft dropped from denominator` -- which was **not a survivor**: the mutant replaced `set(staged_aircraft)` with `{a for a in staged_aircraft}`, the same expression, so the "mutant" was the original and could only ever survive. It sent a reader looking for a test that had been there all along. Rewritten to intersect the answer key with the aircraft that actually appear, which is the defect the name claims, and killed. |
 | `mutation/mutate_anom008_control.py` | **Would the tests notice a control that reports the quiet runs were clean when it graded nothing?** This is the worst-shaped instrument in the repo for a weak suite: the answer it is looking for is *nothing*, so its correct output and its broken output are identical, and almost every mutant here is more flattering than the truth while looking exactly like it. Four surfaces: the account (disable the missing-producer refusal and it grades whatever it was handed; invert the set difference and it refuses a stray key while letting a missing producer through); the band (drop the floor and every detector's silence becomes acceptable, raise the RF floor and twenty of twenty correct runs fail); the reportable verdict; and the rule that does not exist, reported as clean or counted as covered. Needs no database and no corpus. | **29 of 29 killed, no survivors** (`.log`). One mutant had to be rejected and replaced: keying the register on the rule id alone broke the module at import, so no test ran and the harness scored it *inconclusive* rather than killed -- a mutant killed by the language is not killed by the suite. Second time in two items that a mutant appeared to be caught by a test that never ran. The module also sat at 100% line coverage while two of its guards had no test at all, which is the argument for scoring a control by mutation. |
 | `mutation/mutate_anom009_latency.py` | **Would the tests notice a latency that is plausible and false?** Every mutant here returns a number of seconds -- nothing raises, nothing looks wrong, and the damage is a figure that would be quoted in a results table and never sanity-checked. Four surfaces: the receiver requirement (measuring interference as though one receiver sufficed reports when the *first* matured, understating the latency by however long they were staggered); the minimum (dropping it reports when evidence *started* rather than when it was *sufficient*, which is the rejected "first cited reading" definition and reports near-zero everywhere); the sign (clamping a negative turns "the rule swept in readings from before the incident" into "it detected instantly"); and the refusals. Needs no database and no corpus, because the module reads neither, so it runs pytest directly rather than through Compose and a pass takes seconds. **First harness here to enforce that a mutant parses** -- `mutate_ai012_campaign.py` records that lesson in a comment and never implemented it, so an unparseable mutant is still scored by a syntax error there rather than by a test. | **15 of 15 killed, no survivors** (`.log`). It found a real gap on its first run: every test had given a rule exactly as many receivers as it required, which makes *the second to qualify* and *the last to qualify* indistinguishable -- and the corpus carries three-receiver interference zones, so the untested case is the common one. Closed with a three-receiver test before the pass was recorded. |
 | `mutation/mutate_evb001_bundle.py` | **Are `evb-001`'s tests load-bearing?** 34 mutants over the typed-absence boundary, the per-item data mode, the unit of a bundle, the frequency axis, and the scoping of superseded claims. | **34 of 34 killed** — after a first pass killed only 22. The 10 genuine survivors were **all scoping rules**: evidence from another receiver, another window, another zone. The suite had tested what goes *into* a bundle and barely what must stay *out*, which is the more dangerous half, because a bundle carrying a neighbouring event's evidence is not malformed — it is wrong. 7 tests added, 2 tightened. |
@@ -327,6 +336,26 @@ load-bearing, and those are not all in one file.
 Worth stating because the failure runs in the direction that wastes work rather than hiding defects:
 it **manufactures** gaps. An investigator who believed the first report would have written a
 duplicate test and found the original only afterwards.
+
+## A sixth hazard: a mutant that names one defect and implements another, found 2026-09-29
+
+`mutate_anom011_sensitivity.py` carried a mutant called *absent aircraft dropped from denominator*
+whose replacement text was `{a for a in staged_aircraft}` where the original read
+`set(staged_aircraft)`. Those are the same expression. The mutant was the original, could not be
+killed by any test, and was reported as a survivor.
+
+That is worse than a missing mutant, because a survivor is a **claim about the test suite**: it says
+a real defect would go unnoticed. Acted on, it sends someone to write a test for a case that is
+already covered — the covering assertion was eleven lines long and nine months old — and the new
+test then passes for the wrong reason. A missing mutant is a gap; a false survivor is a false
+finding.
+
+It is not catchable the way the unparseable mutant is. Comparing the mutated AST against the
+original would not have caught this one: a set comprehension and a `set()` call are different trees
+that mean the same thing, and semantic equivalence is undecidable in general. What catches it is the
+discipline every survivor already deserves — **read the mutant's replacement text before believing
+its verdict**, and check that it implements the defect its name describes. Both other hazards in this
+series were found the same way and neither was found by a tool.
 
 ## Two constraints that apply to anything added here
 
