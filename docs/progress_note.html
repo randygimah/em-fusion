@@ -6929,6 +6929,170 @@ second pass   <b>5.060000171975998</b></div>
   </section>
 
   <section>
+    <h2>How quickly, and how quietly</h2>
+    <p class="lede">
+      Two questions about the detection half had never been answered, and both turned out to be
+      questions about definitions rather than about code. How fast does it notice something? And —
+      the one everything else rests on — does it stay quiet when there is nothing there?
+    </p>
+
+    <h3>A delay in a system that never notices anything</h3>
+    <p>
+      The obvious definition of detection latency is the time between the incident starting and the
+      system spotting it. Written down that way it cannot be measured here, because there is no
+      moment of spotting: the rules read a completed hour out of the store afterwards. Nothing
+      happens <em>while</em> the incident is happening. Had this been built before the definition was
+      settled, the measurement would have reached for the nearest available timestamp — and the
+      nearest one is when the evidence package was written to the database, which is the real clock
+      on the machine wearing the costume of simulated time. It would have produced a table of
+      plausible numbers that were actually measuring how busy the laptop was.
+    </p>
+    <p>
+      What is real, and what a live version of this system would face too, is <b>how much of an
+      incident has to elapse before the evidence a rule demands is complete</b>. That is a property
+      of how the rule is designed, not of how fast the software is, and it is a floor on what any
+      faster implementation could achieve. The figure is reported as that, and never as a speed.
+    </p>
+    <p>
+      One detail decided the whole thing, and it came from reading the two rules rather than from
+      thinking about time. The broken-receiver rule needs <em>one</em> receiver to have misbehaved
+      for long enough. The interference rule needs <em>more than one</em>, and the window it reports
+      runs from the first receiver's start to the last one's end. So at the moment that window opens,
+      only one receiver has begun — and the rule's entire claim is that several went wrong together.
+      A single formula for both would have understated interference delay by however long the
+      receivers were staggered, silently and in the flattering direction.
+    </p>
+
+    <h3>Zero is the answer we want, and also the answer a broken machine gives</h3>
+    <p>
+      Everything the detection chapter claims depends on one unglamorous number: how often the system
+      raises an alarm when nothing was staged. Without it, a catch rate means nothing — you can catch
+      everything by alarming at everything. So there are twenty hours in the corpus with nothing
+      staged in them, and the requirement is that none of them produce anything an analyst would be
+      shown.
+    </p>
+    <p>
+      Checking that looks like it needs no code at all: look at the list of alarms, confirm it is
+      empty. <b>That is the trap.</b> An empty list is what a working system produces on a quiet
+      hour. It is also what you get from a system that never ran, that was pointed at the wrong
+      hours, or that had everything thrown away by a filter before the detectors ever saw it. All
+      four look identical from the outside, and three of them are failures.
+    </p>
+
+    <div class="fig">
+      <div class="fig__art">
+        <svg width="640" height="236" viewBox="0 0 640 236" role="img"
+             aria-label="Four different causes — the detectors working correctly, the detectors never running, the detectors reading the wrong hours, and a filter discarding everything first — all converge on the same result, an empty list.">
+          <text class="fig__val" x="8" y="40" fill="var(--signal)">the detectors ran and found nothing</text>
+          <line x1="272" y1="36" x2="404" y2="36" stroke="var(--signal)" stroke-width="2" />
+          <circle cx="272" cy="36" r="4" fill="var(--signal)" />
+
+          <text class="fig__val" x="8" y="88" fill="var(--bad)">the detectors never ran</text>
+          <line x1="272" y1="84" x2="404" y2="84" stroke="var(--bad)" stroke-width="2" stroke-dasharray="5 4" />
+          <circle cx="272" cy="84" r="4" fill="var(--bad)" />
+
+          <text class="fig__val" x="8" y="136" fill="var(--bad)">they were given the wrong hours</text>
+          <line x1="272" y1="132" x2="404" y2="132" stroke="var(--bad)" stroke-width="2" stroke-dasharray="5 4" />
+          <circle cx="272" cy="132" r="4" fill="var(--bad)" />
+
+          <text class="fig__val" x="8" y="184" fill="var(--bad)">a filter discarded it all first</text>
+          <line x1="272" y1="180" x2="404" y2="180" stroke="var(--bad)" stroke-width="2" stroke-dasharray="5 4" />
+          <circle cx="272" cy="180" r="4" fill="var(--bad)" />
+
+          <line x1="404" y1="36" x2="404" y2="180" stroke="var(--line)" stroke-width="1.5" />
+          <line x1="404" y1="108" x2="458" y2="108" stroke="var(--line)" stroke-width="2" />
+          <path d="M458 102 L470 108 L458 114 Z" fill="var(--line)" />
+
+          <rect x="470" y="84" width="158" height="48" rx="6" fill="none" stroke="var(--line)" stroke-width="1.5" />
+          <text class="fig__val" x="549" y="104" text-anchor="middle">an empty list</text>
+          <text class="fig__val" x="549" y="121" text-anchor="middle" fill="var(--muted)">on all four paths</text>
+        </svg>
+      </div>
+    </div>
+    <p class="caption">
+      Only the teal path is the system working. Nothing about the result distinguishes it from the
+      three dashed ones, because the thing being checked is an absence — so the check had to be
+      given something other than the result to look at.
+    </p>
+
+    <p>
+      The fix is to change what the check is handed rather than what it looks for. It receives
+      <b>an account of every detector by name</b> — one entry each, saying what that detector
+      produced — and it refuses to grade the hour at all if any detector is missing from the account.
+      A detector that found nothing has to say so. It cannot simply fail to turn up. That refusal,
+      and not any count, is what answers <em>did this detector actually look</em>.
+    </p>
+    <p>
+      <b>The result: none of the twenty quiet hours produces anything an analyst would be shown.</b>
+      That is the number every catch rate in the project is quoted against.
+    </p>
+
+    <h3>The two halves of the data disagree about what silence means</h3>
+    <p>
+      Underneath the three rules an analyst sees are simpler ones that do the looking. Here the
+      expectation reverses: they are <em>supposed</em> to find things on a quiet hour, and finding
+      nothing is the symptom of a detector that has stopped working. The aircraft tracks are real
+      recorded traffic, and real traffic is full of ordinary dropouts — aircraft leaving receiver
+      range, transponders going quiet, ground stations missing reports. A quiet hour genuinely
+      contains between nine and nineteen of them.
+    </p>
+    <p>
+      That rule was nearly written into the check as a blanket one, and it would have been wrong for
+      half the system. <b>The radio grid is invented rather than recorded.</b> On a quiet hour
+      nothing is injected into it, so there is genuinely nothing there to deviate — and, measured,
+      the radio rule finds nothing on twenty hours out of twenty. A blanket "you must find something"
+      rule would have failed every correct hour in the corpus, and failed them in a way that looks
+      like a detection fault rather than a rule written too broadly.
+    </p>
+
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>What it looks for</th><th>Where the data comes from</th><th class="n">Found per quiet hour</th><th>Finding nothing is</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="key">Radio deviation</td><td class="why">invented</td><td class="n">0</td><td class="why">correct</td></tr>
+          <tr><td class="key">Aircraft dropout</td><td class="why">recorded</td><td class="n">9–19</td><td class="why"><b>a failure</b></td></tr>
+          <tr><td class="key">Dropouts grouped by place</td><td class="why">recorded</td><td class="n">5–9</td><td class="why"><b>a failure</b></td></tr>
+          <tr><td class="key">Dropout rate comparison</td><td class="why">recorded</td><td class="n">0</td><td class="why">correct — it is never asked on a quiet hour</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="caption">
+      The ranges are measured off the quiet hours themselves, not chosen. Nothing in the check names
+      a rule: each detector carries the range it was measured at and the comparison is the same one
+      for all of them, so the disagreement between the two halves is a fact about the data rather
+      than an exception somebody wrote down.
+    </p>
+
+    <p>
+      Those ranges come with a caveat that has to be said out loud, because it is easy to quote them
+      as if they proved something. They were measured on these twenty hours and are applied to these
+      twenty hours, so all twenty are inside their range <em>by construction</em>. As evidence that
+      anything is currently right, they are worth nothing. Their value is entirely for later: these
+      are the counts nothing else in the project reports, so if the hours are regenerated or a
+      setting moves underneath the detectors, this is the only place it would show.
+    </p>
+
+    <h3>A test that was never built cannot be credited with staying quiet</h3>
+    <p>
+      There are three answers the system is allowed to give, and only two have tests behind them. The
+      third — <em>we are not hearing aircraft here</em> — was attempted twice, measured twice, and
+      closed both times: the signal is not separable from ordinary background on hours generated this
+      way, and the version that would work needs the whole corpus regenerated and every detection
+      figure re-measured.
+    </p>
+    <p>
+      So a report saying <em>zero of these across twenty quiet hours</em> would be quoting the
+      absence of a test as the accuracy of a test. It is the most flattering sentence the instrument
+      could produce and it is completely empty. The check therefore lists that answer as
+      <b>not exercised</b> rather than as clean, and carries the coverage figure alongside the
+      result, so the honest reading is forced: <b>no false alarms on twenty of twenty quiet hours,
+      across two of the three answers the system can give</b>.
+    </p>
+  </section>
+
+  <section>
     <h2>The rules the build follows</h2>
     <ul class="rules">
       <li><b>Nothing is written before it is specified and proven to fail.</b> Every capability gets a
@@ -6957,15 +7121,15 @@ second pass   <b>5.060000171975998</b></div>
 
     <div class="outcomes">
       <div class="outcome">
-        <h3>1,486</h3>
+        <h3>1,631</h3>
         <p>Tests passing in containers against a real database, from a database that was deleted first to prove nothing was left over.</p>
       </div>
       <div class="outcome">
-        <h3>99.87%</h3>
+        <h3>99.89%</h3>
         <p>Of the back-end code is exercised by those tests. The screens measure nothing of the kind — see below.</p>
       </div>
       <div class="outcome">
-        <h3>58 / 101</h3>
+        <h3>65 / 104</h3>
         <p>Numbered capabilities finished. The rest are specified and waiting, not vague.</p>
       </div>
     </div>
@@ -7096,12 +7260,12 @@ second pass   <b>5.060000171975998</b></div>
           <tr><td class="key">API</td><td class="n">5</td><td class="n">11</td><td class="why">A health check, the picture and the dashboard reading it, plus the two scenario endpoints and the screen reading those — a batch now starts from a button</td></tr>
           <tr><td class="key">Screens and map</td><td class="n">2</td><td class="n">16</td><td class="why">Three ways in, two of which lead to a screen; both read the real store, and the rail collapses to give the workspace its width back</td></tr>
           <tr><td class="key">Scenario generator</td><td class="n">8</td><td class="n">8</td><td class="why">Complete. Receiver positions fixed, an invented hour reproducible from one number, all five kinds of run staging what they should, twenty produced unattended from a single number by one command, the screen that will drive it, disruptions staged only on aircraft that are actually flying, a floor of five affected aircraft per hour so that no hour is unscoreable, and every hour now recording the number it was generated from so a batch can be reproduced rather than remembered</td></tr>
-          <tr><td class="key">Anomaly detection</td><td class="n">9</td><td class="n">14</td><td class="why">What normal looks like, and a rule for each side of the picture — the radio and the aircraft. Findings are kept and grouped, and the evidence the final rules read has been settled: grouping alone could not separate a staged hour from a quiet one, so it was replaced by a local rate comparison — measured first, and chosen over turning up the scenario settings. The three answers the system may give are one decision asked in a fixed order; the order itself is now built and enforced, and two of the three tests with it. Marked against the answer key over three hundred regenerated hours: every one of the five kinds of hour decided correctly sixty times out of sixty, no event anywhere given two answers, and — since a blip lasting one reading stopped counting as an event — no false report anywhere at all. The third test, ruled out last time, is worth attempting again</td></tr>
+          <tr><td class="key">Anomaly detection</td><td class="n">11</td><td class="n">14</td><td class="why">What normal looks like, and a rule for each side of the picture — the radio and the aircraft. Findings are kept and grouped, and the evidence the final rules read has been settled: grouping alone could not separate a staged hour from a quiet one, so it was replaced by a local rate comparison — measured first, and chosen over turning up the scenario settings. The three answers the system may give are one decision asked in a fixed order; the order itself is now built and enforced, and two of the three tests with it. Marked against the answer key over three hundred regenerated hours: every one of the five kinds of hour decided correctly sixty times out of sixty, no event anywhere given two answers, and — since a blip lasting one reading stopped counting as an event — no false report anywhere at all. The third test, ruled out last time, is worth attempting again. Two things have since been settled that the chapter cannot be written without: how long an incident must run before a rule has the evidence it demands — a property of the rule rather than a measure of how fast the software is, since nothing here notices anything while it is happening — and the other half of the testing, the hours with nothing staged in them, where <b>none of the twenty produces anything an analyst would be shown</b>. That second check turned out to need real care: an empty result is also what a machine that never ran produces, so it is given an account of every detector by name and refuses to grade an hour where one is missing</td></tr>
           <tr><td class="key">Evidence bundles</td><td class="n">2</td><td class="n">2</td><td class="why">Complete. One event becomes one package, with the frequency dimension joined up here because nothing upstream joins it, and with every absence labelled by which of the three kinds it is rather than left as silence. Every statement's citations are then resolved against the store before the package is allowed to exist — which found that one citation in eleven had been pointing at a reconstructed instant rather than a stored reading, in a field that had been written and never read since the findings were first kept</td></tr>
           <tr><td class="key">AI hypothesis layer</td><td class="n">9</td><td class="n">12</td><td class="why">The shape every explanation must take, and the first thing that produces one. The shape is a constraint on what a model is allowed to emit rather than a description of what it did, so each guarantee is checked on the translated version a model is actually handed as well as on the original. The producer built first has no model in it: it is both the fallback for when a model's answer cannot be trusted and the yardstick the models are measured against. Run over all forty-one real packages it produced forty-one explanations, refused none, and every one of its one hundred and sixty-four citations was found in the package it came from. Since then, the seam a model plugs into — defined before either model exists, so neither one's peculiarities leak into it — and the decision about what a person sees when a model's answer cannot be used: ask again a fixed number of times, then fall back to the mechanical account, and keep a record of why, plus the guard that counts what a run spends and stops it rather than letting it quietly continue. Then the producer the whole project is about: a model, handed the package and constrained so it cannot emit the wrong shape at all. And now the safeguard that constraint cannot be — every claim an explanation rests on is resolved against the package it came from, with citing an explanation the system itself rejected treated as its own kind of failure rather than lumped in with inventing one. Over the forty-one real packages it flagged none of one hundred and sixty-four honest citations, and caught all one hundred and sixty-four deliberate corruptions. And now the first real requests: eight explanations over three packages, read by hand. Every claim in every one of them traced back to its package; reading them found an instruction that had never been written, without which the blind marking would have been decided by citation count alone; and running the trial twice showed the answers do not reproduce word for word, which narrows a claim this project had been making about reproducibility and settles a question about whether asking a model again after a bad answer is a real mechanism. And now the job that asks twenty questions rather than one: it keeps the answers that were thrown away, because those are the only evidence the safeguard ever did anything, and it takes care that a rejected answer is counted once rather than twice and that a mechanical stand-in is never counted as the model's — a mistake that would make the model look better the more often it failed. What remains is choosing the twenty packages, the marking pack itself, and the marking</td></tr>
           <tr><td class="key">Hypothesis screen and feedback</td><td class="n">0</td><td class="n">6</td><td class="why">Specified, unbuilt</td></tr>
-          <tr><td class="key">Evaluation</td><td class="n">4</td><td class="n">8</td><td class="why">Scoring instrument written and locked, and amended twice in the open since — once because the sample it described could not exist on the built system, once because asking the model a single time rested on an assumption the first real requests disproved. The twenty packages are chosen from one number and written down; the run has happened and cost eighty-five pence; the per-producer figures are computed for each writer separately and never pooled, because the difference between them <em>is</em> the result. The pack the marker reads is built, and then rebuilt: correct by every automated check and unusable by a person, missing the one thing — which receiver each finding came from — that the first scored dimension depends on. What is left is the marking itself and the arithmetic over the returned sheets, and that waits on a person rather than on code</td></tr>
-          <tr class="total"><td class="key">Total</td><td class="n">62</td><td class="n">103</td><td class="why">&nbsp;</td></tr>
+          <tr><td class="key">Evaluation</td><td class="n">5</td><td class="n">9</td><td class="why">Scoring instrument written and locked, and amended twice in the open since — once because the sample it described could not exist on the built system, once because asking the model a single time rested on an assumption the first real requests disproved. The twenty packages are chosen from one number and written down; the run has happened and cost eighty-five pence; the per-producer figures are computed for each writer separately and never pooled, because the difference between them <em>is</em> the result. The pack the marker reads is built, and then rebuilt: correct by every automated check and unusable by a person, missing the one thing — which receiver each finding came from — that the first scored dimension depends on. The marker's pack now also carries a glossary, and the workbook a matching tab, under one rule: an entry may say what a word refers to and never what seeing it would mean, the second being the marker's own job. What is left is the marking itself and the arithmetic over the returned sheets, and that waits on a person rather than on code — plus the table of detection figures, which now has two of its three inputs</td></tr>
+          <tr class="total"><td class="key">Total</td><td class="n">65</td><td class="n">104</td><td class="why">&nbsp;</td></tr>
         </tbody>
       </table>
     </div>
@@ -7255,6 +7419,15 @@ second pass   <b>5.060000171975998</b></div>
           references. It is also a narrow one, and the narrowness is the point — the safeguard checks
           that a named rule exists, never that the sentence attached to it is true. Which of those
           two the study can actually claim is what the marking decides.
+          <br><br>
+          One piece of code can proceed while that waits, and it is the table of detection figures —
+          how often the system is right, how often it is wrong in each of the two directions, and how
+          long each answer takes to become available. Two of its three inputs now exist: the delay,
+          and the false-alarm side, which is zero across twenty quiet hours over two of the three
+          answers. The third is how many staged aircraft the dropout rule actually catches, which
+          needs measuring on a second independently generated batch before it can be quoted as a
+          property of the rule rather than of one batch. Nothing in that table has ever been
+          computed; three of its six columns have never been computed at all.
         </div>
       </div>
       <div class="tier">
