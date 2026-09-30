@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../App";
 import {
+  BatchAlreadyRunningError,
   DEFAULT_POLL_INTERVAL_MS,
   SCENARIO_RUNS_PATH,
   SCENARIO_START_PATH,
@@ -36,6 +37,19 @@ const RUNS = [
 
 const ok = (body: unknown): Response =>
   ({ ok: true, status: 200, json: async () => body }) as Response;
+
+// A refusal, with a body. The existing 422 stubs carry no `json` at all, which
+// is what holds the transport to reading a body only where there is one to read
+// (spec: api-011).
+const refused = (status: number, body?: unknown): Response =>
+  ({ ok: false, status, json: async () => body }) as Response;
+
+// What the backend reports is already in flight when it answers 409.
+const IN_FLIGHT = {
+  scenarioType: "gnss-degradation",
+  baseSeed: 20220627,
+  startedAt: "2026-09-30T14:03:12Z",
+};
 
 const table = () => within(screen.getByRole("table", { name: /recent runs/i }));
 
@@ -273,5 +287,99 @@ describe("where the screen's data comes from", () => {
       .map(([path]) => path);
 
     expect(offenders).toEqual([]);
+  });
+});
+
+// ------------------------------------------------------ one batch at a time
+//
+// spec: api-011. Several starts in quick succession left the backend serving
+// nothing at all: every start spawns another daemon thread, every thread borrows
+// the API's one connection pool, and the pool holds fifteen. One batch at a
+// time removes the observed cause, and a refusal has to reach the analyst --
+// which, before this item, nothing on this screen could do. The feed computed
+// an error and the seam dropped it, so every 422 was already invisible.
+
+describe("a batch that is already running", () => {
+  it("reads the refusal's body rather than discarding it", async () => {
+    // spec: api-011 (sixth decision) — an analyst who cannot tell which batch
+    // is in flight cannot tell whether to wait or to investigate
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(refused(409, { detail: IN_FLIGHT })));
+
+    const reason = await startScenarioBatch(DEFAULT_CONFIGURATION).catch((error: unknown) => error);
+
+    expect(reason).toBeInstanceOf(BatchAlreadyRunningError);
+    expect((reason as BatchAlreadyRunningError).inFlight).toEqual(IN_FLIGHT);
+  });
+
+  it("leaves an ordinary refusal an ordinary refusal", async () => {
+    // spec: api-011 — a configuration the backend will not accept and a batch
+    // already running are different facts, and the screen says different
+    // things about them
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(refused(422)));
+
+    const reason = await startScenarioBatch(DEFAULT_CONFIGURATION).catch((error: unknown) => error);
+
+    expect(reason).not.toBeInstanceOf(BatchAlreadyRunningError);
+    expect(reason).toBeInstanceOf(Error);
+  });
+
+  it("says what is already running, and that the button comes back", async () => {
+    // spec: api-011 (seventh decision) — a 409 rendering as nothing would look
+    // exactly like the defect that prompted this item
+    const fetchMock = vi.fn().mockImplementation((path: string) =>
+      path === SCENARIO_START_PATH
+        ? Promise.resolve(refused(409, { detail: IN_FLIGHT }))
+        : Promise.resolve(ok(RUNS)),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: /start batch/i }));
+
+    const refusal = await screen.findByRole("alert");
+    expect(refusal).toHaveTextContent(/already running/i);
+    expect(refusal).toHaveTextContent(/gnss-degradation/);
+    expect(refusal).toHaveTextContent(/20220627/);
+    expect(refusal).toHaveTextContent(/finishes/i);
+  });
+
+  it("surfaces a refusal at all, which the seam used to drop", async () => {
+    // spec: api-011, first finding — the feed has computed this since api-010
+    // and App.tsx destructured it away, so a 422 was refused by the backend and
+    // the analyst saw nothing
+    const fetchMock = vi.fn().mockImplementation((path: string) =>
+      path === SCENARIO_START_PATH
+        ? Promise.resolve(refused(422))
+        : Promise.resolve(ok(RUNS)),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: /start batch/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/not started/i);
+  });
+
+  it("drops the refusal once a later start is accepted", async () => {
+    // spec: api-011 — the guard bounds concurrency, not batches, so the
+    // refusal has to go when the batch it named has finished: left standing it
+    // says the button is blocked while it is working
+    let refusals = 1;
+    const fetchMock = vi.fn().mockImplementation((path: string) => {
+      if (path !== SCENARIO_START_PATH) return Promise.resolve(ok(RUNS));
+      if (refusals-- > 0) return Promise.resolve(refused(409, { detail: IN_FLIGHT }));
+      return Promise.resolve(ok({ baseSeed: 4242, runs: 20, seeds: [1] }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+    const start = await screen.findByRole("button", { name: /start batch/i });
+    fireEvent.click(start);
+    await screen.findByRole("alert");
+
+    fireEvent.click(start);
+
+    expect(await screen.findByText(/4242/)).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
   });
 });

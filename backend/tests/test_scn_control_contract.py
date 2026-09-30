@@ -32,6 +32,7 @@ from datetime import UTC, datetime
 
 import pytest
 
+from app.api.v1.schemas.scenario import BatchInFlight
 from app.dal.models import ScenarioRunSummary
 from app.pipeline import build_parser
 from app.scenario.emitter import BaselineParameters, RunSpec
@@ -210,3 +211,35 @@ def test_a_listed_run_has_no_field_the_answer_key_could_travel_in() -> None:
         for field in declared
         for word in ("truth", "answer", "injected", "aircraft", "sensors", "channels")
     )
+
+
+# ------------------------------------------------------- a batch already running
+
+
+def test_the_in_flight_batch_is_declared_as_the_backend_reports_it() -> None:
+    """The 409 body, field for field. Spec: api-011 (fourth finding).
+
+    The refusal carries facts rather than prose precisely so it can be asserted
+    field by field, and this is where that pays: the screen composes its sentence
+    out of these names, so a rename on either side leaves the analyst reading
+    `undefined` about a batch that really is running -- visible only by starting
+    two batches by hand.
+    """
+    # spec: api-011, api-006
+    declared = set(_declared()["InFlightBatch"])
+    served = {_camel(name) for name in BatchInFlight.model_fields}
+
+    assert declared == served
+
+
+def test_the_in_flight_batch_carries_no_field_the_answer_key_could_travel_in() -> None:
+    """`api-009` at the one response added since it was written.
+
+    The scenario type is legitimate here for `FR-714`'s reason -- the analyst
+    chose it, and this screen is the harness's own face. What was *staged* is
+    not: no window, no sensors, no aircraft, no incident.
+    """
+    # spec: api-011, api-009
+    declared = set(_declared()["InFlightBatch"])
+
+    assert declared == {"scenarioType", "baseSeed", "startedAt"}

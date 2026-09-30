@@ -10,14 +10,24 @@ is injected precisely so these tests can substitute one that records its
 argument, which is what lets the refusals be asserted as *nothing was started*
 rather than as an error message. The listing half needs real rows and sits in
 the database tier.
+
+`api-011`'s guard is asserted here rather than in a file of its own, because it
+is the same endpoint and reuses every helper below. Two of them changed shape
+for it: a launcher now receives the **lease** as well as the request, and
+`_post` binds a **fresh guard per call** -- a process-wide singleton shared
+between tests would make the second test in this file receive a 409 for the
+first test's batch.
 """
 
 from __future__ import annotations
 
 import ast
 import os
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from threading import Barrier, Thread
 from typing import Any
 
 import pytest
@@ -26,7 +36,7 @@ from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.pool import NullPool
 
 from alembic import command
-from app.api.v1.scenario import get_batch_launcher
+from app.api.v1.scenario import get_batch_guard, get_batch_launcher
 from app.api.v1.schemas.scenario import BatchRequest
 from app.dal.models import ScenarioRunSummary
 from app.db.migrations import alembic_config
@@ -34,6 +44,12 @@ from app.main import app
 from app.pipeline import MAX_RUNS, MIN_RUNS
 from app.replay import MANIFEST_NAME
 from app.scenario import batch
+from app.scenario.guard import (
+    BatchAlreadyRunning,
+    BatchGuard,
+    InFlightBatch,
+    Lease,
+)
 from app.scenario.incident import IncidentParameters, ScenarioType
 from app.scenario.seeding import SEED_MAX
 from tests.conftest import live_database_url, requires_database
@@ -68,23 +84,64 @@ class RecordingLauncher:
     """Stands in for the thing that actually runs a batch.
 
     Records rather than runs, so a test can assert a refusal started nothing.
+
+    **It does not release the lease by default, and that is the faithful
+    default** (`api-011`, second finding). A real launcher returns within
+    microseconds and the batch it started runs for about seventy seconds, so
+    "called, not finished" is the ordinary state and a stand-in that released at
+    once would simulate the one case the guard does not have to handle. Pass
+    `release=True` for a batch that has finished.
+    """
+
+    def __init__(self, *, release: bool = False) -> None:
+        self.calls: list[Any] = []
+        self.leases: list[Any] = []
+        self._release = release
+
+    def __call__(self, request: Any, lease: Any) -> None:
+        self.calls.append(request)
+        self.leases.append(lease)
+        if self._release:
+            lease.release()
+
+
+class RaisingLauncher:
+    """A launcher that cannot even start its thread. Spec: api-011.
+
+    Distinct from a batch that fails *inside* its thread, which the launcher
+    logs and the thread's own `finally` releases. This one raises where the
+    route can still see it, and the route is what must hand the guard back.
     """
 
     def __init__(self) -> None:
         self.calls: list[Any] = []
 
-    def __call__(self, request: Any) -> None:
+    def __call__(self, request: Any, lease: Any) -> None:
         self.calls.append(request)
+        raise RuntimeError("could not start a thread")
+
+
+@contextmanager
+def _bound(guard: BatchGuard, launcher: Any) -> Iterator[TestClient]:
+    """A client whose route sees this guard and this launcher.
+
+    Separate from `_post` because the guard's whole subject is what a *second*
+    request sees, which needs two requests against one guard.
+    """
+    app.dependency_overrides[get_batch_launcher] = lambda: launcher
+    app.dependency_overrides[get_batch_guard] = lambda: guard
+    try:
+        with TestClient(app) as client:
+            yield client
+    finally:
+        app.dependency_overrides.pop(get_batch_launcher, None)
+        app.dependency_overrides.pop(get_batch_guard, None)
 
 
 def _post(body: dict[str, Any]) -> tuple[int, dict[str, Any], RecordingLauncher]:
     launcher = RecordingLauncher()
-    app.dependency_overrides[get_batch_launcher] = lambda: launcher
-    try:
-        with TestClient(app) as client:
-            response = client.post("/api/v1/scenario/start", json=body)
-    finally:
-        app.dependency_overrides.pop(get_batch_launcher, None)
+    with _bound(BatchGuard(), launcher) as client:
+        response = client.post("/api/v1/scenario/start", json=body)
     payload = response.json() if response.content else {}
     return response.status_code, payload, launcher
 
@@ -415,7 +472,7 @@ def test_a_failing_batch_is_logged_rather_than_raised(
     monkeypatch.setattr(batch, "run_batch_now", explode)
 
     with caplog.at_level("ERROR"):
-        batch.launch_batch(_batch_request())
+        batch.launch_batch(_batch_request(), lease=_free_lease())
 
     assert "scenario batch failed" in caplog.text
     assert "no corpus on disk" in caplog.text
@@ -538,3 +595,469 @@ def test_a_real_seed_in_the_environment_is_not_shadowed_by_the_file(
     batch.load_seed_environment(env_file)
 
     assert os.environ["PSEUDONYM_SEED"] == "the-real-one"
+
+
+# ============================================================ one batch at a
+# time
+#
+# Spec: api-011. The backend was found hung on "QueuePool limit of size 5
+# overflow 10 reached, connection timed out", serving nothing, after several
+# batches were started from the screen in quick succession. Every start spawns
+# another unbounded daemon thread and every thread borrows the API's one engine,
+# so batches compete with request serving for a pool whose ceiling is fifteen.
+# One batch is harmless -- measured, it adds a single connection while /health
+# stays 200 -- so the fault is concurrency, and bounding the count at one
+# removes the observed cause.
+#
+# Two layers, deliberately. The guard is asserted directly, because its whole
+# content is what a second caller sees and an HTTP test can only observe that
+# through a status code. The route is then asserted through the endpoint,
+# because the failure the item is about is a *request* being refused.
+
+
+def _free_lease() -> Lease:
+    """A lease over a guard nothing else holds.
+
+    The launcher's own tests predate the guard and care only that the batch
+    ran, so they take one of these rather than growing a guard each.
+    """
+    return BatchGuard().take(_in_flight())
+
+
+def _in_flight(*, base_seed: int = 20220627) -> InFlightBatch:
+    return InFlightBatch(
+        scenario_type=ScenarioType.GNSS_DEGRADATION,
+        base_seed=base_seed,
+        started_at=datetime(2026, 9, 30, 14, 3, 12, tzinfo=UTC),
+    )
+
+
+# ------------------------------------------------------------------ the guard
+
+
+def test_nothing_is_in_flight_before_a_batch_is_taken() -> None:
+    """The state says so by not existing. Spec: api-011 (second decision)."""
+    # spec: api-011
+    assert BatchGuard().in_flight is None
+
+
+def test_the_guard_admits_one_batch() -> None:
+    """A start arriving when nothing is running behaves as api-006 describes."""
+    # spec: api-011, api-006
+    guard = BatchGuard()
+
+    lease = guard.take(_in_flight())
+
+    assert lease is not None
+    assert guard.in_flight == _in_flight()
+
+
+def test_the_guard_refuses_a_second_batch() -> None:
+    """The whole item, at the layer that decides it."""
+    # spec: api-011
+    guard = BatchGuard()
+    guard.take(_in_flight())
+
+    with pytest.raises(BatchAlreadyRunning):
+        guard.take(_in_flight(base_seed=999))
+
+
+def test_the_refusal_carries_what_is_already_running() -> None:
+    """Atomically, and that is the reason it is on the exception.
+
+    Returning a bare "no" and making the caller ask `in_flight` afterwards is a
+    race: the running batch can finish in between, leaving a 409 with nothing to
+    name. Spec: api-011 (sixth decision).
+    """
+    # spec: api-011
+    guard = BatchGuard()
+    guard.take(_in_flight())
+
+    with pytest.raises(BatchAlreadyRunning) as refusal:
+        guard.take(_in_flight(base_seed=999))
+
+    assert refusal.value.in_flight == _in_flight()
+
+
+def test_releasing_the_lease_admits_the_next_batch() -> None:
+    """Spec: api-011 (fourth decision)."""
+    # spec: api-011
+    guard = BatchGuard()
+    lease = guard.take(_in_flight())
+
+    lease.release()
+
+    assert guard.in_flight is None
+    assert guard.take(_in_flight(base_seed=999)) is not None
+
+
+def test_a_stale_lease_does_not_release_a_later_batch() -> None:
+    """The hazard that makes release idempotence the wrong answer.
+
+    A release that simply clears the guard would let a lease from a finished
+    batch free the guard a *later* batch is holding, and then two batches run at
+    once -- the item defeating itself by the mechanism meant to enforce it. So a
+    lease releases only while it is still the holder.
+    """
+    # spec: api-011
+    guard = BatchGuard()
+    first = guard.take(_in_flight())
+    first.release()
+    second = guard.take(_in_flight(base_seed=999))
+
+    first.release()
+
+    assert guard.in_flight == _in_flight(base_seed=999)
+    with pytest.raises(BatchAlreadyRunning):
+        guard.take(_in_flight(base_seed=555))
+    second.release()
+
+
+def test_taking_the_guard_is_atomic() -> None:
+    """Spec: api-011 (fifth decision).
+
+    A check followed by a set lets two simultaneous callers both observe
+    "nothing running" and both proceed, which defeats the item entirely while
+    passing every test that takes the guard twice in a row. The barrier is what
+    makes the interleaving certain rather than hoped for: both threads are
+    inside `take` at the same moment or the test times out.
+    """
+    # spec: api-011
+    guard = BatchGuard()
+    gate = Barrier(2, timeout=5)
+    taken: list[Lease] = []
+    refused: list[BatchAlreadyRunning] = []
+
+    def contend(seed: int) -> None:
+        gate.wait()
+        try:
+            taken.append(guard.take(_in_flight(base_seed=seed)))
+        except BatchAlreadyRunning as refusal:
+            refused.append(refusal)
+
+    threads = [Thread(target=contend, args=(seed,)) for seed in (1, 2)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=5)
+
+    assert len(taken) == 1
+    assert len(refused) == 1
+
+
+def test_the_guard_writes_nothing_to_the_database() -> None:
+    """Spec: api-011 (second decision), db-007.
+
+    A persisted "running" flag would be a claim no crash could retract: kill the
+    container mid-batch and the row still says a batch is in flight, locking the
+    button until somebody edits the database. `db-007` rejected exactly this
+    when it refused a three-valued status column. Asserted against the parsed
+    imports rather than the text, on `api-003`'s reasoning -- a text search would
+    match the docstring explaining the rule.
+    """
+    # spec: api-011, db-007, api-003
+    from app.scenario import guard as guard_module
+
+    tree = ast.parse(Path(guard_module.__file__).read_text(encoding="utf-8"))
+    reached = {
+        module
+        for node in ast.walk(tree)
+        for module in (
+            [alias.name for alias in node.names]
+            if isinstance(node, ast.Import)
+            else [node.module or ""]
+            if isinstance(node, ast.ImportFrom)
+            else []
+        )
+    }
+
+    assert not any(
+        module.startswith(("app.db", "sqlalchemy", "alembic")) for module in reached
+    ), f"the guard reaches storage: {sorted(reached)}"
+
+
+# ------------------------------------------------------------------ the route
+
+
+def test_a_second_start_while_one_runs_is_refused() -> None:
+    """Spec: api-011. The refusal an analyst actually meets."""
+    # spec: api-011
+    launcher = RecordingLauncher()
+    with _bound(BatchGuard(), launcher) as client:
+        first = client.post("/api/v1/scenario/start", json=CONFIGURATION)
+        second = client.post("/api/v1/scenario/start", json=CONFIGURATION)
+
+    assert first.status_code == 202
+    assert second.status_code == 409
+
+
+def test_a_refused_second_start_starts_no_second_batch() -> None:
+    """No second batch, no run rows, no second thread. Spec: api-011."""
+    # spec: api-011
+    launcher = RecordingLauncher()
+    with _bound(BatchGuard(), launcher) as client:
+        client.post("/api/v1/scenario/start", json=CONFIGURATION)
+        client.post("/api/v1/scenario/start", json=CONFIGURATION)
+
+    assert len(launcher.calls) == 1
+
+
+def test_the_refusal_names_the_batch_already_running() -> None:
+    """Spec: api-011 (sixth decision), fourth finding.
+
+    An analyst who cannot tell which batch is in flight, or how long it has
+    been, cannot tell whether to wait or to investigate -- and the information
+    costs nothing, the guard holding it in order to exist.
+
+    The key set is asserted **exactly**, which is what keeps api-009 mechanical:
+    a field added here later has to be argued for in this test rather than
+    arriving with the injected event in tow.
+    """
+    # spec: api-011, api-009
+    launcher = RecordingLauncher()
+    with _bound(BatchGuard(), launcher) as client:
+        client.post("/api/v1/scenario/start", json=CONFIGURATION)
+        refusal = client.post("/api/v1/scenario/start", json=CONFIGURATION)
+
+    detail = refusal.json()["detail"]
+    assert set(detail) == {"scenarioType", "baseSeed", "startedAt"}
+    assert detail["scenarioType"] == "gnss-degradation"
+    assert detail["baseSeed"] == 20220627
+    assert datetime.fromisoformat(detail["startedAt"]).tzinfo is not None
+
+
+def test_the_refusal_carries_no_answer_key() -> None:
+    """Spec: api-009. The injected event is not among what a 409 reports."""
+    # spec: api-011, api-009
+    launcher = RecordingLauncher()
+    with _bound(BatchGuard(), launcher) as client:
+        client.post("/api/v1/scenario/start", json=CONFIGURATION)
+        refusal = client.post("/api/v1/scenario/start", json=CONFIGURATION)
+
+    body = refusal.text
+    for leak in ("incident", "radius", "elevation", "groundTruth", "ground_truth"):
+        assert leak not in body
+
+
+def test_a_start_after_the_batch_finished_is_accepted() -> None:
+    """The guard is a bound on concurrency, not a bound on batches."""
+    # spec: api-011
+    launcher = RecordingLauncher(release=True)
+    with _bound(BatchGuard(), launcher) as client:
+        first = client.post("/api/v1/scenario/start", json=CONFIGURATION)
+        second = client.post("/api/v1/scenario/start", json=CONFIGURATION)
+
+    assert (first.status_code, second.status_code) == (202, 202)
+    assert len(launcher.calls) == 2
+
+
+def test_the_route_hands_the_lease_to_the_launcher() -> None:
+    """Spec: api-011, second finding.
+
+    The launcher returns within microseconds and the batch runs for about
+    seventy seconds, so the release belongs to the thread -- which means the
+    lease has to cross the seam rather than being held here.
+    """
+    # spec: api-011, api-006
+    launcher = RecordingLauncher()
+    with _bound(BatchGuard(), launcher) as client:
+        client.post("/api/v1/scenario/start", json=CONFIGURATION)
+
+    assert len(launcher.leases) == 1
+    assert hasattr(launcher.leases[0], "release")
+
+
+def test_a_launcher_that_raises_frees_the_guard() -> None:
+    """The item's sharpest failure case. Spec: api-011 (fourth decision).
+
+    One failure disabling the button until the container is restarted would
+    convert a recoverable error into an outage -- a worse defect than the one
+    this item fixes.
+    """
+    # spec: api-011
+    guard = BatchGuard()
+    with _bound(guard, RaisingLauncher()) as client:
+        with pytest.raises(RuntimeError):
+            client.post("/api/v1/scenario/start", json=CONFIGURATION)
+
+    assert guard.in_flight is None
+
+    launcher = RecordingLauncher()
+    with _bound(guard, launcher) as client:
+        after = client.post("/api/v1/scenario/start", json=CONFIGURATION)
+
+    assert after.status_code == 202
+    assert len(launcher.calls) == 1
+
+
+@pytest.mark.parametrize(
+    "invalid",
+    [
+        {"scenarioType": "sixth-type"},
+        {"runs": MIN_RUNS - 1},
+        {"incidentOffsetS": 900},
+    ],
+)
+def test_a_refused_configuration_does_not_consume_the_guard(
+    invalid: dict[str, Any],
+) -> None:
+    """Spec: api-011, third finding.
+
+    The guard is taken in the handler body and never in a dependency, because a
+    dependency is resolved whether or not the body validates. Taken there, a 422
+    would consume it and the next valid start would be refused 409 with nothing
+    running at all.
+    """
+    # spec: api-011, api-006
+    guard = BatchGuard()
+    launcher = RecordingLauncher()
+    with _bound(guard, launcher) as client:
+        refused = client.post(
+            "/api/v1/scenario/start", json={**CONFIGURATION, **invalid}
+        )
+        accepted = client.post("/api/v1/scenario/start", json=CONFIGURATION)
+
+    assert refused.status_code == 422
+    assert accepted.status_code == 202
+    assert len(launcher.calls) == 1
+
+
+def test_two_simultaneous_starts_give_one_acceptance_and_one_refusal() -> None:
+    """Spec: api-011 (fifth decision), at the layer that answers a request.
+
+    The barrier sits inside the guard so both handlers are provably inside
+    `take` together. It also means the test cannot pass for the wrong reason: if
+    the requests were serialised the barrier would time out rather than quietly
+    assert two sequential starts.
+    """
+    # spec: api-011
+    gate = Barrier(2, timeout=5)
+
+    class _BarrierGuard(BatchGuard):
+        def take(self, in_flight: InFlightBatch) -> Lease:
+            gate.wait()
+            return super().take(in_flight)
+
+    statuses: list[int] = []
+    launcher = RecordingLauncher()
+    with _bound(_BarrierGuard(), launcher) as client:
+
+        def start() -> None:
+            statuses.append(
+                client.post("/api/v1/scenario/start", json=CONFIGURATION).status_code
+            )
+
+        threads = [Thread(target=start) for _ in range(2)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=10)
+
+    assert sorted(statuses) == [202, 409]
+    assert len(launcher.calls) == 1
+
+
+# ---------------------------------------------------------------- the launcher
+# side of the lease
+
+
+def test_the_launcher_releases_the_lease_when_the_batch_finishes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Spec: api-011 (fourth decision)."""
+    # spec: api-011
+    guard = BatchGuard()
+    lease = guard.take(_in_flight())
+    monkeypatch.setattr(batch, "Thread", _InlineThread)
+    monkeypatch.setattr(batch, "run_batch_now", lambda request: None)
+
+    batch.launch_batch(_batch_request(), lease=lease)
+
+    assert guard.in_flight is None
+
+
+def test_the_launcher_releases_the_lease_when_the_batch_fails(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Released in a `finally`, always. Spec: api-011 (fourth decision).
+
+    A batch that raises must free it. This is the same failure the launcher
+    already logs rather than raises; what is new is that the guard comes back.
+    """
+    # spec: api-011, api-006
+
+    def explode(request: Any) -> None:
+        raise RuntimeError("no corpus on disk")
+
+    guard = BatchGuard()
+    lease = guard.take(_in_flight())
+    monkeypatch.setattr(batch, "Thread", _InlineThread)
+    monkeypatch.setattr(batch, "run_batch_now", explode)
+
+    with caplog.at_level("ERROR"):
+        batch.launch_batch(_batch_request(), lease=lease)
+
+    assert "scenario batch failed" in caplog.text
+    assert guard.in_flight is None
+
+
+# ------------------------------------------------- the condition the guard needs
+
+
+DOCKERFILE_PATHS = (
+    Path(__file__).resolve().parents[1] / "Dockerfile",
+    Path("/app/Dockerfile"),
+)
+API_COMPOSE_PATHS = (
+    Path(__file__).resolve().parents[2] / "compose.yaml",
+    Path("/repo/compose.yaml"),
+)
+
+
+def _read_one(candidates: tuple[Path, ...]) -> str:
+    for path in candidates:
+        if path.is_file():
+            return path.read_text(encoding="utf-8")
+    raise AssertionError(  # pragma: no cover -- a broken checkout or mount
+        f"not found at any of {[str(p) for p in candidates]}; skipping is not "
+        "an option, since a skipped structural test passes for the wrong reason."
+    )
+
+
+def _uvicorn_invocations() -> list[str]:
+    """Every place this repository starts the API, comments removed.
+
+    Three of them: the Dockerfile's development and production stages, and the
+    compose command that overrides both.
+    """
+    lines = [
+        line
+        for source in (_read_one(DOCKERFILE_PATHS), _read_one(API_COMPOSE_PATHS))
+        for line in source.splitlines()
+        if not line.strip().startswith("#") and "uvicorn" in line
+    ]
+    return [line for line in lines if "app.main:app" in line]
+
+
+def test_every_way_of_starting_the_api_is_found() -> None:
+    """The guard's assertion is worth nothing if it reads no invocation.
+
+    A pattern that matched none of them would make the test below pass by
+    finding nothing to object to, which is the failure mode of every structural
+    check in this repository.
+    """
+    # spec: api-011 (third decision), sixth finding
+    assert len(_uvicorn_invocations()) == 3
+
+
+@pytest.mark.parametrize("invocation", _uvicorn_invocations())
+def test_the_api_runs_as_a_single_worker(invocation: str) -> None:
+    """Spec: api-011 (third decision), sixth finding.
+
+    In-process state is sound only while the API is one process. Adding workers
+    would give each its own guard and silently restore the defect, so the guard
+    and the condition it depends on are asserted together -- the guard alone
+    would keep passing while becoming untrue.
+    """
+    # spec: api-011
+    assert "--workers" not in invocation
