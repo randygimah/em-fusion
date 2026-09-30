@@ -7829,6 +7829,134 @@ the one place a value can be dropped without any module being obviously wrong.
 Worth recording as a limitation: the other screen's data source was not audited the same way, so
 whether it drops anything is not known.
 
+## 129. Does the detector output on injected anomalies show in the app at all, or only in local measurement?
+
+**Only in local measurement. Nothing the detection layer produces reaches the application.**
+
+This is worth separating into two independent failures, because fixing one would not fix the other.
+
+| | |
+|---|---|
+| **The detectors never run in the shipped path** | The rules only ever execute inside measurement scripts. A batch started from the screen writes observations and an answer key, and stops there. |
+| **And no route carries their output anyway** | Even with findings stored, there is nothing to serve them through. |
+
+Measured against the running stack, the one endpoint the dashboard reads returns
+**419 aircraft positions and four hardcoded empties** — the detection summary is
+two nulls, and the sensors, hypotheses and timeline are empty arrays.
+
+Two things found while checking, both worse than the gap itself.
+
+**The endpoint's own recorded reason has expired.** It justifies those empties
+*"because no detector, RF source or generator exists"*, with the principle beside it
+that an empty section is honest while a populated one would be invented data reaching
+an analyst. The principle stands. The condition does not: there are now eight
+detection rules, the synthetic RF source, the generator, 103 stored evidence bundles
+and 155 stored hypothesis rows. Nothing noticed, because nothing checks whether a
+recorded reason is still true.
+
+**There is a producer-less field in the backlog.** Three items *consume* those
+collections — one takes the detection summary, one takes the timeline, one filters
+both — and **no item produced them**. That is invisible in a backlog by construction:
+every consumer can be built and pass while the field stays empty forever.
+
+Worth recording as a trap for anyone reading that screen: it starts from a fixture
+carrying a High anomaly level, a hypothesis card and an RF sensor, and the real
+payload replaces it a moment later. Any detection seen there is the fixture's.
+
+## 130. Can a backlog item close without writing any code?
+
+**Yes, and one just did — but only because the thing that was missing was a proof rather than a behaviour.**
+
+The batch runner's item asks for twenty to thirty runs from one base seed, reproducible
+from that seed, with a failing run recorded and skipped. All of that was built by the
+generator items. What had never existed was evidence: the item's single failure case is
+*a batch that cannot be reproduced from its recorded base seed*, and until the batch
+provenance item put that seed **on the row**, there was nothing to reproduce it from.
+The seed was printed to a terminal and discarded — of the seeds behind the first 240
+runs exactly one survives anywhere.
+
+So the item had been readable as outstanding for weeks while its only failure case was
+**untestable rather than failing**. That distinction is the useful part, and it
+generalises: an item whose failure case cannot be evaluated is not a passing item, and
+nothing in a backlog of pass/fail flags can say so.
+
+Measured over the whole store, not just the corpus of record:
+
+| | |
+|---|---|
+| Runs | **380 of 380** re-derive their own seed from their own recorded parameters |
+| Batches | 19, across five base seeds — three for the corpus of record, one development, one from the screen |
+| Runs recording no batch | 0 |
+| Batch sizes outside the permitted 20–30 | none |
+
+**What this cost instead of code:** one database-tier test, because the existing suite
+proves the *function* can re-derive a seed and nothing proved that what was
+**persisted** re-derives — between them lie a JSON round-trip, a base seed that returns
+as text to be cast, and an index into a list.
+
+**And a note on the workflow.** The mandatory order is spec, then failing tests, then
+code. With no code to write, nothing could go red. Rather than contort the order, the
+substitute is a paired test that feeds the same assertion a deliberately corrupted row
+and requires it to fail — the pattern already used wherever a structural check could
+pass by finding nothing. A check that cannot fail is not a check.
+
+## 131. What actually makes a "seed-matched pair" matched?
+
+**One arm's run at position *i* carries the identical derived seed as another arm's run at position *i* — and until now nothing verified it.**
+
+A great deal of this project's evidence rests on this. The source-gap rule was closed on
+"60 seed-matched pairs — same seed, same corpus window, same aircraft". The clustering
+radius was argued over "eight triples of eight". The staged-aircraft floor was measured
+over "40 pairs". Every one of those comparisons is only meaningful if the two runs being
+compared really did start from the same number.
+
+It **follows** from how seeds are derived: the derivation is keyed on the base seed and
+the run's index within its batch, and on nothing else. But "follows from" is exactly the
+kind of claim worth checking once against the rows, because a generator keyed
+additionally on the scenario type would produce a corpus in which every matched-pair
+figure silently compared unmatched runs — and no test would fail, because each run would
+still be internally reproducible.
+
+Checked: **100 (base seed, index) positions, one to five arms at each, and every single
+position carries one seed across all of its arms.** So a matched pair really is matched.
+
+Also clarified by the same measurement, having briefly been read wrong: a base seed
+behind 100 runs does **not** mean a batch of 100. It means **five batches of twenty**,
+one per scenario type, each recording twenty as its size — which is why the same twenty
+derived seeds appear five times over.
+
+## 132. A test wrote twenty runs and every database test after it broke. Why?
+
+**Because the guard protecting the test database had a ceiling of twenty runs, and a batch's floor is twenty.**
+
+The guard refuses to wipe a database holding more than a test fixture could plausibly
+have created, and it exists because a corpus was destroyed exactly there once. Its
+ceiling was set at **20 runs**. The smallest batch the generator will produce is **20
+runs**. Add the single run the shared fixture seeds for other suites and you have 21 —
+one over.
+
+So a test that wrote one entirely legitimate minimum batch left the database looking,
+to the guard, like a corpus. Every database test *after* it in the same session then
+refused to start.
+
+Two things make this worth recording rather than just fixing.
+
+**The failure lands on the wrong test.** It arrives as a fixture error in whatever test
+happened to run next, so the obvious suspect is that test, not the one that filled the
+database.
+
+**The comment was the reason nobody checked.** It read: *"one generated run alone holds
+tens of thousands of observations and one batch is twenty runs. Nothing legitimate sits
+in between, so these are set nowhere near either edge rather than tuned."* The value was
+set **at** the edge the comment said it was nowhere near, and the sentence is confident
+enough that reading it substitutes for checking it.
+
+The fix raises the ceiling to 40 — still a long way below a corpus of 300 — and moves the
+claim out of the comment into an assertion that the ceiling exceeds the largest batch a
+test can write. The observation count was always the real discriminator anyway: a
+generated run holds tens of thousands, a batch-shaped test writes none, and either count
+over its ceiling refuses.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -8052,3 +8180,7 @@ whether it drops anything is not known.
 | **409 Conflict** | The HTTP answer to *the thing you asked for cannot happen because of the state something else is in*, as distinct from 422, *what you asked for is not a valid request*. The first clears itself; the second needs the caller to change something. |
 | **Check-then-set** | Reading a shared value and then writing it as two steps, so two callers can both read the old value and both write. The defect is invisible in ordinary use and rare enough under contention that a test catches it only sometimes. |
 | **Connection pool** | The fixed set of database connections a process shares between everything it is doing. Fifteen here, by library default. When they are all lent out, further work waits rather than failing, which is why exhausting the pool looks like a hang rather than an error. |
+| **Unprovenanced** | A run recording no batch, because it was generated outside one. Not the same as a run whose record disagrees with its seed: the first cannot be checked, the second is wrong. Conflating them reports an older corpus as broken. See §130. |
+| **Seed-matched pair** | Two runs of different scenario types generated at the same position in their batches, and therefore from the same derived seed, the same corpus window and the same aircraft. Verified across 100 positions. See §131. |
+| **Untestable rather than failing** | An item whose failure case cannot be evaluated at all, which a pass/fail backlog records identically to one that has been evaluated and failed. See §130. |
+| **Producer-less field** | A field every consumer reads and nothing writes. Invisible in a backlog, because each consumer can be built and pass while the field stays empty. See §129. |

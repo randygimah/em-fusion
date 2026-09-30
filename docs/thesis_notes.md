@@ -8322,3 +8322,128 @@ endpoint would white-screen the application rather than degrade. Recorded as ope
 it needs an item of its own and the honest posture -- fail loudly or render an empty state -- is a
 decision rather than a patch.
 
+### An item whose only failure case was untestable rather than failing
+
+The batch-runner item specifies twenty to thirty runs from one base seed, reproducible from that
+seed, with a failing run recorded and skipped rather than aborting the batch. All of that behaviour
+was delivered by the generator items. What had never existed was the evidence: the item's single
+failure case is a batch that cannot be reproduced from its recorded base seed, and until the batch
+provenance item wrote that seed onto the run row there was nothing to reproduce it from -- the seed
+was printed by the batch summary and discarded, and of the seeds behind the first 240 runs exactly
+one survives anywhere.
+
+So for several weeks the item read as outstanding while its only failure case was **untestable
+rather than failing**, and a backlog of pass/fail flags cannot express the difference. That is the
+finding worth carrying into the methodology chapter rather than the measurement itself: a
+specification whose failure case cannot be evaluated is not a specification that is passing, and
+spec-driven development as practised here has no mechanism that surfaces the distinction. It was
+found by reading the item against the schema, not by any check.
+
+Measured over the whole store rather than the corpus of record -- because the claim is about the
+store, and a check scoped to one corpus would not notice a generator that had stopped recording
+provenance -- 380 of 380 runs re-derive their own seed from their own recorded parameters, across 19
+batches and five base seeds, with none unprovenanced and every batch size inside the permitted
+bounds.
+
+### Closing an item on a measurement, and what replaces the failing test
+
+The workflow this project follows requires a failing test before any implementation. Here there was
+no implementation to write, so nothing could go red, and the honest options were to contort the
+order or to state plainly what replaced it.
+
+What replaced it is a paired test that feeds the same assertion a deliberately corrupted row and
+requires it to fail. That is the pattern already used wherever a structural check could pass by
+finding nothing -- a parser test asserting that the parser found the contract it claims to check,
+beside one firing it at a real violation -- and the principle is the same: a check that cannot fail
+is not a check, and the way to establish that it can is to make it.
+
+One test was genuinely new rather than a formality. The existing suite proves the derivation
+*function* re-derives a seed from a constructed batch record; nothing proved that what was
+**persisted** re-derives, and between the two lie a JSON round-trip through the run's parameters, a
+base seed that returns as text to be cast, and a batch index that indexes a list. The item's failure
+case is about the record, so the test had to be about the record.
+
+### The seed-matching every matched-pair figure rests on, verified once
+
+A substantial part of this project's evidence is comparisons between seed-matched runs: the
+source-gap rule was closed on sixty matched pairs with the same seed, the same corpus window and the
+same aircraft; the clustering radius was argued over eight triples of eight; the staged-aircraft
+floor was measured over forty pairs. Every one of those is meaningful only if the two runs compared
+really did begin from the same number.
+
+It *follows* from the derivation, which is keyed on the base seed and the run's index within its
+batch and on nothing else. It had never been checked. The reason to check it is the shape of the
+failure it would hide: a generator additionally keyed on the scenario type would produce a corpus in
+which every matched-pair figure compared unmatched runs, and **no test would fail**, because each run
+would still be internally reproducible and each batch still derivable from its own seed. The defect
+would live entirely in the relationship between arms, which nothing asserted.
+
+Checked across 100 (base seed, index) positions carrying one to five arms each: every position
+carries a single seed across all of its arms. The matched pairs are matched. Recorded because a
+result quoted as a matched comparison should have the matching verified somewhere, and now it is.
+
+A smaller correction came out of the same measurement, and it is the kind of thing that misleads
+quietly: a base seed behind 100 runs does not mean a batch of 100. It means five batches of twenty,
+one per scenario type, each recording twenty as its size -- so the same twenty derived seeds appear
+five times over. The first version of this measurement grouped on the base seed alone and reported a
+batch of twenty holding a hundred runs.
+
+### A guard whose ceiling sat exactly on the edge its comment said it was nowhere near
+
+The test suite protects the test database with a guard that refuses to wipe one holding more rows
+than a fixture could plausibly have created. It exists because a corpus was destroyed exactly there
+once. Its run ceiling was twenty. The smallest batch the generator will produce is twenty runs. With
+the single run the shared fixture seeds for other suites, a test writing one entirely legitimate
+minimum batch leaves twenty-one -- one over -- and every database test after it in the session then
+refuses to start.
+
+Two properties make this worth recording beyond the fix.
+
+The failure lands on the wrong test. It surfaces as a fixture error in whatever test happened to run
+next, so the first suspect is that test rather than the one that filled the database, and the
+connection is only visible if you already know the ceiling exists.
+
+And the comment is why nobody checked. It read that one generated run holds tens of thousands of
+observations and one batch is twenty runs, so "nothing legitimate sits in between" and the values are
+"set nowhere near either edge rather than tuned". The value was set *at* the edge named in the
+sentence describing how far from it the value was. A confident comment about a numeric relationship
+is a substitute for checking that relationship, which is an argument for asserting such claims in
+tests even when they read as self-evident -- the correction here moves the claim out of the comment
+into an assertion that the ceiling exceeds the largest batch a test can write.
+
+Worth noting what did *not* need to change: the observation ceiling was always the real
+discriminator. A generated run holds tens of thousands of observations and a batch-shaped test writes
+none, and either count over its own ceiling refuses, so raising the run ceiling from twenty to forty
+-- still far below a corpus of three hundred -- weakens nothing.
+
+### The detection layer is invisible in the application, and the reason had expired
+
+Asked whether an injected anomaly and the detection of it can be seen in the running application, the
+answer is no, twice over: the detectors never execute in the shipped path, running only inside
+measurement scripts, and no route carries their output in any case. The one endpoint the dashboard
+reads returns aircraft positions and four hardcoded empties.
+
+The finding that matters is not the gap but how it stayed invisible. The endpoint's own specification
+records those empty collections as justified "because no detector, RF source or generator exists",
+with the principle beside it that an empty section is honest while a populated one would be invented
+data reaching an analyst. The principle is sound and still holds. The condition is false and has been
+for some time: there are eight detection rules, the synthetic RF source, the generator, 103 stored
+evidence bundles and 155 stored hypothesis rows. Nothing checks whether a recorded reason is still
+true, and a passing item with an expired justification reads exactly like a passing item.
+
+Underneath it is a structural gap in the backlog: three items *consume* those collections and none
+produces them. A producer-less field cannot be found by building its consumers, because each consumer
+can be built, tested and passed while the field stays empty forever. It is the same class of defect as
+the requirement that had no item at all, found the same way -- by reading the items against each other
+rather than working down the list.
+
+Two items were written in response rather than the gap being patched: one owning a detection pass over
+a completed run, and one owning the endpoint that serves it. The first exists because the composition
+of the eight rules currently lives *only* inside a measurement script, which sits outside the linter,
+the type checker, the test suite and the coverage gate -- so the ordering that produces every detection
+figure this project quotes is the one part of the chain nothing checks, while all eight rules
+individually sit at full coverage. That is the same shape as the egress-payload defect, where a
+measurement was taken against an object hand-written in a script while nothing in the application
+serialised the real one: a right number about the wrong object, which is harder to notice than a wrong
+number because every check you could run on the measurement passes.
+
