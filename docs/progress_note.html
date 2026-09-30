@@ -7114,6 +7114,449 @@ second pass   <b>5.060000171975998</b></div>
   </section>
 
   <section>
+    <h2>How well it did, and what every number means</h2>
+
+    <p class="lede">
+      Everything up to here says what the system decided. This says how well — and it is the last
+      piece of evidence the detection half needed. Until now three of its six figures had never been
+      computed at all.
+    </p>
+
+    <div class="panel panel--gap">
+      <p>
+        <b>The definitions are the hard part, not the arithmetic.</b> Five of the six figures are
+        fractions, and a fraction means nothing without its denominator. Two of the denominators here
+        are so easily confused that the same English word carries both — and on one kind of hour they
+        come out <b>forty-one points apart</b>, with both answers correct. So every figure below is
+        written as <em>a count over a named population</em>, and never as a bare percentage.
+      </p>
+    </div>
+
+    <h3>The six figures, defined</h3>
+    <div class="tiers">
+      <div class="tier">
+        <div class="tier__name">Recall</div>
+        <div class="tier__what">
+          Of the hours that <em>were</em> a given kind, the fraction on which the system gave the
+          right answer. <b>Counted by what was staged.</b> It is the answer to <em>did we miss
+          anything?</em> and it says nothing whatever about how often the system was wrong when it
+          did speak — you can score a perfect recall by shouting on every hour.
+        </div>
+      </div>
+      <div class="tier">
+        <div class="tier__name">Precision</div>
+        <div class="tier__what">
+          Of the hours the system <em>called</em> a given thing, the fraction that really were it.
+          <b>Counted by what was claimed.</b> It is the answer to <em>can we believe it when it
+          speaks?</em> and says nothing about what it stayed silent through. Its population is a
+          different set of hours from recall's — that is the whole reason the two are in separate
+          tables below rather than in one.
+        </div>
+      </div>
+      <div class="tier">
+        <div class="tier__name">F1</div>
+        <div class="tier__what">
+          The two above combined into one number, so that neither can be improved by sacrificing the
+          other. Because it joins a <em>kind of hour</em> to a <em>kind of answer</em>, it only
+          exists where one corresponds to one. Where two kinds of hour produce the same answer, an F1
+          would be a score with no subject, and it is withheld rather than fudged.
+        </div>
+      </div>
+      <div class="tier">
+        <div class="tier__name">False alarms</div>
+        <div class="tier__what">
+          Of the hours where the right answer was silence, the fraction on which the system said
+          something anyway. <b>There are two of these and they are never added together</b> — an
+          alarm on an empty hour and an alarm provoked by something real but unrelated are different
+          failures, and one combined figure cannot say which occurred.
+        </div>
+      </div>
+      <div class="tier">
+        <div class="tier__name">Misses</div>
+        <div class="tier__what">
+          The mirror of recall: of the hours that were a given kind, the fraction the system failed
+          to name. Reported because it is what an operator actually cares about, and kept explicitly
+          rather than left for the reader to subtract.
+        </div>
+      </div>
+      <div class="tier tier--sig">
+        <div class="tier__name">Delay</div>
+        <div class="tier__what">
+          How much of an incident had to elapse before the evidence a rule demands was complete.
+          <b>It exists only for the hours the system got right</b>, so it describes the successes and
+          not the kind of hour — printed beside a recall of less than one it invites exactly the
+          wrong reading. It is reported with the number of hours it was averaged over.
+        </div>
+      </div>
+    </div>
+
+    <h3>Counting by what happened, and counting by what was said</h3>
+    <p>
+      This is the distinction the whole results section is organised around, and it is easiest to see
+      on a tiny example. Suppose four hours: two staging interference, two staging an aircraft
+      coverage gap — and suppose the system wrongly announces interference on one of the coverage-gap
+      hours.
+    </p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>Figure</th><th>Population it is counted over</th><th class="n">Result</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="key">Recall of interference</td>
+            <td>the two hours that <em>were</em> interference</td>
+            <td class="n">2 / 2</td>
+          </tr>
+          <tr>
+            <td class="key">Precision of the interference answer</td>
+            <td>the three hours the system <em>called</em> interference</td>
+            <td class="n">2 / 3</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="caption">
+      Two different figures, neither wrong, over two different sets of hours. The misreported hour
+      belongs in the second population and not the first, so no single table row could honestly carry
+      both under one heading.
+    </p>
+    <p>
+      That example also shows why a wrong answer costs <b>twice</b>. The misreported hour is a miss
+      for the kind of hour it really was and a false alarm for the kind it was called. Scored as
+      three separate yes-or-no questions it would appear once, in whichever question happened to be
+      examined, and half the cost of the mistake would quietly vanish. The scoring here treats the
+      whole thing as one decision with several possible answers, which is what makes both halves of
+      the error land.
+    </p>
+
+    <h3>What it caught — counted by what was staged</h3>
+    <p>
+      Three hundred hours, sixty of each kind. The full chain was re-run from the stored readings for
+      this table rather than read back from earlier results, so that the figures depend on the hours
+      and the rules and not on which measurement happened to run last.
+    </p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Kind of hour</th><th class="n">Hours</th><th class="n">Right</th>
+            <th class="n">Recall</th><th class="n">Misses</th><th>What the figure means</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="key">One broken receiver</td><td class="n">60</td><td class="n">60</td>
+            <td class="n">1.000</td><td class="n">0.000</td>
+            <td class="why">Every hour staging a faulty receiver was announced as a faulty receiver</td>
+          </tr>
+          <tr>
+            <td class="key">Interference</td><td class="n">60</td><td class="n">60</td>
+            <td class="n">1.000</td><td class="n">0.000</td>
+            <td class="why">Every hour staging several receivers together was announced as interference</td>
+          </tr>
+          <tr>
+            <td class="key">Mixed evidence</td><td class="n">60</td><td class="n">60</td>
+            <td class="n">1.000</td><td class="n">0.000</td>
+            <td class="why">The simultaneous aircraft disturbance did not perturb the radio verdict on a single hour</td>
+          </tr>
+          <tr>
+            <td class="key">Quiet baseline</td><td class="n">60</td><td class="n">—</td>
+            <td class="n">—</td><td class="n">—</td>
+            <td class="why">Nothing staged, so there is nothing to recall. It is scored as a silence, below</td>
+          </tr>
+          <tr>
+            <td class="key">Aircraft coverage gap</td><td class="n">60</td><td class="n">—</td>
+            <td class="n">—</td><td class="n">—</td>
+            <td class="why">Something real is staged, but the rule that would name it does not exist, so it cannot contribute a catch. Also scored as a silence</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="caption">
+      No hour was dropped. An hour of a staged kind on which the generator managed to stage nothing
+      would be a quiet hour wearing the wrong label, and would be excluded from every figure and
+      counted separately — there were none.
+    </p>
+
+    <h3>What it got right when it spoke — counted by what was claimed</h3>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Answer given</th><th class="n">Hours it was given on</th><th class="n">Right</th>
+            <th class="n">Precision</th><th class="n">F1</th><th>Which kinds of hour produce it</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="key"><em>that receiver is broken</em></td><td class="n">120</td><td class="n">120</td>
+            <td class="n">1.000</td><td class="n">withheld</td>
+            <td class="why"><b>Two</b> — one broken receiver, and mixed evidence. So there is no single kind of hour an F1 would be about</td>
+          </tr>
+          <tr>
+            <td class="key"><em>something is interfering</em></td><td class="n">60</td><td class="n">60</td>
+            <td class="n">1.000</td><td class="n">1.000</td>
+            <td class="why"><b>One</b> — interference. The one answer where the two figures can honestly be combined</td>
+          </tr>
+          <tr>
+            <td class="key"><em>we are not hearing aircraft here</em></td><td class="n">0</td><td class="n">0</td>
+            <td class="n">—</td><td class="n">—</td>
+            <td class="why"><b>None.</b> The rule was attempted twice and closed both times. This row is a coverage statement, not a score</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="caption">
+      A dash is <em>not measured</em> and never zero. A precision of 0.000 on an answer nobody ever
+      gave would read as an answer that was always wrong, which is the opposite of what happened.
+    </p>
+    <p>
+      <b>The withheld F1 is a result rather than an omission.</b> Two kinds of hour — a broken
+      receiver alone, and a broken receiver with five aircraft removed at the same time — are staged
+      differently and decided identically. That is by design, and the pair is the controlled
+      comparison described earlier on this page. But it means the phrase <em>the F1 of the
+      broken-receiver answer</em> has no referent: which of the two kinds of hour would its recall be
+      taken from? Printing a number there would have required silently picking one.
+    </p>
+
+    <h3>The two silences</h3>
+    <p>
+      Both kinds of hour where the right answer is nothing, kept apart because they test different
+      things and pooling them would destroy the more interesting one.
+    </p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Silence being tested</th><th class="n">Alarms</th><th class="n">Hours</th>
+            <th class="n">Rate</th><th>What it proves, and what it rests on</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="key">On an empty hour</td><td class="n">0</td><td class="n">60</td>
+            <td class="n">0.000</td>
+            <td class="why"><b>The system does not invent things.</b> Backed by the per-detector account described in the previous section, so an empty result here is known to be a detector that looked and found nothing</td>
+          </tr>
+          <tr>
+            <td class="key">On a real but unrelated disturbance</td><td class="n">0</td><td class="n">60</td>
+            <td class="n">0.000</td>
+            <td class="why"><b>Evidence from the aircraft side does not leak into a radio verdict.</b> Not backed by that account, which grades empty hours only — so this figure rests on the same machinery having been exercised, and says so rather than borrowing the assurance of the row above</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="caption">
+      Both rates are quoted as covering <b>two of the three answers the system can give</b>. Read as
+      three, either would overstate the layer's coverage by exactly the rule that does not exist.
+    </p>
+    <p>
+      One thing is enforced rather than promised here. <b>Neither of these rates will be produced at
+      all unless every quiet hour behind it passed the per-detector check.</b> Zero alarms is the
+      answer we want and also the answer a machine that never ran gives, so the figure is refused
+      rather than computed when the check is missing, filed against the wrong hour, or failed. The
+      sentence <em>this is why the quiet-hour check matters</em> had sat in the specification for
+      weeks with nothing enforcing it.
+    </p>
+
+    <h3>The same sixty hours, two recalls, forty-one points apart</h3>
+    <p>
+      This is the single most important thing on this page for anyone reading a figure out of it. The
+      word <b>recall</b> carries two measurements in this project, and nothing in the word
+      distinguishes them.
+    </p>
+    <div class="fig">
+      <div class="fig__art">
+        <svg width="640" height="250" viewBox="0 0 640 250" role="img"
+             aria-label="On the sixty mixed-evidence hours, recall counted per hour is 1.000 — sixty of sixty — while recall counted per disrupted aircraft is 0.587, or 176 of 300. Both figures are correct and describe different populations.">
+          <text class="fig__label" x="8" y="20">the same sixty hours, counted two ways</text>
+
+          <text class="fig__val" x="8" y="62">counted per hour</text>
+          <text class="fig__val" x="8" y="80" fill="var(--muted)">did it name the right anomaly?</text>
+          <rect x="250" y="48" width="320" height="22" rx="3" fill="none" stroke="var(--line)" stroke-width="1" />
+          <rect x="250" y="48" width="320" height="22" rx="3" fill="var(--signal)" opacity="0.85" />
+          <text class="fig__val" x="582" y="64" fill="var(--signal)">1.000</text>
+          <text class="fig__val" x="410" y="63" text-anchor="middle" fill="var(--surface)">60 of 60</text>
+
+          <text class="fig__val" x="8" y="136">counted per disrupted aircraft</text>
+          <text class="fig__val" x="8" y="154" fill="var(--muted)">did it flag each aircraft interfered with?</text>
+          <rect x="250" y="122" width="320" height="22" rx="3" fill="none" stroke="var(--line)" stroke-width="1" />
+          <rect x="250" y="122" width="188" height="22" rx="3" fill="var(--warn)" opacity="0.85" />
+          <text class="fig__val" x="582" y="138" fill="var(--warn)">0.587</text>
+          <text class="fig__val" x="344" y="137" text-anchor="middle" fill="var(--surface)">176 of 300</text>
+
+          <line x1="438" y1="90" x2="438" y2="176" stroke="var(--line)" stroke-width="1" stroke-dasharray="3 3" />
+          <line x1="570" y1="90" x2="570" y2="176" stroke="var(--line)" stroke-width="1" stroke-dasharray="3 3" />
+          <line x1="438" y1="192" x2="570" y2="192" stroke="var(--bad)" stroke-width="1.5" />
+          <path d="M444 186 L438 192 L444 198 Z" fill="var(--bad)" />
+          <path d="M564 186 L570 192 L564 198 Z" fill="var(--bad)" />
+          <text class="fig__val" x="504" y="216" text-anchor="middle" fill="var(--bad)">41 points</text>
+          <text class="fig__val" x="504" y="234" text-anchor="middle" fill="var(--muted)">both figures correct</text>
+        </svg>
+      </div>
+    </div>
+    <p class="caption">
+      The mixed-evidence hours, which stage a faulty receiver and remove five aircraft at the same
+      time. The system named the right anomaly on every single hour, and on each of those hours it
+      said nothing about roughly four in ten of the aircraft that had been disrupted.
+    </p>
+    <p>
+      Both numbers are right, and they are compatible because the announced answer on that kind of
+      hour rests on the radio evidence and <b>needs no aircraft at all</b>. Quoted without saying
+      which is which, either one misleads in a different direction: the per-hour figure alone implies
+      the aircraft rule is flawless, and the per-aircraft figure alone implies the system missed four
+      hours in ten.
+    </p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Kind of hour</th><th class="n">Recall per hour</th>
+            <th class="n">Recall per disrupted aircraft</th><th>Why they differ</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="key">Interference</td><td class="n">1.000</td><td class="n">0.823</td>
+            <td class="why">The aircraft here have their reported position frozen, which is the more visible of the two disruptions</td>
+          </tr>
+          <tr>
+            <td class="key">Mixed evidence</td><td class="n">1.000</td><td class="n">0.587</td>
+            <td class="why">The aircraft here simply stop being heard, which is harder to tell from ordinary loss of contact</td>
+          </tr>
+          <tr>
+            <td class="key">Aircraft coverage gap</td><td class="n">—</td><td class="n">0.587</td>
+            <td class="why">The same disruption as the row above. No per-hour figure, because no built rule announces this kind of hour</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="caption">
+      The safeguard adopted is mechanical rather than editorial: nothing the system exports is
+      labelled simply <em>recall</em>. Every figure carries its population in its own name, so
+      neither can be copied into a table without it.
+    </p>
+
+    <h3>How long it took to know</h3>
+    <p>
+      These are the first delay figures the project has ever produced on real hours. Read them as
+      defined above: <b>how much of the incident had to elapse before the evidence was complete</b>,
+      over the hours the system got right.
+    </p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Kind of hour</th><th class="n">Hours it was taken over</th>
+            <th class="n">Median</th><th class="n">Fastest</th><th class="n">Slowest</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="key">One broken receiver</td><td class="n">60</td><td class="n">10 s</td><td class="n">10 s</td><td class="n">90 s</td></tr>
+          <tr><td class="key">Mixed evidence</td><td class="n">60</td><td class="n">10 s</td><td class="n">10 s</td><td class="n">90 s</td></tr>
+          <tr><td class="key">Interference</td><td class="n">60</td><td class="n">20 s</td><td class="n">10 s</td><td class="n">90 s</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      <b>The ten-second floor is not a rounding artefact and not a coincidence.</b> A blip lasting a
+      single reading stopped counting as an event earlier in this project, which means ten seconds is
+      the shortest stretch of evidence any rule will act on. No delay can be shorter than that, and
+      the two broken-receiver rows sit exactly on it: the rule decided as soon as it was permitted to
+      look. That threshold was chosen to remove false reports, and this is the first time the project
+      has put a price on it — the price is that nothing can be known faster.
+    </p>
+    <p>
+      The interference row is one sampling interval slower, and that is the rule's claim showing up
+      in the arithmetic rather than a weakness. Interference means <em>more than one receiver went
+      wrong together</em>, so the earliest moment it can be supported is when the <em>second</em>
+      receiver's evidence becomes sufficient — not the first. A single formula for both rules would
+      have understated this by however long the receivers were staggered.
+    </p>
+    <p>
+      Two possibilities the definition allowed for turned out not to occur: no delay came out
+      negative — which would have meant a rule sweeping in readings from before the incident began —
+      and there was no hour where a rule announced something but its evidence could not be traced.
+    </p>
+
+    <h3>Nothing was ever called by the wrong name</h3>
+    <p>
+      Laid out as a grid of what was staged against what was said, every hour falls on the diagonal.
+      No hour of one kind was announced as another, no hour produced two different answers, and the
+      two silent kinds were silent throughout.
+    </p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Staged ↓ &nbsp; Said →</th><th class="n"><em>receiver broken</em></th>
+            <th class="n"><em>interfering</em></th><th class="n"><em>not hearing aircraft</em></th>
+            <th class="n">silence</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="key">One broken receiver</td><td class="n">60</td><td class="n dim">·</td><td class="n dim">·</td><td class="n dim">·</td></tr>
+          <tr><td class="key">Mixed evidence</td><td class="n">60</td><td class="n dim">·</td><td class="n dim">·</td><td class="n dim">·</td></tr>
+          <tr><td class="key">Interference</td><td class="n dim">·</td><td class="n">60</td><td class="n dim">·</td><td class="n dim">·</td></tr>
+          <tr><td class="key">Quiet baseline</td><td class="n dim">·</td><td class="n dim">·</td><td class="n dim">·</td><td class="n">60</td></tr>
+          <tr><td class="key">Aircraft coverage gap</td><td class="n dim">·</td><td class="n dim">·</td><td class="n dim">·</td><td class="n">60</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="caption">
+      The third column is empty because no rule can produce that answer. That is the coverage gap,
+      visible as a column rather than stated as a caveat.
+    </p>
+
+    <h3>A perfect score is a weaker result than it looks</h3>
+    <div class="panel panel--warn">
+      <p class="lede">
+        <b>Every figure in the tables above is 1.000 or 0.000, and that is not as good as it
+        sounds.</b> What it establishes is that the detection layer is correctly wired and internally
+        consistent. It does not establish that the layer would detect real interference.
+      </p>
+    </div>
+    <p>
+      Three reasons, and they belong in the write-up rather than in a footnote.
+    </p>
+    <ul class="gaps">
+      <li>
+        <b>The radio half of the data is invented.</b> The receiver grid, the way signals fall off
+        with distance, and the incident itself are all generated by this project, and the injected
+        disturbance sits comfortably above the detection threshold by construction. A precision of
+        1.000 measures the rules against the generator that fed them.
+      </li>
+      <li>
+        <b>There are no near-misses in the corpus.</b> Nothing in it stages an incident at the edge
+        of what can be detected, so no hour in it is genuinely difficult. A result about telling
+        hard cases apart needs a body of hours that contains hard cases, and building one is the
+        obvious next experiment rather than a rerun of this one.
+      </li>
+      <li>
+        <b>One of the three answers has no rule behind it.</b> The figures cover two, which is why
+        the coverage-gap hours are a silence to be checked rather than a fourth thing to be caught,
+        and why every rate above is quoted as covering two of three.
+      </li>
+    </ul>
+    <p>
+      There is one figure in the whole results section that carries information from outside the
+      generator, and it is worth saying which: <b>the per-aircraft recall</b>. The aircraft tracks
+      are real recorded traffic rather than invented, so the disruptions staged on them have to
+      compete with genuine loss of contact, aircraft on the ground, and ordinary gaps in coverage.
+      That figure is <b>0.587 on two of the three kinds of hour it applies to</b> — and the accounting
+      for where the missing aircraft went is complete, with two of the four suspected causes
+      responsible for none of them at all.
+    </p>
+    <p>
+      The honest summary, and the one that will be written up: the detection layer does exactly what
+      it was specified to do on the hours it was given, it never confuses one kind of incident with
+      another, it never speaks when it should be silent, and the question of how it behaves against
+      genuine interference at the edge of detectability remains open.
+    </p>
+  </section>
+
+  <section>
     <h2>The rules the build follows</h2>
     <ul class="rules">
       <li><b>Nothing is written before it is specified and proven to fail.</b> Every capability gets a
@@ -7142,7 +7585,7 @@ second pass   <b>5.060000171975998</b></div>
 
     <div class="outcomes">
       <div class="outcome">
-        <h3>1,631</h3>
+        <h3>1,682</h3>
         <p>Tests passing in containers against a real database, from a database that was deleted first to prove nothing was left over.</p>
       </div>
       <div class="outcome">
@@ -7150,7 +7593,7 @@ second pass   <b>5.060000171975998</b></div>
         <p>Of the back-end code is exercised by those tests. The screens measure nothing of the kind — see below.</p>
       </div>
       <div class="outcome">
-        <h3>65 / 104</h3>
+        <h3>67 / 104</h3>
         <p>Numbered capabilities finished. The rest are specified and waiting, not vague.</p>
       </div>
     </div>
@@ -7281,12 +7724,12 @@ second pass   <b>5.060000171975998</b></div>
           <tr><td class="key">API</td><td class="n">5</td><td class="n">11</td><td class="why">A health check, the picture and the dashboard reading it, plus the two scenario endpoints and the screen reading those — a batch now starts from a button</td></tr>
           <tr><td class="key">Screens and map</td><td class="n">2</td><td class="n">16</td><td class="why">Three ways in, two of which lead to a screen; both read the real store, and the rail collapses to give the workspace its width back</td></tr>
           <tr><td class="key">Scenario generator</td><td class="n">8</td><td class="n">8</td><td class="why">Complete. Receiver positions fixed, an invented hour reproducible from one number, all five kinds of run staging what they should, twenty produced unattended from a single number by one command, the screen that will drive it, disruptions staged only on aircraft that are actually flying, a floor of five affected aircraft per hour so that no hour is unscoreable, and every hour now recording the number it was generated from so a batch can be reproduced rather than remembered</td></tr>
-          <tr><td class="key">Anomaly detection</td><td class="n">11</td><td class="n">14</td><td class="why">What normal looks like, and a rule for each side of the picture — the radio and the aircraft. Findings are kept and grouped, and the evidence the final rules read has been settled: grouping alone could not separate a staged hour from a quiet one, so it was replaced by a local rate comparison — measured first, and chosen over turning up the scenario settings. The three answers the system may give are one decision asked in a fixed order; the order itself is now built and enforced, and two of the three tests with it. Marked against the answer key over three hundred regenerated hours in three independently seeded waves: every one of the five kinds of hour decided correctly sixty times out of sixty, no event anywhere given two answers, and — since a blip lasting one reading stopped counting as an event — no false report anywhere at all. The third test, ruled out last time, is worth attempting again. Two things have since been settled that the chapter cannot be written without: how long an incident must run before a rule has the evidence it demands — a property of the rule rather than a measure of how fast the software is, since nothing here notices anything while it is happening — and the other half of the testing, the hours with nothing staged in them, where <b>none of the twenty produces anything an analyst would be shown</b>. That second check turned out to need real care: an empty result is also what a machine that never ran produces, so it is given an account of every detector by name and refuses to grade an hour where one is missing. And how much of what is staged the aircraft side actually sees is now measured on two independently seeded waves rather than on one: 82 per cent of disrupted aircraft found on the navigation arm, 59 on the two suppression arms, with every missing aircraft accounted for and two of the four suspected causes accounting for none of them at all. Three waves rather than one is what makes that reportable: the navigation arm gives 83, 81 and 83 per cent and the suppression arms give 64, 59 and 53, so one is a property of the mechanism and the other varies with which aircraft a wave happened to disrupt — and a single batch would have stated both with the same confidence</td></tr>
+          <tr><td class="key">Anomaly detection</td><td class="n">12</td><td class="n">14</td><td class="why">What normal looks like, and a rule for each side of the picture — the radio and the aircraft. Findings are kept and grouped, and the evidence the final rules read has been settled: grouping alone could not separate a staged hour from a quiet one, so it was replaced by a local rate comparison — measured first, and chosen over turning up the scenario settings. The three answers the system may give are one decision asked in a fixed order; the order itself is now built and enforced, and two of the three tests with it. Marked against the answer key over three hundred regenerated hours in three independently seeded waves: every one of the five kinds of hour decided correctly sixty times out of sixty, no event anywhere given two answers, and — since a blip lasting one reading stopped counting as an event — no false report anywhere at all. The third test, ruled out last time, is worth attempting again. Two things have since been settled that the chapter cannot be written without: how long an incident must run before a rule has the evidence it demands — a property of the rule rather than a measure of how fast the software is, since nothing here notices anything while it is happening — and the other half of the testing, the hours with nothing staged in them, where <b>none of the sixty produces anything an analyst would be shown</b>. That second check turned out to need real care: an empty result is also what a machine that never ran produces, so it is given an account of every detector by name and refuses to grade an hour where one is missing. And how much of what is staged the aircraft side actually sees is now measured on two independently seeded waves rather than on one: 82 per cent of disrupted aircraft found on the navigation arm, 59 on the two suppression arms, with every missing aircraft accounted for and two of the four suspected causes accounting for none of them at all. Three waves rather than one is what makes that reportable: the navigation arm gives 83, 81 and 83 per cent and the suppression arms give 64, 59 and 53, so one is a property of the mechanism and the other varies with which aircraft a wave happened to disrupt — and a single batch would have stated both with the same confidence. And now the results table itself: sixty of sixty on all three kinds of hour that stage something, no false alarm on either kind of silence, nothing anywhere called by the wrong name, and the first delay figures the project has produced — ten seconds on the broken-receiver rules and twenty on interference, which is one sampling interval slower because its claim is that a <em>second</em> receiver went wrong too</td></tr>
           <tr><td class="key">Evidence bundles</td><td class="n">2</td><td class="n">2</td><td class="why">Complete. One event becomes one package, with the frequency dimension joined up here because nothing upstream joins it, and with every absence labelled by which of the three kinds it is rather than left as silence. Every statement's citations are then resolved against the store before the package is allowed to exist — which found that one citation in eleven had been pointing at a reconstructed instant rather than a stored reading, in a field that had been written and never read since the findings were first kept</td></tr>
           <tr><td class="key">AI hypothesis layer</td><td class="n">9</td><td class="n">12</td><td class="why">The shape every explanation must take, and the first thing that produces one. The shape is a constraint on what a model is allowed to emit rather than a description of what it did, so each guarantee is checked on the translated version a model is actually handed as well as on the original. The producer built first has no model in it: it is both the fallback for when a model's answer cannot be trusted and the yardstick the models are measured against. Run over all forty-one real packages it produced forty-one explanations, refused none, and every one of its one hundred and sixty-four citations was found in the package it came from. Since then, the seam a model plugs into — defined before either model exists, so neither one's peculiarities leak into it — and the decision about what a person sees when a model's answer cannot be used: ask again a fixed number of times, then fall back to the mechanical account, and keep a record of why, plus the guard that counts what a run spends and stops it rather than letting it quietly continue. Then the producer the whole project is about: a model, handed the package and constrained so it cannot emit the wrong shape at all. And now the safeguard that constraint cannot be — every claim an explanation rests on is resolved against the package it came from, with citing an explanation the system itself rejected treated as its own kind of failure rather than lumped in with inventing one. Over the forty-one real packages it flagged none of one hundred and sixty-four honest citations, and caught all one hundred and sixty-four deliberate corruptions. And now the first real requests: eight explanations over three packages, read by hand. Every claim in every one of them traced back to its package; reading them found an instruction that had never been written, without which the blind marking would have been decided by citation count alone; and running the trial twice showed the answers do not reproduce word for word, which narrows a claim this project had been making about reproducibility and settles a question about whether asking a model again after a bad answer is a real mechanism. And now the job that asks twenty questions rather than one: it keeps the answers that were thrown away, because those are the only evidence the safeguard ever did anything, and it takes care that a rejected answer is counted once rather than twice and that a mechanical stand-in is never counted as the model's — a mistake that would make the model look better the more often it failed. What remains is choosing the twenty packages, the marking pack itself, and the marking</td></tr>
           <tr><td class="key">Hypothesis screen and feedback</td><td class="n">0</td><td class="n">6</td><td class="why">Specified, unbuilt</td></tr>
-          <tr><td class="key">Evaluation</td><td class="n">5</td><td class="n">9</td><td class="why">Scoring instrument written and locked, and amended twice in the open since — once because the sample it described could not exist on the built system, once because asking the model a single time rested on an assumption the first real requests disproved. The twenty packages are chosen from one number and written down; the run has happened and cost eighty-five pence; the per-producer figures are computed for each writer separately and never pooled, because the difference between them <em>is</em> the result. The pack the marker reads is built, and then rebuilt: correct by every automated check and unusable by a person, missing the one thing — which receiver each finding came from — that the first scored dimension depends on. The marker's pack now also carries a glossary, and the workbook a matching tab, under one rule: an entry may say what a word refers to and never what seeing it would mean, the second being the marker's own job. What is left is the marking itself and the arithmetic over the returned sheets, and that waits on a person rather than on code — plus the table of detection figures, which now has two of its three inputs</td></tr>
-          <tr class="total"><td class="key">Total</td><td class="n">65</td><td class="n">104</td><td class="why">&nbsp;</td></tr>
+          <tr><td class="key">Evaluation</td><td class="n">6</td><td class="n">9</td><td class="why">Scoring instrument written and locked, and amended twice in the open since — once because the sample it described could not exist on the built system, once because asking the model a single time rested on an assumption the first real requests disproved. The twenty packages are chosen from one number and written down; the run has happened and cost eighty-five pence; the per-producer figures are computed for each writer separately and never pooled, because the difference between them <em>is</em> the result. The pack the marker reads is built, and then rebuilt: correct by every automated check and unusable by a person, missing the one thing — which receiver each finding came from — that the first scored dimension depends on. The marker's pack now also carries a glossary, and the workbook a matching tab, under one rule: an entry may say what a word refers to and never what seeing it would mean, the second being the marker's own job. What is left is the marking itself and the arithmetic over the returned sheets, and that waits on a person rather than on code — and the table of detection figures is now built and measured over all three hundred hours — every rate defined by the population it is counted over, the two recalls kept apart, the two kinds of false alarm never pooled, and a refusal to report either unless the quiet hours passed their own check</td></tr>
+          <tr class="total"><td class="key">Total</td><td class="n">67</td><td class="n">104</td><td class="why">&nbsp;</td></tr>
         </tbody>
       </table>
     </div>
@@ -7441,15 +7884,19 @@ second pass   <b>5.060000171975998</b></div>
           that a named rule exists, never that the sentence attached to it is true. Which of those
           two the study can actually claim is what the marking decides.
           <br><br>
-          One piece of code can proceed while that waits, and it is the table of detection figures —
-          how often the system is right, how often it is wrong in each of the two directions, and how
-          long each answer takes to become available. Two of its three inputs now exist: the delay,
-          and the false-alarm side, which is zero across sixty quiet hours over two of the three
-          answers. The third — how many disrupted aircraft the dropout rule actually catches — is now measured
-          on three independently generated batches and is 82 per cent on the navigation arm and 59
-          on the suppression arms. The set of hours was deliberately finished first, so the table is
-          computed once on a fixed corpus rather than computed, extended and recomputed with results
-          already in view. Three of its six columns have never been computed at all.
+          One piece of code did proceed while that waits, and it is the table of detection figures
+          above. The set of hours was deliberately finished first, so it was computed once over a
+          fixed three hundred rather than computed, extended and recomputed with results already in
+          view. Three of its six figures had never been computed at all before this, and the delay
+          column had never been run against a single real hour.
+          <br><br>
+          What remains on that side is not another figure but the same figures over harder hours.
+          Everything in the table is a 1.000 or a 0.000, which says the layer is wired correctly and
+          says very little about whether it would catch real interference — the incidents staged
+          here all sit well above the detection threshold by construction, so nothing in the corpus
+          is a genuinely difficult case. Generating a body of hours with incidents at the edge of
+          detectability is the experiment that would turn this from a consistency result into an
+          accuracy one, and it is named here as out of scope rather than as unnecessary.
         </div>
       </div>
       <div class="tier">
