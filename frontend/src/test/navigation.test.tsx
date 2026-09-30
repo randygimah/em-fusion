@@ -30,11 +30,7 @@ describe("the navigation shell", () => {
   it("declares exactly three screens, each with its own address", () => {
     // spec: nav-001, FR-701 — the closed set at its source. Two lists would be
     // two places to add a fourth, and only one of them would be tested.
-    expect(SCREENS.map((screenRoute) => screenRoute.label)).toEqual([
-      "Operational Picture",
-      "Hypotheses",
-      "Scenario Control",
-    ]);
+    expect(SCREENS.map((screenRoute) => screenRoute.label)).toEqual(["Operational Picture", "Hypotheses", "Scenario Control"]);
     expect(new Set(SCREENS.map((screenRoute) => screenRoute.hash)).size).toBe(3);
   });
 
@@ -134,11 +130,18 @@ describe("the navigation shell", () => {
     // spec: nav-001 (fourth decision), api-003 — the hook belongs to the
     // screen that needs it. Left in App it would poll every five seconds
     // against an endpoint whose data is not on screen.
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => operationalPicture,
-    } as Response);
+    // Answered per path, not one body for every request. A single stub returned
+    // the picture to the Scenario Control feed as well, so `control.runs` became
+    // an object and the screen threw `control.runs.map is not a function` while
+    // every assertion still passed -- an unhandled error that left the whole
+    // frontend suite exiting non-zero, and therefore any gate over it broken.
+    const fetchMock = vi.fn().mockImplementation((path: string) =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => (String(path).includes("operational-picture") ? operationalPicture : []),
+      } as Response),
+    );
     vi.stubGlobal("fetch", fetchMock);
     vi.useFakeTimers();
 
@@ -146,8 +149,7 @@ describe("the navigation shell", () => {
     // screen polls an endpoint of its own, so a bare call count keeps rising
     // after the analyst leaves the picture and would fail this test for the
     // opposite of the reason it exists.
-    const pictureCalls = () =>
-      fetchMock.mock.calls.filter(([path]) => String(path).includes("operational-picture")).length;
+    const pictureCalls = () => fetchMock.mock.calls.filter(([path]) => String(path).includes("operational-picture")).length;
 
     render(<App />);
     await vi.advanceTimersByTimeAsync(DEFAULT_POLL_INTERVAL_MS * 2);

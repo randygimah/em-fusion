@@ -107,3 +107,29 @@ export interface ScenarioControl {
   library: ScenarioLibraryEntry[];
   runs: ScenarioRunRecord[];
 }
+
+// What the backend reports is already running, when it refuses a start with a
+// 409. spec: api-011.
+//
+// Facts, never prose: the sentence an analyst reads is composed on the screen,
+// where the rest of this screen's copy already lives. Field names mirror the
+// backend model and a parity test in the backend suite holds them to it — a
+// rename on either side would leave the analyst reading `undefined` about a
+// batch that really is running, visible only by starting two batches by hand.
+//
+// The scenario type is here legitimately, for FR-714's reason: the analyst chose
+// it, and this screen is the evaluation harness's own face rather than the
+// analyst's picture. What was *staged* is not here, per api-009.
+export interface InFlightBatch {
+  scenarioType: ScenarioTypeId;
+  baseSeed: number;
+  startedAt: string;
+}
+
+// Why a batch did not start. spec: api-011.
+//
+// Two kinds, kept apart because the screen says different things about them. A
+// batch already running is temporary and self-clearing — the button comes back
+// when it finishes. A configuration the backend would not accept is neither, and
+// nothing changes until the analyst changes something.
+export type BatchRefusal = { kind: "already-running"; inFlight: InFlightBatch } | { kind: "not-accepted"; detail: string };

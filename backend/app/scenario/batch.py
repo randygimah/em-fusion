@@ -35,6 +35,7 @@ from app.db.repository import PostgisObservationRepository
 from app.db.session import get_sessionmaker
 from app.pipeline import EXCLUSIONS_NAME, run_batch
 from app.replay import DEFAULT_DATA_DIR, DEFAULT_ENV_FILE, EXTRACT_NAME, MANIFEST_NAME
+from app.scenario.guard import Lease
 from app.scenario.layout import load_layout
 from app.scenario.tracks import load_exclusions
 
@@ -77,13 +78,21 @@ def run_batch_now(
     )
 
 
-def launch_batch(request: BatchRequest) -> None:
+def launch_batch(request: BatchRequest, lease: Lease) -> None:
     """Start a batch and return immediately. The launcher the route uses.
 
     Failures are logged and go no further. There is nobody left to raise to --
     the response was sent before this thread was scheduled -- and the run rows
     already written are the record of what happened, which is the same posture
     `run_batch` takes toward a single run that fails inside a batch.
+
+    **The lease is released in the thread's `finally`, always** (`api-011`).
+    Here and not where this function returns: it returns within microseconds and
+    the batch runs for about seventy seconds, so a release at the call site would
+    free the guard before a single run row had been opened. And in a `finally`
+    rather than after the call, because a batch that raises must free it too --
+    one failure leaving the guard held would disable the button until the
+    container restarted, which is a worse defect than the one the guard fixes.
     """
 
     def work() -> None:
@@ -96,5 +105,7 @@ def launch_batch(request: BatchRequest) -> None:
                 request.base_seed,
                 request.runs,
             )
+        finally:
+            lease.release()
 
     Thread(target=work, name="scenario-batch", daemon=True).start()

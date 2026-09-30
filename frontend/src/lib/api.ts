@@ -1,5 +1,5 @@
 import type { OperationalPicture } from "../types/operationalPicture";
-import type { ScenarioConfiguration, ScenarioRunRecord } from "../types/scenarioControl";
+import type { InFlightBatch, ScenarioConfiguration, ScenarioRunRecord } from "../types/scenarioControl";
 
 /**
  * The only module in the frontend that reaches the network. spec: api-003.
@@ -25,10 +25,7 @@ export const OPERATIONAL_PICTURE_PATH = "/api/v1/operational-picture";
 export const DEFAULT_POLL_INTERVAL_MS = 5000;
 
 /** Fetch the current picture, or throw. */
-export const fetchOperationalPicture = async (
-  baseUrl = "",
-  signal?: AbortSignal,
-): Promise<OperationalPicture> => {
+export const fetchOperationalPicture = async (baseUrl = "", signal?: AbortSignal): Promise<OperationalPicture> => {
   const response = await fetch(`${baseUrl}${OPERATIONAL_PICTURE_PATH}`, { signal });
   if (!response.ok) {
     // Thrown rather than returned as a value: every caller has to handle a
@@ -61,16 +58,35 @@ export interface BatchAcceptance {
 }
 
 /** The runs the database holds, newest first, or throw. */
-export const fetchScenarioRuns = async (
-  baseUrl = "",
-  signal?: AbortSignal,
-): Promise<ScenarioRunRecord[]> => {
+export const fetchScenarioRuns = async (baseUrl = "", signal?: AbortSignal): Promise<ScenarioRunRecord[]> => {
   const response = await fetch(`${baseUrl}${SCENARIO_RUNS_PATH}`, { signal });
   if (!response.ok) {
     throw new Error(`${SCENARIO_RUNS_PATH} responded ${response.status}`);
   }
   return (await response.json()) as ScenarioRunRecord[];
 };
+
+/**
+ * A start refused because one batch is already running. spec: api-011.
+ *
+ * A distinct type rather than a status code on a generic error, because the
+ * screen has to say something different about it: this refusal is temporary and
+ * clears itself when the running batch finishes, where a rejected configuration
+ * changes nothing until the analyst changes something. The message here is for a
+ * developer reading a stack trace; the analyst's sentence is composed on screen
+ * out of `inFlight`.
+ */
+export class BatchAlreadyRunningError extends Error {
+  readonly inFlight: InFlightBatch;
+
+  constructor(inFlight: InFlightBatch) {
+    super(
+      `${SCENARIO_START_PATH} responded 409: a ${inFlight.scenarioType} batch from base seed ${inFlight.baseSeed} has been running since ${inFlight.startedAt}`,
+    );
+    this.name = "BatchAlreadyRunningError";
+    this.inFlight = inFlight;
+  }
+}
 
 /**
  * Ask for a batch, and get back what was accepted rather than what was run.
@@ -80,15 +96,19 @@ export const fetchScenarioRuns = async (
  * minute. A refusal — an unknown type, a batch outside the run bounds, an
  * incident beginning after its run ends — is a 422 and throws here.
  */
-export const startScenarioBatch = async (
-  configuration: ScenarioConfiguration,
-  baseUrl = "",
-): Promise<BatchAcceptance> => {
+export const startScenarioBatch = async (configuration: ScenarioConfiguration, baseUrl = ""): Promise<BatchAcceptance> => {
   const response = await fetch(`${baseUrl}${SCENARIO_START_PATH}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(configuration),
   });
+  if (response.status === 409) {
+    // The only refusal whose body is read. A 409 carries what is already in
+    // flight, and discarding it would leave the screen with nothing to name —
+    // which is the defect that prompted the item, wearing a status code.
+    const body = (await response.json()) as { detail: InFlightBatch };
+    throw new BatchAlreadyRunningError(body.detail);
+  }
   if (!response.ok) {
     throw new Error(`${SCENARIO_START_PATH} responded ${response.status}`);
   }

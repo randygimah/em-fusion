@@ -130,6 +130,28 @@ class ScenarioStartAccepted(BaseModel):
     seeds: list[int]
 
 
+class BatchInFlight(BaseModel):
+    """What is already running, when a start is refused. Spec: api-011.
+
+    **Facts, never prose.** The sentence an analyst reads is composed on the
+    screen, for two reasons. Every other piece of user-facing copy on that
+    screen is already there -- the validation refusals, the acceptance note --
+    so a server-composed message would split the screen's voice across two
+    codebases and make its tone depend on the API. And a body of fields is
+    assertable field by field, where a sentence is assertable only by substring,
+    which is the weaker test of the two.
+
+    Three fields and no fourth, and the suite asserts the key set exactly: what
+    was *staged* is not here, per `api-009`.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    scenarioType: str
+    baseSeed: int
+    startedAt: datetime
+
+
 class ScenarioRunListing(BaseModel):
     """One row of the recent-runs table. Spec: api-006, scn-004.
 

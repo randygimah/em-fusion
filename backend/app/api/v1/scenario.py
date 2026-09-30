@@ -14,11 +14,13 @@ started* without a corpus on disk or a database to start it against.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Protocol
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.api.v1.schemas.scenario import (
+    BatchInFlight,
     BatchRequest,
     ScenarioRunListing,
     ScenarioStartAccepted,
@@ -28,6 +30,13 @@ from app.db.repository import list_runs
 from app.db.session import SessionFactory, get_sessionmaker
 from app.pipeline import derive_seeds
 from app.scenario.batch import launch_batch
+from app.scenario.guard import (
+    BATCH_GUARD,
+    BatchAlreadyRunning,
+    BatchGuard,
+    InFlightBatch,
+    Lease,
+)
 from app.scenario.seeding import new_seed
 
 router = APIRouter(prefix="/scenario", tags=["scenario"])
@@ -42,7 +51,7 @@ class BatchLauncher(Protocol):
     background thread exists to avoid.
     """
 
-    def __call__(self, request: BatchRequest) -> None: ...
+    def __call__(self, request: BatchRequest, lease: Lease) -> None: ...
 
 
 def get_batch_launcher() -> BatchLauncher:
@@ -50,10 +59,25 @@ def get_batch_launcher() -> BatchLauncher:
     return launch_batch
 
 
+def get_batch_guard() -> BatchGuard:
+    """The process's one guard (`api-011`), reached through the same seam.
+
+    A dependency rather than a direct reference so the suite can substitute a
+    fresh guard per test. What it must *not* be is the place the guard is
+    **taken**: a dependency is resolved whether or not the request body
+    validates, so a guard claimed here would be consumed by a 422 -- an unknown
+    scenario type, a batch outside the run bounds, an incident beginning after
+    its run ends -- and the next valid start would be refused 409 with nothing
+    running at all.
+    """
+    return BATCH_GUARD
+
+
 @router.post("/start", status_code=202)
 def start_scenario(
     request: ScenarioStartRequest,
     launcher: BatchLauncher = Depends(get_batch_launcher),
+    guard: BatchGuard = Depends(get_batch_guard),
 ) -> ScenarioStartAccepted:
     """Accept a batch and start it. spec: api-006.
 
@@ -65,11 +89,44 @@ def start_scenario(
     comes back in the response either way -- a run whose seed nobody was told
     cannot be reproduced from its record, which is the constraint this item has
     carried since it was written.
+
+    **One batch at a time** (`api-011`). The guard is taken here, in the handler
+    body, so a refused configuration cannot consume it; it is handed on to the
+    launcher, because the release belongs to the thread that finishes the batch
+    rather than to the call that starts it. A launcher that raises before its
+    thread is running is the one case this frame has to clean up after: one
+    failure leaving the guard held would disable the button until the container
+    restarted, turning a recoverable error into an outage of the same kind this
+    item exists to prevent.
     """
     base_seed = new_seed() if request.baseSeed is None else request.baseSeed
     seeds = derive_seeds(base_seed, request.runs)
+    batch = request.resolved(base_seed)
 
-    launcher(request.resolved(base_seed))
+    try:
+        lease = guard.take(
+            InFlightBatch(
+                scenario_type=batch.scenario_type,
+                base_seed=base_seed,
+                started_at=datetime.now(UTC),
+            )
+        )
+    except BatchAlreadyRunning as refusal:
+        running = refusal.in_flight
+        raise HTTPException(
+            status_code=409,
+            detail=BatchInFlight(
+                scenarioType=running.scenario_type.value,
+                baseSeed=running.base_seed,
+                startedAt=running.started_at,
+            ).model_dump(mode="json"),
+        ) from refusal
+
+    try:
+        launcher(batch, lease)
+    except Exception:
+        lease.release()
+        raise
 
     return ScenarioStartAccepted(
         baseSeed=base_seed, runs=request.runs, seeds=list(seeds)

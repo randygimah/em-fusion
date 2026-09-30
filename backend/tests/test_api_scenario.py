@@ -765,9 +765,7 @@ def test_the_guard_writes_nothing_to_the_database() -> None:
         for module in (
             [alias.name for alias in node.names]
             if isinstance(node, ast.Import)
-            else [node.module or ""]
-            if isinstance(node, ast.ImportFrom)
-            else []
+            else [node.module or ""] if isinstance(node, ast.ImportFrom) else []
         )
     }
 
@@ -1061,3 +1059,31 @@ def test_the_api_runs_as_a_single_worker(invocation: str) -> None:
     """
     # spec: api-011
     assert "--workers" not in invocation
+
+
+# ------------------------------------------------- the seam's shipped defaults
+#
+# Every test above substitutes both dependencies, which is what makes the
+# refusals assertable without a corpus -- and it means nothing above asserts what
+# the *application* gets. Both failures are silent: a launcher returning a no-op
+# would leave the screen answering 202 and running nothing, and a guard built
+# fresh per call would give every request its own, making the bound vacuous while
+# every test with an override still passed.
+
+
+def test_the_shipped_launcher_is_the_one_that_runs_a_batch() -> None:
+    # spec: api-006
+    assert get_batch_launcher() is batch.launch_batch
+
+
+def test_the_shipped_guard_is_the_one_the_process_shares() -> None:
+    """Spec: api-011 (second and third decisions).
+
+    One guard per process, which is the whole scope of the state. A factory
+    handing out a new guard each call would bound nothing at all.
+    """
+    # spec: api-011
+    from app.scenario.guard import BATCH_GUARD
+
+    assert get_batch_guard() is BATCH_GUARD
+    assert get_batch_guard() is get_batch_guard()

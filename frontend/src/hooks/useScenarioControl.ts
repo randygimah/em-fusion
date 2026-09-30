@@ -1,12 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import {
-  type BatchAcceptance,
-  DEFAULT_POLL_INTERVAL_MS,
-  fetchScenarioRuns,
-  startScenarioBatch,
-} from "../lib/api";
+import { type BatchAcceptance, BatchAlreadyRunningError, DEFAULT_POLL_INTERVAL_MS, fetchScenarioRuns, startScenarioBatch } from "../lib/api";
 import { SCENARIO_LIBRARY } from "../lib/scenarioLibrary";
-import type { ScenarioConfiguration, ScenarioControl } from "../types/scenarioControl";
+import type { BatchRefusal, ScenarioConfiguration, ScenarioControl } from "../types/scenarioControl";
 
 /**
  * What the Scenario Control screen shows, and what starting a batch does.
@@ -30,22 +25,28 @@ export interface ScenarioFeed {
   degraded: boolean;
   /** What the backend accepted, once a batch has been asked for. */
   accepted: BatchAcceptance | null;
-  /** The last refusal, so the screen can say why nothing started. */
-  error: string | null;
+  /**
+   * Why the last start did not happen, so the screen can say so. spec: api-011.
+   *
+   * Typed rather than a string, and that is the correction this item made: the
+   * feed has computed a refusal since `api-010` and the seam dropped it, so
+   * every 422 the backend returned was invisible on screen. A shape with two
+   * kinds is what lets the screen distinguish a batch already running — which
+   * clears itself — from a configuration that will not be accepted until the
+   * analyst changes it.
+   */
+  refusal: BatchRefusal | null;
   start: (configuration: ScenarioConfiguration) => void;
 }
 
-export const useScenarioControl = (
-  intervalMs: number = DEFAULT_POLL_INTERVAL_MS,
-  baseUrl = "",
-): ScenarioFeed => {
+export const useScenarioControl = (intervalMs: number = DEFAULT_POLL_INTERVAL_MS, baseUrl = ""): ScenarioFeed => {
   const [control, setControl] = useState<ScenarioControl>({
     library: SCENARIO_LIBRARY,
     runs: [],
   });
   const [degraded, setDegraded] = useState(true);
   const [accepted, setAccepted] = useState<BatchAcceptance | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [refusal, setRefusal] = useState<BatchRefusal | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -76,7 +77,7 @@ export const useScenarioControl = (
 
   const start = useCallback(
     (configuration: ScenarioConfiguration) => {
-      setError(null);
+      setRefusal(null);
       void startScenarioBatch(configuration, baseUrl)
         .then((acceptance) => {
           // The seed is the point. The backend may have drawn it, and a batch
@@ -85,11 +86,18 @@ export const useScenarioControl = (
         })
         .catch((reason: unknown) => {
           setAccepted(null);
-          setError(reason instanceof Error ? reason.message : "the batch was refused");
+          setRefusal(
+            reason instanceof BatchAlreadyRunningError
+              ? { kind: "already-running", inFlight: reason.inFlight }
+              : {
+                  kind: "not-accepted",
+                  detail: reason instanceof Error ? reason.message : String(reason),
+                },
+          );
         });
     },
     [baseUrl],
   );
 
-  return { control, degraded, accepted, error, start };
+  return { control, degraded, accepted, refusal, start };
 };

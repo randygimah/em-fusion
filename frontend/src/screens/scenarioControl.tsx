@@ -1,6 +1,7 @@
 import { useId, useState } from "react";
 import { EmButton } from "../components/em/EmButton";
 import {
+  type BatchRefusal,
   DEFAULT_CONFIGURATION,
   type ScenarioConfiguration,
   type ScenarioControl,
@@ -36,7 +37,24 @@ interface Props {
   // answers 202 and the first row can be ten seconds behind it, so a control
   // that changed nothing visible would read as a dead button.
   accepted?: { baseSeed: number; runs: number } | null;
+  // Why the last start did not happen (spec: api-011). The feed has computed
+  // this since api-010 and the seam dropped it, so a batch the backend refused
+  // changed nothing on screen — a refusal nobody is told about looking exactly
+  // like the dead button above.
+  refusal?: BatchRefusal | null;
 }
+
+// The instant a running batch started, rendered unambiguously.
+//
+// UTC and not the viewer's locale: the seed, the run window and every recorded
+// parameter on this screen are already stated in the run's own terms, and a
+// local time here would be the one value an analyst comparing two machines had
+// to convert. A value that will not parse is shown as it arrived rather than
+// swallowed — it came from the API, and hiding it would hide a contract defect.
+const asInstant = (iso: string): string => {
+  const parsed = new Date(iso);
+  return Number.isNaN(parsed.getTime()) ? iso : `${parsed.toISOString().slice(0, 19).replace("T", " ")} UTC`;
+};
 
 // The form holds strings, not numbers: an empty seed field has to stay empty
 // rather than become a zero, and a value read back has to be the value typed.
@@ -133,7 +151,7 @@ const NumberField = ({ label, value, onChange, hint }: { label: string; value: s
   );
 };
 
-const ScenarioControlScreen = ({ control, onStart, onReset, onReplay, degraded = false, accepted = null }: Props) => {
+const ScenarioControlScreen = ({ control, onStart, onReset, onReplay, degraded = false, accepted = null, refusal = null }: Props) => {
   const [form, setForm] = useState<Form>(() => asForm(DEFAULT_CONFIGURATION));
   const [error, setError] = useState<string | null>(null);
   const libraryHeading = useId();
@@ -144,8 +162,8 @@ const ScenarioControlScreen = ({ control, onStart, onReset, onReplay, degraded =
   const nameFor = (id: ScenarioTypeId): string => control.library.find((entry) => entry.id === id)?.name ?? id;
 
   const start = () => {
-    const { configuration, error: refusal } = validate(form);
-    setError(refusal);
+    const { configuration, error: invalid } = validate(form);
+    setError(invalid);
     if (configuration !== null) {
       onStart?.(configuration);
     }
@@ -303,8 +321,8 @@ const ScenarioControlScreen = ({ control, onStart, onReset, onReplay, degraded =
                 className="mt-3 border-l-2 border-[#6fd3a5] bg-[#191b23] px-3 py-2 text-[12px] text-[#6fd3a5]"
                 role="status"
               >
-                Batch accepted — {accepted.runs} runs from base seed <span className="font-mono">{accepted.baseSeed}</span>. Runs appear
-                below as each finishes. Keep that number: it is what reproduces this batch exactly.
+                Batch accepted — {accepted.runs} runs from base seed <span className="font-mono">{accepted.baseSeed}</span>. Runs appear below as each
+                finishes. Keep that number: it is what reproduces this batch exactly.
               </p>
             )}
 
@@ -313,8 +331,8 @@ const ScenarioControlScreen = ({ control, onStart, onReset, onReplay, degraded =
                 className="mt-3 border-l-2 border-[#df7412] bg-[#191b23] px-3 py-2 text-[12px] text-[#ffb786]"
                 role="note"
               >
-                Nothing is wired to these controls yet, and the runs listed below are a recorded example rather than the database. A batch
-                runs from the command line today — <span className="font-mono">make generate</span> — and this screen is what will drive it.
+                Nothing is wired to these controls yet, and the runs listed below are a recorded example rather than the database. A batch runs from
+                the command line today — <span className="font-mono">make generate</span> — and this screen is what will drive it.
               </p>
             )}
 
@@ -324,6 +342,31 @@ const ScenarioControlScreen = ({ control, onStart, onReset, onReplay, degraded =
                 role="alert"
               >
                 {error}
+              </p>
+            )}
+
+            {/* Why the backend would not start it (spec: api-011). Two kinds,
+                because they call for different actions: a batch already running
+                clears itself and the analyst waits, where a configuration the
+                backend rejected needs changing before anything will run. */}
+            {refusal !== null && refusal.kind === "already-running" && (
+              <p
+                className="mt-3 border-l-2 border-[#df7412] bg-[#191b23] px-3 py-2 text-[12px] text-[#ffb786]"
+                role="alert"
+              >
+                A batch is already running — {nameFor(refusal.inFlight.scenarioType)}, base seed{" "}
+                <span className="font-mono">{refusal.inFlight.baseSeed}</span>, started{" "}
+                <span className="font-mono">{asInstant(refusal.inFlight.startedAt)}</span>. Only one batch runs at a time, because several at once
+                exhaust the connections the rest of the system needs. This button works again when that batch finishes.
+              </p>
+            )}
+
+            {refusal !== null && refusal.kind === "not-accepted" && (
+              <p
+                className="mt-3 border-l-2 border-[#ffb4ab] bg-[#191b23] px-3 py-2 text-[12px] text-[#ffb4ab]"
+                role="alert"
+              >
+                The batch was not started, and nothing has changed in the database. <span className="font-mono">{refusal.detail}</span>
               </p>
             )}
           </section>
@@ -369,9 +412,7 @@ const ScenarioControlScreen = ({ control, onStart, onReset, onReplay, degraded =
               </p>
             )}
             {degraded && control.runs.length > 0 && (
-              <p className="mt-2 text-[12px] text-[#ffb786]">
-                Not live — this list is the last one read and may be out of date.
-              </p>
+              <p className="mt-2 text-[12px] text-[#ffb786]">Not live — this list is the last one read and may be out of date.</p>
             )}
           </section>
         </div>

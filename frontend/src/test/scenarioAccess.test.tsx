@@ -9,8 +9,9 @@ import {
   fetchScenarioRuns,
   startScenarioBatch,
 } from "../lib/api";
+import { SCENARIO_LIBRARY } from "../lib/scenarioLibrary";
 import scenarioControlMock from "../mocks/scenarioControlMock";
-import { DEFAULT_CONFIGURATION } from "../types/scenarioControl";
+import { DEFAULT_CONFIGURATION, type InFlightBatch } from "../types/scenarioControl";
 
 // spec: api-010 — the Scenario Control screen stops reading a fixture.
 
@@ -35,17 +36,15 @@ const RUNS = [
   },
 ];
 
-const ok = (body: unknown): Response =>
-  ({ ok: true, status: 200, json: async () => body }) as Response;
+const ok = (body: unknown): Response => ({ ok: true, status: 200, json: async () => body }) as Response;
 
 // A refusal, with a body. The existing 422 stubs carry no `json` at all, which
 // is what holds the transport to reading a body only where there is one to read
 // (spec: api-011).
-const refused = (status: number, body?: unknown): Response =>
-  ({ ok: false, status, json: async () => body }) as Response;
+const refused = (status: number, body?: unknown): Response => ({ ok: false, status, json: async () => body }) as Response;
 
 // What the backend reports is already in flight when it answers 409.
-const IN_FLIGHT = {
+const IN_FLIGHT: InFlightBatch = {
   scenarioType: "gnss-degradation",
   baseSeed: 20220627,
   startedAt: "2026-09-30T14:03:12Z",
@@ -169,10 +168,7 @@ describe("the Scenario Control screen against the backend", () => {
   it("keeps the runs on screen when a later poll fails", async () => {
     // spec: api-010 (fifth failure case), api-003 — stale truth beats fresh
     // nothing, and only the indicator changes
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(ok(RUNS))
-      .mockRejectedValue(new Error("offline"));
+    const fetchMock = vi.fn().mockResolvedValueOnce(ok(RUNS)).mockRejectedValue(new Error("offline"));
     vi.stubGlobal("fetch", fetchMock);
     vi.useFakeTimers();
 
@@ -204,22 +200,18 @@ describe("the Scenario Control screen against the backend", () => {
   it("starts a batch and names the seed the server used", async () => {
     // spec: api-010 (fourth decision) — a 202 that changes nothing on screen
     // reads as a dead button, and the seed is what makes the batch repeatable
-    const fetchMock = vi.fn().mockImplementation((path: string) =>
-      path === SCENARIO_START_PATH
-        ? Promise.resolve(ok({ baseSeed: 1735359291, runs: 20, seeds: [1] }))
-        : Promise.resolve(ok(RUNS)),
-    );
+    const fetchMock = vi
+      .fn()
+      .mockImplementation((path: string) =>
+        path === SCENARIO_START_PATH ? Promise.resolve(ok({ baseSeed: 1735359291, runs: 20, seeds: [1] })) : Promise.resolve(ok(RUNS)),
+      );
     vi.stubGlobal("fetch", fetchMock);
 
     render(<App />);
     fireEvent.click(await screen.findByRole("button", { name: /start batch/i }));
 
     expect(await screen.findByText(/1735359291/)).toBeInTheDocument();
-    await waitFor(() =>
-      expect(
-        fetchMock.mock.calls.some(([path]) => path === SCENARIO_START_PATH),
-      ).toBe(true),
-    );
+    await waitFor(() => expect(fetchMock.mock.calls.some(([path]) => path === SCENARIO_START_PATH)).toBe(true));
   });
 
   it("leaves reset and replay disabled, because neither has an endpoint", async () => {
@@ -254,14 +246,10 @@ describe("where the screen's data comes from", () => {
   // The trap is the same one either way: a rule described must not read as a
   // rule broken. `scenarioLibrary.ts` explains in prose where it came from,
   // and that sentence is why this scrubber exists.
-  const stripComments = (source: string): string =>
-    source.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/\/\/[^\n]*/g, " ");
+  const stripComments = (source: string): string => source.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/\/\/[^\n]*/g, " ");
 
   const appModules = Object.entries(modules).filter(
-    ([path]) =>
-      !path.startsWith("../test/") &&
-      !path.startsWith("./") &&
-      !path.startsWith("../mocks/"),
+    ([path]) => !path.startsWith("../test/") && !path.startsWith("./") && !path.startsWith("../mocks/"),
   );
 
   it("checks the files it claims to check", () => {
@@ -282,9 +270,7 @@ describe("where the screen's data comes from", () => {
   it("imports the scenario fixture nowhere in the app", () => {
     // spec: api-010 (second decision) — the library moved out of the mock, so
     // nothing outside the tests needs it any more
-    const offenders = appModules
-      .filter(([, source]) => stripComments(source).includes("mocks/scenarioControlMock"))
-      .map(([path]) => path);
+    const offenders = appModules.filter(([, source]) => stripComments(source).includes("mocks/scenarioControlMock")).map(([path]) => path);
 
     expect(offenders).toEqual([]);
   });
@@ -326,20 +312,25 @@ describe("a batch that is already running", () => {
   it("says what is already running, and that the button comes back", async () => {
     // spec: api-011 (seventh decision) — a 409 rendering as nothing would look
     // exactly like the defect that prompted this item
-    const fetchMock = vi.fn().mockImplementation((path: string) =>
-      path === SCENARIO_START_PATH
-        ? Promise.resolve(refused(409, { detail: IN_FLIGHT }))
-        : Promise.resolve(ok(RUNS)),
-    );
+    const fetchMock = vi
+      .fn()
+      .mockImplementation((path: string) =>
+        path === SCENARIO_START_PATH ? Promise.resolve(refused(409, { detail: IN_FLIGHT })) : Promise.resolve(ok(RUNS)),
+      );
     vi.stubGlobal("fetch", fetchMock);
 
     render(<App />);
     fireEvent.click(await screen.findByRole("button", { name: /start batch/i }));
 
+    // The library's own name for the type, not the wire identifier: it is what
+    // the rest of this screen calls it, and an analyst comparing the refusal
+    // against the form should not have to translate.
     const refusal = await screen.findByRole("alert");
+    const named = SCENARIO_LIBRARY.find((entry) => entry.id === IN_FLIGHT.scenarioType);
     expect(refusal).toHaveTextContent(/already running/i);
-    expect(refusal).toHaveTextContent(/gnss-degradation/);
+    expect(refusal).toHaveTextContent(named?.name ?? "");
     expect(refusal).toHaveTextContent(/20220627/);
+    expect(refusal).toHaveTextContent(/14:03:12/);
     expect(refusal).toHaveTextContent(/finishes/i);
   });
 
@@ -347,11 +338,9 @@ describe("a batch that is already running", () => {
     // spec: api-011, first finding — the feed has computed this since api-010
     // and App.tsx destructured it away, so a 422 was refused by the backend and
     // the analyst saw nothing
-    const fetchMock = vi.fn().mockImplementation((path: string) =>
-      path === SCENARIO_START_PATH
-        ? Promise.resolve(refused(422))
-        : Promise.resolve(ok(RUNS)),
-    );
+    const fetchMock = vi
+      .fn()
+      .mockImplementation((path: string) => (path === SCENARIO_START_PATH ? Promise.resolve(refused(422)) : Promise.resolve(ok(RUNS))));
     vi.stubGlobal("fetch", fetchMock);
 
     render(<App />);

@@ -9,8 +9,12 @@ import OperationalPictureScreen from "./screens/operationalPicture";
 import ScenarioControlScreen from "./screens/scenarioControl";
 
 // The seam, and the only place that knows where a screen's data comes from
-// (spec: api-003). The picture is fetched; the scenario control fixture is
-// imported, because api-006 does not exist. No screen imports a mock itself.
+// (spec: api-003). Both screens fetch; no screen imports a mock itself.
+//
+// It is also where api-011 found a defect worth recording: this destructuring
+// dropped the scenario feed's refusal, so a start the backend rejected changed
+// nothing on screen at all. Every value a feed exposes has to arrive somewhere,
+// or the seam is where a capability goes to be silently discarded.
 //
 // The hook lives in here rather than in App so that it mounts and unmounts
 // with the screen that needs it: left above the switch it would poll every
@@ -32,7 +36,7 @@ const OperationalPictureRoute = () => {
 // single-run replay is not a request the start endpoint can make, since a
 // batch is between 20 and 30 runs (spec: api-010).
 const ScenarioControlRoute = () => {
-  const { control, degraded, accepted, start } = useScenarioControl();
+  const { control, degraded, accepted, refusal, start } = useScenarioControl();
 
   return (
     <ScenarioControlScreen
@@ -40,6 +44,7 @@ const ScenarioControlRoute = () => {
       control={control}
       degraded={degraded}
       onStart={start}
+      refusal={refusal}
     />
   );
 };
