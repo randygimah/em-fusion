@@ -1,0 +1,35 @@
+eval-001 -- does every stored run re-derive its own seed? Measured 2026-10-01.
+Read-only over the whole store: every batch, not only corpus v2.
+
+380 runs in the store, ids 21 to 400
+19 batches, 0 runs recording no batch
+
+     base seed scenario type               size  runs  re-derived  mismatched
+     655209063 aircraft-coverage-gap         20    20          20           0
+     655209063 ambiguous-mixed-evidence      20    20          20           0
+     655209063 gnss-degradation              20    20          20           0
+     655209063 normal-baseline               20    20          20           0
+     655209063 rf-sensor-fault               20    20          20           0
+     695081452 gnss-degradation              20    20          20           0
+     695081452 normal-baseline               20    20          20           0
+     695081452 rf-sensor-fault               20    20          20           0
+     965530111 aircraft-coverage-gap         20    20          20           0
+     965530111 ambiguous-mixed-evidence      20    20          20           0
+     965530111 gnss-degradation              20    20          20           0
+     965530111 normal-baseline               20    20          20           0
+     965530111 rf-sensor-fault               20    20          20           0
+    1284648146 normal-baseline               20    20          20           0
+    1412660662 aircraft-coverage-gap         20    20          20           0
+    1412660662 ambiguous-mixed-evidence      20    20          20           0
+    1412660662 gnss-degradation              20    20          20           0
+    1412660662 normal-baseline               20    20          20           0
+    1412660662 rf-sensor-fault               20    20          20           0
+
+380 of 380 runs re-derive their own seed exactly
+no mismatches: every batch in the store reproduces from its recorded seed
+
+SEED MATCHING ACROSS ARMS -- one arm's run at index i against another's
+  100 (base seed, index) positions, [1, 3, 5] arms at each
+  every one of the 100 positions carries one seed across all of its arms, so a matched pair really is matched
+
+batch sizes within 20-30: all

@@ -114,12 +114,37 @@ def test_the_threshold_refuses_far_below_a_corpus() -> None:
     fixture rows and a generated corpus, so the guard does not need to be
     tuned finely -- it needs to be nowhere near either edge."""
     # spec: ops-004
-    assert MAX_FIXTURE_RUNS < 60, "a single generated batch is 20 runs per type"
+    assert MAX_FIXTURE_RUNS < 60, "far below a corpus, which is 300 runs"
     assert MAX_FIXTURE_OBSERVATIONS < 100_000, "one run alone holds tens of thousands"
     with pytest.raises(DatabaseGuardError):
         guard_population(runs=MAX_FIXTURE_RUNS + 1, observations=0, url=TEST)
     with pytest.raises(DatabaseGuardError):
         guard_population(runs=0, observations=MAX_FIXTURE_OBSERVATIONS + 1, url=TEST)
+
+
+def test_the_threshold_admits_what_a_legitimate_test_writes() -> None:
+    """The other side of the bracket, and the one that was missing.
+
+    `MAX_FIXTURE_RUNS` was 20 -- exactly a batch's floor -- so a test writing one
+    legitimate minimum batch, plus the run `migrated_database` seeds, left 21 and
+    refused the schema drop for every database test after it in the session. The
+    ceiling was checked against a corpus from above and against nothing from
+    below, which is how a value can sit on an edge a comment says it is nowhere
+    near. Asserted here rather than in the comment, and against the batch bounds
+    themselves rather than a repeated literal.
+    """
+    # spec: eval-001, scn-003
+    from app.pipeline import MAX_RUNS, MIN_RUNS
+
+    # One shared-fixture run beside the largest batch a test could legitimately
+    # write. Anything at or below this must be allowed to be dropped.
+    guard_population(runs=MAX_RUNS + 1, observations=0, url=TEST)
+    guard_population(runs=MIN_RUNS + 1, observations=0, url=TEST)
+
+    assert MAX_FIXTURE_RUNS > MAX_RUNS, (
+        "the ceiling must sit above the largest batch a test can write, or a "
+        "test that writes one poisons every database test after it"
+    )
 
 
 def test_either_count_alone_is_enough_to_refuse() -> None:

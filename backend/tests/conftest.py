@@ -59,11 +59,27 @@ requires_database = pytest.mark.skipif(
 )
 
 
-#: How much a test fixture could plausibly have put there. Fixtures insert a
-#: run or two; one generated run alone holds tens of thousands of
-#: observations and one batch is twenty runs. Nothing legitimate sits in
-#: between, so these are set nowhere near either edge rather than tuned.
-MAX_FIXTURE_RUNS = 20
+#: How much a test fixture could plausibly have put there.
+#:
+#: **The run ceiling was 20 and that was exactly one too low**, found while
+#: building `eval-001`'s test. The comment here used to say "one batch is twenty
+#: runs, nothing legitimate sits in between, so these are set nowhere near either
+#: edge" -- and the value was set *at* that edge. A batch's floor is twenty runs
+#: (`scn-003`), so a test writing one legitimate minimum batch, plus the single
+#: run `migrated_database` seeds for the bundle suites, leaves twenty-one and
+#: trips this guard for **every database test after it in the session**. The
+#: failure is worse than a refusal: it arrives as an unrelated fixture error in a
+#: later test, so the cause looks like the wrong test.
+#:
+#: The real discriminator is the observation count, and it always was: a
+#: generated run holds tens of thousands, a batch-shaped test writes none, and
+#: either count over its ceiling refuses. So the run ceiling only has to sit
+#: above what a legitimate test can write (`MAX_RUNS` plus a fixture row) and far
+#: below a corpus (300). The relationship is asserted in
+#: `test_ops_database_guard.py` rather than trusted to this comment, which is the
+#: correction that matters -- a comment claiming a value is nowhere near an edge
+#: is exactly what stopped anyone checking.
+MAX_FIXTURE_RUNS = 40
 MAX_FIXTURE_OBSERVATIONS = 10_000
 
 
