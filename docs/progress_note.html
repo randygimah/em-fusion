@@ -342,6 +342,7 @@
   }
   .record b { color: var(--ink); font-weight: 500; }
   .record i { color: var(--accent); font-style: normal; }
+  .dim { color: var(--muted); }
   .record .dim { color: var(--muted); }
 
   /* ---------- lists and panels ---------- */
@@ -7438,6 +7439,51 @@ second pass   <b>5.060000171975998</b></div>
       neither can be copied into a table without it.
     </p>
 
+    <div class="fig">
+      <div class="fig__art">
+        <svg width="640" height="276" viewBox="0 0 640 276" role="img"
+             aria-label="Recall counted two ways on the three kinds of hour that stage aircraft. Per hour: interference 1.000, mixed evidence 1.000, aircraft coverage gap not applicable. Per disrupted aircraft: interference 0.823, mixed evidence 0.587, aircraft coverage gap 0.587.">
+          <text class="fig__label" x="8" y="16">the same three kinds of hour, counted two ways</text>
+
+          <line x1="210" y1="32" x2="210" y2="216" stroke="var(--line)" stroke-width="1" />
+          <line x1="590" y1="32" x2="590" y2="216" stroke="var(--line)" stroke-width="1" stroke-dasharray="3 3" />
+
+          <text class="fig__val" x="8" y="62">Interference</text>
+          <rect x="210" y="40" width="380" height="16" rx="2" fill="var(--signal)" opacity="0.85" />
+          <text class="fig__val" x="634" y="53" text-anchor="end" fill="var(--signal)">1.000</text>
+          <rect x="210" y="62" width="313" height="16" rx="2" fill="var(--warn)" opacity="0.85" />
+          <text class="fig__val" x="634" y="75" text-anchor="end" fill="var(--warn)">0.823</text>
+
+          <text class="fig__val" x="8" y="128">Mixed evidence</text>
+          <rect x="210" y="106" width="380" height="16" rx="2" fill="var(--signal)" opacity="0.85" />
+          <text class="fig__val" x="634" y="119" text-anchor="end" fill="var(--signal)">1.000</text>
+          <rect x="210" y="128" width="223" height="16" rx="2" fill="var(--warn)" opacity="0.85" />
+          <text class="fig__val" x="634" y="141" text-anchor="end" fill="var(--warn)">0.587</text>
+
+          <text class="fig__val" x="8" y="194">Aircraft coverage gap</text>
+          <rect x="210" y="172" width="380" height="16" rx="2" fill="none" stroke="var(--line)"
+                stroke-width="1" stroke-dasharray="4 4" />
+          <text class="fig__val" x="634" y="185" text-anchor="end" fill="var(--muted)">no rule</text>
+          <rect x="210" y="194" width="223" height="16" rx="2" fill="var(--warn)" opacity="0.85" />
+          <text class="fig__val" x="634" y="207" text-anchor="end" fill="var(--warn)">0.587</text>
+
+          <text class="fig__val" x="210" y="234" text-anchor="middle" fill="var(--muted)">0</text>
+          <text class="fig__val" x="590" y="234" text-anchor="middle" fill="var(--muted)">1.0</text>
+
+          <rect x="8" y="252" width="11" height="11" rx="2" fill="var(--signal)" opacity="0.85" />
+          <text class="fig__val" x="26" y="262">per hour — did it name the right anomaly?</text>
+          <rect x="330" y="252" width="11" height="11" rx="2" fill="var(--warn)" opacity="0.85" />
+          <text class="fig__val" x="348" y="262">per disrupted aircraft — did it flag each one?</text>
+        </svg>
+      </div>
+    </div>
+    <p class="caption">
+      The divergence is systematic rather than a quirk of one arm. Every hour that staged something
+      was named correctly; between one aircraft in six and two in five of the aircraft actually
+      disrupted were never flagged. The coverage-gap row has no upper bar because no built rule
+      announces that kind of hour — which is the coverage gap, not a failure to detect.
+    </p>
+
     <h3>How long it took to know</h3>
     <p>
       These are the first delay figures the project has ever produced on real hours. Read them as
@@ -7459,6 +7505,51 @@ second pass   <b>5.060000171975998</b></div>
         </tbody>
       </table>
     </div>
+    <div class="fig">
+      <div class="fig__art">
+        <svg width="640" height="238" viewBox="0 0 640 238" role="img"
+             aria-label="Delay per kind of hour, in seconds. All three run from ten seconds to ninety. The median is ten seconds for one broken receiver and for mixed evidence, and twenty seconds for interference. Below ten seconds is a forbidden region: no rule acts on evidence that short.">
+          <rect x="210" y="34" width="38" height="152" fill="var(--muted)" opacity="0.13" />
+          <line x1="248" y1="30" x2="248" y2="190" stroke="var(--accent)" stroke-width="1.5"
+                stroke-dasharray="4 3" />
+          <text class="fig__label" x="8" y="18">nothing can be known faster than the floor</text>
+          <text class="fig__val" x="252" y="26" fill="var(--accent)">10 s floor</text>
+
+          <text class="fig__val" x="8" y="62">One broken receiver</text>
+          <rect x="248" y="50" width="304" height="14" rx="7" fill="var(--signal)" opacity="0.22" />
+          <circle cx="248" cy="57" r="6" fill="var(--signal)" stroke="var(--surface)" stroke-width="1.5" />
+          <text class="fig__val" x="634" y="62" text-anchor="end" fill="var(--signal)">10 s</text>
+
+          <text class="fig__val" x="8" y="106">Mixed evidence</text>
+          <rect x="248" y="94" width="304" height="14" rx="7" fill="var(--signal)" opacity="0.22" />
+          <circle cx="248" cy="101" r="6" fill="var(--signal)" stroke="var(--surface)" stroke-width="1.5" />
+          <text class="fig__val" x="634" y="106" text-anchor="end" fill="var(--signal)">10 s</text>
+
+          <text class="fig__val" x="8" y="150">Interference</text>
+          <rect x="248" y="138" width="304" height="14" rx="7" fill="var(--signal)" opacity="0.22" />
+          <circle cx="286" cy="145" r="6" fill="var(--warn)" stroke="var(--surface)" stroke-width="1.5" />
+          <text class="fig__val" x="634" y="150" text-anchor="end" fill="var(--warn)">20 s</text>
+
+          <line x1="210" y1="186" x2="590" y2="186" stroke="var(--line)" stroke-width="1" />
+          <text class="fig__val" x="210" y="204" text-anchor="middle" fill="var(--muted)">0</text>
+          <text class="fig__val" x="305" y="204" text-anchor="middle" fill="var(--muted)">25</text>
+          <text class="fig__val" x="400" y="204" text-anchor="middle" fill="var(--muted)">50</text>
+          <text class="fig__val" x="495" y="204" text-anchor="middle" fill="var(--muted)">75</text>
+          <text class="fig__val" x="590" y="204" text-anchor="middle" fill="var(--muted)">100 s</text>
+
+          <rect x="8" y="222" width="11" height="11" rx="2" fill="var(--signal)" opacity="0.22" />
+          <text class="fig__val" x="26" y="232">fastest to slowest over 60 hours</text>
+          <circle cx="318" cy="228" r="5" fill="var(--signal)" />
+          <text class="fig__val" x="330" y="232">median</text>
+        </svg>
+      </div>
+    </div>
+    <p class="caption">
+      All three ranges are identical — ten seconds to ninety — and only the median separates them.
+      The shaded strip on the left is forbidden ground: no rule in the system will act on evidence
+      shorter than ten seconds, so no delay can land there. Both broken-receiver medians sit exactly
+      on that edge.
+    </p>
     <p>
       <b>The ten-second floor is not a rounding artefact and not a coincidence.</b> A blip lasting a
       single reading stopped counting as an event earlier in this project, which means ten seconds is
@@ -7548,11 +7639,148 @@ second pass   <b>5.060000171975998</b></div>
       for where the missing aircraft went is complete, with two of the four suspected causes
       responsible for none of them at all.
     </p>
+    <div class="fig">
+      <div class="fig__art">
+        <svg width="640" height="212" viewBox="0 0 640 212" role="img"
+             aria-label="Of 300 aircraft disrupted on the interference hours, 247 were flagged, 8 were on the ground, 15 had no fresh prior contact and 30 had gaps below the threshold. Of 300 disrupted on the mixed-evidence and coverage-gap hours, 176 were flagged, 64 on the ground, 9 without fresh contact and 51 below threshold.">
+          <text class="fig__label" x="8" y="16">where every disrupted aircraft went, per 300 staged</text>
+
+          <text class="fig__val" x="8" y="58">Interference</text>
+          <rect x="210" y="44" width="313" height="20" fill="var(--signal)" opacity="0.85" />
+          <rect x="523" y="44" width="10" height="20" fill="var(--muted)" opacity="0.6" />
+          <rect x="533" y="44" width="19" height="20" fill="var(--warn)" opacity="0.8" />
+          <rect x="552" y="44" width="38" height="20" fill="var(--bad)" opacity="0.8" />
+          <text class="fig__val" x="366" y="58" text-anchor="middle" fill="var(--surface)">247 flagged</text>
+
+          <text class="fig__val" x="8" y="104">Mixed evidence</text>
+          <text class="fig__val" x="8" y="120" fill="var(--muted)">and coverage gap</text>
+          <rect x="210" y="96" width="223" height="20" fill="var(--signal)" opacity="0.85" />
+          <rect x="433" y="96" width="81" height="20" fill="var(--muted)" opacity="0.6" />
+          <rect x="514" y="96" width="11" height="20" fill="var(--warn)" opacity="0.8" />
+          <rect x="525" y="96" width="65" height="20" fill="var(--bad)" opacity="0.8" />
+          <text class="fig__val" x="321" y="110" text-anchor="middle" fill="var(--surface)">176 flagged</text>
+
+          <text class="fig__val" x="210" y="138" text-anchor="middle" fill="var(--muted)">0</text>
+          <text class="fig__val" x="590" y="138" text-anchor="middle" fill="var(--muted)">300</text>
+
+          <rect x="8" y="160" width="11" height="11" rx="2" fill="var(--signal)" opacity="0.85" />
+          <text class="fig__val" x="26" y="170">flagged — 599 of 900</text>
+          <rect x="200" y="160" width="11" height="11" rx="2" fill="var(--muted)" opacity="0.6" />
+          <text class="fig__val" x="218" y="170">on the ground — 136</text>
+          <rect x="390" y="160" width="11" height="11" rx="2" fill="var(--warn)" opacity="0.8" />
+          <text class="fig__val" x="408" y="170">no fresh prior contact — 33</text>
+          <rect x="8" y="184" width="11" height="11" rx="2" fill="var(--bad)" opacity="0.8" />
+          <text class="fig__val" x="26" y="194">gap too short to count — 132</text>
+          <text class="fig__val" x="200" y="194" fill="var(--muted)">three further suspected causes — 0</text>
+        </svg>
+      </div>
+    </div>
+    <p class="caption">
+      The account closes exactly: 599 flagged and 301 missed, every one of the 301 attributed. Three
+      other causes that had been suspected — the aircraft leaving the area covered, disappearing from
+      the record entirely, or having a gap that could not be bracketed at all — turned out to account
+      for <b>none</b> of them. The two rows differ almost entirely in the first two categories, and
+      the lower row is one measurement shown twice: those two kinds of hour disrupt aircraft the same
+      way, from the same starting number, so they are not two results.
+    </p>
     <p>
       The honest summary, and the one that will be written up: the detection layer does exactly what
       it was specified to do on the hours it was given, it never confuses one kind of incident with
       another, it never speaks when it should be silent, and the question of how it behaves against
       genuine interference at the edge of detectability remains open.
+    </p>
+
+    <h3>Every number above can be followed back to what produced it</h3>
+    <p>
+      A results table is only as good as its provenance, and until now every figure in this project
+      lived in a saved log — text a person reads and retypes. Once a number has been retyped into a
+      table it has lost every connection to the run that produced it. So the figures above also exist
+      as data files, and the point of them is not the format.
+    </p>
+    <p>
+      <b>The unit that actually travels into a dissertation is one row</b>, pasted into a table,
+      arriving without any line that was above it. A header block naming the corpus and the settings
+      would be lost at exactly that moment. So every row carries a short fingerprint of the run
+      description as its first column, and one file resolves it:
+    </p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>Where</th><th>What it says</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="key">Any exported row</td><td><span class="num">c421c41506fd</span>, then the figures</td></tr>
+          <tr><td class="key">The description file</td><td><span class="num">c421c41506fd</span> → three hundred hours, corpus version two</td></tr>
+          <tr><td class="key"></td><td><span class="num">c421c41506fd</span> → generated from three numbers: 1412660662, 965530111, 655209063</td></tr>
+          <tr><td class="key"></td><td><span class="num">c421c41506fd</span> → deviation threshold 6.0 dB, and twelve further settings</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="caption">
+      Change any part of that description and the fingerprint changes with it, so a row exported
+      under older settings <em>fails to resolve</em> rather than quietly pointing at the wrong run.
+    </p>
+
+    <h3>A seed reproduces the hours; a setting reproduces the figures</h3>
+    <p>
+      This was the correction that building the export forced, and it applies to how the results
+      chapter must be written. The project had been treating "record the number the hours were
+      generated from" as what makes a figure reproducible. It is not.
+    </p>
+    <p>
+      The generating number fixes <em>which three hundred hours exist</em>. It says nothing at all
+      about the settings the detectors were run at — how far from normal a reading has to be before
+      it counts, how long it has to stay there, how long a gap in an aircraft's reports has to be,
+      the three distances and the one ratio the final rules turn on. Set the first of those to eight
+      decibels instead of six and <b>every figure in every table above moves, on exactly the same
+      hours</b>, with the generating number unchanged.
+    </p>
+    <p>
+      Thirteen settings therefore travel with the results, read off the objects the measurement
+      actually used rather than typed out beside it — a recorded setting that is not the one in force
+      is worse than none, because it looks like provenance. A description missing any of them cannot
+      be constructed, which is the difference between a rule that is checked and one that cannot be
+      broken.
+    </p>
+
+    <h3>Why the blank cells are blank, and why that took care</h3>
+    <p>
+      Several cells in the exported tables are empty, and an empty cell is the most dangerous thing a
+      results file can contain: <b>a spreadsheet reads it as zero, and so does every data-analysis
+      library.</b> The tables above are careful that a rate over nothing is <em>not measured</em>
+      rather than 0.000 — a precision of zero on an answer nobody ever gave would read as an answer
+      that was always wrong — and that care evaporates the moment the number is written to a file.
+    </p>
+    <p>
+      Labelling the cell with a word was rejected: it makes the column non-numeric, and the whole
+      purpose is files a chart can be drawn from. Instead <b>no rate is ever written without the
+      counts it was computed from in the columns beside it</b>, so a blank can always be read:
+    </p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>Row</th><th class="n">Recall</th><th class="n">Found</th><th class="n">Hours</th><th>How to read it</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="key">Interference</td><td class="n">1.000</td><td class="n">60</td><td class="n">60</td>
+              <td class="why">Measured, and perfect</td></tr>
+          <tr><td class="key">Aircraft coverage gap</td><td class="n dim">—</td><td class="n">0</td><td class="n">60</td>
+              <td class="why">Sixty hours were run and there is no rate to have, because no rule announces them</td></tr>
+          <tr><td class="key">Quiet baseline</td><td class="n dim">—</td><td class="n">0</td><td class="n">60</td>
+              <td class="why">Nothing was staged, so there is nothing to have caught</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="caption">
+      Without the two count columns, all three of those rows would look identical to a reader, and
+      two of them would look like a detector that found nothing.
+    </p>
+    <p>
+      One last rule, which sounds pedantic and is not: <b>the export is forbidden to calculate
+      anything</b>. It rearranges values and derives none — no rounding, no percentages, no column
+      totals. Rounded to three places on the way out, a file would say 0.823 where the measurement
+      says 0.8233333333333334, and the number that gets quoted would no longer be the number that was
+      checked. Rounding belongs in the document, where a reader can see it happening.
     </p>
   </section>
 
