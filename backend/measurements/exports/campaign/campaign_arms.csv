@@ -1,0 +1,4 @@
+source,arm,is_oracle,generations,bundles,skipped,checked,caught,catch_rate,attempts,refusals,retry_rate,fell_back,fallback_rate,calls,prompt_tokens,completion_tokens,spent_usd,unpriced_calls,cost_is_complete,seconds,agreement_bundles,agreement_grounding,agreement_confidence,agreement_cited_kinds
+9cce33897e53,template,True,20,20,0,20,0,0.0,20,0,0.0,0,0.0,0,0,0,0,0,True,0.008293707942357287,0,,,
+9cce33897e53,hosted,False,60,20,0,60,0,0.0,60,0,0.0,0,0.0,60,326106,25269,0.854364,0,True,334.19733200085466,20,1.0,1.0,1.0
+9cce33897e53,local,False,0,0,0,0,0,,0,0,,0,,0,0,0,0,0,True,0,0,,,

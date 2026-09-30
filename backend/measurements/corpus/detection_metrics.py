@@ -93,8 +93,12 @@ TRACK_SIDE = {
 }
 
 #: Where eval-003's files land. Committed, because they are the inputs a
-#: thesis table is built from and they are small.
-EXPORTS = Path(__file__).resolve().parents[1] / "exports"
+#: thesis table is built from and they are small. **Its own directory**, not
+#: shared with the campaign's: the two halves were measured on different
+#: corpora on different dates -- three hundred generated hours here, the dev
+#: batch there -- and one `metrics.json` holding both would invite exactly
+#: the reading that they are one measurement.
+EXPORTS = Path(__file__).resolve().parents[1] / "exports" / "detection"
 
 BASELINE_WINDOW = timedelta(hours=2)
 
@@ -317,10 +321,10 @@ provenance = DetectionProvenance(
     },
 )
 export = export_metrics(detection=metrics, detection_provenance=provenance)
-EXPORTS.mkdir(exist_ok=True)
+EXPORTS.mkdir(parents=True, exist_ok=True)
 for name, text in sorted(export.files.items()):
     (EXPORTS / name).write_text(text)
-print(f"\nexported {len(export.files)} files to measurements/exports/, "
+print(f"\nexported {len(export.files)} files to measurements/exports/detection/, "
       f"every row stamped {provenance.digest}")
 for name in sorted(export.files):
     print(f"  {name}")

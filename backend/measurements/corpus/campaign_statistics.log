@@ -1,0 +1,34 @@
+the scored campaign of 28 September 2026, re-read from its own artefact
+  80 generations, 0 skipped
+
+read 155 stored hypotheses across 20 bundles
+budget rebuilt and reconciled: 60 calls, $0.854364, 351375 tokens -- identical to the figures recorded at the time
+ledger rebuilt and reconciled against the recorded per-arm counts
+
+PER ARM, NEVER POOLED -- there is deliberately no campaign-wide figure
+  arm         gens  bund  checked  caught   catch   retry  fallbk  calls   spend $   seconds
+  template      20    20       20       0   0.000   0.000   0.000      0  0.000000     0.008
+  hosted        60    20       60       0   0.000   0.000   0.000     60  0.854364   334.197
+  local          0     0        0       0      --      --      --      0  0.000000     0.000
+
+  the template arm is the ORACLE: it is grounded by construction, so a
+  non-zero catch rate there would be a defect in the check, not the arm.
+
+TOKENS AND COMPLETENESS
+  template   prompt       0  completion      0  unpriced   0  cost is complete
+  hosted     prompt  326106  completion  25269  unpriced   0  cost is complete
+  local      prompt       0  completion      0  unpriced   0  cost is complete
+
+AGREEMENT ACROSS REPEATED GENERATIONS -- only where an arm was asked twice
+  template   bundles   0  grounding     --  confidence     --  cited kinds     --
+  hosted     bundles  20  grounding  1.000  confidence  1.000  cited kinds  1.000
+  local      bundles   0  grounding     --  confidence     --  cited kinds     --
+  A bundle asked once reports nothing rather than a perfect score it did
+  not earn, which is why the template row is empty.
+
+exported 3 files to measurements/exports/campaign/, every row stamped 9cce33897e53
+  campaign_arms.csv
+  metrics.json
+  provenance.csv
+
+re-read on 2026-09-30; the campaign itself ran 2026-09-28 and is not re-run here.
