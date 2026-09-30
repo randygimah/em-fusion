@@ -1,0 +1,48 @@
+sentinel killed (44 failed, 6 passed in 1.15s) -- source edits reach the tests
+
+recall indexed by prediction rather than by truth              KILLED   8 failed, 42 passed in 0.48s
+precision indexed by truth rather than by prediction           KILLED   2 failed, 48 passed in 0.44s
+a claim is credited to the arm that made it rather than the one staged KILLED   4 failed, 46 passed in 0.45s
+the false negative rate is the recall rather than its complement KILLED   1 failed, 49 passed in 0.41s
+the run-level recall is exported under a bare key              KILLED   2 failed, 48 passed in 0.42s
+the track-side recall is exported under a bare key             KILLED   1 failed, 49 passed in 0.42s
+the two recalls are averaged into one figure                   KILLED   1 failed, 49 passed in 0.43s
+a per-aircraft recall is accepted for an arm that stages nothing KILLED   1 failed, 49 passed in 0.43s
+a misreport is a miss but not a false alarm                    KILLED   4 failed, 46 passed in 0.43s
+a misreport is a false alarm but not a miss                    KILLED   1 failed, 49 passed in 0.43s
+a run claiming two types is counted once                       KILLED   1 failed, 49 passed in 0.43s
+a run claiming two types is not flagged                        KILLED   1 failed, 49 passed in 0.46s
+F1 is emitted where two arms produce one type                  KILLED   30 failed, 20 passed in 1.10s
+the contradiction behind that is accepted rather than refused  KILLED   1 failed, 49 passed in 0.41s
+F1 over an unmeasured half is zero rather than absent          KILLED   6 failed, 44 passed in 0.50s
+F1 over a precision and a recall of zero divides by zero       KILLED   1 failed, 49 passed in 0.49s
+the arms behind a type include the one with no rule            KILLED   1 failed, 49 passed in 0.44s
+the cross-modal arm is dropped, leaving one pooled-looking rate KILLED   3 failed, 47 passed in 0.46s
+the cross-modal rate claims a control it never had             KILLED   1 failed, 49 passed in 0.45s
+a silent arm's reports are counted per claim rather than per run KILLED   1 failed, 49 passed in 0.44s
+the coverage figure counts the rule that does not exist        KILLED   1 failed, 49 passed in 0.47s
+a failing control does not stop the rate being computed        KILLED   1 failed, 49 passed in 0.42s
+an ungraded quiet run is scored                                KILLED   1 failed, 49 passed in 0.42s
+a control for a run outside the population is accepted         KILLED   1 failed, 49 passed in 0.42s
+a control filed under the wrong run is accepted                KILLED   1 failed, 49 passed in 0.42s
+a staged-type run that staged nothing is scored                KILLED   2 failed, 48 passed in 0.43s
+an intermediate finding counts as reportable output            KILLED   1 failed, 49 passed in 0.42s
+a duplicated run is weighted twice                             KILLED   1 failed, 49 passed in 0.42s
+an unknown scenario type is scored as if it were a sixth arm   KILLED   1 failed, 49 passed in 0.42s
+a quiet run that claims to have staged something is scored     KILLED   1 failed, 49 passed in 0.42s
+latency is taken over the arm rather than over its detections  SURVIVED 50 passed in 0.38s
+a detection carrying no latency is invisible                   KILLED   1 failed, 49 passed in 0.43s
+latency stops saying what population it is conditional on      KILLED   1 failed, 49 passed in 0.43s
+a negative latency is clamped to zero                          KILLED   1 failed, 49 passed in 0.42s
+a latency is accepted on a run that produced no matching claim KILLED   3 failed, 47 passed in 0.42s
+an unjudged arm reports a recall of zero rather than none      KILLED   2 failed, 48 passed in 0.42s
+an arm that stages nothing a built rule judges is scored as positive KILLED   6 failed, 44 passed in 0.46s
+a table omits the arms nobody generated                        KILLED   1 failed, 49 passed in 0.43s
+the type with no rule is dropped from the table rather than listed KILLED   5 failed, 45 passed in 0.47s
+a track side detecting more than was staged is accepted        KILLED   1 failed, 49 passed in 0.42s
+an empty corpus produces a report of every rate absent         KILLED   1 failed, 49 passed in 0.43s
+
+restored
+
+40 killed of 41 valid mutants
+no unexpected survivors

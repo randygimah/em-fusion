@@ -386,8 +386,21 @@ class TypePrecision:
     correct: int
     wrong: int
     #: The single arm's recall, when there is a single arm. Carried so `f1`
-    #: is arithmetic over two stated numbers rather than a hidden lookup.
+    #: is arithmetic over two stated numbers rather than a hidden lookup, and
+    #: refused where there is not exactly one arm: the contradiction is made
+    #: unconstructible rather than guarded twice, since two checks holding one
+    #: rule can each be removed without the behaviour changing, and a rule
+    #: nothing can break is a rule no test is proving.
     arm_recall_per_run: float | None = None
+
+    def __post_init__(self) -> None:
+        if self.arm_recall_per_run is not None and len(self.arms) != 1:
+            raise MetricsError(
+                f"{self.anomaly_type} carries a single arm's recall while "
+                f"{len(self.arms)} arms produce it. There is no arm that "
+                "figure is about, so an F1 computed from it would be a "
+                "harmonic mean of two different populations."
+            )
 
     @property
     def precision(self) -> float | None:
@@ -395,8 +408,14 @@ class TypePrecision:
 
     @property
     def f1_is_defined(self) -> bool:
-        if len(self.arms) != 1:
-            return False
+        """Whether one arm and one type correspond, and both halves exist.
+
+        The arm count is held at construction, so what is asked here is only
+        whether the two rates were measured -- and `precision + recall > 0`
+        because an arm that detected nothing of a type only ever claimed
+        wrongly gives 0 and 0, whose harmonic mean is a division by zero
+        rather than a score of zero.
+        """
         precision, recall = self.precision, self.arm_recall_per_run
         return precision is not None and recall is not None and precision + recall > 0
 

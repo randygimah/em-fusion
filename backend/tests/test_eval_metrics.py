@@ -62,6 +62,7 @@ from app.evaluation.metrics import (
     NegativeArm,
     RunOutcome,
     TrackSideRecall,
+    TypePrecision,
     compute,
 )
 
@@ -343,16 +344,24 @@ def test_a_run_reporting_two_types_is_counted_once_per_type_and_flagged() -> Non
     assert metrics.multi_claim_runs == 1
     assert metrics.for_arm(GNSS).detected == 2
     assert metrics.for_type(FAULT).wrong == 1
+    # Both claims reach the matrix. Keeping only the first would make the
+    # row sum to the run count and look correct.
+    assert metrics.confusion[GNSS] == {INTERFERENCE: 2, FAULT: 1}
 
 
 def test_the_false_negative_rate_is_the_complement_of_the_run_level_recall() -> None:
     # spec: eval-002
+    # Three runs rather than two, so the two figures differ: at a recall of
+    # one half they are the same number and the assertion proves nothing.
     outcomes, controls = _corpus()
     outcomes = [o for o in outcomes if o.run_id != "f1"]
-    outcomes.append(RunOutcome(run_id="f1", scenario_type=SENSOR_FAULT))
+    outcomes += [
+        RunOutcome(run_id="f1", scenario_type=SENSOR_FAULT),
+        RunOutcome(run_id="f3", scenario_type=SENSOR_FAULT, reported=(FAULT,)),
+    ]
     arm = compute(outcomes, controls=controls).for_arm(SENSOR_FAULT)
-    assert arm.recall_per_run == 0.5
-    assert arm.false_negative_rate == 0.5
+    assert arm.recall_per_run == pytest.approx(2 / 3)
+    assert arm.false_negative_rate == pytest.approx(1 / 3)
 
 
 # --- F1 only where one arm maps to one type --------------------------------
@@ -385,7 +394,52 @@ def test_f1_is_withheld_where_precision_or_recall_is_unmeasured() -> None:
     source = _computed().for_type(SOURCE_GAP)
     assert source.claimed_runs == 0
     assert source.precision is None
+    assert source.arm_recall_per_run is None
     assert source.f1 is None
+    assert not source.f1_is_defined
+
+
+def test_the_arms_behind_a_type_are_the_ones_a_built_rule_judges() -> None:
+    # spec: eval-002, anom-006
+    # aircraft-coverage-gap stages what anom-006 would claim, and listing it
+    # here would make possible_data_source_issue look like a tested arm whose
+    # recall happens to be missing rather than one with no rule at all.
+    assert _computed().for_type(SOURCE_GAP).arms == ()
+
+
+def test_f1_over_a_precision_and_a_recall_of_zero_is_absent_not_zero() -> None:
+    # spec: eval-002
+    # Their harmonic mean is a division by zero, which is this item's named
+    # failure case arriving where nobody looks for it.
+    outcomes, controls = _corpus()
+    outcomes = [o for o in outcomes if o.scenario_type not in {GNSS, COVERAGE_GAP}]
+    outcomes += [
+        RunOutcome(run_id="g1", scenario_type=GNSS),
+        RunOutcome(run_id="g2", scenario_type=GNSS),
+        RunOutcome(run_id="c1", scenario_type=COVERAGE_GAP, reported=(INTERFERENCE,)),
+        RunOutcome(run_id="c2", scenario_type=COVERAGE_GAP),
+    ]
+    row = compute(outcomes, controls=controls).for_type(INTERFERENCE)
+    assert row.precision == 0.0
+    assert row.arm_recall_per_run == 0.0
+    assert row.f1 is None
+
+
+def test_a_single_arm_recall_on_a_type_two_arms_produce_is_refused() -> None:
+    # spec: eval-002
+    # Held at construction rather than checked again where F1 is read: two
+    # checks over one rule can each be removed with the behaviour unchanged,
+    # which is a rule no test is proving.
+    with pytest.raises(MetricsError, match="arms produce it"):
+        TypePrecision(
+            anomaly_type=FAULT,
+            built=True,
+            arms=(AMBIGUOUS, SENSOR_FAULT),
+            claimed_runs=4,
+            correct=4,
+            wrong=0,
+            arm_recall_per_run=1.0,
+        )
 
 
 # --- two false-positive rates ----------------------------------------------
@@ -397,8 +451,12 @@ def test_the_two_false_positive_rates_are_reported_separately() -> None:
     # different failures, and one pooled figure cannot say which happened.
     outcomes, controls = _corpus()
     outcomes = [o for o in outcomes if o.run_id != "c1"]
+    # Two claims on one run, so a rate counting claims rather than runs comes
+    # out at one rather than a half.
     outcomes.append(
-        RunOutcome(run_id="c1", scenario_type=COVERAGE_GAP, reported=(INTERFERENCE,))
+        RunOutcome(
+            run_id="c1", scenario_type=COVERAGE_GAP, reported=(INTERFERENCE, FAULT)
+        )
     )
     metrics = compute(outcomes, controls=controls)
 
