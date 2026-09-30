@@ -216,12 +216,44 @@ def test_an_arm_with_no_track_side_measurement_carries_none_not_a_zero() -> None
 def test_a_track_side_recall_for_an_arm_outside_the_population_is_refused() -> None:
     # spec: eval-002
     outcomes, controls = _corpus()
+    outcomes = [o for o in outcomes if o.scenario_type != AMBIGUOUS]
     with pytest.raises(MetricsError, match="was not scored"):
+        compute(
+            outcomes,
+            controls=controls,
+            track_side={AMBIGUOUS: TrackSideRecall(10, 5)},
+        )
+
+
+def test_a_track_side_recall_for_an_arm_that_stages_nothing_is_refused() -> None:
+    # spec: eval-002, anom-011
+    # anom-011 refuses a run that staged nothing rather than scoring it nought
+    # or a hundred, so the quiet arm has no per-aircraft recall to carry --
+    # unlike aircraft-coverage-gap, which is one of the arms it measures.
+    outcomes, controls = _corpus()
+    with pytest.raises(MetricsError, match="stages nothing"):
         compute(
             outcomes,
             controls=controls,
             track_side={BASELINE: TrackSideRecall(10, 5)},
         )
+
+
+def test_the_unjudged_arm_still_carries_a_track_side_recall() -> None:
+    # spec: eval-002, anom-011
+    # It is unjudged by the *reportable* rules and is one of anom-011's two
+    # suppression arms, so its per-aircraft figure exists where its run-level
+    # one does not -- the clearest case for keeping the two apart.
+    outcomes, controls = _corpus()
+    metrics = compute(
+        outcomes,
+        controls=controls,
+        track_side={COVERAGE_GAP: TrackSideRecall(100, 59)},
+    )
+    arm = metrics.for_arm(COVERAGE_GAP)
+    assert arm.recall_per_run is None
+    assert arm.track_side is not None
+    assert arm.track_side.recall_per_staged_aircraft == pytest.approx(0.59)
 
 
 def test_a_track_side_recall_detecting_more_than_was_staged_is_refused() -> None:
@@ -233,6 +265,16 @@ def test_a_track_side_recall_detecting_more_than_was_staged_is_refused() -> None
 def test_a_track_side_recall_over_no_staged_aircraft_is_none() -> None:
     # spec: eval-002
     assert TrackSideRecall(0, 0).recall_per_staged_aircraft is None
+
+
+def test_a_track_side_recall_counting_a_negative_number_is_refused() -> None:
+    # spec: eval-002
+    # A count below zero makes the rate readable and wrong, which is worse
+    # than an error: nothing downstream can tell it from a measurement.
+    with pytest.raises(MetricsError, match="negative"):
+        TrackSideRecall(staged_aircraft=-1, detected_aircraft=0)
+    with pytest.raises(MetricsError, match="negative"):
+        TrackSideRecall(staged_aircraft=10, detected_aircraft=-1)
 
 
 # --- recall by truth, precision by prediction ------------------------------
@@ -457,7 +499,9 @@ def test_a_detection_carrying_no_latency_is_visible_rather_than_silent() -> None
     # be instrumented, with nothing in the report saying how many.
     outcomes, controls = _corpus()
     outcomes = [o for o in outcomes if o.run_id != "g1"]
-    outcomes.append(RunOutcome(run_id="g1", scenario_type=GNSS, reported=(INTERFERENCE,)))
+    outcomes.append(
+        RunOutcome(run_id="g1", scenario_type=GNSS, reported=(INTERFERENCE,))
+    )
     latency = compute(outcomes, controls=controls).for_arm(GNSS).latency
     assert (latency.detections, latency.measured) == (2, 1)
 
@@ -554,7 +598,9 @@ def test_an_excluded_run_reaches_no_rate_at_all() -> None:
     assert metrics.confusion[GNSS][INTERFERENCE] == 2
 
 
-def test_a_normal_baseline_run_that_claims_to_have_staged_something_is_refused() -> None:
+def test_a_normal_baseline_run_that_claims_to_have_staged_something_is_refused() -> (
+    None
+):
     # spec: eval-002
     with pytest.raises(MetricsError, match="stages nothing"):
         RunOutcome(run_id="b1", scenario_type=BASELINE, staged=True)
@@ -583,7 +629,9 @@ def test_an_intermediate_finding_type_in_the_report_is_refused() -> None:
 def test_a_repeated_anomaly_type_on_one_run_is_refused() -> None:
     # spec: eval-002
     with pytest.raises(MetricsError, match="twice"):
-        RunOutcome(run_id="g1", scenario_type=GNSS, reported=(INTERFERENCE, INTERFERENCE))
+        RunOutcome(
+            run_id="g1", scenario_type=GNSS, reported=(INTERFERENCE, INTERFERENCE)
+        )
 
 
 def test_a_repeated_run_id_is_refused() -> None:
@@ -629,16 +677,18 @@ def test_the_unjudged_arm_becomes_positive_when_its_rule_is_built() -> None:
     # positive one with no edit here at all.
     register = build_register(
         *(
-            Producer(
-                rule_id=p.rule_id,
-                finding_type=p.finding_type,
-                kind=p.kind,
-                background=p.background,
-                built=True,
-                note=p.note,
+            (
+                Producer(
+                    rule_id=p.rule_id,
+                    finding_type=p.finding_type,
+                    kind=p.kind,
+                    background=p.background,
+                    built=True,
+                    note=p.note,
+                )
+                if p.rule_id == SOURCE_GAP_RULE
+                else p
             )
-            if p.rule_id == SOURCE_GAP_RULE
-            else p
             for p in REGISTER.values()
         )
     )
@@ -659,6 +709,10 @@ def test_the_unjudged_arm_becomes_positive_when_its_rule_is_built() -> None:
         NegativeArm.FROM_NOTHING
     ]
     assert metrics.for_negative(NegativeArm.FROM_NOTHING).coverage == "3 of 3"
+    # And the rate that no longer exists is absent rather than zero: an arm
+    # with a rule to judge it is no longer a test of silence.
+    with pytest.raises(KeyError):
+        metrics.for_negative(NegativeArm.CROSS_MODAL)
 
 
 def test_every_scenario_type_gets_a_row_whether_or_not_it_was_run() -> None:
