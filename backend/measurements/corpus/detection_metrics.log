@@ -1,0 +1,43 @@
+corpus v2 -- one generator, 900 s runs, anom-014 and scn-007 active; base seeds 1412660662, 965530111, 655209063
+baseline from 60 quiet runs of this corpus
+scoring 300 runs
+
+RECALL, INDEXED BY TRUTH -- one row per scenario type, over its own runs
+  scenario type              kind            runs  excl  found  missed  recall/run     FNR
+  aircraft-coverage-gap      unjudged          60     0      0       0          --      --
+  ambiguous-mixed-evidence   positive          60     0     60       0       1.000   0.000
+  gnss-degradation           positive          60     0     60       0       1.000   0.000
+  normal-baseline            silent-control    60     0      0       0          --      --
+  rf-sensor-fault            positive          60     0     60       0       1.000   0.000
+
+PRECISION, INDEXED BY PREDICTION -- one row per reportable type
+  anomaly type                 built  claimed  right  wrong  precision      F1  arms
+  possible_data_source_issue   False        0      0      0         --      --  []
+  possible_interference_zone    True       60     60      0      1.000   1.000  ['gnss-degradation']
+  possible_sensor_fault         True      120    120      0      1.000      --  ['ambiguous-mixed-evidence', 'rf-sensor-fault']
+  F1 is withheld where two arms produce one type: there is no arm it
+  would be about. anom-006 being unbuilt, its row is coverage, not a score.
+
+FALSE POSITIVES -- two rates, never pooled
+  cross-modal    aircraft-coverage-gap        0 of  60 = 0.000   anom-008 control: no   reportable types covered: 2 of 3
+  from-nothing   normal-baseline              0 of  60 = 0.000   anom-008 control: yes   reportable types covered: 2 of 3
+
+LATENCY, CONDITIONAL ON DETECTION -- seconds, signed, quantised to 10 s
+  scenario type               detections  measured   median      min      max
+  ambiguous-mixed-evidence            60        60       10       10       90
+  gnss-degradation                    60        60       20       10       90
+  rf-sensor-fault                     60        60       10       10       90
+
+TRACK-SIDE RECALL (anom-011) -- a different denominator, printed beside
+  aircraft-coverage-gap       176 of  300 staged aircraft = 0.587  (run-level: --)
+  ambiguous-mixed-evidence    176 of  300 staged aircraft = 0.587  (run-level: 1.000)
+  gnss-degradation            247 of  300 staged aircraft = 0.823  (run-level: 1.000)
+
+CONFUSION -- truth down, reported across. A misreport is two errors.
+  aircraft-coverage-gap      {'(silent)': 60}
+  ambiguous-mixed-evidence   {'possible_sensor_fault': 60}
+  gnss-degradation           {'possible_interference_zone': 60}
+  normal-baseline            {'(silent)': 60}
+  rf-sensor-fault            {'possible_sensor_fault': 60}
+
+scored 300 runs, excluded 0 for staging nothing, 0 claimed more than one type
