@@ -8,91 +8,69 @@ Abstraction Layer, detects deviations deterministically, and turns evidence bund
 schema-validated, grounding-checked AI hypotheses for analyst review. Decision support, not
 autonomous decision-making.
 
-This session built **`eval-002`, the detection metrics** and **`eval-003`, the metrics export**, then
-ran **`eval-005`'s per-arm campaign figures end to end** for the first time. Between them: the
-results table for the detection chapter, the per-writer table for the AI chapter, and files a thesis
-row can be traced back through. Everything in the evaluation phase that does not need a second
-person is now done.
+This session did one thing: **`api-011`, one batch at a time**. It is a defect fix rather than a
+feature — starting several batches from the screen in quick succession left the backend serving
+nothing at all — and it was chosen because `eval-006` is blocked until the second rater returns
+mid-October and this was the only item in the backlog fixing something already broken in shipped
+code.
+
+It also closed a second, older defect found on the way: **the screen had no channel for a backend
+refusal at all**, so every 422 the start endpoint had ever returned was invisible.
 
 ## Current state
 
-Backlog **68 of 104**. Tree clean at `85c5682`. Progress note published at v21.
+Backlog **69 of 104**. Tree clean at `fe1eca3` plus the documentation commit.
 
-- `backend/app/evaluation/metrics.py` — 237 statements, **100%**, 50 tests.
-- `backend/app/evaluation/export.py` — 190 statements, **100%**, 40 tests.
-- Backend suite: **1,434 passed / 288 skipped** locally; **1,682 at 99.89%** in containers.
-  ruff and mypy clean.
-- Mutation: **40 of 41** (`mutate_eval002_metrics.log`), **39 of 39** (`mutate_eval003_export.log`).
-- Three corpus measurements of record: `detection_metrics.log` (300 runs),
-  `campaign_statistics.log` (80 generations re-read), `track_gap_recall.log`.
-- `measurements/corpus/scored_campaign_calls.json` — the reconstructed per-call split, committed so
-  the rebuild outlives the rows it came from, and written only after it reconciles.
+- `backend/app/scenario/guard.py` — new, 39 statements, **100%**.
+- `backend/app/api/v1/scenario.py`, `app/scenario/batch.py`,
+  `app/api/v1/schemas/scenario.py` — changed; batch and schemas at **100%**.
+- Backend suite: **1,465 passed / 288 skipped** locally; **1,751 passed at 99.92%** in containers.
+  `make lint` and mypy clean.
+- Frontend: **86 passed across 8 files, and it now exits 0** — see Failed attempts.
+- Mutation: **17 of 17** (`mutate_api011_guard.log`), three files, no survivors.
 
-### The detection results, over all 300 runs of corpus v2
+### What the defect was, and what the fix claims
 
-| Arm | Runs | Right | Recall per run | Recall per staged aircraft |
-|---|---|---|---|---|
-| `rf-sensor-fault` | 60 | 60 | 1.000 | — |
-| `gnss-degradation` | 60 | 60 | 1.000 | 0.823 |
-| `ambiguous-mixed-evidence` | 60 | 60 | 1.000 | **0.587** |
-| `normal-baseline` | 60 | silent 60 | — | — |
-| `aircraft-coverage-gap` | 60 | silent 60 | — (unjudged) | 0.587 |
+The backend was found hung on `QueuePool limit of size 5 overflow 10 reached, connection timed out`,
+serving nothing, with its container reporting unhealthy. The cause is a **composition of two
+correct decisions**, each separately tested: every start spawns an unbounded daemon thread
+(`api-006`, so the request does not block for seventy seconds), and every thread borrows the
+application's one Engine (`db-003`). Together they put batch work and request serving in competition
+for a pool whose ceiling is SQLAlchemy's default fifteen, nothing in this project setting
+`pool_size`.
 
-Precision 1.000 on both built reportable types. F1 **1.000** for `possible_interference_zone`;
-**withheld** for `possible_sensor_fault`, which two arms produce. Both false-positive rates 0 of 60,
-never pooled, only the quiet one control-backed. Confusion matrix diagonal. 0 runs excluded.
+The measurement that shaped the fix is the one saying what the defect is **not**: a single batch adds
+one connection and `/health` answers 200 throughout. So this is not about batches being expensive,
+and the remedy is to bound the count rather than to make a batch cheaper or the pool bigger.
 
-Latency, conditional on detection — the project's first on real data: median **10 s** on both fault
-arms, **20 s** on interference, min 10 s, max 90 s, over 60 detections each. The floor is
-`anom-014`'s minimum episode duration. No negative latency, no undecidable claim.
+What it claims: the observed cause is removed. What it does not claim: safety against arbitrary
+load. It does not cancel a running batch, and it still does not report a batch that *failed* after
+being accepted — the standing honesty gap.
 
-`ambiguous-mixed-evidence` reads **1.000 run-level and 0.587 per-aircraft on the same sixty runs** —
-the strongest argument in the project for never merging the two recalls.
+### The five decisions worth carrying forward
 
-### The campaign results, per arm
+| | |
+|---|---|
+| **Nothing is written to the database** | A batch cannot outlive its process, so a persisted *running* flag is a claim no crash can retract — `db-007`'s own argument for refusing a three-valued status column. In memory, a restart genuinely means nothing is in flight and the state says so by not existing. Held by a parsed-import check: the guard may not reach `app.db` or `sqlalchemy`. |
+| **A lease, not a flag** | `launch_batch` returns in microseconds and the batch runs for seventy seconds, so releasing at the call site frees the guard before a run row is opened — **not a weaker guard but the absence of one**. The lease crosses the launcher seam and the thread's `finally` gives it back. |
+| **Release means *if I am still the holder*** | Clearing unconditionally lets a thread finishing late free a bound a **later** batch holds, and then two batches run at once — the mechanism breaking the rule it enforces. |
+| **Claimed in the handler body, never in a dependency** | A dependency resolves whether or not the body validates, so a guard claimed there is consumed by a 422 and the next valid start is refused on account of a batch that does not exist. |
+| **Wall clock, deliberately** | `anom-009` records the opposite mistake. "How long has this batch been running" is a question about a real process, so this is the one place in the project where the wall clock is right — said out loud so it cannot later read as a repeat. |
 
-| Arm | Gens | Bundles | Checked | Caught | Catch | Retry | Fallback | Calls | Spend | Seconds |
-|---|---|---|---|---|---|---|---|---|---|---|
-| `template` (oracle) | 20 | 20 | 20 | 0 | 0.000 | 0.000 | 0.000 | 0 | $0.000000 | 0.008 |
-| `hosted` | 60 | 20 | 60 | 0 | 0.000 | 0.000 | 0.000 | 60 | $0.854364 | 334.197 |
-| `local` | 0 | 0 | 0 | 0 | — | — | — | 0 | $0.000000 | 0.000 |
+### The refusal, and the channel that did not exist
 
-Agreement across the three generations per bundle, hosted arm over 20 bundles: grounding **1.000**,
-confidence **1.000**, cited evidence kinds **1.000**.
+A second start gets **409** with three fields and no fourth — type, base seed, start time — the key
+set asserted exactly, so anything added later has to be argued for in that test rather than arriving
+with the injected event in tow (`api-009`). **Facts, never prose**: the sentence an analyst reads is
+composed on the screen, where the rest of that screen's copy already lives, and a body of fields is
+assertable field by field where a sentence is assertable only by substring.
 
-**That last figure corrects a prediction on `eval-005`.** The amendment written after the
-three-bundle trial expected the *cited set* to be the dimension carrying the result, having seen it
-move on one of three bundles. Over twenty it moved on none. The widening to three dimensions was
-still right; the prediction about which one would matter was not. What is left is sharper: across
-sixty generations the only thing that differed between repeated answers was the **prose**, which
-none of the three measures and which `eval-004`'s blind scoring is what examines. Recorded on the
-spec item, in `thesis_notes.md`, `qa.md` §121, `evaluation_harness.md` and the progress note.
-
-The `local` row is the `None`-over-empty-population rule arriving on real data for the first time —
-blank, not 0.000, with denominators of zero beside it saying which.
-
-### The exported files
-
-Two directories, deliberately separate: the halves were measured on **different corpora on different
-dates**, and one summary file holding both would read as one measurement.
-
-| | Stamp | Resolves to |
-|---|---|---|
-| `measurements/exports/detection/` | `c421c41506fd` | corpus v2, three base seeds in wave order, 300 runs, thirteen detector settings, 2026-09-30 |
-| `measurements/exports/campaign/` | `9cce33897e53` | `gpt-4.1-2025-04-14`, frozen parameters, prompt digest `af153726…`, sample seed 20260928, population by bundle id, 2026-09-28 |
-
-### Two limitations that must not be dropped
-
-**The detection table measures wiring, not accuracy.** Every rate in it is 1.000 or 0.000. The radio
-side is synthetic with the injected incident well above threshold by construction, the corpus holds
-no near-misses, and one of three reportable types has no rule. The only figure carrying information
-from outside the generator is the per-aircraft recall, and that is 0.587 on two arms of three.
-
-**The retry and fallback paths never fired.** Nothing was refused and nothing fell back on the scored
-campaign, so a fallback rate of zero reports that the path was *not exercised* — not that it works.
-
-Both are recorded in `thesis_notes.md`, `evaluation_harness.md`, `qa.md` (§115, §121),
-`measurements/README.md` and the progress note.
+The screen could not say it. The scenario data source has computed a refusal since `api-010`;
+`App.tsx` destructured the feed without it and the screen declared no prop for it. So **every 422 the
+backend has ever returned produced no visible change at all** — an unknown scenario type, a batch
+outside the permitted size, an incident starting after its run ends. Now: a prop, the wiring, and two
+kinds of message, because a batch already running clears itself and a rejected configuration does
+not.
 
 ## Files in flight
 
@@ -102,136 +80,138 @@ Tree is clean. Nothing half-finished.
 
 | Commit | What |
 |---|---|
-| `07d4e91` | `spec: amend eval-002 — what the figures are indexed by` |
-| `715ba4a` | `test: add tests for eval-002` |
-| `1c13210` | `feat(eval-002): detection metrics indexed by what they are about - tests pass` |
-| `c65522f` | `measure(eval-002): mutation pass — 40 of 41` |
-| `c22418b` | `measure(eval-002): the results table over corpus v2` |
-| `5142060` | `docs: eval-002 write-up` |
-| `95c31fc` | `docs: handoff for the eval-002 session` |
-| `cfd8c06` | `docs: progress note — the detection results section` |
-| `5a88adf` | `spec: amend eval-003 — what self-describing has to mean to be checkable` |
-| `b4b7e74` | `test: add tests for eval-003` |
-| `24f9f91` | `feat(eval-003): metrics exported so a thesis row can be traced back - tests pass` |
-| `4f5d4f6` | `measure(eval-003): mutation pass 39 of 39, and the exported files` |
-| `6e9aafc` | `docs: eval-003 write-up` |
-| `a73c798` | `docs: handoff after eval-002 and eval-003` |
-| `dfd438a` | `docs: progress note — charts over the exported results, and provenance` |
-| `423cf32` | `measure(eval-005, eval-003): the campaign's per-arm figures, end to end` |
-| `85c5682` | `docs: the campaign's per-arm figures, and a prediction they correct` |
+| `a310896` | `spec: amend api-011 — the lease, the refusal channel, and the clock` |
+| `299c6bf` | `test: add tests for api-011` |
+| `80ace99` | `feat(api-011): one batch at a time - tests pass` |
+| `fe1eca3` | `test(api-011): mutation pass, 17 of 17` |
 
-New files: `app/evaluation/metrics.py`, `app/evaluation/export.py`, `tests/test_eval_metrics.py`,
-`tests/test_eval_export.py`, `measurements/corpus/detection_metrics.py` + `.log`,
-`measurements/corpus/campaign_statistics.py` + `.log`,
-`measurements/mutation/mutate_eval002_metrics.py` + `.log`,
-`measurements/mutation/mutate_eval003_export.py` + `.log`,
-`measurements/exports/detection/` (6 files), `measurements/exports/campaign/` (3 files).
+New files: `backend/app/scenario/guard.py`,
+`backend/measurements/mutation/mutate_api011_guard.py` + `.log`.
 
-Edited: `docs/spec.jsonl` (`eval-002` and `eval-003` amended and passing, `eval-005` amended with its
-measured result), `docs/qa.md` (§110-123 + 16 glossary rows, now 125 entries), `docs/thesis_notes.md`
-(18 subsections, now 236), `docs/evaluation_harness.md`, `docs/implementation.md` (two Phase 11 items
-ticked), `docs/progress_note.html` (results section, three charts, provenance section, campaign
-figures; published v19→v21), `backend/measurements/README.md`, `CLAUDE.md`.
+Edited, backend: `app/api/v1/scenario.py` (the guard dependency, the 409, the release on a launcher
+that raises), `app/api/v1/schemas/scenario.py` (`BatchInFlight`), `app/scenario/batch.py` (the lease
+across the seam and the thread's `finally`), `tests/test_api_scenario.py` (+24 tests; `_post` now
+binds a fresh guard per call and `RecordingLauncher` takes the lease), `tests/test_scn_control_contract.py`
+(+2 parity tests over the 409 body).
 
-No new dependencies. No new requirements.
+Edited, frontend: `types/scenarioControl.ts` (`InFlightBatch`, `BatchRefusal`), `lib/api.ts`
+(`BatchAlreadyRunningError`, and the 409 body read rather than discarded), `hooks/useScenarioControl.ts`
+(`error: string` → `refusal: BatchRefusal`), `App.tsx` (the seam passes it),
+`screens/scenarioControl.tsx` (the prop and two messages), `test/scenarioAccess.test.tsx` (+5),
+`test/navigation.test.tsx` (the leaking fetch stub).
+
+Edited, docs: `docs/spec.jsonl` (`api-011` amended with six findings, now passing),
+`docs/qa.md` (§124-128 + 4 glossary rows), `docs/thesis_notes.md` (7 subsections, now 243),
+`docs/implementation.md`, `backend/measurements/README.md`, `CLAUDE.md` (repo-map entry for the
+guard).
+
+No new dependencies. No new requirements. The progress note was **not** touched — this item changes
+what the system does under load rather than the story the note tells, and nothing on it went stale.
 
 ## Failed attempts
 
-- **The `eval-003` spec amendment was asked for on `eval-005`.** The user corrected it mid-turn; the
-  six points were `eval-002`'s throughout.
-- **`eval-002`'s track-side guard was written against the wrong rule.** First version refused a
-  per-aircraft recall on any arm that was not `POSITIVE`. Wrong: `anom-011` measures
-  `aircraft-coverage-gap`, which is `UNJUDGED`. The correct rule is "an arm that stages nothing".
-- **`eval-002`'s mutation pass reported seven survivors; five were real gaps in the tests.** The
-  worst: the false-negative rate was asserted at a recall of one half, where a figure and its
-  complement are the same number, so the test could not fail. A sixth was a **redundancy in the
-  code** — two checks held the one-arm-per-type rule and either could be removed with no
-  behavioural change, meaning neither was proved. Fixed by making the contradiction unconstructible.
-- **`eval-003`'s mutation pass reported four survivors, all real.** The declared count-columns were
-  never checked against what each rate is taken over; the declaration *set* was never checked for
-  completeness; **no fixture value had more than three decimal places**, so a rounding mutant was
-  invisible; and the row for a type two arms produce was never asserted to carry neither arm's
-  counts.
-- **Two later `eval-003` survivors were one dead defence.** A missing-key fallback had been made
-  unreachable by the record alignment, so two mutants of it changed nothing. Removed rather than
-  marked equivalent: a record missing a column now raises. **Second time this session that a
-  survivor on a guarded rule meant the guard was redundant rather than the test missing.**
-- **A defect no unit test could catch, found by opening the exported CSV.** A nested record absent
-  on one row and present on another flattened two ways, adding an always-blank column that on the
-  rows where the record really was absent read as a missing *value* rather than a missing *record*.
-  The first fix — drop any column name that prefixes another — was wrong within a minute: it also
-  dropped `f1`, because `f1_is_defined` sits beside it, and those are siblings. A rule over names
-  cannot tell the two apart.
-- **A cascade miss in the progress note, present before this session.** `.dim` had only ever been
-  styled inside `.record`, so every em-dash marked with it rendered unstyled. Found while adding a
-  table that used it; a bare rule now exists.
-- **The campaign statistics export landed in `backend/exports/` on its first run.** Off-by-one:
-  `HERE` was already the directory, so `HERE.parents[1]` climbed one level too far. Removed and
-  re-run.
-- **`eval-005` could not simply be run**, and that is a finding rather than a slip. `ai-012`
-  serialises the budget and the grounding ledger as *figures* rather than as contents, and `eval-005`
-  is per arm while the stored budget is pooled — so the one artefact the campaign produced cannot
-  answer the question the item after it asks of it. Two items passed independently with that join
-  never exercised. Worked around by rebuilding the record with nothing invented and reconciling it
-  twice; the durable fix is owed on `ai-012`.
-- **`quiet_run_background`'s row in `measurements/README.md` still quoted n=20 figures** eleven days
-  after the three-wave re-measurement moved them. Its own `.log` was correct. Corrected in place.
-- **The progress note was two items behind and quoted a stale test count**, a stale quiet-hour count
-  (twenty, not sixty) and a "what happens next" entry describing the results table as pending. All
-  corrected; container suite re-run to get the real figure rather than extrapolating it.
-- **The browser extension was not connected**, so the one visual pass over the three new charts could
-  not be taken. Verified arithmetically instead: every drawn shape inside its viewBox, every bar
-  width matching its value to the pixel, both stacked bars summing to exactly 380px and 300 aircraft.
-  Worth a real look next session.
-- **`make format` reformatted 12 unrelated files again.** Worked around by running `black` on the
-  files in hand rather than the whole tree. Standing item below.
-- **Workflow deviations, recorded rather than hidden:** in both spec items, tests were added *after*
-  the implementation in response to the mutation pass — which is its purpose — and two `eval-002`
-  tests came from correcting the track-side guard. Three `eval-003` test expectations were corrected
-  after first green, where the flattening rule turned out more correct than the test assumed.
+- **The item's own scope line was wrong, and reading the code before writing tests is what caught
+  it.** It said "one sentence of screen copy". There was nowhere to put a sentence: the feed computed
+  a refusal, the seam dropped it, and the screen had no prop. Six findings went into the amendment
+  before any test was written, and this one changed the scope rather than a detail.
+- **The item said the launcher releases the guard in a `finally`.** It cannot: `launch_batch` starts a
+  thread and returns. Released there, the guard is free before the batch has opened a run row, which
+  is not a weaker bound but no bound — every later start would be accepted.
+- **A frontend test passed before the implementation existed.** It asserted that no refusal is shown
+  before anything has been refused, which was vacuously true while nothing rendered a refusal at all.
+  The prove-red step is the only thing that said so. Replaced with a test requiring a refusal to
+  appear and then clear.
+- **The mutation pass found one survivor, and it was a real limit on what a test can observe.** A
+  check-then-set `take` survived the barrier test, because two threads released together are usually
+  scheduled so that one completes both halves before the other begins either. A test that catches a
+  defect *occasionally* is worse than none, since it reads as coverage. Atomicity is now asserted
+  against the parsed source — `take`'s body is one `with self._lock` and nothing beside it — with the
+  behavioural test kept and annotated with what it leaves through.
+- **Reasoning about mutants before running the harness found two gaps the suite already had.** Both
+  posts in the refusal test carried one configuration, so a 409 naming the batch it had just refused
+  was indistinguishable from one naming the running batch. And under the existing inline-thread
+  stand-in a batch always finishes, so *released in the thread* and *released at the call site* looked
+  identical; a stand-in that starts and never runs its target is what tells them apart.
+- **The frontend suite had been passing and failing at the same time**, and the reassuring half was
+  the one being read. All 86 tests passed while the runner exited non-zero on an unhandled exception:
+  `navigation.test.tsx` stubbed the network to answer *every* path with the operational picture, so
+  the scenario data source received a picture object as its run list and the screen called `.map` on
+  it. Any CI gate over the frontend was broken regardless of the code. Fixed by answering per path, as
+  the scenario suite already does — a defect in a test's fixture, which is the part of a suite nothing
+  tests.
+- **One frontend assertion was testing the wrong thing.** It expected the wire identifier
+  `gnss-degradation` in the refusal; the screen renders the library's own name for the type, which is
+  what the rest of that screen calls it. The screen was right and the test was changed, along with
+  tightening the contract so the type travels as the closed set and the cast goes away.
+- **`make format` reformatted unrelated files again.** Worked around by running `black` and `biome`
+  on the files in hand. Standing item below.
+- **Workflow deviation, recorded:** two backend tests and one structural test were added *after* first
+  green, in response to the mutation pass. That is its purpose, but the order is worth noting.
 
 ## Next step
 
-1. **`eval-006`** — the blind-score ingest and inter-rater agreement. Deferred until the second rater
-   returns mid-October, and **the only thing between here and a complete evaluation chapter**. Not
-   built ahead of time on purpose: what a returned sheet looks like is a fact about what two people
-   did with a file, and writing the arithmetic while the first sheet is visible makes choices with
-   partial results in view.
-2. **A corpus with near-misses** is what would turn the detection table from a consistency result
+1. **`eval-006`** — the blind-score ingest and inter-rater agreement. Still the only thing between
+   here and a complete evaluation chapter, and still blocked until the second rater returns
+   mid-October.
+2. **`eval-001`, possibly closeable by measurement rather than code.** Its failure case is a batch
+   that cannot be reproduced from its recorded base seed — and until `scn-008` landed, base seeds were
+   never stored, so that proof could not be taken. It is now in the run's recorded parameters, so the
+   measurement is available. Cheap, and it keeps the evaluation chapter moving while the rater is
+   away. Check first whether it is satisfiable before writing anything.
+3. **The Hypotheses arc — the largest real gap, and all of it unblocked.** The system has produced 80
+   hypothesis rows including a scored 20-bundle campaign and the application cannot display one of
+   them; the human-in-the-loop half has no code at all, so AC-09 is undemonstrable and so are FR-711,
+   FR-712 and FR-713. Ten items in one chain:
+   `ui-001` → `api-004` → `hyp-001` → `hyp-002` → `hyp-003` → `hyp-004` → `ai-010` → `api-005` →
+   `fbk-001` → `fbk-002`. Fold **`api-009`** in along the way rather than as its own arc: it is
+   cross-cutting, assertable now, and `api-004` is exactly where a scenario type could leak into a
+   response and quietly invalidate every metric already measured.
+4. **A corpus with near-misses** is what would turn the detection table from a consistency result
    into an accuracy one. Out of scope for the dissertation, named as such in five places.
 
 ### Open and unowned
 
+- **A malformed response from `/scenario/runs` would white-screen the application** rather than
+  degrade — noticed while fixing the test above and deliberately not patched, because the honest
+  posture (fail loudly, or render an explicit fault state) is a decision needing an item rather than
+  a `try`. The other screen's data source was not audited the same way, so whether it drops or
+  mishandles anything is not known.
+- **Giving batch work its own Engine** is the complementary fix to `api-011` and stays available and
+  unowned. Nothing sets `pool_size` or `max_overflow` either.
+- **Reporting a batch that failed after acceptance.** `api-011` tells the analyst a batch is running;
+  nothing tells them one died. Named out of scope on the item.
 - **Serialising enough for the campaign record to round-trip** (`ai-012`) — **decided against, with a
-  trigger.** The budget and the ledger go out as figures, so the per-arm cost has to be rebuilt from
-  the generations and reconciled. Every benefit of fixing it is conditional on a second campaign:
-  `ai-005` and `ai-006` are both unbuilt and both need the local arm, which is not planned, so the
-  28 September run is plausibly the only campaign this dissertation will have. It would not help the
-  existing artefact either, which predates it, and re-running the campaign costs money and would
-  replace a pre-registered corpus. **The trigger: do this first if a second campaign is ever run.**
-  What is kept is the finding, which is the part with thesis value. The one real exposure — the
-  rebuild depends on the eighty stored rows — is closed instead by committing the reconstructed
-  per-call split beside the record, written only after the reconciliation passes.
+  trigger.** Every benefit is conditional on a second campaign, which needs `ai-005`/`ai-006`, both
+  unbuilt and both needing the unplanned local arm. **The trigger: do this first if a second campaign
+  is ever run.** The one real exposure — the rebuild depends on the eighty stored rows — is closed by
+  the committed per-call split, written only after its reconciliation passes.
 - **`cost_is_complete` is vacuously true on an arm that made no calls** — the same defect `eval-005`
-  fixed for its rates, surviving in the one field that is a boolean rather than a rate. It reads
-  correctly only because the call count of zero sits beside it in the export. Recorded in
-  `thesis_notes.md` and `qa.md` §123 rather than changed, because changing a passing item to fix a
-  field that reads correctly in context should be argued for first.
+  fixed for its rates, surviving in the one field that is a boolean rather than a rate. Recorded, not
+  changed.
 - Mutation harnesses for the four other evaluation modules — `pack.py`, `sampling.py`,
   `statistics.py`, `workbook.py` — 104 tests with nothing establishing they are load-bearing. The
-  two written this session found nine real gaps between them, which is the argument.
-- Only `mutate_anom009_latency.py`, `mutate_anom008_control.py`, `mutate_eval002_metrics.py` and
-  `mutate_eval003_export.py` check that a mutant parses; the last two also check it is not identical
-  to the original.
+  three harnesses written recently found ten real gaps between them, which is the argument.
+- Six measurement harnesses lack the guard-file-and-sentinel pattern; only the four most recent check
+  that a mutant parses and is not identical to the original.
 - The 0.39 rate-excess singleton, seen once at n=40 and surviving to n=60 with no second example.
 - 12 files not Black-formatted; `make format` touches them on every run.
-- Frontend suite exits non-zero (`control.runs.map is not a function`, `scenarioControl.tsx:344`).
 - Nothing applies migrations to the application database in the ordinary path.
-- Six measurement harnesses lack the guard-file-and-sentinel pattern.
 - `ai-011`'s harness has not been re-run since the corpus was regenerated.
 - The credential loader is not generalised.
 - `ai-008`'s superseded case has no corpus demonstration.
-- `docs/phase9_hypothesis_layer.md` §8 still says N=1 — and the twenty-bundle agreement figures are
-  now the measurement that settles what N=3 only suggested.
+- `docs/phase9_hypothesis_layer.md` §8 still says N=1, which the twenty-bundle agreement figures
+  settle.
 - Rebuilding evidence bundles corpus-wide would renumber the scored population (bundle ids 247-308)
   and stop `draw_scored_sample.py` reproducing its own draw.
+- The three progress-note charts still want a real visual pass; the browser extension was unavailable
+  when they were drawn, and geometry was verified arithmetically instead.
+
+### Two limitations from earlier sessions that must not be dropped
+
+**The detection table measures wiring, not accuracy.** Every rate is 1.000 or 0.000. The radio side
+is synthetic with the incident well above threshold by construction, the corpus holds no near-misses,
+and one of three reportable types has no rule. The only figure carrying information from outside the
+generator is the per-aircraft recall, 0.587 on two arms of three.
+
+**The retry and fallback paths never fired.** Nothing was refused and nothing fell back on the scored
+campaign, so a fallback rate of zero reports that the path was *not exercised* — not that it works.

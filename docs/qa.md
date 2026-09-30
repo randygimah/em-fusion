@@ -7700,6 +7700,135 @@ went unpriced. Over zero calls that is true and vacuous — the honest statement
 *nothing to price*. It reads correctly only because the call count of zero sits
 beside it, which is exactly what putting the counts next to every figure was for.
 
+## 124. eval-006 is next but it is waiting on a second rater. What is worth building while we wait?
+
+**The presentation half, and there is more of it left than of anything else.** Of the thirty-six
+capabilities still unbuilt, twenty-six are the screens and the endpoints behind them. The backend is
+a long way ahead of the application: detection, the hypothesis layer and the evaluation harness are
+all finished, while the API serves four routes and the Hypotheses screen is a placeholder saying it
+is missing.
+
+The gap that matters is not a count. The system has produced eighty hypothesis rows including a
+scored twenty-bundle campaign, and **the application cannot display one of them**. The research
+question is about explainable, *human-in-the-loop* situational awareness, and the human-in-the-loop
+half has no code at all -- no hypothesis endpoint, no detail view, no way for an analyst to record a
+verdict. The acceptance criterion covering analyst validation cannot be demonstrated, and neither
+can the requirements for evidence traceability, the decision-support disclaimer, or showing which
+generator produced an explanation. A demonstration today cannot show a hypothesis.
+
+Two things came before that arc, both small.
+
+| Item | Why it goes first |
+|---|---|
+| One batch at a time | A **defect in shipped code**, not a feature. Pressing the start button several times in quick succession left the backend serving nothing at all. |
+| The batch runner's reproducibility | Possibly closeable by **measurement rather than code**, and it keeps the evaluation chapter moving while the rater is away. Its failure case is a batch that cannot be reproduced from its recorded base seed -- and until the batch provenance landed, base seeds were never stored, so that proof could not be taken at all. |
+
+Worth recording as a limitation of how the backlog was read: a count of open items says nothing
+about their size. The eight Operational Picture items and the four map items are a larger body of
+work than the ten in the hypothesis arc, and they were not chosen because none of them is what the
+thesis is short of.
+
+## 125. Why did pressing "start batch" a few times stop the whole backend?
+
+**Because every press started another background worker, and the workers took the database
+connections the web server needed to answer anything at all.**
+
+The wrong assumption worth naming is that this was about batches being expensive. It was not.
+Measured afterwards, one batch on its own is harmless: it adds a single connection and the health
+endpoint keeps answering normally throughout. A batch is roughly seventy seconds of work and half a
+million rows, so "it is heavy, and several at once is heavier" is the natural reading -- and it is
+wrong in a way that matters, because it points at making batches cheaper instead of at bounding how
+many run together.
+
+What actually happens:
+
+| | |
+|---|---|
+| Connections available | Fifteen, which is the library's default and nothing in this project changes it |
+| What a start does | Answers immediately, then does the work on a background worker |
+| What each worker borrows | The same pool the web server uses to serve requests |
+| Result of enough of them | Nothing left for requests, so the server waits for a connection that is never returned |
+
+The symptom is worth distinguishing from slowness. The backend was not responding late; it was not
+responding, and its container was reporting itself unhealthy. Every request was queued behind a
+connection that would not come back.
+
+**The fix is to allow one batch at a time**, and a second press is refused with a message saying
+what is already running -- which scenario type, which seed, and when it started. That last part is
+not decoration: an analyst who cannot tell which batch is in flight, or how long it has been, cannot
+tell whether to wait or to investigate, and the information is already being held in order to
+enforce the bound.
+
+Two things the fix deliberately does not do. It does not cancel a running batch, and it does not
+make the connection pool safe against arbitrary load -- it removes the one cause that was actually
+observed. Giving batches a pool of their own remains available and unowned.
+
+## 126. Why is "is a batch running" kept in memory rather than written down?
+
+**Because a batch cannot outlive the process running it, so a written-down record of one could
+never be corrected.**
+
+This looks like the lazy choice and it is the opposite. Write *a batch is running* into the
+database and then kill the container mid-batch: the record still says a batch is in flight, and
+nothing is left alive to retract it. The button stays locked until somebody edits the database by
+hand. The project already settled this once, when it refused to give runs a three-valued status
+column on the grounds that a process killed outright cannot record its own death.
+
+Kept in memory, the state has the property that argument wanted:
+
+| Event | Written down | In memory |
+|---|---|---|
+| Batch finishes | Cleared | Cleared |
+| Process is killed mid-batch | **Still says running, forever** | Gone -- and correctly, since nothing is running |
+| Two machines running the app | One record, two truths | Each knows its own, which is what it is asked |
+
+The cost is real and worth stating: this is sound only while the API runs as **one** process. Adding
+a second worker would give each its own copy of the state and quietly restore the defect, with every
+test still passing -- so the way the server is started is asserted alongside the bound itself, in all
+three places this repository starts it.
+
+## 127. What is a "lease", and why does it travel to the background worker?
+
+**A lease is the right to run one batch plus the obligation to give it back, and it travels because
+the worker is the only thing that knows when the batch is finished.**
+
+The obvious design is a flag: set it when a batch starts, clear it when the batch ends. The trap is
+in *where* "when the batch ends" is. The function that starts the work returns in microseconds --
+that is the whole point of it, since the request must not wait seventy seconds -- so clearing the
+flag where that function returns clears it before the batch has opened a single row. That is not a
+weaker bound. It is no bound at all, because every later press would be accepted.
+
+So the right to run is handed to the worker as a value, and the worker gives it back in a block that
+runs whether the batch succeeded or failed. The failure half is the sharper one: a batch that raises
+and never gives the right back would disable the button until the container restarted, turning a
+recoverable error into an outage of exactly the kind the bound exists to prevent.
+
+One subtlety found while building it. Giving the right back must not mean *clear the flag*, but
+*clear the flag if I am still the one holding it*. Otherwise a worker finishing late can release a
+bound that a **later** batch is holding, and then two batches run at once -- the mechanism meant to
+enforce the rule breaking it.
+
+## 128. The screen showed nothing when the backend refused a batch. Was that part of this defect?
+
+**No, and that is the point -- it was a separate defect, already there, and this item happened to
+walk into it.**
+
+The scenario feed has computed a reason-why-not since the day the screen was wired to the backend.
+The seam that connects the feed to the screen unpacked everything it needed and left that value
+behind, and the screen was never given anywhere to put it. So every refusal the backend has ever
+returned -- an unknown scenario type, a batch outside the permitted size, an incident beginning after
+its run ends -- was rejected by the server and produced **no visible change whatsoever**. The button
+looked dead.
+
+The lesson generalises past this screen, and it is the part worth carrying into the write-up: a
+value a data source exposes and nothing consumes is not a small omission, because nothing fails.
+There is no error, no warning and no empty state -- the capability is simply absent, and it looks
+identical to a capability that was never built. The seam is where that happens, because the seam is
+the one place a value can be dropped without any module being obviously wrong.
+
+Worth recording as a limitation: the other screen's data source was not audited the same way, so
+whether it drops anything is not known.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -7919,3 +8048,7 @@ beside it, which is exactly what putting the counts next to every figure was for
 | **Round-trip** | Whether an artefact can be read back into the object it was written from. The campaign record cannot: it stores the spending as a total and the next question needs it per arm. See §122. |
 | **Reconciliation** | Checking a rebuilt figure against the one recorded at the time, and refusing to report anything if they differ. What separates a reconstruction from a plausible guess. See §122. |
 | **Vacuously complete** | A flag that is technically true over an empty population and says nothing — "the cost is complete" for an arm that made no calls. Readable only because the count sits beside it. See §123. |
+| **Lease** | The right to run one batch plus the obligation to give it back. Held by the background worker that runs the batch, because that worker is the only thing that knows when the batch has finished; given back whether the batch succeeded or failed, and only while the holder is still the holder. |
+| **409 Conflict** | The HTTP answer to *the thing you asked for cannot happen because of the state something else is in*, as distinct from 422, *what you asked for is not a valid request*. The first clears itself; the second needs the caller to change something. |
+| **Check-then-set** | Reading a shared value and then writing it as two steps, so two callers can both read the old value and both write. The defect is invisible in ordinary use and rare enough under contention that a test catches it only sometimes. |
+| **Connection pool** | The fixed set of database connections a process shares between everything it is doing. Fifteen here, by library default. When they are all lent out, further work waits rather than failing, which is why exhausting the pool looks like a hang rather than an error. |

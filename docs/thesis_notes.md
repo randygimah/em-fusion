@@ -8174,3 +8174,151 @@ export mitigates it — the call count of zero sits in the next column, which is
 exactly what requiring the counts beside every figure was for — and because changing
 a passing item to fix a field that reads correctly in context is a change that should
 be argued for rather than made in passing.
+
+### A concurrency defect found by using the screen, not by testing it
+
+The Scenario Control screen's start control was wired on 13 September 2026 and every test over it
+passed. The defect it carried was found by pressing the button several times in quick succession on
+a machine already doing other work: the backend stopped serving anything at all, reporting
+`QueuePool limit of size 5 overflow 10 reached, connection timed out`, with its container marking
+itself unhealthy. Not slow -- unserviceable.
+
+The cause is a composition rather than a component. Each start spawns an unbounded daemon thread
+(the decision that keeps the request from blocking for seventy seconds), and each thread borrows the
+application's single Engine, as the one-Engine-per-process rule requires. Both decisions are
+correct in isolation and both were tested in isolation. Together they put batch work and request
+serving in competition for a pool whose ceiling is SQLAlchemy's default fifteen, because nothing in
+this project sets `pool_size` or `max_overflow`.
+
+The measurement that shaped the fix is the one that says what the defect is *not*. A single batch
+adds one connection and `/health` answers 200 throughout, so this is not a story about batches being
+expensive; it is a story about how many run at once. That distinction chose the remedy: bound the
+count at one, rather than make a batch cheaper or enlarge the pool. It is worth being explicit that
+the fix is narrow -- it removes the observed cause and makes no claim about arbitrary load. Giving
+batch work its own Engine remains the complementary fix, available and unowned.
+
+The methodological point is the one to carry into the write-up. Every test over the start endpoint
+substituted a launcher that records instead of running, which is exactly what made the endpoint's
+refusals testable without a corpus or a database -- and is exactly what made this defect invisible,
+because a recording launcher borrows no connection. The seam that made the unit tests possible is
+the seam the defect lived behind. That is not an argument against the seam; it is an argument that a
+system assembled from separately-tested parts needs at least one pass of being *used*, and that the
+defects that pass finds are of a kind no unit test was ever going to reach.
+
+### In-memory state as the honest choice, on an argument the project had already made
+
+The fix needs to know whether a batch is running. Writing that into the database is the obvious
+design and is wrong for a reason this project had already settled once: a batch cannot outlive the
+process running it, so a persisted *running* flag is a claim that no crash can retract. Kill the
+container mid-batch and the row still says a batch is in flight, with nothing alive to correct it,
+and the control stays locked until somebody edits the database by hand.
+
+The earlier settlement was the refusal to give runs a three-valued status column, on the grounds
+that a process killed outright cannot record its own death -- which is why an unfinished run is
+recorded by the *absence* of a completion stamp rather than by a state saying "running". Keeping the
+guard in memory is the same argument one layer along, and it gets the property the earlier one
+wanted for free: a restart genuinely means nothing is in flight, and the state says so by not
+existing.
+
+The cost is a dependency worth stating rather than hiding. The guard is sound only while the API is
+a single process; a second worker would give each its own copy and silently restore the defect while
+every test still passed. That is the failure mode where a guard becomes untrue without becoming
+red, so the way the server is started is asserted **alongside** the guard, across all three
+invocations this repository contains -- the Dockerfile's development and production stages and the
+Compose command that overrides both.
+
+### Where a release belongs, and the difference between a weak guard and no guard
+
+The natural shape for a bound like this is a flag set on the way in and cleared on the way out. The
+trap is that the function starting the work returns in microseconds by design, so clearing on its
+return clears before the batch has written anything. That is not a weaker bound -- it is the absence
+of one, since every subsequent start is accepted. The right to run is therefore handed to the thread
+as a value and given back inside the thread's own `finally`.
+
+Two further decisions came out of building it, and both are cases where the safe-looking option is
+the dangerous one.
+
+Giving the right back must mean *release it if I am still the holder*, not *clear the flag*. A flag
+cleared unconditionally lets a thread finishing late release a bound a **later** batch is holding,
+at which point two batches run at once -- the enforcement mechanism breaking the rule it enforces.
+
+And the right must be claimed in the handler's own body rather than in an injected dependency,
+because a dependency is resolved whether or not the request validates. Claimed there, a rejected
+configuration would consume the bound and the next valid start would be refused on account of a
+batch that does not exist.
+
+### Asserting a race structurally, because the behavioural test catches it only sometimes
+
+The bound is only a bound if claiming it is atomic: a check followed by a set lets two simultaneous
+callers both observe *nothing running* and both proceed. A contention test was written for this --
+two threads released together by a barrier, exactly one expected to win -- and the mutation pass
+showed it insufficient. A check-then-set implementation survived it, because two threads released
+together are usually scheduled so that one completes both halves before the other begins either.
+
+The important part is what that implies about the test rather than about the code. A test that
+catches a defect occasionally is worse than no test for it, because it reads as coverage and gives a
+green run on a broken implementation more often than not. So the atomicity is now asserted against
+the parsed source -- the claim function's body is one `with self._lock` statement and nothing beside
+it -- and the mutation pass is what establishes that this assertion is the load-bearing one rather
+than a belt-and-braces addition. The behavioural test is kept, with a note saying what it leaves
+through.
+
+This is the second time in this project a property has been moved from a behavioural assertion to a
+structural one for want of a reliable observation, after the import-graph walks that hold the
+fallback generator's independence. Both are cases where the thing to be proved is a property of the
+code's shape and only indirectly of its output.
+
+### A capability dropped at a seam fails silently, which is worse than failing
+
+Building the refusal path found a defect that had nothing to do with concurrency and predates it.
+The Scenario Control data source has computed a reason-why-a-start-did-not-happen since the screen
+was wired to the backend. The seam that connects sources to screens destructured everything it
+needed and left that value behind, and the screen declared no place to put it. Every refusal the
+backend has returned since -- an unknown scenario type, a batch outside the permitted size, an
+incident starting after its run ends -- was rejected by the server and produced no visible change at
+all.
+
+What makes this worth a subsection is the failure mode, not the fix. Nothing broke. There was no
+error, no warning, no empty state: the capability was simply absent, and absent is
+indistinguishable from never-built. A screen that renders a refusal badly is a defect somebody
+notices; a screen with no channel for one looks exactly like a screen whose backend never refuses
+anything. The seam is where this can happen precisely because it is the one module whose job is to
+take values from one place and hand them to another, so a value it fails to pass on leaves no module
+looking wrong.
+
+Recorded as a limitation: the same audit was not run over the other screen's data source, so
+whether it drops anything is not known.
+
+### A test that passed before its implementation, caught by the workflow
+
+One of the frontend tests written for this item asserted that no refusal is shown before anything
+has been refused. It passed on the first run, before a line of the implementation existed, because
+nothing rendered a refusal at all -- the assertion was true for the reason the item was written to
+fix. The workflow requires every new test to fail first, which is what surfaced it; replaced with a
+test that requires a refusal to appear and then clear when a later start succeeds.
+
+It is worth recording as an argument for the prove-red step rather than as an embarrassment. The
+original assertion was not meaningless -- a standing alert would be a real defect -- but it was
+unfalsifiable at the moment it was written, and nothing about reading it would have said so. The
+only signal available was that it went green too early.
+
+### A broken frontend gate, hidden behind a passing suite
+
+While verifying this item the frontend suite was found to exit non-zero while reporting all tests
+passed. An unhandled exception was being thrown during one navigation test -- the screen calling
+`.map` on something that was not an array -- which the runner reports separately from test results.
+Any continuous-integration gate over the frontend was therefore failing regardless of the code, and
+had been for some time.
+
+The cause was in the test rather than the application: the test stubbed the network to answer *every*
+request with the operational picture, so the scenario data source received a picture object as its
+run list. Fixed by answering per path, as the scenario suite already does. Two things are worth
+recording. The suite had been passing and failing at the same time, which is a state a reader
+naturally resolves in favour of the reassuring half. And the defect was in a test's fixture, which
+is the part of a suite that nothing tests.
+
+A separate hazard was noticed and deliberately not fixed: a malformed response from the runs
+endpoint would white-screen the application rather than degrade. Recorded as open and unowned, since
+it needs an item of its own and the honest posture -- fail loudly or render an empty state -- is a
+decision rather than a patch.
+
