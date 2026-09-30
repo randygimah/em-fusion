@@ -1,0 +1,46 @@
+sentinel killed (29 failed, 11 passed in 0.77s) -- source edits reach the tests
+
+an export with no detector policies at all is accepted         KILLED   1 failed, 39 passed in 0.42s
+only the policies that happen to be present are required       KILLED   2 failed, 38 passed in 0.43s
+the threshold is dropped from the required set                 KILLED   2 failed, 38 passed in 0.46s
+the policies are recorded but not exported                     KILLED   4 failed, 36 passed in 0.73s
+a corpus with no base seed is accepted                         KILLED   1 failed, 39 passed in 0.49s
+a campaign with no population is accepted                      KILLED   1 failed, 39 passed in 0.44s
+a credential in the parameters is written to the file          KILLED   1 failed, 39 passed in 0.42s
+the digest is taken over the corpus name alone                 KILLED   3 failed, 37 passed in 0.43s
+the digest ignores the policies                                KILLED   1 failed, 39 passed in 0.42s
+the seed order stops mattering                                 KILLED   2 failed, 38 passed in 0.43s
+the digest is not the first column                             KILLED   9 failed, 31 passed in 0.68s
+the rows carry no digest at all                                KILLED   1 failed, 39 passed in 0.47s
+the provenance file resolves nothing because its digest differs KILLED   1 failed, 39 passed in 0.41s
+the two records share one digest                               KILLED   1 failed, 39 passed in 0.43s
+an unmeasured rate is written as zero                          KILLED   5 failed, 35 passed in 0.44s
+a rate is exported without the counts behind it                KILLED   1 failed, 39 passed in 0.41s
+only the rate itself has to be present, not its counts         KILLED   1 failed, 39 passed in 0.42s
+the recall loses its denominator                               KILLED   1 failed, 39 passed in 0.41s
+the per-aircraft recall is exported with no population declared KILLED   1 failed, 39 passed in 0.44s
+a record disagreeing about its own shape is blanked rather than refused KILLED   1 failed, 39 passed in 0.48s
+a ragged row is written out                                    KILLED   1 failed, 39 passed in 0.45s
+a value is rounded on the way out                              KILLED   3 failed, 37 passed in 0.43s
+the type row recomputes its arm counts instead of copying them KILLED   1 failed, 39 passed in 0.43s
+the type row carries no arm counts, so F1 cannot be checked    KILLED   1 failed, 39 passed in 0.45s
+an arm's counts are taken from whichever arm sorts first       KILLED   1 failed, 39 passed in 0.43s
+the per-run recall is renamed on the way out                   KILLED   20 failed, 20 passed in 0.80s
+an absent nested record becomes a blank column of its own      KILLED   20 failed, 20 passed in 0.75s
+the shape of an absent record is guessed from one entry's keys KILLED   20 failed, 20 passed in 0.76s
+the nested record's name is dropped from its columns           KILLED   21 failed, 19 passed in 0.80s
+the confusion matrix is exported wide                          KILLED   20 failed, 20 passed in 0.77s
+figures are exported with no provenance                        KILLED   1 failed, 39 passed in 0.43s
+campaign figures are exported with no provenance               KILLED   1 failed, 39 passed in 0.42s
+an empty export is produced rather than refused                KILLED   1 failed, 39 passed in 0.41s
+provenance with nothing to describe is accepted                KILLED   1 failed, 39 passed in 0.41s
+a file is written for a half that was not supplied             KILLED   1 failed, 39 passed in 0.41s
+a blank model id is accepted                                   KILLED   1 failed, 39 passed in 0.41s
+a blank prompt digest is accepted                              KILLED   1 failed, 39 passed in 0.42s
+an unnamed corpus is accepted                                  KILLED   1 failed, 39 passed in 0.40s
+a measurement with no date is accepted                         KILLED   1 failed, 39 passed in 0.40s
+
+restored
+
+39 killed of 39 valid mutants
+no unexpected survivors

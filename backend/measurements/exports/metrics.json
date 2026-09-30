@@ -1,0 +1,231 @@
+{
+  "detection": {
+    "arms": [
+      {
+        "detected": 0,
+        "excluded": 0,
+        "false_negative_rate": null,
+        "kind": "unjudged",
+        "latency": {
+          "conditional_on": "detections",
+          "detections": 0,
+          "max_seconds": null,
+          "measured": 0,
+          "median_seconds": null,
+          "min_seconds": null
+        },
+        "missed": 0,
+        "recall_per_run": null,
+        "runs": 60,
+        "scenario_type": "aircraft-coverage-gap",
+        "staged_type": "possible_data_source_issue",
+        "track_side": {
+          "detected_aircraft": 176,
+          "recall_per_staged_aircraft": 0.5866666666666667,
+          "staged_aircraft": 300
+        }
+      },
+      {
+        "detected": 60,
+        "excluded": 0,
+        "false_negative_rate": 0.0,
+        "kind": "positive",
+        "latency": {
+          "conditional_on": "detections",
+          "detections": 60,
+          "max_seconds": 90.0,
+          "measured": 60,
+          "median_seconds": 10.0,
+          "min_seconds": 10.0
+        },
+        "missed": 0,
+        "recall_per_run": 1.0,
+        "runs": 60,
+        "scenario_type": "ambiguous-mixed-evidence",
+        "staged_type": "possible_sensor_fault",
+        "track_side": {
+          "detected_aircraft": 176,
+          "recall_per_staged_aircraft": 0.5866666666666667,
+          "staged_aircraft": 300
+        }
+      },
+      {
+        "detected": 60,
+        "excluded": 0,
+        "false_negative_rate": 0.0,
+        "kind": "positive",
+        "latency": {
+          "conditional_on": "detections",
+          "detections": 60,
+          "max_seconds": 90.0,
+          "measured": 60,
+          "median_seconds": 20.0,
+          "min_seconds": 10.0
+        },
+        "missed": 0,
+        "recall_per_run": 1.0,
+        "runs": 60,
+        "scenario_type": "gnss-degradation",
+        "staged_type": "possible_interference_zone",
+        "track_side": {
+          "detected_aircraft": 247,
+          "recall_per_staged_aircraft": 0.8233333333333334,
+          "staged_aircraft": 300
+        }
+      },
+      {
+        "detected": 0,
+        "excluded": 0,
+        "false_negative_rate": null,
+        "kind": "silent-control",
+        "latency": {
+          "conditional_on": "detections",
+          "detections": 0,
+          "max_seconds": null,
+          "measured": 0,
+          "median_seconds": null,
+          "min_seconds": null
+        },
+        "missed": 0,
+        "recall_per_run": null,
+        "runs": 60,
+        "scenario_type": "normal-baseline",
+        "staged_type": null,
+        "track_side": null
+      },
+      {
+        "detected": 60,
+        "excluded": 0,
+        "false_negative_rate": 0.0,
+        "kind": "positive",
+        "latency": {
+          "conditional_on": "detections",
+          "detections": 60,
+          "max_seconds": 90.0,
+          "measured": 60,
+          "median_seconds": 10.0,
+          "min_seconds": 10.0
+        },
+        "missed": 0,
+        "recall_per_run": 1.0,
+        "runs": 60,
+        "scenario_type": "rf-sensor-fault",
+        "staged_type": "possible_sensor_fault",
+        "track_side": null
+      }
+    ],
+    "confusion": {
+      "aircraft-coverage-gap": {
+        "(silent)": 60
+      },
+      "ambiguous-mixed-evidence": {
+        "possible_sensor_fault": 60
+      },
+      "gnss-degradation": {
+        "possible_interference_zone": 60
+      },
+      "normal-baseline": {
+        "(silent)": 60
+      },
+      "rf-sensor-fault": {
+        "possible_sensor_fault": 60
+      }
+    },
+    "excluded": 0,
+    "false_positive_rates": [
+      {
+        "arm": "cross-modal",
+        "controlled": false,
+        "rate": 0.0,
+        "reportable_types": "2 of 3",
+        "runs": 60,
+        "runs_with_a_report": 0,
+        "scenario_type": "aircraft-coverage-gap"
+      },
+      {
+        "arm": "from-nothing",
+        "controlled": true,
+        "rate": 0.0,
+        "reportable_types": "2 of 3",
+        "runs": 60,
+        "runs_with_a_report": 0,
+        "scenario_type": "normal-baseline"
+      }
+    ],
+    "multi_claim_runs": 0,
+    "runs": 300,
+    "types": [
+      {
+        "anomaly_type": "possible_data_source_issue",
+        "arm_recall_per_run": null,
+        "arms": [],
+        "built": false,
+        "claimed_runs": 0,
+        "correct": 0,
+        "f1": null,
+        "f1_is_defined": false,
+        "precision": null,
+        "wrong": 0
+      },
+      {
+        "anomaly_type": "possible_interference_zone",
+        "arm_recall_per_run": 1.0,
+        "arms": [
+          "gnss-degradation"
+        ],
+        "built": true,
+        "claimed_runs": 60,
+        "correct": 60,
+        "f1": 1.0,
+        "f1_is_defined": true,
+        "precision": 1.0,
+        "wrong": 0
+      },
+      {
+        "anomaly_type": "possible_sensor_fault",
+        "arm_recall_per_run": null,
+        "arms": [
+          "ambiguous-mixed-evidence",
+          "rf-sensor-fault"
+        ],
+        "built": true,
+        "claimed_runs": 120,
+        "correct": 120,
+        "f1": null,
+        "f1_is_defined": false,
+        "precision": 1.0,
+        "wrong": 0
+      }
+    ]
+  },
+  "provenance": {
+    "detection": {
+      "base_seeds": [
+        1412660662,
+        965530111,
+        655209063
+      ],
+      "corpus": "v2",
+      "digest": "c421c41506fd",
+      "measured_on": "2026-09-30",
+      "policies": {
+        "BASELINE.window_h": "2.0",
+        "FUSION-SPATIAL.corroboration_threshold": "1.58",
+        "FUSION-SPATIAL.excess_radius_km": "60.0",
+        "RF-NOISE.direction": "above",
+        "RF-NOISE.high_at_db": "15.0",
+        "RF-NOISE.medium_at_db": "10.0",
+        "RF-NOISE.metric": "power_dbm",
+        "RF-NOISE.minimum_episode_s": "10.0",
+        "RF-NOISE.threshold_db": "6.0",
+        "SENSOR-FAULT.neighbour_radius_km": "70.0",
+        "TRACK-CLUSTER.radius_km": "60.0",
+        "TRACK-GAP.box": "49.0,54.0,3.0,11.0",
+        "TRACK-GAP.contact_fresh_within_s": "30.0",
+        "TRACK-GAP.rate_excess_radius_km": "60.0",
+        "TRACK-GAP.threshold_s": "100.0"
+      },
+      "runs": 300
+    }
+  }
+}

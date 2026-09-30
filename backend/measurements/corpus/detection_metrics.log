@@ -40,4 +40,12 @@ CONFUSION -- truth down, reported across. A misreport is two errors.
   normal-baseline            {'(silent)': 60}
   rf-sensor-fault            {'possible_sensor_fault': 60}
 
+exported 6 files to measurements/exports/, every row stamped c421c41506fd
+  detection_arms.csv
+  detection_confusion.csv
+  detection_false_positives.csv
+  detection_types.csv
+  metrics.json
+  provenance.csv
+
 scored 300 runs, excluded 0 for staging nothing, 0 claimed more than one type

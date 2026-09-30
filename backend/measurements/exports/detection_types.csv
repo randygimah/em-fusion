@@ -1,0 +1,4 @@
+source,anomaly_type,built,arms,claimed_runs,correct,wrong,precision,arm_recall_per_run,f1,f1_is_defined,arm_detected,arm_runs
+c421c41506fd,possible_data_source_issue,False,,0,0,0,,,,False,,
+c421c41506fd,possible_interference_zone,True,gnss-degradation,60,60,0,1.0,1.0,1.0,True,60,60
+c421c41506fd,possible_sensor_fault,True,ambiguous-mixed-evidence;rf-sensor-fault,120,120,0,1.0,,,False,,

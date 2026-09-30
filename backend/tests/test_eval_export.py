@@ -50,6 +50,7 @@ from app.evaluation.export import (
     DetectionProvenance,
     ExportError,
     Table,
+    _table,
     export_metrics,
 )
 from app.evaluation.metrics import RunOutcome, TrackSideRecall, compute
@@ -148,7 +149,7 @@ def _metrics():
     return compute(
         outcomes,
         controls=controls,
-        track_side={GNSS: TrackSideRecall(staged_aircraft=100, detected_aircraft=82)},
+        track_side={GNSS: TrackSideRecall(staged_aircraft=300, detected_aircraft=247)},
     )
 
 
@@ -363,6 +364,48 @@ def test_no_rate_is_exported_without_the_counts_behind_it() -> None:
                 assert count in table.columns, (table.name, column, count)
 
 
+def test_the_declared_counts_are_the_populations_each_rate_was_taken_over() -> None:
+    # spec: eval-003
+    # The structural test above only holds that what is declared is present.
+    # The declaration itself carries the guarantee, so it is argued by name
+    # here -- REQUIRED_POLICIES' rule, for the same reason.
+    declared = {t.name: dict(t.counts_behind) for t in _export().tables}
+
+    assert declared["detection_arms.csv"] == {
+        "recall_per_run": ("detected", "runs"),
+        "false_negative_rate": ("missed", "runs"),
+        # All three latency figures are conditional on the detections, and
+        # measured says how many of those carried a value.
+        "latency_median_seconds": ("latency_measured", "latency_detections"),
+        "latency_min_seconds": ("latency_measured", "latency_detections"),
+        "latency_max_seconds": ("latency_measured", "latency_detections"),
+        # anom-011's figure, whose denominator is aircraft and not runs.
+        "track_side_recall_per_staged_aircraft": (
+            "track_side_detected_aircraft",
+            "track_side_staged_aircraft",
+        ),
+    }
+    assert declared["detection_types.csv"] == {
+        "precision": ("correct", "claimed_runs"),
+        "arm_recall_per_run": ("arm_detected", "arm_runs"),
+        # F1's inputs are the two rates, each with its own counts above.
+        "f1": ("precision", "arm_recall_per_run"),
+    }
+    assert declared["detection_false_positives.csv"] == {
+        "rate": ("runs_with_a_report", "runs")
+    }
+    assert declared["campaign_arms.csv"] == {
+        "catch_rate": ("caught", "checked"),
+        # Over attempts, not generations: over generations it is an average
+        # wearing the word rate and can exceed one.
+        "retry_rate": ("refusals", "attempts"),
+        "fallback_rate": ("fell_back", "generations"),
+        "agreement_grounding": ("agreement_bundles",),
+        "agreement_confidence": ("agreement_bundles",),
+        "agreement_cited_kinds": ("agreement_bundles",),
+    }
+
+
 def test_a_table_emitting_a_rate_without_its_counts_is_refused() -> None:
     # spec: eval-003
     with pytest.raises(ExportError, match="without the counts"):
@@ -467,7 +510,13 @@ def test_a_float_is_not_rounded_on_the_way_out() -> None:
     assert fault["precision"] == str(3 / 3)
     gnss_arm = {r["scenario_type"]: r for r in _rows(_export(), "detection_arms.csv")}
     assert gnss_arm[SENSOR_FAULT]["recall_per_run"] == str(1 / 2)
-    assert gnss_arm[GNSS]["track_side_recall_per_staged_aircraft"] == str(82 / 100)
+    assert gnss_arm[GNSS]["track_side_recall_per_staged_aircraft"] == str(247 / 300)
+    # A figure with more decimals than anyone would print, which is the
+    # point: rounding here would make the quoted number differ from the
+    # computed one with nothing in either file saying so.
+    campaign = {r["arm"]: r for r in _rows(_export(), "campaign_arms.csv")}
+    assert campaign["hosted"]["spent_usd"] == "0.8544"
+    assert campaign["hosted"]["agreement_cited_kinds"] == "0.95"
 
 
 # --- column names are derived ----------------------------------------------
@@ -491,10 +540,31 @@ def test_both_recalls_survive_the_export_on_one_row() -> None:
     rows = {r["scenario_type"]: r for r in _rows(_export(), "detection_arms.csv")}
     gnss = rows[GNSS]
     assert gnss["recall_per_run"] == "1.0"
-    assert gnss["track_side_recall_per_staged_aircraft"] == str(82 / 100)
+    assert gnss["track_side_recall_per_staged_aircraft"] == str(247 / 300)
     # The per-aircraft figure keeps the record it came from in its name, so
     # the two cannot be read as one column's two spellings.
     assert "recall_per_staged_aircraft" not in gnss
+
+
+def test_an_absent_nested_record_does_not_become_a_column_of_its_own() -> None:
+    # spec: eval-003
+    # An arm with no track-side measurement flattens that record to its own
+    # name carrying nothing. Left in, the file gains a column blank on every
+    # row that duplicates what the expanded columns already say -- and that
+    # on the rows where the record *is* absent looks like a missing value
+    # rather than a missing record.
+    columns = {t.name: t.columns for t in _export().tables}
+    arms = columns["detection_arms.csv"]
+    assert "track_side" not in arms
+    assert "track_side_staged_aircraft" in arms
+    assert "track_side_recall_per_staged_aircraft" in arms
+
+    # And the arm that has none is blank across all three rather than absent.
+    rows = {r["scenario_type"]: r for r in _rows(_export(), "detection_arms.csv")}
+    fault = rows[SENSOR_FAULT]
+    assert fault["track_side_staged_aircraft"] == ""
+    assert fault["track_side_detected_aircraft"] == ""
+    assert fault["track_side_recall_per_staged_aircraft"] == ""
 
 
 def test_the_columns_are_the_exported_keys() -> None:
@@ -534,6 +604,16 @@ def test_a_type_row_carries_its_arms_counts_so_the_row_stands_alone() -> None:
     assert interference["arm_detected"] == "2"
     assert interference["arm_runs"] == "2"
     assert interference["f1"] == "1.0"
+
+    # And a type two arms produce carries neither, for the same reason its F1
+    # is withheld: there is no single arm those counts would be about, and
+    # taking whichever sorts first would put one arm's population beside the
+    # other's precision.
+    fault = rows[FAULT]
+    assert fault["arms"] == f"{AMBIGUOUS};{SENSOR_FAULT}"
+    assert fault["arm_detected"] == ""
+    assert fault["arm_runs"] == ""
+    assert fault["f1"] == ""
 
 
 def test_the_json_carries_the_metrics_unchanged() -> None:
@@ -643,6 +723,20 @@ def test_each_record_can_be_asked_for_its_digest_directly() -> None:
     assert detection.digest == detection.as_json()["digest"]
     assert campaign.digest == campaign.as_json()["digest"]
     assert len(campaign.digest) == DIGEST_LENGTH
+
+
+def test_records_that_disagree_about_their_shape_are_refused() -> None:
+    # spec: eval-003
+    # Legitimate absence is handled by filling a nested record's own shape,
+    # so anything still missing here is two entries that disagree about what
+    # they hold. Blanked, one row's value would sit under another row's
+    # heading -- unreadable, and silent.
+    with pytest.raises(KeyError):
+        _table(
+            "x.csv",
+            [{"runs": "2", "detected": "1"}, {"runs": "3"}],
+            "abc123def456",
+        )
 
 
 def test_a_ragged_row_is_refused() -> None:

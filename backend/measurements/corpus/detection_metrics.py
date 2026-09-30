@@ -44,7 +44,8 @@ Run:  make measure SCRIPT=corpus/detection_metrics.py
 from __future__ import annotations
 
 import os
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
+from pathlib import Path
 
 import _corpus
 from sqlalchemy import create_engine, text
@@ -66,7 +67,10 @@ from app.detection.precedence import (PrecedenceError, PrecedencePolicy,
 from app.detection.rf_noise import Direction, ThresholdPolicy, detect_rf_noise
 from app.detection.sensor_fault import FaultPolicy, detect_sensor_faults
 from app.detection.track_gap import BoundingBox, GapPolicy, detect_track_gaps
+from app.evaluation.export import DetectionProvenance, export_metrics
 from app.evaluation.metrics import STAGED_TYPE, RunOutcome, TrackSideRecall, compute
+from app.detection.rate_excess import DEFAULT_RADIUS_KM as EXCESS_RADIUS_KM
+from app.detection.rf_noise import DEFAULT_MINIMUM_DURATION
 from app.scenario.layout import load_layout
 
 RF_POLICY = ThresholdPolicy(metric=RfMetric.POWER_DBM, direction=Direction.ABOVE,
@@ -87,6 +91,12 @@ TRACK_SIDE = {
     "ambiguous-mixed-evidence": TrackSideRecall(staged_aircraft=300,
                                                 detected_aircraft=176),
 }
+
+#: Where eval-003's files land. Committed, because they are the inputs a
+#: thesis table is built from and they are small.
+EXPORTS = Path(__file__).resolve().parents[1] / "exports"
+
+BASELINE_WINDOW = timedelta(hours=2)
 
 print(_corpus.describe())
 
@@ -125,6 +135,15 @@ with factory.begin() as s:
     runs = s.execute(text(
         f"SELECT id, scenario_type, ground_truth FROM scenario_runs "
         f"WHERE {_corpus.run_filter()} ORDER BY id")).mappings().all()
+    # `scn-008` put the base seed on the row precisely so a batch can be
+    # re-derived from what it records rather than from what was remembered.
+    # Ordered by the earliest run of each batch, which is wave order: the
+    # sequence is part of what the corpus is, and the export's digest moves
+    # with it.
+    _seeds = s.execute(text(
+        f"SELECT (parameters->>'base_seed')::bigint AS seed FROM scenario_runs "
+        f"WHERE {_corpus.run_filter()} AND parameters->>'base_seed' IS NOT NULL "
+        f"GROUP BY 1 ORDER BY MIN(id)")).all()
 print(f"scoring {len(runs)} runs", flush=True)
 
 outcomes: list[RunOutcome] = []
@@ -267,6 +286,44 @@ print(f"\nCONFUSION -- truth down, reported across. A misreport is two errors.")
 for truth_type in sorted(metrics.confusion):
     row = metrics.confusion[truth_type]
     print(f"  {truth_type:26} {dict(sorted(row.items()))}")
+
+# eval-003: the same figures as files, with everything needed to regenerate
+# them. The policies are read off the objects the run actually used rather
+# than typed out again -- a recorded setting that is not the one in force is
+# worse than none, since it looks like provenance.
+provenance = DetectionProvenance(
+    corpus=_corpus.which(),
+    base_seeds=tuple(row[0] for row in _seeds),
+    runs=len(runs),
+    measured_on=date.today().isoformat(),
+    policies={
+        "BASELINE.window_h": str(BASELINE_WINDOW.total_seconds() / 3600),
+        "RF-NOISE.metric": RF_POLICY.metric.value,
+        "RF-NOISE.direction": RF_POLICY.direction.value,
+        "RF-NOISE.threshold_db": str(RF_POLICY.threshold),
+        "RF-NOISE.medium_at_db": str(RF_POLICY.medium_at),
+        "RF-NOISE.high_at_db": str(RF_POLICY.high_at),
+        "RF-NOISE.minimum_episode_s": str(DEFAULT_MINIMUM_DURATION.total_seconds()),
+        "TRACK-GAP.threshold_s": str(GAP.threshold.total_seconds()),
+        "TRACK-GAP.contact_fresh_within_s": str(GAP.contact_fresh_within.total_seconds()),
+        "TRACK-GAP.box": f"{BOX.lat_min},{BOX.lat_max},{BOX.lon_min},{BOX.lon_max}",
+        "TRACK-GAP.rate_excess_radius_km": str(EXCESS_RADIUS_KM),
+        "TRACK-CLUSTER.radius_km": str(CLUSTER.radius_km),
+        "SENSOR-FAULT.neighbour_radius_km": str(FAULT.radius_for(layout)),
+        "FUSION-SPATIAL.corroboration_threshold": str(FUSION.corroboration_threshold),
+        "FUSION-SPATIAL.excess_radius_km": str(
+            EXCESS_RADIUS_KM if FUSION.excess_radius_km is None else FUSION.excess_radius_km
+        ),
+    },
+)
+export = export_metrics(detection=metrics, detection_provenance=provenance)
+EXPORTS.mkdir(exist_ok=True)
+for name, text in sorted(export.files.items()):
+    (EXPORTS / name).write_text(text)
+print(f"\nexported {len(export.files)} files to measurements/exports/, "
+      f"every row stamped {provenance.digest}")
+for name in sorted(export.files):
+    print(f"  {name}")
 
 print(f"\nscored {metrics.runs} runs, excluded {metrics.excluded} for staging nothing, "
       f"{metrics.multi_claim_runs} claimed more than one type")

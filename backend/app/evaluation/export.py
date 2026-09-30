@@ -148,6 +148,35 @@ def _underscored(node: Mapping[str, Any]) -> dict[str, str]:
     return {k.replace(".", "_"): v for k, v in _flatten(node).items()}
 
 
+def _records(entries: Sequence[Mapping[str, Any]]) -> list[dict[str, str]]:
+    """A table's entries flattened, with nested records aligned across them.
+
+    A nested record that is absent on one entry and present on another
+    flattens two ways -- to its own name carrying nothing, and to the
+    expanded columns -- so the file gains a column blank on every row that
+    duplicates what the expanded ones say, and that on the rows where the
+    record really is absent reads as a missing *value* rather than a missing
+    *record*. The shape is taken from the entries that do carry it, so
+    nothing is inferred from what the columns happen to be called: `f1` and
+    `f1_is_defined` are siblings, not a record and its expansion, and a rule
+    written over names cannot tell the two apart.
+    """
+    shapes: dict[str, tuple[str, ...]] = {}
+    for entry in entries:
+        for key, value in entry.items():
+            if isinstance(value, Mapping):
+                shapes.setdefault(key, tuple(value))
+
+    aligned: list[dict[str, str]] = []
+    for entry in entries:
+        filled = dict(entry)
+        for key, inner in shapes.items():
+            if filled.get(key) is None:
+                filled[key] = {name: None for name in inner}
+        aligned.append(_underscored(filled))
+    return aligned
+
+
 @dataclass(frozen=True, slots=True)
 class DetectionProvenance:
     """What produced the detection figures, in full.
@@ -328,9 +357,13 @@ def _table(
     """A rectangle over records that may not all carry the same keys.
 
     The column order is first-seen across every record rather than sorted,
-    so a figure's own field order survives into the file; a record missing a
-    key gets a blank, which is correct -- an arm with no track-side
-    measurement has no per-aircraft recall and no population either.
+    so a figure's own field order survives into the file.
+
+    A record missing one of the columns raises rather than being blanked.
+    Legitimate absence is `_records`' job and it fills the record's own
+    shape, so anything still missing here is two entries that disagree about
+    what they hold -- and blanking that writes a file where one row's value
+    sits under another row's heading, which is unreadable and silent.
     """
     columns: list[str] = ["source"]
     for record in records:
@@ -338,8 +371,7 @@ def _table(
             if key not in columns:
                 columns.append(key)
     rows = tuple(
-        tuple([source] + [record.get(key, "") for key in columns[1:]])
-        for record in records
+        tuple([source] + [record[key] for key in columns[1:]]) for record in records
     )
     return Table(
         name=name,
@@ -386,7 +418,7 @@ def _detection_tables(metrics: DetectionMetrics, source: str) -> list[Table]:
 
     arms = _table(
         "detection_arms.csv",
-        [_underscored(arm) for arm in exported["arms"]],
+        _records(exported["arms"]),
         source,
         _ARM_COUNTS,
     )
@@ -397,8 +429,7 @@ def _detection_tables(metrics: DetectionMetrics, source: str) -> list[Table]:
     # verbatim from the arm and never recomputed.
     by_arm = {arm.scenario_type: arm for arm in metrics.arms}
     type_records = []
-    for entry in exported["types"]:
-        record = _underscored(entry)
+    for entry, record in zip(exported["types"], _records(exported["types"])):
         arms_behind = entry["arms"]
         arm = by_arm[arms_behind[0]] if len(arms_behind) == 1 else None
         record["arm_detected"] = "" if arm is None else str(arm.detected)
@@ -409,7 +440,7 @@ def _detection_tables(metrics: DetectionMetrics, source: str) -> list[Table]:
 
     rates = _table(
         "detection_false_positives.csv",
-        [_underscored(rate) for rate in exported["false_positive_rates"]],
+        _records(exported["false_positive_rates"]),
         source,
         _FP_COUNTS,
     )
@@ -431,7 +462,7 @@ def _campaign_tables(statistics: CampaignStatistics, source: str) -> list[Table]
     return [
         _table(
             "campaign_arms.csv",
-            [_underscored(arm) for arm in exported["arms"]],
+            _records(exported["arms"]),
             source,
             _CAMPAIGN_COUNTS,
         )

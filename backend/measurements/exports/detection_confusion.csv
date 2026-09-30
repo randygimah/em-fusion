@@ -1,0 +1,6 @@
+source,staged,reported,runs
+c421c41506fd,aircraft-coverage-gap,(silent),60
+c421c41506fd,ambiguous-mixed-evidence,possible_sensor_fault,60
+c421c41506fd,gnss-degradation,possible_interference_zone,60
+c421c41506fd,normal-baseline,(silent),60
+c421c41506fd,rf-sensor-fault,possible_sensor_fault,60

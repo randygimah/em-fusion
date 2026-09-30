@@ -1,0 +1,6 @@
+source,scenario_type,kind,staged_type,runs,excluded,detected,missed,recall_per_run,false_negative_rate,latency_conditional_on,latency_detections,latency_measured,latency_median_seconds,latency_min_seconds,latency_max_seconds,track_side_staged_aircraft,track_side_detected_aircraft,track_side_recall_per_staged_aircraft
+c421c41506fd,aircraft-coverage-gap,unjudged,possible_data_source_issue,60,0,0,0,,,detections,0,0,,,,300,176,0.5866666666666667
+c421c41506fd,ambiguous-mixed-evidence,positive,possible_sensor_fault,60,0,60,0,1.0,0.0,detections,60,60,10.0,10.0,90.0,300,176,0.5866666666666667
+c421c41506fd,gnss-degradation,positive,possible_interference_zone,60,0,60,0,1.0,0.0,detections,60,60,20.0,10.0,90.0,300,247,0.8233333333333334
+c421c41506fd,normal-baseline,silent-control,,60,0,0,0,,,detections,0,0,,,,,,
+c421c41506fd,rf-sensor-fault,positive,possible_sensor_fault,60,0,60,0,1.0,0.0,detections,60,60,10.0,10.0,90.0,,,
