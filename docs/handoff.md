@@ -29,6 +29,30 @@ Backlog **69 of 104**. Tree clean at `fe1eca3` plus the documentation commit.
 - Frontend: **86 passed across 8 files, and it now exits 0** — see Failed attempts.
 - Mutation: **17 of 17** (`mutate_api011_guard.log`), three files, no survivors.
 
+### Verified by hand in the browser, 2026-09-30
+
+Both paths confirmed on the running stack at `#/scenario-control`, which is the one check no test can
+make: a second **Start Batch** while one was running showed the amber note naming the running batch,
+and it was accepted again once that batch finished. An incident offset past the run duration — the one
+refusal the form does not pre-validate, since it checks only the seed and the run count — produced the
+red note, which before this item produced nothing at all.
+
+What that left in the application database, recorded because a next session will see the ids jump:
+**20 `normal-baseline` runs, ids 381-400, base seed 1284648146**, drawn by the API. Harmless to every
+figure of record, and *by construction* rather than by luck — `_corpus.run_filter()` pins corpus v2 to
+its three seeds **by value**, so a fourth batch is excluded rather than swept in. Total is now 380
+runs and 778,029 further observations.
+
+All 20 finished, which is the part worth having: the guard came back because the batch **completed**,
+not because it failed early, so the release in the thread's `finally` is confirmed against real work
+rather than against a stand-in.
+
+Incidental observation, not a re-measurement: that batch took **1m45s**, against the ~70 s figure
+`api-006` and `batch.py` quote. Different scenario type, and a machine also running a frontend build,
+so it does not replace the figure — but it is the direction that matters, since the whole argument for
+not blocking the request is that a batch outruns nginx's 60 s `proxy_read_timeout`. Treat 70 s as a
+floor.
+
 ### What the defect was, and what the fix claims
 
 The backend was found hung on `QueuePool limit of size 5 overflow 10 reached, connection timed out`,
