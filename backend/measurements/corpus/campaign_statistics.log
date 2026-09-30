@@ -3,6 +3,7 @@ the scored campaign of 28 September 2026, re-read from its own artefact
 
 read 155 stored hypotheses across 20 bundles
 budget rebuilt and reconciled: 60 calls, $0.854364, 351375 tokens -- identical to the figures recorded at the time
+per-call split written to scored_campaign_calls.json, so the reconstruction outlives the rows it came from
 ledger rebuilt and reconciled against the recorded per-arm counts
 
 PER ARM, NEVER POOLED -- there is deliberately no campaign-wide figure

@@ -25,6 +25,8 @@ Backlog **68 of 104**. Tree clean at `85c5682`. Progress note published at v21.
 - Mutation: **40 of 41** (`mutate_eval002_metrics.log`), **39 of 39** (`mutate_eval003_export.log`).
 - Three corpus measurements of record: `detection_metrics.log` (300 runs),
   `campaign_statistics.log` (80 generations re-read), `track_gap_recall.log`.
+- `measurements/corpus/scored_campaign_calls.json` — the reconstructed per-call split, committed so
+  the rebuild outlives the rows it came from, and written only after it reconciles.
 
 ### The detection results, over all 300 runs of corpus v2
 
@@ -190,18 +192,26 @@ No new dependencies. No new requirements.
 
 ## Next step
 
-1. **Serialise enough for the campaign record to round-trip** (`ai-012`). The budget and the ledger
-   go out as figures, so the per-arm cost had to be rebuilt from the generations and reconciled. It
-   works and is checked, but the next campaign should not need it. A spec amendment, tests, and
-   `mutate_ai012_campaign`'s pass re-run. **It would not help the existing artefact**, which predates
-   it, and re-running the campaign costs money and would replace a pre-registered corpus.
-2. **`eval-006`** stays deferred until the second rater returns mid-October. It is the only thing
-   between here and a complete evaluation chapter.
-3. **A corpus with near-misses** is what would turn the detection table from a consistency result
+1. **`eval-006`** — the blind-score ingest and inter-rater agreement. Deferred until the second rater
+   returns mid-October, and **the only thing between here and a complete evaluation chapter**. Not
+   built ahead of time on purpose: what a returned sheet looks like is a fact about what two people
+   did with a file, and writing the arithmetic while the first sheet is visible makes choices with
+   partial results in view.
+2. **A corpus with near-misses** is what would turn the detection table from a consistency result
    into an accuracy one. Out of scope for the dissertation, named as such in five places.
 
 ### Open and unowned
 
+- **Serialising enough for the campaign record to round-trip** (`ai-012`) — **decided against, with a
+  trigger.** The budget and the ledger go out as figures, so the per-arm cost has to be rebuilt from
+  the generations and reconciled. Every benefit of fixing it is conditional on a second campaign:
+  `ai-005` and `ai-006` are both unbuilt and both need the local arm, which is not planned, so the
+  28 September run is plausibly the only campaign this dissertation will have. It would not help the
+  existing artefact either, which predates it, and re-running the campaign costs money and would
+  replace a pre-registered corpus. **The trigger: do this first if a second campaign is ever run.**
+  What is kept is the finding, which is the part with thesis value. The one real exposure — the
+  rebuild depends on the eighty stored rows — is closed instead by committing the reconstructed
+  per-call split beside the record, written only after the reconciliation passes.
 - **`cost_is_complete` is vacuously true on an arm that made no calls** — the same defect `eval-005`
   fixed for its rates, surviving in the one field that is a boolean rather than a rate. It reads
   correctly only because the call count of zero sits beside it in the export. Recorded in

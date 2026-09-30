@@ -1,0 +1,557 @@
+{
+  "calls": [
+    {
+      "arm": "hosted",
+      "completion_tokens": 486,
+      "cost_usd": 0.016568,
+      "hypothesis_id": 76,
+      "ordinal": 1,
+      "outcome": "served",
+      "prompt_tokens": 6340
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 480,
+      "cost_usd": 0.01652,
+      "hypothesis_id": 77,
+      "ordinal": 2,
+      "outcome": "served",
+      "prompt_tokens": 6340
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 460,
+      "cost_usd": 0.01636,
+      "hypothesis_id": 78,
+      "ordinal": 3,
+      "outcome": "served",
+      "prompt_tokens": 6340
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 406,
+      "cost_usd": 0.02026,
+      "hypothesis_id": 80,
+      "ordinal": 4,
+      "outcome": "served",
+      "prompt_tokens": 8506
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 382,
+      "cost_usd": 0.020068,
+      "hypothesis_id": 81,
+      "ordinal": 5,
+      "outcome": "served",
+      "prompt_tokens": 8506
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 495,
+      "cost_usd": 0.020971999999999998,
+      "hypothesis_id": 82,
+      "ordinal": 6,
+      "outcome": "served",
+      "prompt_tokens": 8506
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 406,
+      "cost_usd": 0.021286000000000003,
+      "hypothesis_id": 84,
+      "ordinal": 7,
+      "outcome": "served",
+      "prompt_tokens": 9019
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 494,
+      "cost_usd": 0.021990000000000003,
+      "hypothesis_id": 85,
+      "ordinal": 8,
+      "outcome": "served",
+      "prompt_tokens": 9019
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 446,
+      "cost_usd": 0.021606,
+      "hypothesis_id": 86,
+      "ordinal": 9,
+      "outcome": "served",
+      "prompt_tokens": 9019
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 414,
+      "cost_usd": 0.018606,
+      "hypothesis_id": 88,
+      "ordinal": 10,
+      "outcome": "served",
+      "prompt_tokens": 7647
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 470,
+      "cost_usd": 0.019054,
+      "hypothesis_id": 89,
+      "ordinal": 11,
+      "outcome": "served",
+      "prompt_tokens": 7647
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 444,
+      "cost_usd": 0.018846,
+      "hypothesis_id": 90,
+      "ordinal": 12,
+      "outcome": "served",
+      "prompt_tokens": 7647
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 443,
+      "cost_usd": 0.019778000000000004,
+      "hypothesis_id": 92,
+      "ordinal": 13,
+      "outcome": "served",
+      "prompt_tokens": 8117
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 410,
+      "cost_usd": 0.019514000000000004,
+      "hypothesis_id": 93,
+      "ordinal": 14,
+      "outcome": "served",
+      "prompt_tokens": 8117
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 452,
+      "cost_usd": 0.019850000000000003,
+      "hypothesis_id": 94,
+      "ordinal": 15,
+      "outcome": "served",
+      "prompt_tokens": 8117
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 460,
+      "cost_usd": 0.017016,
+      "hypothesis_id": 96,
+      "ordinal": 16,
+      "outcome": "served",
+      "prompt_tokens": 6668
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 385,
+      "cost_usd": 0.016416,
+      "hypothesis_id": 97,
+      "ordinal": 17,
+      "outcome": "served",
+      "prompt_tokens": 6668
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 483,
+      "cost_usd": 0.0172,
+      "hypothesis_id": 98,
+      "ordinal": 18,
+      "outcome": "served",
+      "prompt_tokens": 6668
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 559,
+      "cost_usd": 0.021717999999999998,
+      "hypothesis_id": 100,
+      "ordinal": 19,
+      "outcome": "served",
+      "prompt_tokens": 8623
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 508,
+      "cost_usd": 0.021309999999999996,
+      "hypothesis_id": 101,
+      "ordinal": 20,
+      "outcome": "served",
+      "prompt_tokens": 8623
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 546,
+      "cost_usd": 0.021613999999999998,
+      "hypothesis_id": 102,
+      "ordinal": 21,
+      "outcome": "served",
+      "prompt_tokens": 8623
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 437,
+      "cost_usd": 0.019292,
+      "hypothesis_id": 104,
+      "ordinal": 22,
+      "outcome": "served",
+      "prompt_tokens": 7898
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 433,
+      "cost_usd": 0.01926,
+      "hypothesis_id": 105,
+      "ordinal": 23,
+      "outcome": "served",
+      "prompt_tokens": 7898
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 404,
+      "cost_usd": 0.019028,
+      "hypothesis_id": 106,
+      "ordinal": 24,
+      "outcome": "served",
+      "prompt_tokens": 7898
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 428,
+      "cost_usd": 0.015214,
+      "hypothesis_id": 108,
+      "ordinal": 25,
+      "outcome": "served",
+      "prompt_tokens": 5895
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 470,
+      "cost_usd": 0.01555,
+      "hypothesis_id": 109,
+      "ordinal": 26,
+      "outcome": "served",
+      "prompt_tokens": 5895
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 460,
+      "cost_usd": 0.015470000000000001,
+      "hypothesis_id": 110,
+      "ordinal": 27,
+      "outcome": "served",
+      "prompt_tokens": 5895
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 442,
+      "cost_usd": 0.024018,
+      "hypothesis_id": 112,
+      "ordinal": 28,
+      "outcome": "served",
+      "prompt_tokens": 10241
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 559,
+      "cost_usd": 0.024954,
+      "hypothesis_id": 113,
+      "ordinal": 29,
+      "outcome": "served",
+      "prompt_tokens": 10241
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 550,
+      "cost_usd": 0.024882,
+      "hypothesis_id": 114,
+      "ordinal": 30,
+      "outcome": "served",
+      "prompt_tokens": 10241
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 389,
+      "cost_usd": 0.008906,
+      "hypothesis_id": 116,
+      "ordinal": 31,
+      "outcome": "served",
+      "prompt_tokens": 2897
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 392,
+      "cost_usd": 0.00893,
+      "hypothesis_id": 117,
+      "ordinal": 32,
+      "outcome": "served",
+      "prompt_tokens": 2897
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 377,
+      "cost_usd": 0.00881,
+      "hypothesis_id": 118,
+      "ordinal": 33,
+      "outcome": "served",
+      "prompt_tokens": 2897
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 352,
+      "cost_usd": 0.008504,
+      "hypothesis_id": 120,
+      "ordinal": 34,
+      "outcome": "served",
+      "prompt_tokens": 2844
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 348,
+      "cost_usd": 0.008472,
+      "hypothesis_id": 121,
+      "ordinal": 35,
+      "outcome": "served",
+      "prompt_tokens": 2844
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 360,
+      "cost_usd": 0.008568,
+      "hypothesis_id": 122,
+      "ordinal": 36,
+      "outcome": "served",
+      "prompt_tokens": 2844
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 364,
+      "cost_usd": 0.008952,
+      "hypothesis_id": 124,
+      "ordinal": 37,
+      "outcome": "served",
+      "prompt_tokens": 3020
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 369,
+      "cost_usd": 0.008992,
+      "hypothesis_id": 125,
+      "ordinal": 38,
+      "outcome": "served",
+      "prompt_tokens": 3020
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 371,
+      "cost_usd": 0.009008,
+      "hypothesis_id": 126,
+      "ordinal": 39,
+      "outcome": "served",
+      "prompt_tokens": 3020
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 399,
+      "cost_usd": 0.009214,
+      "hypothesis_id": 128,
+      "ordinal": 40,
+      "outcome": "served",
+      "prompt_tokens": 3011
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 409,
+      "cost_usd": 0.009294,
+      "hypothesis_id": 129,
+      "ordinal": 41,
+      "outcome": "served",
+      "prompt_tokens": 3011
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 400,
+      "cost_usd": 0.009222000000000001,
+      "hypothesis_id": 130,
+      "ordinal": 42,
+      "outcome": "served",
+      "prompt_tokens": 3011
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 383,
+      "cost_usd": 0.007986,
+      "hypothesis_id": 132,
+      "ordinal": 43,
+      "outcome": "served",
+      "prompt_tokens": 2461
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 417,
+      "cost_usd": 0.008258,
+      "hypothesis_id": 133,
+      "ordinal": 44,
+      "outcome": "served",
+      "prompt_tokens": 2461
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 379,
+      "cost_usd": 0.007954,
+      "hypothesis_id": 134,
+      "ordinal": 45,
+      "outcome": "served",
+      "prompt_tokens": 2461
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 387,
+      "cost_usd": 0.00954,
+      "hypothesis_id": 136,
+      "ordinal": 46,
+      "outcome": "served",
+      "prompt_tokens": 3222
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 393,
+      "cost_usd": 0.009588,
+      "hypothesis_id": 137,
+      "ordinal": 47,
+      "outcome": "served",
+      "prompt_tokens": 3222
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 389,
+      "cost_usd": 0.009556,
+      "hypothesis_id": 138,
+      "ordinal": 48,
+      "outcome": "served",
+      "prompt_tokens": 3222
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 369,
+      "cost_usd": 0.008820000000000001,
+      "hypothesis_id": 140,
+      "ordinal": 49,
+      "outcome": "served",
+      "prompt_tokens": 2934
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 371,
+      "cost_usd": 0.008836,
+      "hypothesis_id": 141,
+      "ordinal": 50,
+      "outcome": "served",
+      "prompt_tokens": 2934
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 358,
+      "cost_usd": 0.008732,
+      "hypothesis_id": 142,
+      "ordinal": 51,
+      "outcome": "served",
+      "prompt_tokens": 2934
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 420,
+      "cost_usd": 0.010022,
+      "hypothesis_id": 144,
+      "ordinal": 52,
+      "outcome": "served",
+      "prompt_tokens": 3331
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 417,
+      "cost_usd": 0.009998,
+      "hypothesis_id": 145,
+      "ordinal": 53,
+      "outcome": "served",
+      "prompt_tokens": 3331
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 418,
+      "cost_usd": 0.010006000000000001,
+      "hypothesis_id": 146,
+      "ordinal": 54,
+      "outcome": "served",
+      "prompt_tokens": 3331
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 399,
+      "cost_usd": 0.008896000000000001,
+      "hypothesis_id": 148,
+      "ordinal": 55,
+      "outcome": "served",
+      "prompt_tokens": 2852
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 390,
+      "cost_usd": 0.008824,
+      "hypothesis_id": 149,
+      "ordinal": 56,
+      "outcome": "served",
+      "prompt_tokens": 2852
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 384,
+      "cost_usd": 0.008775999999999999,
+      "hypothesis_id": 150,
+      "ordinal": 57,
+      "outcome": "served",
+      "prompt_tokens": 2852
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 368,
+      "cost_usd": 0.009296,
+      "hypothesis_id": 152,
+      "ordinal": 58,
+      "outcome": "served",
+      "prompt_tokens": 3176
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 344,
+      "cost_usd": 0.009104000000000001,
+      "hypothesis_id": 153,
+      "ordinal": 59,
+      "outcome": "served",
+      "prompt_tokens": 3176
+    },
+    {
+      "arm": "hosted",
+      "completion_tokens": 341,
+      "cost_usd": 0.009080000000000001,
+      "hypothesis_id": 154,
+      "ordinal": 60,
+      "outcome": "served",
+      "prompt_tokens": 3176
+    }
+  ],
+  "note": "The per-call split behind eval-005's per-arm figures, reconstructed by campaign_statistics.py and written only after it reconciled exactly against the pooled budget in scored_campaign_record.json. That record stores the spending as one total for the run, so this is the only place the per-arm split exists outside the database -- and this project has lost a corpus once already.",
+  "rebuilt_from": [
+    "scored_campaign_record.json",
+    "the stored hypothesis rows"
+  ],
+  "reconciled_against": {
+    "calls": 60,
+    "completion_tokens": 25269,
+    "cost_is_complete": true,
+    "prompt_tokens": 326106,
+    "spent_usd": 0.854364,
+    "unpriced_calls": 0
+  }
+}

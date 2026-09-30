@@ -37,6 +37,14 @@ faithfully. On this campaign nothing failed, so the path is not exercised --
 and it raises rather than inventing a finding, because a catch rate is a
 result this project reports.
 
+**The reconstruction is written out, because it depends on the database.**
+Those eighty rows are the only place the per-arm split exists, the record
+having stored one total for the run, and this project has lost a corpus once
+already. So the rebuilt calls are committed beside the record as plain
+values -- written only after the reconciliation passes, so the file cannot
+exist in an unchecked state. It is a recovery artefact and not a result:
+`eval-003`'s exported figures are the results.
+
 Needs the database, for the stored hypotheses. Needs no corpus and makes no
 model call: it costs nothing and can be re-run freely.
 
@@ -111,6 +119,10 @@ if missing:
 
 # --- the budget, rebuilt from the calls that actually happened -------------
 calls: list[CallRecord] = []
+#: The same calls as plain values, written out below so the reconstruction
+#: survives the database. The rows it is built from are the only place the
+#: per-arm split exists, and this corpus has been destroyed once already.
+detail: list[dict] = []
 for generation in generations:
     row = stored[generation.hypothesis_id]
     if generation.usage is not None:
@@ -121,6 +133,13 @@ for generation in generations:
             call=ModelCall(model_id=row.model_id or "", parameters=row.generation_params or {},
                            raw_response=row.raw_response or "", usage=generation.usage),
         ))
+        detail.append({
+            "ordinal": calls[-1].ordinal, "arm": generation.requested_arm.value,
+            "outcome": CallOutcome.SERVED.value, "hypothesis_id": generation.hypothesis_id,
+            "prompt_tokens": generation.usage.prompt_tokens,
+            "completion_tokens": generation.usage.completion_tokens,
+            "cost_usd": generation.usage.cost_usd,
+        })
     for refusal in generation.refusals:
         if refusal.usage is None:
             continue
@@ -141,6 +160,13 @@ for generation in generations:
                            raw_response=refused_row.raw_response or "",
                            usage=refusal.usage),
         ))
+        detail.append({
+            "ordinal": calls[-1].ordinal, "arm": generation.requested_arm.value,
+            "outcome": CallOutcome.REFUSED.value, "hypothesis_id": refusal.hypothesis_id,
+            "prompt_tokens": refusal.usage.prompt_tokens,
+            "completion_tokens": refusal.usage.completion_tokens,
+            "cost_usd": refusal.usage.cost_usd,
+        })
 
 budget = BudgetReport(calls=tuple(calls), max_calls=MAX_CALLS, max_cost_usd=MAX_COST_USD)
 recorded = record_json["budget"]
@@ -164,9 +190,26 @@ if disagree:
         f"{disagree}. Some call produced neither a generation nor a refusal, so "
         "the per-arm split would be short by it with nothing saying so."
     )
+CALLS_FILE = HERE / "scored_campaign_calls.json"
+CALLS_FILE.write_text(json.dumps({
+    "note": (
+        "The per-call split behind eval-005's per-arm figures, reconstructed by "
+        "campaign_statistics.py and written only after it reconciled exactly "
+        "against the pooled budget in scored_campaign_record.json. That record "
+        "stores the spending as one total for the run, so this is the only "
+        "place the per-arm split exists outside the database -- and this "
+        "project has lost a corpus once already."
+    ),
+    "rebuilt_from": ["scored_campaign_record.json", "the stored hypothesis rows"],
+    "reconciled_against": recorded,
+    "calls": detail,
+}, indent=2, sort_keys=True) + "\n")
+
 print(f"budget rebuilt and reconciled: {budget.call_count} calls, "
       f"${budget.spent_usd:.6f}, {budget.prompt_tokens + budget.completion_tokens} "
       "tokens -- identical to the figures recorded at the time", flush=True)
+print(f"per-call split written to {CALLS_FILE.name}, so the reconstruction "
+      "outlives the rows it came from", flush=True)
 
 # --- the ledger, rebuilt from each generation's own verdict ----------------
 ledger = GroundingLedger()
