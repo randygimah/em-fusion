@@ -112,11 +112,11 @@ not in the baseline. That is why the check is validated against the template rat
 | **Sampling** | Draws the 20 scored bundles from one seed, records the population it drew from | **Built.** Drawn and committed before the first paid call |
 | **Campaign** | Runs every arm over every sampled bundle, records everything | **Built.** Has run |
 | **Grounding check** | Resolves every citation against its bundle | **Built.** 80 of 80 passed |
-| **Statistics** | Per-arm catch rate, retry rate, fallback rate, cost, agreement across repeats | **Built.** Not yet reported end to end |
+| **Statistics** | Per-arm catch rate, retry rate, fallback rate, cost, agreement across repeats | **Built and reported end to end.** Needed the campaign record rebuilt: it stores the budget pooled and this reports per arm |
 | **Scoring pack** | What a marker reads, blinded, plus the workbook they score in | **Built and rebuilt** |
 | **Score ingest + agreement** | Two sheets in, weighted κ out, adjudication applied | **Not built — deliberately deferred.** The second marker is unavailable until mid-October, so there are no sheets to ingest. Building the ingest against invented sheets is how you discover at ingest time that you guessed the shape |
 | **Detection metrics** | Precision, recall, F1, two false-positive rates and latency over the staged corpus | **Built and measured.** 300 runs; the first precision, F1 or latency figures in the project |
-| **Metrics export** | The figures as CSV and JSON, with everything needed to regenerate them | **Built.** Detection half exported; the campaign half is wired and waits on the per-arm figures being run end to end |
+| **Metrics export** | The figures as CSV and JSON, with everything needed to regenerate them | **Built and both halves exported**, into separate directories: different corpora, different dates, so one file holding both would read as one measurement |
 
 ## The order things happened in, and why the order is the result
 
@@ -290,6 +290,52 @@ The seventh is a refusal rather than a definition: **no false-positive rate is r
 whose quiet runs did not pass `anom-008`**. Zero findings is the answer the control wants and also the
 answer a pipeline that never ran gives.
 
+## The per-arm figures, run end to end
+
+| Arm | Gens | Bundles | Checked | Caught | Catch | Retry | Fallback | Calls | Spend | Seconds |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `template` (oracle) | 20 | 20 | 20 | 0 | 0.000 | 0.000 | 0.000 | 0 | $0.000000 | 0.008 |
+| `hosted` | 60 | 20 | 60 | 0 | 0.000 | 0.000 | 0.000 | 60 | $0.854364 | 334.197 |
+| `local` | 0 | 0 | 0 | 0 | — | — | — | 0 | $0.000000 | 0.000 |
+
+Agreement across the three generations per bundle, on the model arm over 20 bundles: grounding
+**1.000**, confidence **1.000**, cited evidence kinds **1.000**. The template arm is N=1 by design
+and reports nothing rather than a perfect score it did not earn.
+
+**That last row corrects a prediction this document used to carry.** The amendment written after the
+three-bundle trial expected the *cited set* to be the dimension that moved, having seen it move on
+one of three bundles. Over twenty it moved on none. The widening to three dimensions was still right
+— grounding agreement alone would have printed 1.0 and been unable to say whether anything else had
+changed — but the write-up must quote the measurement rather than the expectation. What it leaves is
+sharper: across sixty generations the only thing that differed between repeated answers was the
+**prose**, which none of these three measures and which the blind scoring is what examines.
+
+**The local row is the `None`-over-nothing rule arriving as a result.** Blank, not 0.000: a catch
+rate of zero would claim the check examined that arm's answers and flagged none, on an arm nobody
+asked. The counts of zero beside it say which.
+
+### Getting these figures out needed the record rebuilt
+
+The campaign's artefact keeps every generation in full and keeps the spending and the grounding
+checks as *figures* — a total spend, a catch rate — not the calls and checks behind them. This report
+is **per arm, never pooled**, and needs the individual calls. So the one artefact the campaign
+produced cannot answer the question the item after it asks of the campaign, and the two items passed
+independently with that join never exercised.
+
+Rebuilt without inventing anything — each call's spend from the generation it produced, its model id,
+frozen parameters and verbatim response from the row stored for it — then **reconciled twice**, with
+the whole report refused if either check fails:
+
+| Check | Result |
+|---|---|
+| rebuilt calls sum to the stored pooled budget | 60 calls, 326,106 + 25,269 tokens, $0.854364, 0 unpriced — exact |
+| rebuilt ledger matches the stored per-arm counts | 60 checked hosted, 20 template, 0 caught — exact |
+
+A *failed* check cannot be rebuilt at all: the artefact records that a hypothesis failed and never
+which citation failed, so that path raises rather than inventing a finding. Nothing failed here, so
+it is unexercised. Storing enough for the record to round-trip is owed and would not help this
+artefact, which predates it.
+
 ## The export, and what makes a file self-describing
 
 Every figure above also lands as files a chart can be drawn from and a thesis row can be traced back
@@ -327,7 +373,7 @@ guard exists for.
 | `detection_types.csv` | one row per reportable answer — precision, F1, the arms behind it |
 | `detection_false_positives.csv` | the two silences, each with its own control status |
 | `detection_confusion.csv` | one cell per row, long rather than wide |
-| `campaign_arms.csv` | per-arm catch, retry, fallback, cost, agreement |
+| `campaign_arms.csv` | per-arm catch, retry, fallback, cost, agreement — in its own directory, with its own provenance |
 
 ## What this harness cannot tell you
 
@@ -344,6 +390,12 @@ Stated in advance, which is the only time it counts.
   against 8 milliseconds — is real and large, but it is a single measurement under one set of network
   conditions.
 - **No result from the human pass exists yet.** Nothing in the write-up may speak as if it does.
+- **The retry and fallback paths never fired.** Nothing was refused and nothing fell back on the
+  scored campaign, so a fallback rate of zero reports that the path was not exercised — not that it
+  works. The same run cannot test both.
+- **Agreement was measured over what can be compared mechanically**, not over the prose. All three
+  comparable dimensions agree perfectly across repeats; the prose is what varies and only the blind
+  scoring examines it.
 - **The detection table measures wiring, not detection accuracy.** Every rate in it is 1.000 or
   0.000, and three things make that a weak result: the radio side is synthetic and the injected
   incident sits well above threshold by construction, the corpus contains no near-misses, and one of

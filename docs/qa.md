@@ -7603,6 +7603,103 @@ Worth recording as a limitation of unit tests: every test passed both before and
 after, because the defect was in the file's shape rather than in any value. It was
 visible only by opening the exported CSV.
 
+## 121. Asking the same question three times produced three identical answers. What does that measure?
+
+**Everything except the prose — and the prose is the only thing that moved.**
+
+The model arm was asked about each of the twenty packages three times, at
+temperature zero with a fixed seed. Three things can vary between those answers and
+all three were compared:
+
+| Dimension | Agreement over 20 packages | What it means |
+|---|---|---|
+| Grounding verdict | **1.000** | every citation in every answer resolved, every time |
+| Confidence | **1.000** | never High on one attempt and Medium on another |
+| Set of cited evidence kinds | **1.000** | the same kinds of evidence cited each time |
+
+**This corrects a prediction the project had been making.** After the three-package
+trial, the expectation written down was that grounding agreement would come out at
+1.0 and say nothing, while the *cited set* would be the dimension that carried the
+result — the trial had seen the cited set move on one of its three packages. Over
+twenty packages it moved on none.
+
+The widening was still the right decision: a report carrying grounding agreement
+alone would have printed 1.0 and been unable to say whether anything else had
+changed. What the measurement leaves is a sharper claim than expected — across sixty
+generations the **only** thing that differed between repeated answers was the free
+text, which none of these three dimensions measures and which the blind marking is
+precisely what examines.
+
+Worth stating as a limitation in the other direction: nothing was refused and
+nothing fell back, so this campaign reports that the retry-and-fall-back path
+**never fired**. That is not the same as reporting that it works.
+
+## 122. Why did running the campaign's own figures need the record rebuilt rather than just read?
+
+**Because the artefact the campaign wrote does not round-trip, by design, and the
+design has a gap.**
+
+The record keeps every generation in full. It keeps the spending and the
+grounding checks as **figures** — a total spend, a catch rate — rather than as the
+individual calls and checks behind them. That is a reasonable thing to store, until
+the next question is asked: the per-arm report needs the individual calls, because
+it reports cost and tokens **per arm**, and the stored total is pooled across the
+whole run.
+
+So the figures had to be rebuilt. Nothing was invented, and that is the part worth
+recording:
+
+| What a rebuilt call needs | Where it came from |
+|---|---|
+| spend, prompt and completion tokens | the generation that call produced |
+| model identifier, frozen parameters, verbatim response | the stored row written for it at the time |
+
+Then two reconciliations, either of which stops the whole report:
+
+- the rebuilt calls must add up to the stored pooled total **exactly** — same call
+  count, same tokens, same spend to the last cent, same unpriced count. They did:
+  60 calls, 326,106 prompt and 25,269 completion tokens, $0.854364, nothing unpriced.
+  Had they not, some call would have produced neither a generation nor a refusal and
+  the per-arm split would have been short by it silently.
+- the rebuilt check ledger must match the stored per-arm counts. It did: 60 checked
+  on the model arm, 20 on the baseline, none caught.
+
+One path deliberately refuses rather than guessing: **a failed grounding check
+cannot be rebuilt.** The artefact records *that* a hypothesis failed and never
+*which* citation failed, so a ledger entry behind a catch has no faithful
+reconstruction — and a catch rate is a result this project reports, not a
+maintenance statistic. Nothing failed on this campaign, so the refusal is
+unexercised.
+
+The durable fix is to store enough for the record to round-trip. It is owed, and it
+would not help this artefact, which was written before it — and re-running the
+campaign costs money and would replace a pre-registered corpus.
+
+## 123. An arm that never ran shows every figure blank. Is that a gap in the data?
+
+**No — it is the one rule this whole report is built on, arriving as a real result.**
+
+Three arms are reported. One of them, a locally hosted model, was deferred and never
+asked anything. Its row reads:
+
+| | generations | calls | checked | catch rate | retry rate | fallback rate |
+|---|---|---|---|---|---|---|
+| Local arm | 0 | 0 | 0 | *(blank)* | *(blank)* | *(blank)* |
+
+Every rate is blank rather than 0.000, and the difference is not cosmetic. A catch
+rate of 0.000 means *the check examined this arm's answers and flagged none of them*
+— which would be a strong claim about an arm nobody ever asked. Blank means *not
+measured*. The counts of zero beside it say which.
+
+This is also the first time the rule has been exercised on real data rather than in
+a test. Everywhere else in this project the populations happened to be non-empty.
+
+One small thing the report gets slightly wrong in the same area, recorded rather
+than quietly fixed: that row also says its **cost is complete**, because no call
+went unpriced. Over zero calls that is true and vacuous — the honest statement is
+*nothing to price*. It reads correctly only because the call count of zero sits
+beside it, which is exactly what putting the counts next to every figure was for.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -7818,3 +7915,7 @@ visible only by opening the exported CSV.
 | **Policy versus seed** | A seed reproduces the *hours*; a detector policy reproduces the *figures*. Both are needed and only one was in the original spec. See §117. |
 | **Export boundary** | The point where a computed value becomes a written one. Guarantees enforced at construction are not enforced here, which is where two of this project's defects have landed. See §118. |
 | **Derived column name** | A header taken from the field it carries rather than typed beside it. Removes the class of defect where a column's name and its contents disagree. See §120. |
+| **Agreement across repeats** | How often the same arm, asked the same question more than once, gave the same answer — measured over the verdict, the confidence and the cited set, and never over the prose. 1.000 on all three over 20 packages. See §121. |
+| **Round-trip** | Whether an artefact can be read back into the object it was written from. The campaign record cannot: it stores the spending as a total and the next question needs it per arm. See §122. |
+| **Reconciliation** | Checking a rebuilt figure against the one recorded at the time, and refusing to report anything if they differ. What separates a reconstruction from a plausible guess. See §122. |
+| **Vacuously complete** | A flag that is technically true over an empty population and says nothing — "the cost is complete" for an arm that made no calls. Readable only because the count sits beside it. See §123. |

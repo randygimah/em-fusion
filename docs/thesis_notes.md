@@ -8074,3 +8074,103 @@ blanking that writes a file where one row's value sits under another row's headi
 is the second time this project has met it: **a surviving mutant on a guarded rule
 often means the guard is redundant rather than that the test is missing**, and the
 fix is to remove the redundancy rather than to write a test for an unreachable path.
+
+### A prediction from three cases that did not hold at twenty
+
+When the per-arm statistics were built, the item's own output list asked for
+"grounding variance across N generations per bundle", and the three-bundle trial had
+already shown that figure would be 1.0 and say nothing: grounding passed every
+citation of every generation. What the trial *had* seen move was the free prose and,
+on one of its three bundles, the set of evidence kinds cited. The amendment written
+at the time therefore widened the measurement to three dimensions — verdict,
+confidence and cited set — and recorded the expectation that **the third would
+carry the result**.
+
+Run over the scored twenty, asked three times each at temperature zero with a fixed
+seed, all three dimensions report 1.000. The cited set moved on none of the twenty.
+
+Two things follow, and both belong in the write-up rather than only in the notes.
+The widening was still correct: a report carrying grounding agreement alone would
+have printed 1.0 and been unable to say whether anything else had changed, so the
+extra two dimensions are what license the claim rather than decorate it. But the
+prediction about which dimension would carry the result was made on three cases and
+does not survive twenty, and the write-up must quote the measurement rather than the
+expectation. What the measurement leaves is a sharper claim than the amendment
+anticipated: across sixty generations the only thing that differed between repeated
+answers was the prose, which none of these three dimensions measures and which the
+blind scoring is precisely what examines.
+
+A limitation to state alongside it, because the same run supplies it: nothing was
+refused and nothing fell back, so the campaign reports that the
+retry-and-fall-back path **never fired**. That is not evidence that it works, and
+the write-up must not let a fallback rate of zero read as a reliability result.
+
+### An artefact that does not round-trip into the object the next item needs
+
+The per-arm statistics had never been run end to end, and the reason turned out to be
+structural rather than an oversight. The campaign's record serialises the generations
+in full and serialises the spending and the grounding checks as **figures** — a total
+spend, a catch rate — rather than as the individual calls and checks behind them. Its
+own docstring says so, and gives a good reason: a function claiming to round-trip the
+whole object would be lying about three quarters of it.
+
+The gap is that the next item's central constraint is *per arm, never pooled*, and
+the stored budget is pooled across the run. So the one artefact the campaign produced
+cannot answer the question the item after it asks of the campaign. That is worth
+recording as a specific instance of a general hazard: **an artefact designed to be
+readable is not automatically an artefact the next stage can consume**, and the two
+items passed independently without the join between them ever being exercised.
+
+Rebuilding it was possible without inventing anything, which is what made proceeding
+defensible rather than expedient. Each call's spend and token counts come from the
+generation that call produced; each call's model identifier, frozen parameters and
+verbatim response come from the row stored for it at the time. The reconstruction is
+then **reconciled twice** against what the campaign recorded, and the measurement
+refuses to report anything if either check fails: the rebuilt calls must sum to the
+stored pooled budget exactly, and the rebuilt ledger must match the stored per-arm
+checked and caught counts. Both matched to the last cent. Had the first failed, some
+call would have produced neither a generation nor a refusal record and the per-arm
+split would have been short by it with nothing saying so.
+
+One path refuses rather than guessing, and the reason is the same one that governs
+the rest of the harness: a *failed* grounding check cannot be rebuilt, because the
+artefact records that a hypothesis failed and never which citation failed. A catch
+rate is a result this project reports, so inventing a finding to make the counts come
+out right would be fabricating the result. Nothing failed on this campaign, so the
+refusal is unexercised — which is worth saying, because an unexercised guard is a
+claim about intent rather than a demonstrated behaviour.
+
+The durable fix — storing enough for the record to round-trip — is owed, and it would
+not help this artefact, which was written before it. Re-running the campaign is not a
+remedy: it costs money and would replace a pre-registered corpus.
+
+### The two halves of the results are not one measurement, and the files now say so
+
+The detection figures and the campaign figures were initially exported into one
+directory, so one summary file would have held both. That is wrong in a way that only
+became visible when the second half was produced: the detection figures are measured
+over three hundred generated hours of corpus v2 on 30 September, and the campaign
+figures over the development batch on 28 September. They share no corpus and no date.
+A single file holding both invites exactly the reading that they were produced
+together, and a reader would have no way to see otherwise.
+
+Each half now exports into its own directory with its own provenance record and its
+own fingerprint, which is how the export already modelled provenance — two
+independent records, never flattened into one. Splitting the directories makes the
+separation visible in the artefact rather than only in the object.
+
+### A flag that is vacuously true over an empty population
+
+The per-arm report carries a boolean saying whether an arm's cost figure is a total
+or a lower bound, computed as *no call went unpriced*. On the arm that never ran, no
+call went unpriced, so the flag reads **complete** — for an arm whose cost was never
+measured at all.
+
+This is the same defect the item already fixed for its rates, where a rate over an
+empty population is reported as not-measured rather than as zero, and it survived in
+the one field that is a boolean rather than a rate: a boolean has no third value
+unless it is given one. It is recorded rather than quietly changed, because the
+export mitigates it — the call count of zero sits in the next column, which is
+exactly what requiring the counts beside every figure was for — and because changing
+a passing item to fix a field that reads correctly in context is a change that should
+be argued for rather than made in passing.

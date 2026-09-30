@@ -6927,6 +6927,136 @@ second pass   <b>5.060000171975998</b></div>
       nothing more than a tidier form. The test that was supposed to catch it had been written from
       the same wrong memory as the code.
     </p>
+
+    <h3>What the run actually produced, writer by writer</h3>
+    <p>
+      These figures had been computable since the run happened and had never been produced, for a
+      reason worth its own paragraph below. They are reported <b>per writer and never combined</b>,
+      because the difference between the writers is the entire result — a single pooled number would
+      hide exactly what is being measured.
+    </p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Writer</th><th class="n">Explanations</th><th class="n">Checked</th>
+            <th class="n">Flagged</th><th class="n">Retries</th><th class="n">Fell back</th>
+            <th class="n">Calls</th><th class="n">Cost</th><th class="n">Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="key">The model</td><td class="n">60</td><td class="n">60</td>
+            <td class="n">0</td><td class="n">0</td><td class="n">0</td>
+            <td class="n">60</td><td class="n">$0.854364</td><td class="n">334.2 s</td>
+          </tr>
+          <tr>
+            <td class="key">The mechanical account</td><td class="n">20</td><td class="n">20</td>
+            <td class="n">0</td><td class="n">0</td><td class="n">0</td>
+            <td class="n">0</td><td class="n">$0.000000</td><td class="n">0.008 s</td>
+          </tr>
+          <tr>
+            <td class="key">A local model</td><td class="n">0</td><td class="n">0</td>
+            <td class="n">0</td><td class="n dim">—</td><td class="n dim">—</td>
+            <td class="n">0</td><td class="n">$0.000000</td><td class="n">0.000 s</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="caption">
+      The third writer was deferred and never asked anything. Its rates are <b>blank rather than
+      zero</b>, and the difference matters: a flagged rate of zero would claim the safeguard examined
+      that writer's answers and found nothing wrong, on a writer nobody ever asked. Blank means not
+      measured, and the counts of zero beside it say which.
+    </p>
+    <p>
+      <b>Read the two zeros in the retry and fall-back columns narrowly.</b> They say that nothing the
+      model returned was unusable, so the machinery for asking again and then handing the analyst the
+      mechanical account instead <em>never ran</em>. That is not the same as evidence that it works,
+      and the write-up must not let a fall-back rate of zero read as a reliability result.
+    </p>
+
+    <h3>Asked three times, it gave the same answer three times — except in the prose</h3>
+    <p>
+      Each package was put to the model three times, with every setting that controls randomness
+      pinned. Three things about an answer can be compared mechanically, and all three were:
+    </p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>What was compared</th><th class="n">Agreement over 20 packages</th><th>What it means</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="key">Did every claim check out?</td><td class="n">1.000</td>
+              <td class="why">Every reference in every attempt resolved, every time</td></tr>
+          <tr><td class="key">How confident was it?</td><td class="n">1.000</td>
+              <td class="why">Never high on one attempt and medium on another</td></tr>
+          <tr><td class="key">Which kinds of evidence did it cite?</td><td class="n">1.000</td>
+              <td class="why">The same kinds of evidence each time</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      <b>This corrects something this page has been saying.</b> After the first three-package trial,
+      the recorded expectation was that the first of those three would come out perfect and say
+      nothing, while <em>which kinds of evidence it cited</em> would be the one that moved — the trial
+      had seen exactly that happen on one of its three packages. Over twenty packages it moved on
+      none.
+    </p>
+    <p>
+      Widening the comparison from one dimension to three was still the right call: with only the
+      first, the report would have printed a perfect score and been unable to say whether anything
+      else had changed. But the prediction about <em>which</em> dimension would carry the result was
+      made on three cases and does not survive twenty. What is left is a sharper statement than the
+      prediction expected: across sixty answers <b>the only thing that varied was the wording</b> —
+      which none of these three comparisons measures, and which the blind marking is precisely what
+      examines.
+    </p>
+
+    <h3>The run's own record could not answer the question asked of it</h3>
+    <p>
+      Here is why those figures took until now. When the run finished it wrote a record of itself:
+      every explanation in full, and the spending and the safeguard's checks as <em>totals</em> — one
+      figure for what the whole run cost, one rate for how often the safeguard fired. That is a
+      sensible thing to keep, right up to the moment the next question is asked. The report above is
+      <b>per writer</b>, and the stored cost is a single number for the run.
+    </p>
+    <p>
+      So the record had to be rebuilt rather than read. Nothing was invented, and that is the part
+      that made rebuilding it defensible: each call's cost and size came from the explanation that
+      call produced, and each call's model name, frozen settings and raw response came from the row
+      written for it at the time. Then two checks, either of which stops the whole report:
+    </p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>Check</th><th>Outcome</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="key">The rebuilt calls must add up to the total the run recorded</td>
+              <td>60 calls, 351,375 units of text, $0.854364, nothing unpriced — <b>exact</b></td></tr>
+          <tr><td class="key">The rebuilt checks must match the counts the run recorded</td>
+              <td>60 checked for the model, 20 for the mechanical account, none flagged — <b>exact</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="caption">
+      Had the first disagreed, some call would have produced no explanation and no recorded refusal,
+      and the per-writer split would have been short by it with nothing saying so.
+    </p>
+    <p>
+      One case refuses rather than guessing. <b>A check that failed cannot be rebuilt at all</b>: the
+      record says <em>that</em> an explanation failed and never <em>which</em> reference failed, so
+      there is no faithful way to reconstruct it — and how often the safeguard fires is a result this
+      project reports, not a maintenance statistic, so inventing a plausible failure would be
+      inventing the result. Nothing failed on this run, so that path was never taken, which is itself
+      worth saying: an untaken guard is a statement of intent rather than a demonstrated behaviour.
+    </p>
+    <p>
+      The lasting fix is to store enough for the record to be read back whole. It is owed, and it
+      would not help <em>this</em> record, which was written before it — and re-running the questions
+      costs money and would replace a set of packages fixed in advance.
+    </p>
   </section>
 
   <section>
@@ -7956,7 +8086,7 @@ second pass   <b>5.060000171975998</b></div>
           <tr><td class="key">Evidence bundles</td><td class="n">2</td><td class="n">2</td><td class="why">Complete. One event becomes one package, with the frequency dimension joined up here because nothing upstream joins it, and with every absence labelled by which of the three kinds it is rather than left as silence. Every statement's citations are then resolved against the store before the package is allowed to exist — which found that one citation in eleven had been pointing at a reconstructed instant rather than a stored reading, in a field that had been written and never read since the findings were first kept</td></tr>
           <tr><td class="key">AI hypothesis layer</td><td class="n">9</td><td class="n">12</td><td class="why">The shape every explanation must take, and the first thing that produces one. The shape is a constraint on what a model is allowed to emit rather than a description of what it did, so each guarantee is checked on the translated version a model is actually handed as well as on the original. The producer built first has no model in it: it is both the fallback for when a model's answer cannot be trusted and the yardstick the models are measured against. Run over all forty-one real packages it produced forty-one explanations, refused none, and every one of its one hundred and sixty-four citations was found in the package it came from. Since then, the seam a model plugs into — defined before either model exists, so neither one's peculiarities leak into it — and the decision about what a person sees when a model's answer cannot be used: ask again a fixed number of times, then fall back to the mechanical account, and keep a record of why, plus the guard that counts what a run spends and stops it rather than letting it quietly continue. Then the producer the whole project is about: a model, handed the package and constrained so it cannot emit the wrong shape at all. And now the safeguard that constraint cannot be — every claim an explanation rests on is resolved against the package it came from, with citing an explanation the system itself rejected treated as its own kind of failure rather than lumped in with inventing one. Over the forty-one real packages it flagged none of one hundred and sixty-four honest citations, and caught all one hundred and sixty-four deliberate corruptions. And now the first real requests: eight explanations over three packages, read by hand. Every claim in every one of them traced back to its package; reading them found an instruction that had never been written, without which the blind marking would have been decided by citation count alone; and running the trial twice showed the answers do not reproduce word for word, which narrows a claim this project had been making about reproducibility and settles a question about whether asking a model again after a bad answer is a real mechanism. And now the job that asks twenty questions rather than one: it keeps the answers that were thrown away, because those are the only evidence the safeguard ever did anything, and it takes care that a rejected answer is counted once rather than twice and that a mechanical stand-in is never counted as the model's — a mistake that would make the model look better the more often it failed. What remains is choosing the twenty packages, the marking pack itself, and the marking</td></tr>
           <tr><td class="key">Hypothesis screen and feedback</td><td class="n">0</td><td class="n">6</td><td class="why">Specified, unbuilt</td></tr>
-          <tr><td class="key">Evaluation</td><td class="n">6</td><td class="n">9</td><td class="why">Scoring instrument written and locked, and amended twice in the open since — once because the sample it described could not exist on the built system, once because asking the model a single time rested on an assumption the first real requests disproved. The twenty packages are chosen from one number and written down; the run has happened and cost eighty-five pence; the per-producer figures are computed for each writer separately and never pooled, because the difference between them <em>is</em> the result. The pack the marker reads is built, and then rebuilt: correct by every automated check and unusable by a person, missing the one thing — which receiver each finding came from — that the first scored dimension depends on. The marker's pack now also carries a glossary, and the workbook a matching tab, under one rule: an entry may say what a word refers to and never what seeing it would mean, the second being the marker's own job. What is left is the marking itself and the arithmetic over the returned sheets, and that waits on a person rather than on code — and the table of detection figures is now built and measured over all three hundred hours — every rate defined by the population it is counted over, the two recalls kept apart, the two kinds of false alarm never pooled, and a refusal to report either unless the quiet hours passed their own check</td></tr>
+          <tr><td class="key">Evaluation</td><td class="n">6</td><td class="n">9</td><td class="why">Scoring instrument written and locked, and amended twice in the open since — once because the sample it described could not exist on the built system, once because asking the model a single time rested on an assumption the first real requests disproved. The twenty packages are chosen from one number and written down; the run has happened and cost eighty-five pence; the per-producer figures are computed for each writer separately and never pooled, because the difference between them <em>is</em> the result — and they have now been produced, which needed the run's own record rebuilt because it stored the spending as one total while the report is per writer; asked three times, the model agreed with itself perfectly on all three things that can be compared mechanically, which corrects a prediction made from three cases, and the writer that was never asked reports blank rather than zero. The pack the marker reads is built, and then rebuilt: correct by every automated check and unusable by a person, missing the one thing — which receiver each finding came from — that the first scored dimension depends on. The marker's pack now also carries a glossary, and the workbook a matching tab, under one rule: an entry may say what a word refers to and never what seeing it would mean, the second being the marker's own job. What is left is the marking itself and the arithmetic over the returned sheets, and that waits on a person rather than on code — and the table of detection figures is now built and measured over all three hundred hours — every rate defined by the population it is counted over, the two recalls kept apart, the two kinds of false alarm never pooled, and a refusal to report either unless the quiet hours passed their own check</td></tr>
           <tr class="total"><td class="key">Total</td><td class="n">67</td><td class="n">104</td><td class="why">&nbsp;</td></tr>
         </tbody>
       </table>
