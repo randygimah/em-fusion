@@ -7769,3 +7769,181 @@ reading the mutant's replacement text before believing its verdict — which is 
 hazards in this series were found, and neither of those was found by a tool either. Rewritten to
 intersect the answer key with the aircraft that actually appear, the mutant is killed and the pass is
 14 of 14.
+
+### Two recalls, 41 points apart on the same sixty runs
+
+The word *recall* carries two measurements in this project and nothing in the
+word distinguishes them. `anom-011` measures it per staged aircraft on the
+track side: of the aircraft the generator interfered with, how many did the
+continuity rule say something about. `eval-002` measures it per run over
+reportable output: of the hours staging an incident, on how many did the system
+tell an analyst the right thing. Different questions, different denominators.
+
+The `ambiguous-mixed-evidence` arm makes the distinction impossible to gloss,
+because it reads both ways at once on the same population: **1.000 per run and
+0.587 per staged aircraft, over the same sixty runs.** Both figures are correct.
+The system named the right anomaly on every one of those hours, and on each hour
+it said nothing about roughly four in ten of the aircraft that had been
+interfered with. It can do both because that arm's reportable verdict rests on
+the radio evidence and needs no aircraft at all — the arm stages an identical RF
+incident to `rf-sensor-fault` and additionally removes five aircraft, which is
+what makes it the immunity check recorded elsewhere in these notes.
+
+Had this gone into the write-up unlabelled, a reader could have quoted either
+figure for the other, in either direction: the run-level figure alone implies the
+track rule is perfect on that arm, and the per-aircraft figure alone implies the
+system missed four hours in ten. The guard adopted is mechanical rather than
+editorial. The metrics module exports no key spelled `recall`; the two are
+`recall_per_run` and `recall_per_staged_aircraft`, the per-aircraft figure is
+carried in its own object beside the arm row rather than as a second field on it,
+and a mutation in the suite renames either key to the bare word and dies. The
+alternative — a note in the prose saying which is which — was rejected because
+the note and the number travel separately once a figure is copied into a table.
+
+### Recall is indexed by truth, precision by prediction, so they cannot share a table row
+
+The item asks for "precision, recall, F1, false positive rate, false negative
+rate, and detection latency **per scenario type**", and that phrasing conceals a
+contradiction. Recall's denominator is the runs that *were* a given type;
+precision's is the runs *called* that type. A row labelled `gnss-degradation`
+carrying both puts two different sets of runs under one name.
+
+A minimal example: two interference runs, two coverage-gap runs, and one
+coverage-gap run wrongly reported as interference. Recall of the interference arm
+is 2 of 2; precision of the interference *type* is 2 of 3, the third member being
+the misreported coverage-gap run, which belongs in the second denominator and not
+the first. The two figures disagree and nothing is wrong.
+
+The implementation therefore emits two tables — one row per scenario type indexed
+by truth, one row per reportable anomaly type indexed by prediction — and joins
+them only where F1 requires it. F1 is the harmonic mean of a type's precision and
+an *arm's* recall, so it exists only where one arm maps to one type. On this
+corpus that is true for `possible_interference_zone` (F1 = 1.000, one arm) and
+false for `possible_sensor_fault`, which two arms produce; that row states the
+two arms rather than printing a number. The condition was first implemented as
+two redundant checks — one in the F1 property and one where the row is built —
+and the mutation pass found that each could be removed with no behavioural
+change, which means neither was being proved. The contradiction is now refused at
+construction instead: a type row carrying a single arm's recall while two arms
+produce it cannot be built.
+
+The two figures coincide everywhere on corpus v2, because the confusion matrix
+turned out diagonal. That is a **result** — no arm was ever reported as another —
+and not a licence to have built one table; a single table would have been correct
+by luck and would have hidden the very confusion the item exists to measure.
+
+### A wrong answer is two errors, which three binary tests would price as one
+
+`anom-013` guarantees at most one reportable claim per zone, so the decision the
+system makes is *which* anomaly, not three independent yes/no questions. That
+distinction has an arithmetic consequence. A fault hour reported as interference
+is a false negative for the fault type **and** a false positive for the
+interference type. Scored as three separate binary problems, that hour appears
+once — in whichever problem happens to be examined — and half the cost of the
+error disappears.
+
+The classification is therefore one multi-class confusion over the reportable
+types, decomposed one-against-rest for the per-type rates, and the matrix is
+reported whole rather than summarised. The matrix also carries a count of runs
+that claimed more than one type, which is possible because the ladder suppresses
+within a zone and a run may hold several: on corpus v2 that count is zero, but it
+is counted rather than assumed away, since a row that sums to its arm's run count
+looks correct whether or not anything was dropped.
+
+### Two false-positive rates, because the silent arms fail differently
+
+Of the five scenario types, two produce correct silence, and pooling them into
+one rate destroys the more informative of the two. A report on `normal-baseline`
+is invention from nothing: there is nothing in the hour to have been provoked by.
+A report on `aircraft-coverage-gap` is cross-modal leakage: something real is
+happening — aircraft stop being heard — and no reportable rule judges it, so
+silence there tests that a track-side disturbance does not reach a radio verdict.
+`research_scope.md` scoped scenarios 3 and 4 as deliberately negative
+discriminating cases from the outset, and a single figure over 120 runs cannot
+say which arm leaked.
+
+Both measured 0 of 60. One asymmetry is carried on the figures themselves: only
+the quiet arm's rate is **controlled**. `anom-008` grades `normal-baseline` runs
+and refuses any other type, so the cross-modal rate rests on the same pipeline
+having been exercised rather than on a verdict of its own. Stating that on the
+figure was preferred to leaving the two looking equally assured, since the second
+is the one a reader would most want to trust.
+
+### The false-positive rate is refused without the control, rather than merely documented beside it
+
+`eval-002` said, from its first draft, that "normal-baseline runs contribute to
+the false positive rate, which is why `anom-008` must hold". That sentence is a
+dependency between two items with nothing enforcing it, and the failure it
+guards against is the one `anom-008` was built around: zero reportable findings
+is the answer the control wants and also the answer produced by detectors that
+never ran, detectors reading the wrong observations, and a filter that discarded
+everything upstream.
+
+So the metrics do not accept a corpus and compute a rate. They require a passing
+control verdict for every scored quiet run and refuse the entire report when one
+is missing, is filed under a different run id, or did not hold. Both rates also
+carry the control's coverage figure — two reportable types of three — because
+read as three, a rate of zero overstates the layer's coverage by exactly the rule
+that does not exist. The refusal is what makes the dependency unskippable; the
+coverage figure is what keeps the number from being quoted larger than it is.
+
+### Latency, computed on real data for the first time, sits on the floor `anom-014` set
+
+`anom-009` had a unit suite and a mutation pass and had never been pointed at a
+run. Running it over the corpus for `eval-002` produced the first latency figures
+in the project: median 10 s on both fault arms, 20 s on the interference arm,
+minimum 10 s and maximum 90 s across all three, over 60 detections each. No value
+came out negative and no claim was undecidable — two possibilities the item names
+and which the corpus turns out not to exercise.
+
+The 10 s minimum is not a rounding artefact. It is `anom-014`'s minimum episode
+duration, the shortest span of evidence any rule will act on, so no latency can
+be shorter and the fault arms sit **on** the floor: the rule decided as soon as it
+was permitted to look. The interference arm is one sampling interval slower
+because it waits for a second receiver to qualify, which is the claim it makes.
+That is the second price this project has put on the 10 s threshold, after the
+episodes it discards.
+
+Latency is reported as conditional on detection, with the count it was taken over.
+Printed beside a recall below one it would read as a property of the arm when it
+is a property of the successes — on an arm at 0.587 it would be the delay on the
+0.587. Two counts are carried rather than one, the detections and the detections
+that produced a figure, because otherwise a median silently describes whichever
+detections happened to be instrumented.
+
+### Threat to validity: a results table of 1.000 and 0.000 measures wiring, not accuracy
+
+Every rate in the detection results table is 1.000 or 0.000: 180 staged hours
+decided correctly, 120 silent hours silent, a diagonal confusion matrix. The
+uniformity is a genuine finding about the layer's internal consistency and a
+weak result about its accuracy, and the write-up must carry both readings.
+
+Three reasons the figures cannot be read as detection accuracy. The radio side is
+**synthetic** — the grid, the propagation and the incident are all generated by
+this project, and the injected elevation sits well above the detection threshold
+by construction, so a precision of 1.000 measures the rules against the
+generator's own staging. The corpus contains **no near-misses**: nothing stages an
+incident at the edge of detectability, so no run in it is genuinely hard, and a
+discrimination result needs a corpus that includes ambiguous cases. And one of
+three reportable types **has no rule**, which is what makes the coverage-gap arm
+a negative rather than a fourth positive.
+
+The one figure in the table carrying information from outside the generator is
+the per-aircraft recall, because the aircraft data is replayed rather than
+invented — and that figure is 0.587 on two arms of three. Read together, the
+honest claim is that the detection layer is correctly wired and internally
+consistent, which is what a results table over a synthetic corpus can establish,
+and that its behaviour against real interference is untested. Generating a corpus
+with incidents near the threshold is the obvious next experiment and is out of
+scope for this dissertation rather than unnecessary to it.
+
+### The detectors are re-run for the results table rather than read from stored findings
+
+The measurement script re-runs the whole chain over all 300 runs instead of
+reading `detection_findings`. That table is written by whichever measurement ran
+last — `db-008`'s write replaces per run per rule, deliberately, because findings
+are derived and regenerable — so a results table built from it would depend on
+script ordering and would keep passing every check while describing a state
+nobody chose. The cost is a full re-run of the chain per figure; the benefit is
+that the table is reproducible from the corpus and the code alone, which is what
+a results chapter has to be.

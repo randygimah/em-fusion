@@ -115,7 +115,7 @@ not in the baseline. That is why the check is validated against the template rat
 | **Statistics** | Per-arm catch rate, retry rate, fallback rate, cost, agreement across repeats | **Built.** Not yet reported end to end |
 | **Scoring pack** | What a marker reads, blinded, plus the workbook they score in | **Built and rebuilt** |
 | **Score ingest + agreement** | Two sheets in, weighted κ out, adjudication applied | **Not built — deliberately deferred.** The second marker is unavailable until mid-October, so there are no sheets to ingest. Building the ingest against invented sheets is how you discover at ingest time that you guessed the shape |
-| **Detection metrics** | Precision, recall, F1 over the staged corpus | **Not built.** Owed, and independent of everything above |
+| **Detection metrics** | Precision, recall, F1, two false-positive rates and latency over the staged corpus | **Built and measured.** 300 runs; the first precision, F1 or latency figures in the project |
 
 ## The order things happened in, and why the order is the result
 
@@ -249,6 +249,46 @@ retrying** — an 11-second gap between calls — because retrying inside the ca
 the availability fallback into the correctness one, which is the distinction the whole design rests
 on.
 
+## The detection results table
+
+Separate from everything above: this scores the **rules**, not the explanations, and it is the one
+part of the harness that needed no model and no money. Measured over all 300 runs of corpus v2, with
+the whole chain re-run rather than read from stored findings.
+
+| Arm | Runs | Decided correctly | Recall per run | Recall per staged aircraft |
+|---|---|---|---|---|
+| `rf-sensor-fault` | 60 | 60 | 1.000 | — (no aircraft staged) |
+| `gnss-degradation` | 60 | 60 | 1.000 | 0.823 |
+| `ambiguous-mixed-evidence` | 60 | 60 | 1.000 | 0.587 |
+| `normal-baseline` | 60 | silent 60 | — | — |
+| `aircraft-coverage-gap` | 60 | silent 60 | — (no built rule judges it) | 0.587 |
+
+| Reportable type | Claimed | Right | Precision | F1 |
+|---|---|---|---|---|
+| `possible_sensor_fault` | 120 | 120 | 1.000 | **withheld** — two arms produce it |
+| `possible_interference_zone` | 60 | 60 | 1.000 | 1.000 |
+| `possible_data_source_issue` | 0 | 0 | — | — (`anom-006` unbuilt) |
+
+False positives: **0 of 60 from nothing** (`normal-baseline`, backed by `anom-008`) and **0 of 60
+cross-modal** (`aircraft-coverage-gap`, not backed by a control — `anom-008` grades quiet runs only).
+Never pooled: the first asks whether the system invents an anomaly, the second whether a track-side
+disturbance leaks into a radio verdict.
+
+Latency, conditional on detection: median **10 s** on both fault arms, **20 s** on the interference
+arm, min 10 s and max 90 s over 60 detections each. The 10 s floor is `anom-014`'s minimum episode
+duration — the fault arms decide as soon as they are allowed to look, and the interference arm waits
+one sampling interval longer for a second receiver to qualify.
+
+**Six constraints govern how this may be reported**, and five of them are about what each figure is
+indexed by. Recall is indexed by truth and precision by prediction, so they never share a row. F1
+exists only where one arm maps to one type. A misreport is two errors, so this is one multi-class
+confusion and not three binary problems. There are two false-positive rates. Latency belongs to the
+successes, not to the arm. And every rate is `None` over an empty population, never 0.0.
+
+The seventh is a refusal rather than a definition: **no false-positive rate is reported for a corpus
+whose quiet runs did not pass `anom-008`**. Zero findings is the answer the control wants and also the
+answer a pipeline that never ran gives.
+
 ## What this harness cannot tell you
 
 Stated in advance, which is the only time it counts.
@@ -264,6 +304,12 @@ Stated in advance, which is the only time it counts.
   against 8 milliseconds — is real and large, but it is a single measurement under one set of network
   conditions.
 - **No result from the human pass exists yet.** Nothing in the write-up may speak as if it does.
+- **The detection table measures wiring, not detection accuracy.** Every rate in it is 1.000 or
+  0.000, and three things make that a weak result: the radio side is synthetic and the injected
+  incident sits well above threshold by construction, the corpus contains no near-misses, and one of
+  three reportable types has no rule. The one figure carrying information from outside the generator
+  is the per-aircraft recall, because the aircraft data is replayed — and that one is 0.587 on two
+  arms of three.
 
 ## Vocabulary
 
@@ -278,6 +324,10 @@ Stated in advance, which is the only time it counts.
 | **Fallback** | An arm was asked and a different one answered. The stored row records both |
 | **Oracle** | The template. Grounded by construction, so anything flagged on it is a defect in the check |
 | **Scored generation** | Generation 1, fixed in advance, **never substituted** — swapping in a later one would delete every failure from the scored corpus |
+| **Indexed by truth / by prediction** | Which set a rate's denominator comes from. Recall is the first, precision the second, and one table row cannot carry both |
+| **Recall per run / per staged aircraft** | The two recalls. `eval-002`'s and `anom-011`'s, 41 points apart on `ambiguous-mixed-evidence`. Never averaged, and neither is exported as a bare `recall` |
+| **Discriminating negative** | A staged case no rule is meant to report, so correct silence on it is evidence rather than an absence |
+| **Conditional on detection** | A figure existing only over the successes. Latency is the one, and printed beside a recall below 1 it invites the opposite reading |
 | **Pass one / pass two** | Five quality dimensions scored blind; then, after the answers are revealed, two more judgements. Kept apart because knowing the answer changes how good an explanation feels |
 
 ## Where to look next
