@@ -42,7 +42,9 @@ import json
 import pytest
 
 from app.ai.service import GeneratorKind
+from app.detection.control import REGISTER, audit
 from app.evaluation.export import (
+    DIGEST_LENGTH,
     REQUIRED_POLICIES,
     CampaignProvenance,
     DetectionProvenance,
@@ -52,7 +54,6 @@ from app.evaluation.export import (
 )
 from app.evaluation.metrics import RunOutcome, TrackSideRecall, compute
 from app.evaluation.statistics import Agreement, ArmStatistics, CampaignStatistics
-from app.detection.control import REGISTER, audit
 
 FAULT = "possible_sensor_fault"
 INTERFERENCE = "possible_interference_zone"
@@ -118,12 +119,24 @@ def _metrics():
         RunOutcome(run_id="b2", scenario_type=BASELINE, staged=False),
         RunOutcome(run_id="c1", scenario_type=COVERAGE_GAP),
         RunOutcome(run_id="c2", scenario_type=COVERAGE_GAP),
-        RunOutcome(run_id="g1", scenario_type=GNSS, reported=(INTERFERENCE,),
-                   latency_seconds=40.0),
-        RunOutcome(run_id="g2", scenario_type=GNSS, reported=(INTERFERENCE,),
-                   latency_seconds=60.0),
-        RunOutcome(run_id="f1", scenario_type=SENSOR_FAULT, reported=(FAULT,),
-                   latency_seconds=20.0),
+        RunOutcome(
+            run_id="g1",
+            scenario_type=GNSS,
+            reported=(INTERFERENCE,),
+            latency_seconds=40.0,
+        ),
+        RunOutcome(
+            run_id="g2",
+            scenario_type=GNSS,
+            reported=(INTERFERENCE,),
+            latency_seconds=60.0,
+        ),
+        RunOutcome(
+            run_id="f1",
+            scenario_type=SENSOR_FAULT,
+            reported=(FAULT,),
+            latency_seconds=20.0,
+        ),
         RunOutcome(run_id="f2", scenario_type=SENSOR_FAULT),
         RunOutcome(run_id="a1", scenario_type=AMBIGUOUS, reported=(FAULT,)),
         RunOutcome(run_id="a2", scenario_type=AMBIGUOUS, reported=(FAULT,)),
@@ -142,25 +155,55 @@ def _metrics():
 def _statistics() -> CampaignStatistics:
     def arm(kind, **over):
         fields = dict(
-            arm=kind, generations=60, bundles=20, skipped=0, checked=60, caught=0,
-            catch_rate=0.0, attempts=60, refusals=0, refusals_by_category={},
-            retry_rate=0.0, fell_back=0, fallback_rate=0.0, calls=60,
-            prompt_tokens=326106, completion_tokens=25269, spent_usd=0.8544,
-            unpriced_calls=0, cost_is_complete=True, seconds=334.2,
-            agreement=Agreement(bundles=20, grounding=1.0, confidence=1.0,
-                                cited_kinds=0.95),
+            arm=kind,
+            generations=60,
+            bundles=20,
+            skipped=0,
+            checked=60,
+            caught=0,
+            catch_rate=0.0,
+            attempts=60,
+            refusals=0,
+            refusals_by_category={},
+            retry_rate=0.0,
+            fell_back=0,
+            fallback_rate=0.0,
+            calls=60,
+            prompt_tokens=326106,
+            completion_tokens=25269,
+            spent_usd=0.8544,
+            unpriced_calls=0,
+            cost_is_complete=True,
+            seconds=334.2,
+            agreement=Agreement(
+                bundles=20, grounding=1.0, confidence=1.0, cited_kinds=0.95
+            ),
         )
         fields.update(over)
         return ArmStatistics(**fields)
 
-    return CampaignStatistics(arms=(
-        arm(GeneratorKind.HOSTED),
-        arm(GeneratorKind.TEMPLATE, generations=20, checked=20, attempts=20, calls=0,
-            prompt_tokens=0, completion_tokens=0, spent_usd=0.0, seconds=0.008,
-            catch_rate=0.0, retry_rate=0.0, fallback_rate=0.0,
-            agreement=Agreement(bundles=0, grounding=None, confidence=None,
-                                cited_kinds=None)),
-    ))
+    return CampaignStatistics(
+        arms=(
+            arm(GeneratorKind.HOSTED),
+            arm(
+                GeneratorKind.TEMPLATE,
+                generations=20,
+                checked=20,
+                attempts=20,
+                calls=0,
+                prompt_tokens=0,
+                completion_tokens=0,
+                spent_usd=0.0,
+                seconds=0.008,
+                catch_rate=0.0,
+                retry_rate=0.0,
+                fallback_rate=0.0,
+                agreement=Agreement(
+                    bundles=0, grounding=None, confidence=None, cited_kinds=None
+                ),
+            ),
+        )
+    )
 
 
 def _export():
@@ -273,25 +316,27 @@ def test_changing_a_policy_changes_the_digest() -> None:
     # Which is the whole mechanism: a row exported under the old settings no
     # longer resolves, rather than resolving to the wrong ones.
     tighter = dict(POLICIES, **{"RF-NOISE.threshold_db": "8.0"})
-    assert _detection_provenance().digest != _detection_provenance(
-        policies=tighter
-    ).digest
+    assert (
+        _detection_provenance().digest != _detection_provenance(policies=tighter).digest
+    )
 
 
 def test_changing_a_seed_changes_the_digest() -> None:
     # spec: eval-003
-    assert _detection_provenance().digest != _detection_provenance(
-        base_seeds=(1412660662, 965530111)
-    ).digest
+    assert (
+        _detection_provenance().digest
+        != _detection_provenance(base_seeds=(1412660662, 965530111)).digest
+    )
 
 
 def test_reordering_the_seeds_changes_the_digest() -> None:
     # spec: eval-003
     # The order is the wave order, and `scn-008` records a run's index within
     # its batch, so the sequence is part of what the corpus is.
-    assert _detection_provenance().digest != _detection_provenance(
-        base_seeds=(965530111, 1412660662, 655209063)
-    ).digest
+    assert (
+        _detection_provenance().digest
+        != _detection_provenance(base_seeds=(965530111, 1412660662, 655209063)).digest
+    )
 
 
 def test_the_provenance_file_is_long_so_two_unlike_records_share_a_shape() -> None:
@@ -337,7 +382,7 @@ def test_a_blank_rate_is_readable_because_its_population_is_beside_it() -> None:
     unjudged = rows[COVERAGE_GAP]
     assert unjudged["recall_per_run"] == ""
     assert unjudged["runs"] == "2"
-    assert unjudged["recall_per_staged_aircraft"] == ""
+    assert unjudged["track_side_recall_per_staged_aircraft"] == ""
     assert unjudged["track_side_staged_aircraft"] == ""
 
 
@@ -345,7 +390,9 @@ def test_a_rate_of_zero_and_an_unmeasured_rate_are_different_cells() -> None:
     # spec: eval-003, eval-002
     # The distinction eval-002 refused to let 0.0 destroy, arriving at the one
     # boundary that would have destroyed it anyway.
-    rows = {r["scenario_type"]: r for r in _rows(_export(), "detection_false_positives.csv")}
+    rows = {
+        r["scenario_type"]: r for r in _rows(_export(), "detection_false_positives.csv")
+    }
     assert rows[BASELINE]["rate"] == "0.0"
     arms = {r["scenario_type"]: r for r in _rows(_export(), "detection_arms.csv")}
     assert arms[BASELINE]["recall_per_run"] == ""
@@ -359,35 +406,58 @@ def test_every_exported_value_appears_verbatim_in_what_was_handed_over() -> None
     # An exporter that rounds makes the quoted number differ from the computed
     # one, and the CSV is what gets quoted.
     metrics = _metrics()
-    export = export_metrics(detection=metrics, detection_provenance=_detection_provenance())
+    provenance = _detection_provenance()
+    export = export_metrics(detection=metrics, detection_provenance=provenance)
 
-    def values(node):
+    def tokens(node) -> set[str]:
+        """Every name and every value in a record.
+
+        Keys as well as values, because a key becoming a cell -- the
+        confusion matrix's axes, the label saying what the latency is
+        conditional on -- is re-organising and not computing, which is
+        exactly the line this test is drawing.
+        """
         if isinstance(node, dict):
-            return [v for item in node.values() for v in values(item)]
-        if isinstance(node, list):
-            return [v for item in node for v in values(item)]
-        return [node]
+            found = {str(k) for k in node}
+            for item in node.values():
+                found |= tokens(item)
+            return found
+        if isinstance(node, (list, tuple)):
+            # A list becomes one delimited cell. Its elements are still
+            # verbatim, so both spellings are allowed and neither is computed.
+            joined = ";".join(str(item) for item in node)
+            return {joined} | {t for item in node for t in tokens(item)}
+        return {"" if node is None else str(node)}
 
-    source = {_render(v) for v in values(metrics.as_json())}
+    from_metrics = tokens(metrics.as_json())
+    from_provenance = tokens(provenance.as_json())
+
+    def is_verbatim(cell: str, allowed: set[str]) -> bool:
+        """The cell itself, or a list rendered as one delimited cell.
+
+        Both are things already present, re-organised. Anything else is a
+        value this module invented, which is the line the item draws.
+        """
+        pieces = cell.split(";")
+        return cell in allowed or (
+            len(pieces) > 1 and all(piece in allowed for piece in pieces)
+        )
+
     for table in export.tables:
+        # The provenance file is long, so two of its columns hold *names* --
+        # which record, which field. The rule is about values, and the names
+        # are checked by the derived-columns tests instead.
+        cells = (
+            (lambda row: row[3:])
+            if table.name == "provenance.csv"
+            else (lambda row: row[1:])  # column 0 is the provenance digest
+        )
+        allowed = from_provenance if table.name == "provenance.csv" else from_metrics
         for row in table.rows:
-            for cell in row[1:]:  # column 0 is the digest
+            for cell in cells(row):
                 if cell == "":
                     continue
-                assert cell in source or _is_a_column_name(cell), cell
-
-
-def _render(value) -> str:
-    if value is None:
-        return ""
-    if isinstance(value, bool):
-        return str(value)
-    return str(value)
-
-
-def _is_a_column_name(cell: str) -> bool:
-    """Labels the metrics carry as keys rather than as values."""
-    return cell in {"detections", "possible_sensor_fault", "possible_interference_zone"}
+                assert is_verbatim(cell, allowed), (table.name, cell)
 
 
 def test_a_float_is_not_rounded_on_the_way_out() -> None:
@@ -397,7 +467,7 @@ def test_a_float_is_not_rounded_on_the_way_out() -> None:
     assert fault["precision"] == str(3 / 3)
     gnss_arm = {r["scenario_type"]: r for r in _rows(_export(), "detection_arms.csv")}
     assert gnss_arm[SENSOR_FAULT]["recall_per_run"] == str(1 / 2)
-    assert gnss_arm[GNSS]["recall_per_staged_aircraft"] == str(82 / 100)
+    assert gnss_arm[GNSS]["track_side_recall_per_staged_aircraft"] == str(82 / 100)
 
 
 # --- column names are derived ----------------------------------------------
@@ -421,7 +491,10 @@ def test_both_recalls_survive_the_export_on_one_row() -> None:
     rows = {r["scenario_type"]: r for r in _rows(_export(), "detection_arms.csv")}
     gnss = rows[GNSS]
     assert gnss["recall_per_run"] == "1.0"
-    assert gnss["recall_per_staged_aircraft"] == str(82 / 100)
+    assert gnss["track_side_recall_per_staged_aircraft"] == str(82 / 100)
+    # The per-aircraft figure keeps the record it came from in its name, so
+    # the two cannot be read as one column's two spellings.
+    assert "recall_per_staged_aircraft" not in gnss
 
 
 def test_the_columns_are_the_exported_keys() -> None:
@@ -445,7 +518,9 @@ def test_the_confusion_matrix_is_exported_one_cell_per_row() -> None:
     # is added, which changes the file's shape rather than its length.
     rows = _rows(_export(), "detection_confusion.csv")
     assert set(rows[0]) == {"source", "staged", "reported", "runs"}
-    cell = next(r for r in rows if r["staged"] == GNSS and r["reported"] == INTERFERENCE)
+    cell = next(
+        r for r in rows if r["staged"] == GNSS and r["reported"] == INTERFERENCE
+    )
     assert cell["runs"] == "2"
 
 
@@ -484,9 +559,11 @@ def test_the_file_names_are_stable() -> None:
 
 def test_only_what_was_supplied_is_exported() -> None:
     # spec: eval-003
-    names = set(export_metrics(
-        campaign=_statistics(), campaign_provenance=_campaign_provenance()
-    ).files)
+    names = set(
+        export_metrics(
+            campaign=_statistics(), campaign_provenance=_campaign_provenance()
+        ).files
+    )
     assert names == {"metrics.json", "provenance.csv", "campaign_arms.csv"}
 
 
@@ -547,6 +624,43 @@ def test_a_corpus_with_no_seeds_or_no_runs_is_refused() -> None:
         _detection_provenance(base_seeds=())
     with pytest.raises(ExportError, match="runs"):
         _detection_provenance(runs=0)
+
+
+def test_a_record_with_no_measurement_date_is_refused() -> None:
+    # spec: eval-003
+    # Both corpora and the campaign were superseded within eleven days of each
+    # other. A figure that cannot say when it was taken cannot be placed.
+    with pytest.raises(ExportError, match="date"):
+        _detection_provenance(measured_on="")
+    with pytest.raises(ExportError, match="date"):
+        _campaign_provenance(measured_on="   ")
+
+
+def test_each_record_can_be_asked_for_its_digest_directly() -> None:
+    # spec: eval-003
+    # What a measurement script prints beside the files it wrote.
+    detection, campaign = _detection_provenance(), _campaign_provenance()
+    assert detection.digest == detection.as_json()["digest"]
+    assert campaign.digest == campaign.as_json()["digest"]
+    assert len(campaign.digest) == DIGEST_LENGTH
+
+
+def test_a_ragged_row_is_refused() -> None:
+    # spec: eval-003
+    # A short row silently shifts every cell after it into the wrong column,
+    # and a CSV reader will not complain.
+    with pytest.raises(ExportError, match="cells against"):
+        Table(
+            name="x.csv",
+            columns=("source", "runs", "detected"),
+            rows=(("abc", "2"),),
+        )
+
+
+def test_campaign_provenance_without_campaign_figures_is_refused() -> None:
+    # spec: eval-003
+    with pytest.raises(ExportError, match="no figures"):
+        export_metrics(campaign_provenance=_campaign_provenance())
 
 
 def test_a_sample_with_no_population_is_refused() -> None:
