@@ -8,22 +8,23 @@ Abstraction Layer, detects deviations deterministically, and turns evidence bund
 schema-validated, grounding-checked AI hypotheses for analyst review. Decision support, not
 autonomous decision-making.
 
-This session built **`eval-002`, the detection metrics**, and then **`eval-003`, the metrics
-export** — the results table for the detection chapter, and the files a thesis row can be traced
-back through. Between them they closed the last two evaluation items that need no second person.
+This session built **`eval-002`, the detection metrics** and **`eval-003`, the metrics export**, then
+ran **`eval-005`'s per-arm campaign figures end to end** for the first time. Between them: the
+results table for the detection chapter, the per-writer table for the AI chapter, and files a thesis
+row can be traced back through. Everything in the evaluation phase that does not need a second
+person is now done.
 
 ## Current state
 
-Backlog **68 of 104**. Tree clean at `6e9aafc`.
+Backlog **68 of 104**. Tree clean at `85c5682`. Progress note published at v21.
 
 - `backend/app/evaluation/metrics.py` — 237 statements, **100%**, 50 tests.
 - `backend/app/evaluation/export.py` — 190 statements, **100%**, 40 tests.
 - Backend suite: **1,434 passed / 288 skipped** locally; **1,682 at 99.89%** in containers.
   ruff and mypy clean.
-- Mutation: **40 of 41** (`mutate_eval002_metrics.log`), **39 of 39**
-  (`mutate_eval003_export.log`).
-- Corpus measurement: 300 runs, `measurements/corpus/detection_metrics.log`, exporting to
-  `measurements/exports/`.
+- Mutation: **40 of 41** (`mutate_eval002_metrics.log`), **39 of 39** (`mutate_eval003_export.log`).
+- Three corpus measurements of record: `detection_metrics.log` (300 runs),
+  `campaign_statistics.log` (80 generations re-read), `track_gap_recall.log`.
 
 ### The detection results, over all 300 runs of corpus v2
 
@@ -46,22 +47,50 @@ arms, **20 s** on interference, min 10 s, max 90 s, over 60 detections each. The
 `ambiguous-mixed-evidence` reads **1.000 run-level and 0.587 per-aircraft on the same sixty runs** —
 the strongest argument in the project for never merging the two recalls.
 
+### The campaign results, per arm
+
+| Arm | Gens | Bundles | Checked | Caught | Catch | Retry | Fallback | Calls | Spend | Seconds |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `template` (oracle) | 20 | 20 | 20 | 0 | 0.000 | 0.000 | 0.000 | 0 | $0.000000 | 0.008 |
+| `hosted` | 60 | 20 | 60 | 0 | 0.000 | 0.000 | 0.000 | 60 | $0.854364 | 334.197 |
+| `local` | 0 | 0 | 0 | 0 | — | — | — | 0 | $0.000000 | 0.000 |
+
+Agreement across the three generations per bundle, hosted arm over 20 bundles: grounding **1.000**,
+confidence **1.000**, cited evidence kinds **1.000**.
+
+**That last figure corrects a prediction on `eval-005`.** The amendment written after the
+three-bundle trial expected the *cited set* to be the dimension carrying the result, having seen it
+move on one of three bundles. Over twenty it moved on none. The widening to three dimensions was
+still right; the prediction about which one would matter was not. What is left is sharper: across
+sixty generations the only thing that differed between repeated answers was the **prose**, which
+none of the three measures and which `eval-004`'s blind scoring is what examines. Recorded on the
+spec item, in `thesis_notes.md`, `qa.md` §121, `evaluation_harness.md` and the progress note.
+
+The `local` row is the `None`-over-empty-population rule arriving on real data for the first time —
+blank, not 0.000, with denominators of zero beside it saying which.
+
 ### The exported files
 
-`backend/measurements/exports/`, every row stamped `c421c41506fd`, which resolves in
-`provenance.csv` to corpus v2, three base seeds in wave order, 300 runs, thirteen detector settings
-and the measurement date. `metrics.json`, `provenance.csv`, `detection_arms.csv`,
-`detection_types.csv`, `detection_false_positives.csv`, `detection_confusion.csv`. The campaign half
-is wired and waits on the per-arm figures being run end to end.
+Two directories, deliberately separate: the halves were measured on **different corpora on different
+dates**, and one summary file holding both would read as one measurement.
 
-### The limitation that must not be dropped
+| | Stamp | Resolves to |
+|---|---|---|
+| `measurements/exports/detection/` | `c421c41506fd` | corpus v2, three base seeds in wave order, 300 runs, thirteen detector settings, 2026-09-30 |
+| `measurements/exports/campaign/` | `9cce33897e53` | `gpt-4.1-2025-04-14`, frozen parameters, prompt digest `af153726…`, sample seed 20260928, population by bundle id, 2026-09-28 |
 
-Every rate in the detection table is 1.000 or 0.000. That establishes the layer is **correctly
-wired**, not that it detects real interference: the radio side is synthetic with the injected
-incident well above threshold by construction, the corpus holds no near-misses, and one of three
-reportable types has no rule. The only figure carrying information from outside the generator is the
-per-aircraft recall, and that is 0.587 on two arms of three. Recorded in `thesis_notes.md`,
-`evaluation_harness.md`, `qa.md` §115, `measurements/README.md` and the progress note.
+### Two limitations that must not be dropped
+
+**The detection table measures wiring, not accuracy.** Every rate in it is 1.000 or 0.000. The radio
+side is synthetic with the injected incident well above threshold by construction, the corpus holds
+no near-misses, and one of three reportable types has no rule. The only figure carrying information
+from outside the generator is the per-aircraft recall, and that is 0.587 on two arms of three.
+
+**The retry and fallback paths never fired.** Nothing was refused and nothing fell back on the scored
+campaign, so a fallback rate of zero reports that the path was *not exercised* — not that it works.
+
+Both are recorded in `thesis_notes.md`, `evaluation_harness.md`, `qa.md` (§115, §121),
+`measurements/README.md` and the progress note.
 
 ## Files in flight
 
@@ -84,16 +113,23 @@ Tree is clean. Nothing half-finished.
 | `24f9f91` | `feat(eval-003): metrics exported so a thesis row can be traced back - tests pass` |
 | `4f5d4f6` | `measure(eval-003): mutation pass 39 of 39, and the exported files` |
 | `6e9aafc` | `docs: eval-003 write-up` |
+| `a73c798` | `docs: handoff after eval-002 and eval-003` |
+| `dfd438a` | `docs: progress note — charts over the exported results, and provenance` |
+| `423cf32` | `measure(eval-005, eval-003): the campaign's per-arm figures, end to end` |
+| `85c5682` | `docs: the campaign's per-arm figures, and a prediction they correct` |
 
 New files: `app/evaluation/metrics.py`, `app/evaluation/export.py`, `tests/test_eval_metrics.py`,
 `tests/test_eval_export.py`, `measurements/corpus/detection_metrics.py` + `.log`,
+`measurements/corpus/campaign_statistics.py` + `.log`,
 `measurements/mutation/mutate_eval002_metrics.py` + `.log`,
-`measurements/mutation/mutate_eval003_export.py` + `.log`, `measurements/exports/` (6 files).
+`measurements/mutation/mutate_eval003_export.py` + `.log`,
+`measurements/exports/detection/` (6 files), `measurements/exports/campaign/` (3 files).
 
-Edited: `docs/spec.jsonl` (both items amended and passing), `docs/qa.md` (§110-120 + 12 glossary
-rows), `docs/thesis_notes.md` (14 subsections), `docs/evaluation_harness.md`,
-`docs/implementation.md` (two Phase 11 items ticked), `docs/progress_note.html` (new results
-section, published v19), `backend/measurements/README.md`, `CLAUDE.md`.
+Edited: `docs/spec.jsonl` (`eval-002` and `eval-003` amended and passing, `eval-005` amended with its
+measured result), `docs/qa.md` (§110-123 + 16 glossary rows, now 125 entries), `docs/thesis_notes.md`
+(18 subsections, now 236), `docs/evaluation_harness.md`, `docs/implementation.md` (two Phase 11 items
+ticked), `docs/progress_note.html` (results section, three charts, provenance section, campaign
+figures; published v19→v21), `backend/measurements/README.md`, `CLAUDE.md`.
 
 No new dependencies. No new requirements.
 
@@ -124,30 +160,53 @@ No new dependencies. No new requirements.
   The first fix — drop any column name that prefixes another — was wrong within a minute: it also
   dropped `f1`, because `f1_is_defined` sits beside it, and those are siblings. A rule over names
   cannot tell the two apart.
+- **A cascade miss in the progress note, present before this session.** `.dim` had only ever been
+  styled inside `.record`, so every em-dash marked with it rendered unstyled. Found while adding a
+  table that used it; a bare rule now exists.
+- **The campaign statistics export landed in `backend/exports/` on its first run.** Off-by-one:
+  `HERE` was already the directory, so `HERE.parents[1]` climbed one level too far. Removed and
+  re-run.
+- **`eval-005` could not simply be run**, and that is a finding rather than a slip. `ai-012`
+  serialises the budget and the grounding ledger as *figures* rather than as contents, and `eval-005`
+  is per arm while the stored budget is pooled — so the one artefact the campaign produced cannot
+  answer the question the item after it asks of it. Two items passed independently with that join
+  never exercised. Worked around by rebuilding the record with nothing invented and reconciling it
+  twice; the durable fix is owed on `ai-012`.
 - **`quiet_run_background`'s row in `measurements/README.md` still quoted n=20 figures** eleven days
   after the three-wave re-measurement moved them. Its own `.log` was correct. Corrected in place.
 - **The progress note was two items behind and quoted a stale test count**, a stale quiet-hour count
   (twenty, not sixty) and a "what happens next" entry describing the results table as pending. All
   corrected; container suite re-run to get the real figure rather than extrapolating it.
+- **The browser extension was not connected**, so the one visual pass over the three new charts could
+  not be taken. Verified arithmetically instead: every drawn shape inside its viewBox, every bar
+  width matching its value to the pixel, both stacked bars summing to exactly 380px and 300 aircraft.
+  Worth a real look next session.
 - **`make format` reformatted 12 unrelated files again.** Worked around by running `black` on the
-  two files in hand rather than the whole tree. Standing item below.
-- **Workflow deviations, recorded rather than hidden:** in both items, tests were added *after* the
-  implementation in response to the mutation pass — which is its purpose — and two `eval-002` tests
-  came from correcting the track-side guard. Three `eval-003` test expectations were also corrected
-  after first green, where the flattening rule turned out more correct than what the test assumed.
+  files in hand rather than the whole tree. Standing item below.
+- **Workflow deviations, recorded rather than hidden:** in both spec items, tests were added *after*
+  the implementation in response to the mutation pass — which is its purpose — and two `eval-002`
+  tests came from correcting the track-side guard. Three `eval-003` test expectations were corrected
+  after first green, where the flattening rule turned out more correct than the test assumed.
 
 ## Next step
 
-1. **The campaign half of the export.** `export.py` takes it and is tested against it; what is
-   missing is running `eval-005`'s per-arm figures end to end over the stored campaign, which needs
-   the hypotheses read back from the database. That produces `campaign_arms.csv` and is the last
-   thing the export is waiting on.
-2. **`eval-006`** stays deferred until the second rater returns mid-October.
+1. **Serialise enough for the campaign record to round-trip** (`ai-012`). The budget and the ledger
+   go out as figures, so the per-arm cost had to be rebuilt from the generations and reconciled. It
+   works and is checked, but the next campaign should not need it. A spec amendment, tests, and
+   `mutate_ai012_campaign`'s pass re-run. **It would not help the existing artefact**, which predates
+   it, and re-running the campaign costs money and would replace a pre-registered corpus.
+2. **`eval-006`** stays deferred until the second rater returns mid-October. It is the only thing
+   between here and a complete evaluation chapter.
 3. **A corpus with near-misses** is what would turn the detection table from a consistency result
-   into an accuracy one. Out of scope for the dissertation, named as such in four places.
+   into an accuracy one. Out of scope for the dissertation, named as such in five places.
 
 ### Open and unowned
 
+- **`cost_is_complete` is vacuously true on an arm that made no calls** — the same defect `eval-005`
+  fixed for its rates, surviving in the one field that is a boolean rather than a rate. It reads
+  correctly only because the call count of zero sits beside it in the export. Recorded in
+  `thesis_notes.md` and `qa.md` §123 rather than changed, because changing a passing item to fix a
+  field that reads correctly in context should be argued for first.
 - Mutation harnesses for the four other evaluation modules — `pack.py`, `sampling.py`,
   `statistics.py`, `workbook.py` — 104 tests with nothing establishing they are load-bearing. The
   two written this session found nine real gaps between them, which is the argument.
@@ -162,6 +221,7 @@ No new dependencies. No new requirements.
 - `ai-011`'s harness has not been re-run since the corpus was regenerated.
 - The credential loader is not generalised.
 - `ai-008`'s superseded case has no corpus demonstration.
-- `docs/phase9_hypothesis_layer.md` §8 still says N=1.
+- `docs/phase9_hypothesis_layer.md` §8 still says N=1 — and the twenty-bundle agreement figures are
+  now the measurement that settles what N=3 only suggested.
 - Rebuilding evidence bundles corpus-wide would renumber the scored population (bundle ids 247-308)
   and stop `draw_scored_sample.py` reproducing its own draw.
