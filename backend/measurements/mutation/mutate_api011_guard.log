@@ -1,0 +1,24 @@
+sentinel killed (26 failed, 28 passed, 5 skipped, 4 warnings in 6.46s) -- source edits reach the tests
+
+a second batch is admitted, as before this item existed        KILLED   9 failed, 45 passed, 5 skipped in 0.62s
+the guard is claimed and never stored, so every start is the first KILLED   10 failed, 44 passed, 5 skipped in 0.68s
+the guard is taken and read without the lock held across both  KILLED   1 failed, 53 passed, 5 skipped in 0.55s
+nothing is ever reported as in flight                          KILLED   3 failed, 51 passed, 5 skipped in 0.54s
+a release frees whichever batch is holding, not the lease's own KILLED   1 failed, 53 passed, 5 skipped in 0.55s
+release does nothing at all                                    KILLED   6 failed, 48 passed, 5 skipped in 0.60s
+the lease is released where the launcher returns               KILLED   1 failed, 53 passed, 5 skipped in 0.64s
+a batch that fails never gives the guard back                  KILLED   1 failed, 53 passed, 5 skipped in 0.54s
+a launcher that cannot start its thread leaves the guard held  KILLED   1 failed, 53 passed, 5 skipped in 0.53s
+the refusal names the batch it just refused, not the running one KILLED   2 failed, 52 passed, 5 skipped in 0.57s
+the refusal is prose rather than fields                        KILLED   1 failed, 53 passed, 5 skipped in 0.52s
+the refusal loses the seed that identifies the batch           KILLED   1 failed, 53 passed, 5 skipped in 0.56s
+a second start is refused with the status of a bad request     KILLED   2 failed, 52 passed, 5 skipped in 0.53s
+the refusal carries the run's own parameters as well           KILLED   2 failed, 52 passed, 5 skipped in 0.57s
+the start time is recorded without a timezone                  KILLED   1 failed, 53 passed, 5 skipped in 0.52s
+each request is given a guard of its own                       KILLED   1 failed, 53 passed, 5 skipped in 0.55s
+the shipped launcher runs nothing                              KILLED   1 failed, 53 passed, 5 skipped in 0.52s
+
+restored
+
+17 killed of 17 valid mutants
+no unexpected survivors

@@ -713,14 +713,55 @@ def test_a_stale_lease_does_not_release_a_later_batch() -> None:
     second.release()
 
 
+def test_the_whole_of_take_happens_under_the_lock() -> None:
+    """Spec: api-011 (fifth decision), api-003.
+
+    Asserted against the parsed code, because behaviour cannot reach it
+    reliably. A check followed by a set is a real race and a rare one: two
+    threads released together are usually scheduled so that one completes both
+    halves before the other starts either, so a contention test catches it
+    occasionally -- and a test that catches a defect occasionally is worse than
+    no test, because it reads as coverage. The mutation pass established that
+    rather than assuming it: a check-then-set `take` survived the barrier test
+    below and is killed by this one.
+
+    What is asserted is the shape the atomicity rests on -- `take`'s body is one
+    `with self._lock` statement and nothing beside it.
+    """
+    # spec: api-011, api-003
+    from app.scenario import guard as guard_module
+
+    tree = ast.parse(Path(guard_module.__file__).read_text(encoding="utf-8"))
+    take = next(
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef) and node.name == "take"
+    )
+    body = [
+        statement
+        for statement in take.body
+        if not (
+            isinstance(statement, ast.Expr)
+            and isinstance(statement.value, ast.Constant)
+            and isinstance(statement.value.value, str)
+        )
+    ]
+
+    assert len(body) == 1, "take does something outside the lock"
+    assert isinstance(body[0], ast.With)
+
+
 def test_taking_the_guard_is_atomic() -> None:
     """Spec: api-011 (fifth decision).
 
     A check followed by a set lets two simultaneous callers both observe
     "nothing running" and both proceed, which defeats the item entirely while
-    passing every test that takes the guard twice in a row. The barrier is what
-    makes the interleaving certain rather than hoped for: both threads are
-    inside `take` at the same moment or the test times out.
+    passing every test that takes the guard twice in a row. The barrier makes the
+    interleaving certain rather than hoped for: both threads are inside `take` at
+    the same moment or the test times out.
+
+    It cannot, on its own, catch a check-then-set -- see the structural test
+    above, which exists because of what this one leaves through.
     """
     # spec: api-011
     guard = BatchGuard()
@@ -812,10 +853,23 @@ def test_the_refusal_names_the_batch_already_running() -> None:
     arriving with the injected event in tow.
     """
     # spec: api-011, api-009
+    #
+    # The second start asks for a *different* type and seed on purpose. Posted
+    # twice with one configuration, a refusal naming the batch it just refused
+    # would be indistinguishable from one naming the batch that is running --
+    # and the first is the useless answer, since the analyst already knows what
+    # they asked for.
     launcher = RecordingLauncher()
     with _bound(BatchGuard(), launcher) as client:
         client.post("/api/v1/scenario/start", json=CONFIGURATION)
-        refusal = client.post("/api/v1/scenario/start", json=CONFIGURATION)
+        refusal = client.post(
+            "/api/v1/scenario/start",
+            json={
+                **CONFIGURATION,
+                "scenarioType": "rf-sensor-fault",
+                "baseSeed": 19990101,
+            },
+        )
 
     detail = refusal.json()["detail"]
     assert set(detail) == {"scenarioType", "baseSeed", "startedAt"}
@@ -957,6 +1011,45 @@ def test_two_simultaneous_starts_give_one_acceptance_and_one_refusal() -> None:
 
 # ---------------------------------------------------------------- the launcher
 # side of the lease
+
+
+class _UnscheduledThread:
+    """A Thread that is started and never runs its target.
+
+    The one stand-in that can tell *released in the thread* from *released where
+    the launcher returns*: `_InlineThread` finishes the batch before `start`
+    returns, so under it both arrangements look identical and the guard is free
+    either way. Here the batch is pending, which is the ordinary state for
+    seventy seconds.
+    """
+
+    def __init__(self, *, target: Any, name: str, daemon: bool) -> None:
+        self.target = target
+
+    def start(self) -> None:
+        pass
+
+
+def test_the_lease_is_still_held_while_the_batch_is_still_running(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Spec: api-011, second finding.
+
+    Releasing where the launcher returns would free the guard before a single run
+    row had been opened -- not a weaker guard but the absence of one, since every
+    later start would be accepted.
+    """
+    # spec: api-011
+    guard = BatchGuard()
+    lease = guard.take(_in_flight())
+    monkeypatch.setattr(batch, "Thread", _UnscheduledThread)
+    monkeypatch.setattr(batch, "run_batch_now", lambda request: None)
+
+    batch.launch_batch(_batch_request(), lease=lease)
+
+    assert guard.in_flight == _in_flight()
+    with pytest.raises(BatchAlreadyRunning):
+        guard.take(_in_flight(base_seed=999))
 
 
 def test_the_launcher_releases_the_lease_when_the_batch_finishes(
