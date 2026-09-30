@@ -7947,3 +7947,130 @@ script ordering and would keep passing every check while describing a state
 nobody chose. The cost is a full re-run of the chain per figure; the benefit is
 that the table is reproducible from the corpus and the code alone, which is what
 a results chapter has to be.
+
+### Reproducibility needs the detector settings, not only the scenario seed
+
+`NFR-601` says every evaluation result shall be regenerable from scenario type,
+parameters and seed, and `eval-003` restated that as a failure case: an export
+omitting the seeds and parameters fails. Building it showed the requirement is
+too narrow in a way that would not have been noticed until someone tried to
+reproduce a figure.
+
+A base seed determines which hours exist. It says nothing about the settings the
+detectors were run at, and those are not scenario parameters — the deviation
+threshold, the minimum episode duration, the gap threshold and contact-freshness
+window, the three radii and the corroboration ratio all live in the detection
+layer. Set the threshold to 8 dB instead of 6 and every catch rate, precision and
+delay in the results table moves, on exactly the same hours, with the seed
+unchanged and an export carrying only seeds still satisfying the requirement as
+written.
+
+The export therefore records thirteen detector settings beside the seeds, read off
+the policy objects the measurement actually used rather than typed out again — a
+recorded setting that is not the one in force is worse than none, because it looks
+like provenance. A provenance record missing any of the settings named as required
+is refused at construction, which is the difference between a failure case that is
+checked and one that cannot occur. The phrasing worth keeping for the write-up: *a
+seed reproduces the hours, a policy reproduces the figures.*
+
+### Traceability as a resolvable key, because the unit that travels is one row
+
+The obvious way to make an export self-describing is a header block: a few comment
+lines at the top of each file naming the corpus, the seeds and the date. It was
+rejected for two reasons, and the second is the real one. Comment lines are not
+CSV and break strict parsers. More importantly, the artefact that actually reaches
+a dissertation is not the file — it is **one row**, pasted into a table, which
+arrives without any line that was above it.
+
+So each row's first column is a twelve-character digest of the provenance record,
+and a companion file resolves it, one field per row so that two records holding
+different fields can share a shape. The digest is taken over the record's canonical
+JSON, which means it moves when a *value* moves and not when the rendering does:
+change the threshold, a seed, the corpus name or the date and the digest changes,
+so a row exported under the old settings fails to resolve rather than resolving to
+the wrong ones. This is the pattern already used for the model prompt, which is
+hashed into the parameters stored beside every hypothesis.
+
+### The typed-absence rule dies at the export boundary unless something carries it
+
+`eval-002` is careful that every rate over an empty population is `None` and never
+0.0, because a precision of zero on an answer nobody gave reads as an answer that
+was always wrong. That guarantee is enforced where the value is computed. It does
+not survive being written to a CSV, where `None` becomes an empty cell and an empty
+cell is zero to a spreadsheet and to every dataframe library that will open the
+file.
+
+This is the second time a guarantee enforced at construction has been lost at an
+export boundary in this project; the first was a measured background band whose
+population count was dropped by its own serialiser, leaving a band that could not
+be read correctly. The pattern is worth naming in the write-up: **a value's
+invariants are enforced where it is made and not where it is written**, and an
+export is a second boundary needing its own guard.
+
+A sentinel token was considered and rejected — `NA` or `unmeasured` makes a numeric
+column non-numeric, and the item asks for files a chart can be drawn from directly.
+The resolution adopted is the rule the per-arm statistics already follow: the count
+sits beside every rate. A blank cell with a denominator of 60 beside it is
+unambiguous; a blank cell with a denominator of 0 is equally unambiguous and means
+something different. The table object refuses to be constructed if a declared rate
+is missing either count column, so the next person adding a figure cannot forget.
+
+### An export that computes is a second implementation of the arithmetic
+
+The governing rule is that the export re-organises values and derives none: no
+rounding, no percentages, no column totals. Rounding is the tempting one, because a
+thesis table wants three decimal places — and it is exactly the failure to avoid.
+Rounded at export, the file says 0.823 where the metrics say 0.8233333333333334,
+and the number that gets quoted is no longer the number that was tested. The
+rounding belongs in the document's own formatting, where it is visible.
+
+The rule is held by a test that walks every cell of every exported file and
+requires it to appear verbatim in the figures the exporter was handed, allowing
+only two renderings — a list joined into one delimited cell, and a nested field's
+name joined into a path. Writing that test was itself informative: the first
+version failed on the confusion matrix, whose axis labels are dictionary *keys*
+rather than values, which clarified that the rule is about values and that turning
+a key into a cell is re-organising. The same rule governs the marker's reading
+pack, adopted there for an unrelated reason, which makes it the second place the
+constraint has been needed.
+
+### A defect only the exported file could show
+
+The files are built by flattening each figure into its own keys, so the header is
+the set of field names rather than a hand-written list — the two-recalls guard from
+`eval-002` would otherwise evaporate at precisely the boundary it exists for, since
+a typed header is where `recall_per_run` becomes `recall`.
+
+One figure carries a *nested* record: the per-aircraft recall, present on the arms
+that stage aircraft and absent on the one that does not. The arms that have it
+flatten to three columns; the arm that does not flattens to a single column holding
+nothing. Both appeared, so the file gained an always-blank column that duplicated
+what the expanded columns said — and that, on the rows where the record genuinely
+was absent, read as a missing *value* rather than a missing *record*.
+
+Two things about this are worth recording. First, every unit test passed before and
+after: the defect was in the file's shape rather than in any value, and it was
+visible only by opening the CSV. Second, the first fix was wrong within a minute. It
+dropped any column name that was a prefix of another, which also removed `f1`,
+because `f1_is_defined` sits beside it — and those are siblings, not a record and
+its expansion. **A rule written over names cannot tell the two apart.** The working
+version takes the shape from the entries that do carry the record, which is the only
+place the answer exists. The mutation pass then carried a mutant for each half:
+absent records left collapsed, and the shape guessed from one entry's keys.
+
+### Making a dead defence loud rather than leaving it equivalent
+
+The mutation pass for the export reported two survivors that were the same finding.
+Rows were built with a fallback — a record missing a column got a blank — and once
+nested records were aligned across a table, no record was ever missing a column, so
+the fallback was unreachable and two different mutants of it changed nothing
+observable.
+
+The resolution was not to mark them equivalent but to remove the dead defence: a
+record missing a column now raises. Legitimate absence is handled by the alignment,
+so anything still missing is two entries disagreeing about what they hold, and
+blanking that writes a file where one row's value sits under another row's heading
+— unreadable, and silent. The pass then went to 39 of 39. The general lesson, which
+is the second time this project has met it: **a surviving mutant on a guarded rule
+often means the guard is redundant rather than that the test is missing**, and the
+fix is to remove the redundancy rather than to write a test for an unreachable path.

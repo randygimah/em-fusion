@@ -7483,6 +7483,126 @@ figure in the table that does carry external information is the per-aircraft
 recall, because the aircraft data is replayed rather than generated — and that
 one is 0.587 on two arms of three.
 
+## 116. The figures are already in a committed log. What does exporting them add?
+
+**Traceability that survives the trip into a thesis.** A log is text a person
+reads and retypes, and once a number has been retyped into a table it has lost
+every connection to what produced it. The export exists so a row in the write-up
+can be followed back.
+
+The mechanism is not a header comment, and the reason is worth stating: a comment
+line breaks a CSV parser, and the unit that actually travels is **one row pasted
+into a table**, which loses every line above it. So each row's first column is a
+short digest of the record describing the run, and one file resolves it:
+
+| | |
+|---|---|
+| Every exported row | `c421c41506fd,gnss-degradation,positive,…` |
+| `provenance.csv` | `c421c41506fd,detection,corpus,v2` |
+| | `c421c41506fd,detection,base_seeds,1412660662;965530111;655209063` |
+| | `c421c41506fd,detection,policies.RF-NOISE.threshold_db,6.0` |
+
+Change any field of that record and the digest changes, so a stale row **fails to
+resolve** rather than quietly citing the wrong corpus. It is the same pattern used
+for the model prompt, which is hashed into every stored hypothesis.
+
+## 117. Isn't recording the seed enough to make a figure reproducible?
+
+**No, and this is the item's own failure case being too narrow.** The spec said an
+export omitting "the seeds and parameters" fails. For the detection table the
+parameters that matter are not the scenario's — they are the **detectors'**.
+
+| What it fixes | Example | Change it and… |
+|---|---|---|
+| Base seed | `1412660662` | you get different hours |
+| Detector policy | deviation threshold `6.0` dB | you get **different figures on the same hours** |
+
+Set the threshold to 8 dB and every catch rate, precision and delay in the table
+moves, with the seed unchanged and the export still satisfying the spec as
+written. So thirteen settings go out beside the seeds — what "normal" is averaged
+over, what counts as a deviation and for how long, what counts as a dropout and
+over what ground, the three radii and the one ratio the reportable rules turn on —
+and a record missing one of them is **refused at construction** rather than
+exported incomplete.
+
+The distinction to keep: *a seed reproduces the hours; a policy reproduces the
+figures.*
+
+## 118. Why does every rate in the CSV have its numerator and denominator beside it?
+
+**Because otherwise a blank cell means zero.** This is the one place the project's
+`None`-over-an-empty-population rule would have died silently.
+
+The detection metrics are careful that a rate over nothing is *not measured* rather
+than 0.0 — a precision of zero on an answer nobody ever gave reads as an answer
+always wrong. But a CSV writes "not measured" as an **empty cell**, and an empty
+cell is zero to a spreadsheet and to every dataframe library. The guarantee
+survives computation and dies at export.
+
+A sentinel word like `NA` was rejected: it makes a numeric column non-numeric, and
+the item asks for files a chart can be drawn from. The resolution is to put the
+population next to the value, so a blank is never ambiguous:
+
+| Row | `recall_per_run` | `detected` | `runs` | How to read it |
+|---|---|---|---|---|
+| `gnss-degradation` | `1.0` | `60` | `60` | measured, and perfect |
+| `aircraft-coverage-gap` | *(blank)* | `0` | `60` | sixty hours, and no rate to have |
+| `normal-baseline` | *(blank)* | `0` | `60` | nothing staged, so nothing to recall |
+
+The table object refuses to exist if a rate is declared without its counts present
+as columns, so this cannot be forgotten by whoever adds the next figure.
+
+Worth recording as a general lesson: **a guarantee enforced where a value is made
+is not enforced where it is written out.** The same defect had already occurred
+once, when a measured band's population was dropped at its own export boundary.
+
+## 119. The export re-organises numbers. Why is it forbidden to compute any?
+
+**Because the exported number is the one that gets quoted, and the computed one is
+the one that was checked.** If the exporter rounds to three decimals, the file says
+`0.823` where the metrics say `0.8233333333333334`, and nothing in either artefact
+says they differ.
+
+So every value written appears **verbatim** in what the exporter was handed. No
+rounding, no percentages, no column totals. A test walks every cell of every file
+and requires it to be present in the source figures, allowing only two renderings:
+a list joined into one cell, and a nested field's name joined into a path. Both
+re-organise; neither invents.
+
+The one join the exporter does make is copying an arm's detection counts onto the
+row that cites that arm's recall — so an F1 row can be checked without the table
+beside it. Copied, never recomputed, and a mutation that recalculates them from the
+other columns is caught.
+
+This is the same rule the marker's reading pack follows, adopted there for a
+different reason: a pack that summarised would have flattered one of the two
+writers being compared.
+
+## 120. What did building the export find that the metrics themselves had not?
+
+**A column that was always blank and meant two different things.**
+
+The files are built by flattening each figure into its own keys, so the header *is*
+the set of field names — a hand-typed header is exactly where `recall_per_run`
+becomes `recall` and the two-recalls guard evaporates. But one figure contains a
+*nested* record: the per-aircraft recall, which some arms have and some do not.
+
+An arm that has it flattens to three columns. An arm that does not flattens to one
+column called `track_side`, holding nothing. The file ended up with both, so there
+was an always-blank column that on the rows where the record genuinely was absent
+looked like a **missing value** rather than a **missing record**.
+
+The first fix was a rule over column names: drop any name that is a prefix of
+another. It was wrong within a minute — it also dropped `f1`, because
+`f1_is_defined` sits beside it, and those are siblings rather than a record and its
+expansion. **A rule over names cannot tell the two apart.** The working version
+takes the shape from the rows that *do* carry the record, which is the only place
+the answer actually exists.
+
+Worth recording as a limitation of unit tests: every test passed both before and
+after, because the defect was in the file's shape rather than in any value. It was
+visible only by opening the exported CSV.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -7693,3 +7813,8 @@ one is 0.587 on two arms of three.
 | **Controlled rate** | A rate every run behind which carries an independent verdict that the machinery ran. Distinguished on the report from one that merely came out low. See §113. |
 | **Conditional on detection** | A figure that exists only over the successes, so it describes them and not the arm they came from. Latency is the example; printed beside a recall below one it invites the opposite reading. See §114. |
 | **Latency floor** | The shortest span of evidence any rule will act on, which is therefore the smallest latency the system can report. Here it is `anom-014`'s 10 s minimum. See §114. |
+| **Provenance digest** | A short hash of the record describing a run, carried on every exported row so the row resolves to what produced it. Changes when any field changes, so a stale row fails to resolve rather than citing the wrong thing. See §116. |
+| **Self-describing export** | A file needing nothing outside itself to say what produced its numbers. The test is not "does it contain a seed" but "could a stranger regenerate this". See §116, §117. |
+| **Policy versus seed** | A seed reproduces the *hours*; a detector policy reproduces the *figures*. Both are needed and only one was in the original spec. See §117. |
+| **Export boundary** | The point where a computed value becomes a written one. Guarantees enforced at construction are not enforced here, which is where two of this project's defects have landed. See §118. |
+| **Derived column name** | A header taken from the field it carries rather than typed beside it. Removes the class of defect where a column's name and its contents disagree. See §120. |

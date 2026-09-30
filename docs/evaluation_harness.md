@@ -116,6 +116,7 @@ not in the baseline. That is why the check is validated against the template rat
 | **Scoring pack** | What a marker reads, blinded, plus the workbook they score in | **Built and rebuilt** |
 | **Score ingest + agreement** | Two sheets in, weighted κ out, adjudication applied | **Not built — deliberately deferred.** The second marker is unavailable until mid-October, so there are no sheets to ingest. Building the ingest against invented sheets is how you discover at ingest time that you guessed the shape |
 | **Detection metrics** | Precision, recall, F1, two false-positive rates and latency over the staged corpus | **Built and measured.** 300 runs; the first precision, F1 or latency figures in the project |
+| **Metrics export** | The figures as CSV and JSON, with everything needed to regenerate them | **Built.** Detection half exported; the campaign half is wired and waits on the per-arm figures being run end to end |
 
 ## The order things happened in, and why the order is the result
 
@@ -289,6 +290,45 @@ The seventh is a refusal rather than a definition: **no false-positive rate is r
 whose quiet runs did not pass `anom-008`**. Zero findings is the answer the control wants and also the
 answer a pipeline that never ran gives.
 
+## The export, and what makes a file self-describing
+
+Every figure above also lands as files a chart can be drawn from and a thesis row can be traced back
+through. Three decisions make that more than a formatting step.
+
+**A seed reproduces the hours; a policy reproduces the figures.** The scenario base seeds determine
+which hours exist and say nothing about the settings the detectors ran at — the deviation threshold,
+the minimum episode, the gap threshold and contact-freshness window, the three radii, the
+corroboration ratio. Set the threshold to 8 dB instead of 6 and every figure moves on the same hours.
+Thirteen detector settings therefore go out beside the seeds, read off the policy objects the
+measurement actually used, and a provenance record missing one is **refused at construction**.
+
+**Traceability is a resolvable key, because the unit that travels is one row.** A header comment
+breaks a CSV parser and, more to the point, is lost the moment a row is pasted into a table. Each
+row's first column is a twelve-character digest of the provenance record; `provenance.csv` resolves
+it, one field per row so two unlike records share a shape. Change any field and the digest changes,
+so a stale row fails to resolve rather than citing the wrong corpus.
+
+**No rate is written without its counts.** This is the one place the `None`-over-an-empty-population
+rule would have died: a CSV writes `None` as an empty cell, and an empty cell is zero to a
+spreadsheet and to every dataframe library. A sentinel token would make the column non-numeric, so
+the population sits in the next column instead — a blank beside a denominator of 60 and a blank
+beside a denominator of 0 mean different things, and both are readable.
+
+Two rules follow from those. The export **computes nothing** — every value appears verbatim in what
+it was handed, so the quoted number is the tested number — and **column names are derived by
+flattening** rather than typed, so `recall_per_run` cannot become `recall` at the one boundary that
+guard exists for.
+
+| File | What it holds |
+|---|---|
+| `metrics.json` | everything, nested, with both provenance records |
+| `provenance.csv` | one field per row: corpus, seeds, run count, thirteen policies, date |
+| `detection_arms.csv` | one row per scenario type — recall, misses, latency, per-aircraft recall |
+| `detection_types.csv` | one row per reportable answer — precision, F1, the arms behind it |
+| `detection_false_positives.csv` | the two silences, each with its own control status |
+| `detection_confusion.csv` | one cell per row, long rather than wide |
+| `campaign_arms.csv` | per-arm catch, retry, fallback, cost, agreement |
+
 ## What this harness cannot tell you
 
 Stated in advance, which is the only time it counts.
@@ -328,6 +368,8 @@ Stated in advance, which is the only time it counts.
 | **Recall per run / per staged aircraft** | The two recalls. `eval-002`'s and `anom-011`'s, 41 points apart on `ambiguous-mixed-evidence`. Never averaged, and neither is exported as a bare `recall` |
 | **Discriminating negative** | A staged case no rule is meant to report, so correct silence on it is evidence rather than an absence |
 | **Conditional on detection** | A figure existing only over the successes. Latency is the one, and printed beside a recall below 1 it invites the opposite reading |
+| **Provenance digest** | A short hash of the record describing a run, on every exported row, resolving in one file. Changes when any field changes |
+| **Policy versus seed** | A seed reproduces the hours; a detector policy reproduces the figures. Both are exported |
 | **Pass one / pass two** | Five quality dimensions scored blind; then, after the answers are revealed, two more judgements. Kept apart because knowing the answer changes how good an explanation feels |
 
 ## Where to look next
