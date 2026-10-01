@@ -71,6 +71,9 @@ from app.evaluation.export import DetectionProvenance, export_metrics
 from app.evaluation.metrics import STAGED_TYPE, RunOutcome, TrackSideRecall, compute
 from app.detection.rate_excess import DEFAULT_RADIUS_KM as EXCESS_RADIUS_KM
 from app.detection.rf_noise import DEFAULT_MINIMUM_DURATION
+from app.db.repository import observations_for_run
+from app.dal.models import ObservationType, ScenarioRunSummary
+from app.detection.chain import DetectorPolicies, Normality, assess
 from app.scenario.layout import load_layout
 
 RF_POLICY = ThresholdPolicy(metric=RfMetric.POWER_DBM, direction=Direction.ABOVE,
@@ -80,6 +83,14 @@ FAULT, FUSION, LADDER, CLUSTER = (FaultPolicy(), FusionPolicy(), PrecedencePolic
 BOX = BoundingBox(lat_min=49.0, lat_max=54.0, lon_min=3.0, lon_max=11.0)
 GAP = GapPolicy(threshold=timedelta(seconds=100),
                 contact_fresh_within=timedelta(seconds=30), box=BOX)
+
+#: `anom-015`. The eight rules are composed in `app/detection/chain.py` rather
+#: than here, which is the whole of that item: this file held the only copy of
+#: the ordering that produces every figure below, and `measurements/` is outside
+#: ruff, mypy, pytest and the coverage gate. The policies are the same objects;
+#: what moved is the sequence they are applied in and the reader in front of it.
+POLICIES = DetectorPolicies(rf=RF_POLICY, fault=FAULT, gap=GAP, cluster=CLUSTER,
+                            fusion=FUSION, ladder=LADDER)
 
 #: `anom-011`'s figures, read off the final block of `track_gap_recall.log`
 #: ("v2, every batch"). Not recomputed: two measurements of one quantity
@@ -110,22 +121,19 @@ layout = load_layout()
 
 
 def obs_for(run_id, kind):
-    with factory.begin() as s:
-        rows = s.execute(text(
-            "SELECT timestamp, ST_Y(location) AS lat, ST_X(location) AS lon, payload "
-            "FROM observations WHERE scenario_run_id=:r AND observation_type=:t "
-            "ORDER BY timestamp"), {"r": run_id, "t": kind}).mappings().all()
-    src = SourceType.OPENSKY if kind == "track" else SourceType.SYNTHETIC_RF
-    mode = DataMode.REPLAYED if kind == "track" else DataMode.SYNTHETIC
-    pl = TrackPayload if kind == "track" else RfPayload
-    ot = ObservationType.TRACK if kind == "track" else ObservationType.RF
-    return [CanonicalObservation(
-        source_id="o", source_type=src, observation_type=ot, timestamp=r["timestamp"],
-        location=Location(lat=r["lat"], lon=r["lon"]), data_mode=mode,
-        validation_status=ValidationStatus.VALID,
-        provenance=Provenance(source_id="o", source_type=src, data_mode=mode,
-                              scenario_run_id=run_id),
-        payload=pl(**r["payload"])) for r in rows]
+    """Through the repository (`anom-015`, seventh finding), not by hand.
+
+    The version this replaces invented five fields: `source_id="o"`, a source type
+    and data mode derived from the observation type rather than read, `VALID`
+    asserted without checking, and a `Provenance` built from scratch. The mapping
+    happened to agree with what the generator writes, which made it a right answer
+    from a wrong source -- `ai-004`'s defect, in the input rather than the output.
+    """
+    return observations_for_run(
+        factory,
+        run_id,
+        ObservationType.TRACK if kind == "track" else ObservationType.RF,
+    )
 
 
 with factory.begin() as _s:
@@ -135,10 +143,12 @@ table = compute_rf_baselines([o for q in quiet for o in obs_for(q, "rf")],
                              RfMetric.POWER_DBM, baseline_run_ids=quiet,
                              window=timedelta(hours=2))
 
+NORMALITY = Normality(table=table, quiet_run_ids=tuple(quiet), window=BASELINE_WINDOW)
+
 with factory.begin() as s:
     runs = s.execute(text(
-        f"SELECT id, scenario_type, ground_truth FROM scenario_runs "
-        f"WHERE {_corpus.run_filter()} ORDER BY id")).mappings().all()
+        f"SELECT id, scenario_type, seed, started_at, completed_at, ground_truth "
+        f"FROM scenario_runs WHERE {_corpus.run_filter()} ORDER BY id")).mappings().all()
     # `scn-008` put the base seed on the row precisely so a batch can be
     # re-derived from what it records rather than from what was remembered.
     # Ordered by the earliest run of each batch, which is wave order: the
@@ -157,31 +167,17 @@ undecidable = []
 for run in runs:
     kind, run_id, truth = run["scenario_type"], run["id"], run["ground_truth"] or {}
 
-    rf = obs_for(run_id, "rf")
-    span = (min(o.timestamp for o in rf), max(o.timestamp for o in rf))
-    found = detect_rf_noise(rf, table, RF_POLICY)
-    faults = detect_sensor_faults(found, rf, table, layout, FAULT)
-
-    tracks = obs_for(run_id, "track")
-    gaps = detect_track_gaps(tracks, GAP)
-    save_findings(factory, scenario_run_id=run_id, rule_id="TRACK-GAP",
-                  findings=[from_track_gap(g, scenario_run_id=run_id) for g in gaps])
-    clusters = cluster_track_gaps(factory, scenario_run_id=run_id, window=span,
-                                  policy=CLUSTER)
-
-    zones = detect_interference(faults, factory, scenario_run_id=run_id,
-                                run_span=span, layout=layout, policy=FUSION)
-
-    # The receivers behind each claim, kept alongside it: a `Claim` carries a
-    # centre and a window and `anom-009` needs the receivers whose evidence
-    # the rule rested on. The two producers emit in finding order, so this
-    # pairs rather than looks up.
-    fault_claims = claims_from_sensor_faults(faults, layout)
-    zone_claims = claims_from_interference(zones)
-    sensors_of = {id(c): (f.sensor_id,) for c, f in zip(fault_claims, faults.faults)}
-    sensors_of.update({id(c): z.sensors for c, z in zip(zone_claims, zones.zones)})
-
-    reported = resolve([*fault_claims, *zone_claims], layout, LADDER).reported
+    # One call (`anom-015`). The ordering, the mid-chain persistence and the
+    # receivers behind each claim all live in `app/detection/chain.py` now, where
+    # the linter, the type checker and the coverage gate can see them.
+    assessment = assess(
+        ScenarioRunSummary(id=run_id, scenario_type=kind, seed=run["seed"],
+                           started_at=run["started_at"],
+                           completed_at=run["completed_at"]),
+        normality=NORMALITY, policies=POLICIES, layout=layout,
+        session_factory=factory)
+    found = assessment.rf
+    reported = assessment.reported
     types = sorted({c.anomaly_type for c in reported})
 
     # What the answer key says was staged, and when it began. An RF arm
@@ -206,7 +202,7 @@ for run in runs:
                 continue
             try:
                 measured.append(measure_latency(
-                    claim, sensors=sensors_of[id(claim)], onset=onset,
+                    claim, sensors=assessment.receivers_for(claim), onset=onset,
                     episodes=found.anomalies).latency.total_seconds())
             except PrecedenceError as refused:
                 undecidable.append((run_id, claim.rule_id, str(refused)[:60]))
@@ -218,17 +214,11 @@ for run in runs:
         staged=staged and kind != "normal-baseline", latency_seconds=seconds))
 
     if kind == "normal-baseline":
+        # The account `anom-008` grades against comes from the pass, which is the
+        # only place every producer is in view -- one hand-written here was a
+        # second place for a producer to be forgotten.
         controls[str(run_id)] = audit(
-            run_id=str(run_id), scenario_type=kind,
-            counts={("RF-NOISE", "rf_noise_deviation"): len(found.anomalies),
-                    ("TRACK-GAP", "track_continuity_gap"): len(gaps),
-                    ("TRACK-CLUSTER", "track_gap_cluster"): len(clusters),
-                    ("TRACK-GAP", "track_rate_excess"): len(zones.zones)
-                    + len(zones.declined),
-                    ("SENSOR-FAULT", "possible_sensor_fault"):
-                        sum(1 for t in types if t == "possible_sensor_fault"),
-                    ("FUSION-SPATIAL", "possible_interference_zone"):
-                        sum(1 for t in types if t == "possible_interference_zone")})
+            run_id=str(run_id), scenario_type=kind, counts=assessment.counts)
 
 metrics = compute(outcomes, controls=controls,
                   track_side={k: v for k, v in TRACK_SIDE.items()
@@ -300,25 +290,12 @@ provenance = DetectionProvenance(
     base_seeds=tuple(row[0] for row in _seeds),
     runs=len(runs),
     measured_on=date.today().isoformat(),
-    policies={
-        "BASELINE.window_h": str(BASELINE_WINDOW.total_seconds() / 3600),
-        "RF-NOISE.metric": RF_POLICY.metric.value,
-        "RF-NOISE.direction": RF_POLICY.direction.value,
-        "RF-NOISE.threshold_db": str(RF_POLICY.threshold),
-        "RF-NOISE.medium_at_db": str(RF_POLICY.medium_at),
-        "RF-NOISE.high_at_db": str(RF_POLICY.high_at),
-        "RF-NOISE.minimum_episode_s": str(DEFAULT_MINIMUM_DURATION.total_seconds()),
-        "TRACK-GAP.threshold_s": str(GAP.threshold.total_seconds()),
-        "TRACK-GAP.contact_fresh_within_s": str(GAP.contact_fresh_within.total_seconds()),
-        "TRACK-GAP.box": f"{BOX.lat_min},{BOX.lat_max},{BOX.lon_min},{BOX.lon_max}",
-        "TRACK-GAP.rate_excess_radius_km": str(EXCESS_RADIUS_KM),
-        "TRACK-CLUSTER.radius_km": str(CLUSTER.radius_km),
-        "SENSOR-FAULT.neighbour_radius_km": str(FAULT.radius_for(layout)),
-        "FUSION-SPATIAL.corroboration_threshold": str(FUSION.corroboration_threshold),
-        "FUSION-SPATIAL.excess_radius_km": str(
-            EXCESS_RADIUS_KM if FUSION.excess_radius_km is None else FUSION.excess_radius_km
-        ),
-    },
+    # `anom-015`: the pass's own record rather than a second spelling of it, so
+    # the settings the findings were produced under and the settings the export
+    # quotes cannot disagree. It also gains the baseline's quiet runs, which this
+    # hand-written version never carried -- two passes under identical thresholds
+    # and different baselines were indistinguishable in the exported provenance.
+    policies=POLICIES.record(NORMALITY, layout=layout),
 )
 export = export_metrics(detection=metrics, detection_provenance=provenance)
 EXPORTS.mkdir(parents=True, exist_ok=True)

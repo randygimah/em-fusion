@@ -413,6 +413,52 @@ def latest_positions(
     return [_observation(row) for row in rows]
 
 
+def observations_for_run(
+    session_factory: sessionmaker[Session],
+    run_id: int,
+    observation_type: ObservationType,
+) -> list[CanonicalObservation]:
+    """Every observation of one kind for one run, oldest first. Spec: anom-015.
+
+    The read `anom-015` needs, and it belongs here rather than in the caller for
+    `FR-904`'s reason: both measurement scripts grew their own, each holding raw
+    SQL that **invents five fields** -- `source_id="o"`, a source type and data
+    mode derived from the observation type rather than read, `VALID` asserted
+    without checking, and a `Provenance` built from scratch. `_observation` below
+    reconstructs all five from the row and picks the payload class by type. The
+    hardcoded mapping happens to agree with what the generator writes, which makes
+    it a right answer from a wrong source -- `ai-004`'s defect, and the one
+    `anom-015` exists to stop repeating one layer up.
+
+    Ordered by timestamp, which is not presentation: every rule downstream reads
+    a series, `anom-001` walks episodes of consecutive readings, and an unordered
+    result takes its order from the heap -- the failure this repository has
+    recorded three times.
+
+    No window and no reduction, unlike `latest_positions`: a detection pass reads
+    the whole run by definition, and a pass over part of one is `anom-015`'s
+    refusal rather than a smaller correct answer.
+    """
+    with session_factory() as session:
+        rows = (
+            session.execute(
+                text(
+                    "SELECT source_id, source_type, observation_type, timestamp, "
+                    "       ST_Y(location) AS lat, ST_X(location) AS lon, "
+                    "       data_mode, validation_status, provenance, payload "
+                    "FROM observations "
+                    "WHERE scenario_run_id = :run_id "
+                    "  AND observation_type = :observation_type "
+                    "ORDER BY timestamp, id"
+                ),
+                {"run_id": run_id, "observation_type": observation_type.value},
+            )
+            .mappings()
+            .all()
+        )
+    return [_observation(row) for row in rows]
+
+
 def _observation(row: RowMapping) -> CanonicalObservation:
     """One row back into the model it was written from.
 

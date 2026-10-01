@@ -20,7 +20,7 @@ it is the same argument at zero.
 from __future__ import annotations
 
 import json
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from datetime import datetime
 
 from sqlalchemy import RowMapping, text
@@ -58,14 +58,24 @@ def save_findings(
     scenario_run_id: int,
     rule_id: str,
     findings: Iterable[DetectionFinding],
+    policy: Mapping[str, str] | None = None,
 ) -> None:
     """Replace this rule's findings for this run.
 
     One transaction, so a failed write leaves the previous set intact rather
     than deleting it and then failing to insert -- which would report an
     error and silently leave the run with no findings at all.
+
+    `policy` is the detector settings these findings were produced under
+    (`anom-015`), written onto every row. Optional **only** so the measurement
+    scripts that predate `anom-015` keep working: a row without it is
+    unprovenanced rather than wrong (`0008`), which is `eval-001`'s distinction
+    carried onto this table, and the pass always supplies one.
     """
     rows = [_row(finding) for finding in findings]
+    recorded = None if policy is None else json.dumps(dict(policy), sort_keys=True)
+    for row in rows:
+        row["policy"] = recorded
 
     with session_factory.begin() as session:
         session.execute(
@@ -80,10 +90,11 @@ def save_findings(
                 text(
                     "INSERT INTO detection_findings "
                     "(scenario_run_id, rule_id, finding_type, subject, "
-                    " started_at, ended_at, evidence_refs, details, location) "
+                    " started_at, ended_at, evidence_refs, details, location, "
+                    " policy) "
                     "VALUES (:scenario_run_id, :rule_id, :finding_type, :subject, "
                     " :started_at, :ended_at, :evidence_refs, :details, "
-                    " ST_GeomFromEWKT(:location))"
+                    " ST_GeomFromEWKT(:location), CAST(:policy AS jsonb))"
                 ),
                 rows,
             )

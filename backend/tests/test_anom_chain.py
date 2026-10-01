@@ -41,7 +41,7 @@ from app.dal.models import (
     TrackPayload,
     ValidationStatus,
 )
-from app.db.repository import create_scenario_run
+from app.db.repository import PostgisObservationRepository, observations_for_run
 from app.detection.baseline import RfMetric, compute_rf_baselines
 from app.detection.chain import (
     ChainError,
@@ -50,7 +50,7 @@ from app.detection.chain import (
     assess,
 )
 from app.detection.clustering import ClusterPolicy
-from app.detection.control import REGISTER, Kind
+from app.detection.control import REGISTER
 from app.detection.fusion import FusionPolicy
 from app.detection.precedence import PrecedencePolicy
 from app.detection.rf_noise import Direction, ThresholdPolicy
@@ -156,17 +156,24 @@ def _tracks(run_id: int, *, stale_after: int = 0) -> tuple[CanonicalObservation,
                     data_mode=DataMode.REPLAYED,
                     scenario_run_id=run_id,
                 ),
+                # The two staleness fields are different measurements and
+                # `anom-010` reads both: fresh contact with a stale *position* is
+                # the frozen-position mechanism, which is what `stale_after`
+                # stages here. Both stale would be the suppression mechanism.
                 payload=TrackPayload(
                     aircraft_id="AC-0001",
-                    callsign="TEST01",
+                    flight_id="TEST01",
                     altitude_m=10000.0,
                     velocity_ms=240.0,
                     heading_deg=90.0,
                     vertical_rate_ms=0.0,
                     on_ground=False,
-                    last_contact_s=float(
-                        stale_after if stale_after and elapsed >= stale_after else 5
+                    position_staleness_s=float(
+                        elapsed - stale_after
+                        if stale_after and elapsed >= stale_after
+                        else 5
                     ),
+                    contact_staleness_s=5.0,
                 ),
             )
         )
@@ -248,8 +255,6 @@ def test_a_run_not_known_to_have_finished_is_refused_before_any_query() -> None:
     with pytest.raises(ChainError, match="not known to have finished"):
         assess(
             _run(finished=False),
-            rf=_rf(2),
-            tracks=_tracks(2),
             normality=_normality(),
             policies=POLICIES,
             layout=LAYOUT,
@@ -257,25 +262,66 @@ def test_a_run_not_known_to_have_finished_is_refused_before_any_query() -> None:
         )
 
 
-def test_a_run_with_no_rf_observations_is_refused_before_any_query() -> None:
+@requires_database
+def test_a_run_with_no_rf_observations_is_refused_before_any_write(
+    migrated_database: Engine,
+) -> None:
     """Spec: anom-015.
 
     The run's span is taken from its RF readings, and every rule after the first
     is scoped to that span. With no readings there is no span, and a pass that
     carried on would report a run nothing was measured on as a run where nothing
     was found.
+
+    Database tier rather than unit, and the reason is the correction the suite
+    forced: the pass reads its own observations, so *whether there are any* is
+    knowable only after reading. The property that survives is the one that
+    matters -- the refusal still precedes every write.
     """
     # spec: anom-015
+    factory = sessionmaker(bind=migrated_database, autoflush=False)
+    _store(factory, 2, rf=False)
+
     with pytest.raises(ChainError, match="no RF observations"):
         assess(
             _run(),
-            rf=(),
-            tracks=_tracks(2),
             normality=_normality(),
             policies=POLICIES,
             layout=LAYOUT,
-            session_factory=_ExplodingFactory(),
+            session_factory=factory,
         )
+
+    with factory() as session:
+        written = session.execute(
+            text("SELECT count(*) FROM detection_findings WHERE scenario_run_id = 2")
+        ).scalar_one()
+    assert written == 0, "a refused pass wrote findings"
+
+
+@requires_database
+def test_the_pass_reads_the_run_it_was_given(migrated_database: Engine) -> None:
+    """Spec: anom-015, and the reason observations are not a parameter.
+
+    Taking them as values made `assess(run 7, observations of run 9)`
+    representable, and the only thing that caught it was a citation resolution at
+    the very end -- after run 7's findings had been written from run 9's data. With
+    the read inside, a loud receiver on another run cannot reach this one's claims.
+    """
+    # spec: anom-015, evb-002
+    factory = sessionmaker(bind=migrated_database, autoflush=False)
+    _store(factory, 2)
+    _store(factory, 3, elevate={(SENSORS[0], channel): 20.0 for channel in CHANNELS})
+
+    quiet = assess(
+        _run(2),
+        normality=_normality(),
+        policies=POLICIES,
+        layout=LAYOUT,
+        session_factory=factory,
+    )
+
+    assert quiet.rf.anomalies == ()
+    assert quiet.reported == ()
 
 
 def test_the_pass_never_baselines_against_the_run_it_is_scoring() -> None:
@@ -395,7 +441,7 @@ def test_the_track_findings_are_written_before_the_spatial_rules_run(
     """
     # spec: anom-015, db-008, db-009
     factory = sessionmaker(bind=migrated_database, autoflush=False)
-    _open_run(factory, 2)
+    _store(factory, 2, stale_after=200)
     issued: list[str] = []
 
     @event.listens_for(migrated_database, "before_cursor_execute")
@@ -405,8 +451,6 @@ def test_the_track_findings_are_written_before_the_spatial_rules_run(
     try:
         assess(
             _run(),
-            rf=_rf(2),
-            tracks=_tracks(2, stale_after=200),
             normality=_normality(),
             policies=POLICIES,
             layout=LAYOUT,
@@ -418,13 +462,16 @@ def test_the_track_findings_are_written_before_the_spatial_rules_run(
     wrote = next(
         i
         for i, s in enumerate(issued)
-        if "detection_findings" in s and ("INSERT" in s.upper() or "DELETE" in s.upper())
+        if "detection_findings" in s
+        and ("INSERT" in s.upper() or "DELETE" in s.upper())
     )
     queried = next(
         i for i, s in enumerate(issued) if "ST_Cluster" in s or "ST_DWithin" in s
     )
 
-    assert wrote < queried, "a spatial rule ran before the findings it reads were written"
+    assert (
+        wrote < queried
+    ), "a spatial rule ran before the findings it reads were written"
 
 
 def _open_run(factory: sessionmaker, run_id: int) -> None:
@@ -437,6 +484,29 @@ def _open_run(factory: sessionmaker, run_id: int) -> None:
             ),
             {"id": run_id},
         )
+
+
+def _store(
+    factory: sessionmaker,
+    run_id: int,
+    *,
+    elevate: dict[tuple[str, int], float] | None = None,
+    stale_after: int = 0,
+    rf: bool = True,
+) -> None:
+    """A run and its observations, where the pass will read them from.
+
+    The pass reads its own run rather than taking observations as values, because
+    the bundles it stores are resolved against these rows -- so the values the
+    rules reason from and the rows the citations resolve against are one thing by
+    construction rather than by the caller's care.
+    """
+    _open_run(factory, run_id)
+    observations = [
+        *(_rf(run_id, elevate=elevate) if rf else ()),
+        *_tracks(run_id, stale_after=stale_after),
+    ]
+    PostgisObservationRepository(factory).save_batch(observations, [])
 
 
 @requires_database
@@ -453,19 +523,20 @@ def test_the_counts_account_for_every_registered_producer(
     """
     # spec: anom-015, anom-008
     factory = sessionmaker(bind=migrated_database, autoflush=False)
-    _open_run(factory, 2)
+    _store(factory, 2)
 
     assessment = assess(
         _run(),
-        rf=_rf(2),
-        tracks=_tracks(2),
         normality=_normality(),
         policies=POLICIES,
         layout=LAYOUT,
         session_factory=factory,
     )
 
-    built = {key for key, producer in REGISTER.items() if producer.kind is not Kind.ABSENT}
+    # `built` on the register, not a count: `anom-006` is registered as **not
+    # exercised** rather than clean, because reporting zero of a type across
+    # twenty quiet runs quotes the absence of a rule as the accuracy of one.
+    built = {key for key, producer in REGISTER.items() if producer.built}
     assert set(assessment.counts) == built
 
 
@@ -480,12 +551,10 @@ def test_a_quiet_run_produces_no_bundles(migrated_database: Engine) -> None:
     """
     # spec: anom-015, anom-008, evb-001
     factory = sessionmaker(bind=migrated_database, autoflush=False)
-    _open_run(factory, 2)
+    _store(factory, 2)
 
     assessment = assess(
         _run(),
-        rf=_rf(2),
-        tracks=_tracks(2),
         normality=_normality(),
         policies=POLICIES,
         layout=LAYOUT,
@@ -509,13 +578,11 @@ def test_a_raised_receiver_reaches_a_reported_claim_and_a_stored_bundle(
     """
     # spec: anom-015, anom-001, anom-007, anom-013, evb-001, evb-002
     factory = sessionmaker(bind=migrated_database, autoflush=False)
-    _open_run(factory, 2)
     loud = {(SENSORS[0], channel): 20.0 for channel in CHANNELS}
+    _store(factory, 2, elevate=loud, stale_after=200)
 
     assessment = assess(
         _run(),
-        rf=_rf(2, elevate=loud),
-        tracks=_tracks(2),
         normality=_normality(),
         policies=POLICIES,
         layout=LAYOUT,
@@ -526,11 +593,15 @@ def test_a_raised_receiver_reaches_a_reported_claim_and_a_stored_bundle(
     assert assessment.reported, "the ladder reported nothing"
     assert len(assessment.bundles) == len(assessment.reported)
 
+    # Built and **not** stored. The line is between what is regenerable and id-free
+    # and what carries identity something else cites: `eval-004`'s pre-registered
+    # sample names its twenty bundles by id, so a pass that rebuilt them corpus-wide
+    # would renumber that population and stop the draw reproducing itself.
     with factory() as session:
         stored = session.execute(
             text("SELECT count(*) FROM evidence_bundles WHERE scenario_run_id = 2")
         ).scalar_one()
-    assert stored == len(assessment.bundles)
+    assert stored == 0, "the pass stored bundles a caller did not ask it to store"
 
 
 @requires_database
@@ -543,14 +614,12 @@ def test_the_pass_is_idempotent(migrated_database: Engine) -> None:
     """
     # spec: anom-015, db-008
     factory = sessionmaker(bind=migrated_database, autoflush=False)
-    _open_run(factory, 2)
     loud = {(SENSORS[0], channel): 20.0 for channel in CHANNELS}
+    _store(factory, 2, elevate=loud, stale_after=200)
 
     def once() -> tuple[int, int]:
         assess(
             _run(),
-            rf=_rf(2, elevate=loud),
-            tracks=_tracks(2, stale_after=200),
             normality=_normality(),
             policies=POLICIES,
             layout=LAYOUT,
@@ -558,7 +627,9 @@ def test_the_pass_is_idempotent(migrated_database: Engine) -> None:
         )
         with factory() as session:
             findings = session.execute(
-                text("SELECT count(*) FROM detection_findings WHERE scenario_run_id = 2")
+                text(
+                    "SELECT count(*) FROM detection_findings WHERE scenario_run_id = 2"
+                )
             ).scalar_one()
             bundles = session.execute(
                 text("SELECT count(*) FROM evidence_bundles WHERE scenario_run_id = 2")
@@ -566,6 +637,37 @@ def test_the_pass_is_idempotent(migrated_database: Engine) -> None:
         return int(findings), int(bundles)
 
     assert once() == once()
+
+
+@requires_database
+def test_storing_the_bundles_is_the_callers_call(migrated_database: Engine) -> None:
+    """The other half of the line. Spec: anom-015, evb-002, eval-004.
+
+    A caller with no pre-registered population to protect stores what the pass
+    built, and the bundles resolve against the same rows the pass read -- which is
+    why the pass reads its own run rather than taking observations as values.
+    """
+    # spec: anom-015, evb-002
+    from app.db.bundles import save_bundles
+
+    factory = sessionmaker(bind=migrated_database, autoflush=False)
+    loud = {(SENSORS[0], channel): 20.0 for channel in CHANNELS}
+    _store(factory, 2, elevate=loud)
+    assessment = assess(
+        _run(),
+        normality=_normality(),
+        policies=POLICIES,
+        layout=LAYOUT,
+        session_factory=factory,
+    )
+
+    save_bundles(factory, scenario_run_id=2, bundles=assessment.bundles)
+
+    with factory() as session:
+        stored = session.execute(
+            text("SELECT count(*) FROM evidence_bundles WHERE scenario_run_id = 2")
+        ).scalar_one()
+    assert stored == len(assessment.bundles) > 0
 
 
 @requires_database
@@ -580,13 +682,11 @@ def test_the_findings_carry_the_policy_that_produced_them(
     """
     # spec: anom-015, eval-003
     factory = sessionmaker(bind=migrated_database, autoflush=False)
-    _open_run(factory, 2)
     loud = {(SENSORS[0], channel): 20.0 for channel in CHANNELS}
+    _store(factory, 2, elevate=loud, stale_after=200)
 
     assess(
         _run(),
-        rf=_rf(2, elevate=loud),
-        tracks=_tracks(2),
         normality=_normality(),
         policies=POLICIES,
         layout=LAYOUT,
@@ -594,12 +694,16 @@ def test_the_findings_carry_the_policy_that_produced_them(
     )
 
     with factory() as session:
-        recorded = session.execute(
-            text(
-                "SELECT DISTINCT policy FROM detection_findings "
-                "WHERE scenario_run_id = 2"
+        recorded = (
+            session.execute(
+                text(
+                    "SELECT DISTINCT policy FROM detection_findings "
+                    "WHERE scenario_run_id = 2"
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
     assert len(recorded) == 1
     assert recorded[0]["RF-NOISE.threshold_db"] == "6.0"
@@ -622,8 +726,6 @@ def test_observations_are_read_back_as_the_row_holds_them(
     writes, which makes it a right answer from a wrong source.
     """
     # spec: anom-015, FR-904, dal-001
-    from app.db.repository import PostgisObservationRepository, observations_for_run
-
     factory = sessionmaker(bind=migrated_database, autoflush=False)
     _open_run(factory, 2)
     written = _rf(2)[:4]
@@ -635,3 +737,67 @@ def test_observations_are_read_back_as_the_row_holds_them(
     assert read[0].source_id == written[0].source_id
     assert read[0].provenance.scenario_run_id == 2
     assert read[0].data_mode is DataMode.SYNTHETIC
+
+
+# ---------------------------------------------- the receivers behind a claim
+
+
+@requires_database
+def test_each_claim_keeps_the_receivers_its_evidence_rested_on(
+    migrated_database: Engine,
+) -> None:
+    """Spec: anom-015, anom-009.
+
+    No claim carries them -- the rules retain derived evidence on purpose, so a
+    fault cannot say when its own evidence matured -- and `anom-009`'s registry
+    states a **count of receivers** rather than a formula. The pass is the only
+    place both halves are in view, so a pass that dropped them would make latency
+    unmeasurable from its own output.
+    """
+    # spec: anom-015, anom-009
+    factory = sessionmaker(bind=migrated_database, autoflush=False)
+    loud = {(SENSORS[0], channel): 20.0 for channel in CHANNELS}
+    _store(factory, 2, elevate=loud)
+
+    assessment = assess(
+        _run(),
+        normality=_normality(),
+        policies=POLICIES,
+        layout=LAYOUT,
+        session_factory=factory,
+    )
+
+    assert assessment.reported
+    for claim in assessment.reported:
+        assert assessment.receivers_for(claim), "a reported claim has no receivers"
+    assert SENSORS[0] in assessment.receivers_for(assessment.reported[0])
+
+
+@requires_database
+def test_a_claim_this_pass_did_not_make_is_refused(migrated_database: Engine) -> None:
+    """Spec: anom-015, anom-009.
+
+    Returning an empty tuple would let `anom-009` measure an interference zone's
+    latency from whichever receiver began first, understating it by however long
+    they were staggered -- silently, since the figure still looks like a latency.
+    """
+    # spec: anom-015, anom-009
+    from app.detection.precedence import Claim
+
+    factory = sessionmaker(bind=migrated_database, autoflush=False)
+    _store(factory, 2)
+    assessment = assess(
+        _run(),
+        normality=_normality(),
+        policies=POLICIES,
+        layout=LAYOUT,
+        session_factory=factory,
+    )
+    stranger = Claim(
+        rule_id="SENSOR-FAULT",
+        anomaly_type="possible_sensor_fault",
+        zone=LAYOUT.sensors[0],
+    )
+
+    with pytest.raises(ChainError, match="no receivers recorded"):
+        assessment.receivers_for(stranger)  # type: ignore[arg-type]
