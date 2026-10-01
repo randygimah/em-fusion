@@ -7497,10 +7497,10 @@ short digest of the record describing the run, and one file resolves it:
 
 | | |
 |---|---|
-| Every exported row | `c421c41506fd,gnss-degradation,positive,…` |
-| `provenance.csv` | `c421c41506fd,detection,corpus,v2` |
-| | `c421c41506fd,detection,base_seeds,1412660662;965530111;655209063` |
-| | `c421c41506fd,detection,policies.RF-NOISE.threshold_db,6.0` |
+| Every exported row | `79ef76db46ba,gnss-degradation,positive,…` |
+| `provenance.csv` | `79ef76db46ba,detection,corpus,v2` |
+| | `79ef76db46ba,detection,base_seeds,1412660662;965530111;655209063` |
+| | `79ef76db46ba,detection,policies.RF-NOISE.threshold_db,6.0` |
 
 Change any field of that record and the digest changes, so a stale row **fails to
 resolve** rather than quietly citing the wrong corpus. It is the same pattern used
@@ -7957,6 +7957,142 @@ test can write. The observation count was always the real discriminator anyway: 
 generated run holds tens of thousands, a batch-shaped test writes none, and either count
 over its ceiling refuses.
 
+## 133. The exported figures' stamp changed. Did the results change?
+
+**No. Every figure is byte-identical; the stamp moved because the record it describes gained a field.**
+
+The detection figures were re-measured through the new detection pass and the output
+diffed against the committed log. One line differed out of forty-three: the stamp,
+`c421c41506fd` → `79ef76db46ba`. Recall, precision, F1, latency, the false-positive
+rates, the confusion matrix and the 300-run population are all exactly as they were.
+
+What changed is the **provenance record**. It now names the sixty quiet runs normality
+was measured over, which it never did. That matters because two passes under identical
+thresholds and different baselines produce different findings and were previously
+indistinguishable in the record — the thresholds were there, the thing they were
+measured *against* was not.
+
+And the stamp moving is the mechanism working rather than a nuisance. It is a digest
+over the whole provenance record, so **any** change to what the figures rest on
+produces a new one, which means a row exported under the old record fails to resolve
+rather than quietly resolving to the wrong settings. A stamp that stayed the same
+while the record changed would be the failure.
+
+| | |
+|---|---|
+| Figures | unchanged, byte for byte |
+| Provenance | gained the baseline's quiet runs and their count |
+| Stamp | `c421c41506fd` → `79ef76db46ba` |
+| Anywhere quoting the old one | this file and the progress note, both corrected |
+
+Worth recording as the general shape: a digest over provenance makes a documentation
+sweep *mandatory* rather than optional whenever the record changes, because the old
+value is now unresolvable. That is the cost of the guarantee, and it is the right way
+round — the alternative is a stamp that resolves to something it should not.
+
+## 134. What is the "detection pass" and why did it need to exist separately?
+
+**It is the missing stage between generating a run and being able to show anything about it.**
+
+The system could detect things and the application could show none of it, because nobody
+ever *ran* the rules outside a terminal. Give this stage a finished run and the detector
+settings and it runs the eight rules in the right order, stores what they found, and
+produces one record per thing worth telling an analyst about.
+
+**The order is the whole capability, not plumbing.** The rules are not independent:
+
+| Step | Reads | Why it cannot move |
+|---|---|---|
+| Radio episodes | the readings against normality | nothing before it |
+| Fault attribution | the **episodes**, plus the readings for nominality | judges the *shape* of an abnormality; measures nothing itself |
+| Aircraft gaps | the position reports | — |
+| **Write the gaps down** | — | the next two steps are database queries over stored rows |
+| Clustering, fusion | the **stored** gaps | a query cannot see what is still in memory |
+| The ladder | every rule's bid | decides which claim wins when two rules disagree |
+
+Compose that wrongly and nothing crashes. You get findings, claims and explanations, and
+the system reports the wrong thing about a run.
+
+**Why it was worth a separate item.** Each of the eight rules had its own tests and full
+coverage. The *order* existed in one place only — a measurement script, which sits outside
+the linter, the type checker, the test suite and the coverage gate. So the composition
+behind every detection figure the project quotes was the one part nothing checked.
+
+**What it cost, measured:**
+
+| | |
+|---|---|
+| One run | 1.04–1.29 s, median 1.22 s |
+| …of which, reading the observations | ~1.0 s. The rules are 0.11–0.23 s |
+| Normality, once per session | 11.2 s over sixty quiet runs |
+| A twenty-run batch | ~35 s |
+
+So the stage can run automatically when a batch finishes. It still cannot run per request —
+not because 1.2 s is slow against a five-second poll, but because the 11 s baseline would be
+recomputed every tick.
+
+## 135. Why does the pass read its own observations instead of being handed them?
+
+**Because being handed them makes "assess run 7 using run 9's data" a thing you can express, and the damage lands before anything notices.**
+
+The first version took them as arguments. It looks cleaner — the rules take observations, so
+why should the composition read anything? The answer is a constraint from two layers away: the
+evidence records the pass builds are **checked against stored observations**, so the values the
+rules reason from and the rows those checks resolve against have to be the same thing.
+
+Hand them in and the mismatch is representable. What catches it is the citation check, which
+runs last — by which point run 7's findings have already been written from run 9's data. **A
+partial wrong write, not a loud refusal.** Reading inside the pass makes the mismatch
+impossible to express.
+
+Worth recording as the general shape: "the failure is loud so the risk is low" is only an
+argument when the failure is loud *before* the damage. Here it was loud afterwards.
+
+## 136. Why does the pass store its findings but not its evidence records?
+
+**Because a pre-registered sample names those records by id, and a pass that rebuilt them would renumber the population it was drawn from.**
+
+The line is between two kinds of thing:
+
+| | Findings | Evidence records |
+|---|---|---|
+| Derived from the run? | yes | yes |
+| Replaced wholesale when re-run? | yes, by design | would be |
+| Referred to by anything? | **no** | **yes — the blind-scoring sample, by id** |
+
+So re-running the pass over the corpus would silently change which twenty records the scored
+campaign was about, and stop the draw reproducing itself. That is a consequence outside the
+pass, which makes storing them the caller's decision rather than the pass's. A caller with no
+pre-registered population to protect stores them in one line.
+
+The general principle: **a row whose identity something else cites is not a row a
+derived-data stage may replace on its own initiative.**
+
+## 137. The suite was green and the mutation pass found six holes. What were they really?
+
+**Five of the six were one thing: every test produced exactly one claim, with nothing suppressed.**
+
+On such a run, four genuinely different mistakes give identical answers.
+
+| The mistake | Why it is invisible with one claim |
+|---|---|
+| Counting every bid rather than the claims that reached an analyst | nothing was suppressed, so they are the same set |
+| Counting "how many claims" rather than "how many of this type" | there is only one |
+| Keeping a zone's first receiver instead of all of them | the zone had one receiver |
+| Omitting the zones the rate rule declined to measure | none were declined — though on the real corpus 47 of 61 cannot be measured at all |
+
+The sixth was separate and sharper. A test asserted that the aircraft findings are written
+before the rules that query them, by watching the statements the database actually received.
+Removing that write — the exact edit the test exists to catch — left it **green**, because the
+pass also writes the radio findings and *that* write still came before the query. The assertion
+was about a table when the claim was about a rule.
+
+The same shape is already on record from the latency work: every test there gave a rule exactly
+as many receivers as it required, making "the second to qualify" and "the last"
+indistinguishable on a corpus that carries three-receiver zones. **Twice now a suite has been
+weakest exactly where its fixtures were simplest, and blind in the direction real data is more
+complicated.** Worth carrying as a standing caution rather than a one-off.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -8184,3 +8320,7 @@ over its ceiling refuses.
 | **Seed-matched pair** | Two runs of different scenario types generated at the same position in their batches, and therefore from the same derived seed, the same corpus window and the same aircraft. Verified across 100 positions. See §131. |
 | **Untestable rather than failing** | An item whose failure case cannot be evaluated at all, which a pass/fail backlog records identically to one that has been evaluated and failed. See §130. |
 | **Producer-less field** | A field every consumer reads and nothing writes. Invisible in a backlog, because each consumer can be built and pass while the field stays empty. See §129. |
+| **The detection pass** | The stage that runs the eight rules over one finished run in the right order, stores the findings and builds one evidence record per reportable claim. 1.22 s per run, ~35 s for a twenty-run batch. See §134. |
+| **Normality** | What *normal* is, measured over the corpus's quiet runs rather than the run being judged — plus the list of those runs, because two baselines under identical thresholds give different findings and were otherwise indistinguishable in the record. See §134. |
+| **A bid** | One rule's claim on one place, before the precedence ladder decides which claim wins. A suppressed bid is a competing conclusion, never an answer the analyst was given. See §137. |
+| **Unprovenanced finding** | A stored finding with no record of the detector settings that produced it — meaning *written before the pass existed*, which is true, rather than *wrong*. Same distinction as a run with no batch record. See §134. |

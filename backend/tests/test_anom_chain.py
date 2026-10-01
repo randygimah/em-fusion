@@ -44,6 +44,8 @@ from app.dal.models import (
 from app.db.repository import PostgisObservationRepository, observations_for_run
 from app.detection.baseline import RfMetric, compute_rf_baselines
 from app.detection.chain import (
+    Assessment,
+    Bid,
     ChainError,
     DetectorPolicies,
     Normality,
@@ -51,10 +53,16 @@ from app.detection.chain import (
 )
 from app.detection.clustering import ClusterPolicy
 from app.detection.control import REGISTER
-from app.detection.fusion import FusionPolicy
-from app.detection.precedence import PrecedencePolicy
-from app.detection.rf_noise import Direction, ThresholdPolicy
-from app.detection.sensor_fault import FaultPolicy
+from app.detection.fusion import ANOMALY_TYPE as INTERFERENCE_TYPE
+from app.detection.fusion import RULE_ID as FUSION_RULE
+from app.detection.fusion import Declination, FusionPolicy, InterferenceFindings
+from app.detection.precedence import Claim, PrecedencePolicy, Resolution, Zone
+from app.detection.rate_excess import FINDING_TYPE as EXCESS_TYPE
+from app.detection.rf_noise import Direction, RfNoiseFindings, ThresholdPolicy
+from app.detection.sensor_fault import ANOMALY_TYPE as FAULT_TYPE
+from app.detection.sensor_fault import RULE_ID as FAULT_RULE
+from app.detection.sensor_fault import FaultPolicy, SensorFaultFindings
+from app.detection.track_gap import RULE_ID as GAP_RULE
 from app.detection.track_gap import BoundingBox, GapPolicy
 from app.evaluation.export import REQUIRED_POLICIES
 from app.scenario.layout import load_layout
@@ -354,6 +362,15 @@ def test_the_policy_record_carries_every_setting_the_export_requires() -> None:
     missing = [name for name in REQUIRED_POLICIES if name not in record]
     assert missing == []
 
+    # And the values, not only the keys. A record carrying every required name
+    # with a wrong value against each is worse than an incomplete one: it reads
+    # as provenance and resolves to settings nothing ran under.
+    assert record["RF-NOISE.threshold_db"] == "6.0"
+    assert record["RF-NOISE.metric"] == "power_dbm"
+    assert record["TRACK-GAP.threshold_s"] == "100.0"
+    assert record["TRACK-GAP.box"] == "49.0,54.0,3.0,11.0"
+    assert record["BASELINE.window_h"] == "2.0"
+
 
 def test_the_policy_record_names_the_quiet_runs_the_baseline_came_from() -> None:
     """Spec: anom-015 (fourth finding).
@@ -446,10 +463,10 @@ def test_the_track_findings_are_written_before_the_spatial_rules_run(
 
     @event.listens_for(migrated_database, "before_cursor_execute")
     def record(conn, cursor, statement, parameters, context, executemany):  # type: ignore[no-untyped-def]
-        issued.append(statement)
+        issued.append(f"{statement} -- {parameters}")
 
     try:
-        assess(
+        assessment = assess(
             _run(),
             normality=_normality(),
             policies=POLICIES,
@@ -459,10 +476,16 @@ def test_the_track_findings_are_written_before_the_spatial_rules_run(
     finally:
         event.remove(migrated_database, "before_cursor_execute", record)
 
+    # Named by **rule**, not only by table. The mutation pass found the first
+    # version of this assertion worthless: it looked for any write to
+    # `detection_findings`, and with the track write removed the *radio* write
+    # still preceded the query -- so the one mutant this test exists to catch
+    # passed it.
     wrote = next(
         i
         for i, s in enumerate(issued)
         if "detection_findings" in s
+        and GAP_RULE in s
         and ("INSERT" in s.upper() or "DELETE" in s.upper())
     )
     queried = next(
@@ -472,6 +495,12 @@ def test_the_track_findings_are_written_before_the_spatial_rules_run(
     assert (
         wrote < queried
     ), "a spatial rule ran before the findings it reads were written"
+    # And the consequence, which is what makes the order load-bearing rather than
+    # a preference: the clustering rule sees only rows that are already down.
+    assert assessment.gaps, "the staged gap was not found at all"
+    assert (
+        assessment.clusters
+    ), "the spatial rule saw none of the findings written for it"
 
 
 def _open_run(factory: sessionmaker, run_id: int) -> None:
@@ -801,3 +830,175 @@ def test_a_claim_this_pass_did_not_make_is_refused(migrated_database: Engine) ->
 
     with pytest.raises(ChainError, match="no receivers recorded"):
         assessment.receivers_for(stranger)  # type: ignore[arg-type]
+
+
+# ------------------------------------------- the account, over crafted inputs
+#
+# Constructed rather than assessed, and the mutation pass is the reason. Every
+# database-tier test above produces exactly **one** claim and nothing suppressed,
+# which made four separate mutants invisible: counting bids instead of reported
+# claims, counting every claim as a fault, dropping the declined zones, and taking
+# a zone's first receiver for all of them. `anom-009` recorded the same shape --
+# every test had given a rule exactly as many receivers as it required, making
+# "the second to qualify" and "the last" indistinguishable on a corpus that
+# carries three-receiver zones.
+
+
+def _zone(sensor: str = "RF-01") -> Zone:
+    site = LAYOUT.site(sensor)
+    return Zone(
+        centre=Location(lat=site.lat, lon=site.lon),
+        started_at=START,
+        ended_at=RUN_END,
+    )
+
+
+def _assessment(
+    *,
+    reported: tuple[Claim, ...],
+    bids: tuple[Bid, ...],
+    zones: tuple[object, ...] = (),
+    declined: tuple[Declination, ...] = (),
+) -> Assessment:
+    return Assessment(
+        scenario_run_id=2,
+        rf=RfNoiseFindings(),
+        faults=SensorFaultFindings(),
+        gaps=(),
+        clusters=(),
+        interference=InterferenceFindings(zones=zones, declined=declined),  # type: ignore[arg-type]
+        resolution=Resolution(reported=reported),
+        bids=bids,
+        bundles=(),
+        policy={},
+    )
+
+
+def test_the_account_counts_reported_claims_and_not_every_bid() -> None:
+    """Spec: anom-015, anom-008, anom-013.
+
+    A bid the ladder suppressed is a *competing conclusion*, never an answer the
+    analyst was given, so counting it would tell `anom-008` a quiet run showed
+    something. `evb-001` makes the same distinction when it carries a suppressed
+    claim in `superseded` and never in the evidence list: co-occurrence read as
+    concurrence inverts the truth exactly.
+    """
+    # spec: anom-015, anom-008, anom-013
+    won = Claim(rule_id=FAULT_RULE, anomaly_type=FAULT_TYPE, zone=_zone())
+    lost = Claim(
+        rule_id=FUSION_RULE, anomaly_type=INTERFERENCE_TYPE, zone=_zone("RF-02")
+    )
+
+    counts = _assessment(
+        reported=(won,),
+        bids=(Bid(claim=won, sensors=("RF-01",)), Bid(claim=lost, sensors=("RF-02",))),
+    ).counts
+
+    assert counts[(FAULT_RULE, FAULT_TYPE)] == 1
+    assert counts[(FUSION_RULE, INTERFERENCE_TYPE)] == 0
+
+
+def test_the_account_counts_each_type_as_its_own_type() -> None:
+    """Spec: anom-015, anom-008.
+
+    A count that read "how many claims" rather than "how many of this type" is
+    right on every run carrying one claim, which is most of them, and wrong on
+    exactly the runs where the ladder had a contest to decide.
+    """
+    # spec: anom-015, anom-008
+    zone_claim = Claim(
+        rule_id=FUSION_RULE, anomaly_type=INTERFERENCE_TYPE, zone=_zone()
+    )
+
+    counts = _assessment(
+        reported=(zone_claim,), bids=(Bid(claim=zone_claim, sensors=("RF-01",)),)
+    ).counts
+
+    assert counts[(FUSION_RULE, INTERFERENCE_TYPE)] == 1
+    assert counts[(FAULT_RULE, FAULT_TYPE)] == 0
+
+
+def test_the_rate_excess_count_includes_what_it_declined_to_measure() -> None:
+    """Spec: anom-015, anom-008, anom-012.
+
+    47 of 61 zones on the real corpus cannot be measured at all: a period holding
+    no findings has a rate consisting of nothing but the smoothing constant. A
+    count omitting them would tell `anom-008` the rule did not look, when it
+    looked and could not decide -- which is the one distinction that control exists
+    to protect.
+    """
+    # spec: anom-015, anom-008, anom-012
+    declined = (
+        Declination(
+            sensors=("RF-01",),
+            started_at=START,
+            ended_at=RUN_END,
+            reason="not measurable",
+        ),
+    )
+
+    counts = _assessment(reported=(), bids=(), declined=declined).counts
+
+    assert counts[(GAP_RULE, EXCESS_TYPE)] == 1
+
+
+def test_receivers_are_matched_to_their_own_claim() -> None:
+    """Spec: anom-015, anom-009.
+
+    With one claim in play, "this claim's receivers" and "the first bid's
+    receivers" are the same answer -- which is what let a mutant returning the
+    first bid unconditionally survive. Two claims is the smallest case that tells
+    them apart, and the real corpus carries three-receiver zones.
+    """
+    # spec: anom-015, anom-009
+    fault = Claim(rule_id=FAULT_RULE, anomaly_type=FAULT_TYPE, zone=_zone("RF-01"))
+    zone = Claim(
+        rule_id=FUSION_RULE, anomaly_type=INTERFERENCE_TYPE, zone=_zone("RF-02")
+    )
+    assessment = _assessment(
+        reported=(fault, zone),
+        bids=(
+            Bid(claim=fault, sensors=("RF-01",)),
+            Bid(claim=zone, sensors=("RF-02", "RF-03")),
+        ),
+    )
+
+    assert assessment.receivers_for(fault) == ("RF-01",)
+    assert assessment.receivers_for(zone) == ("RF-02", "RF-03")
+
+
+@requires_database
+def test_receivers_deviating_together_all_reach_the_claim(
+    migrated_database: Engine,
+) -> None:
+    """Spec: anom-015, anom-005, anom-009.
+
+    Every receiver raised through the same window is `anom-007`'s *environmental*
+    verdict -- more than one deviated together -- which is what `anom-005` consumes.
+    The claim's window is then the **union** of its receivers', so dropping any of
+    them understates the latency by however long they were staggered, silently,
+    because the figure still looks like a latency.
+    """
+    # spec: anom-015, anom-005, anom-009
+    factory = sessionmaker(bind=migrated_database, autoflush=False)
+    everywhere = {(sensor, channel): 20.0 for sensor in SENSORS for channel in CHANNELS}
+    _store(factory, 2, elevate=everywhere)
+
+    assessment = assess(
+        _run(),
+        normality=_normality(),
+        policies=POLICIES,
+        layout=LAYOUT,
+        session_factory=factory,
+    )
+
+    assert assessment.reported, "nothing reached a claim with every receiver raised"
+    carried = {
+        sensor
+        for claim in assessment.reported
+        for sensor in assessment.receivers_for(claim)
+    }
+    assert len(carried) > 1, (
+        f"a claim over several receivers kept only {sorted(carried)}: anom-005's "
+        "window is the union of its receivers', so a subset understates latency"
+    )

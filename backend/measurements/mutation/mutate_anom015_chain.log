@@ -1,0 +1,30 @@
+sentinel killed (12 failed, 12 passed in 20.61s) -- source edits reach the tests
+
+the track findings are written after the rules that query them KILLED   1 failed, 23 passed in 25.55s
+the track findings are written under the radio rule's id       KILLED   1 failed, 23 passed in 27.41s
+a run still going is scored                                    KILLED   1 failed, 23 passed in 27.61s
+a run with no readings is scored                               KILLED   1 failed, 23 passed in 27.47s
+a baseline over no quiet runs is accepted                      KILLED   1 failed, 23 passed in 27.40s
+the radio side is read from the next run                       KILLED   11 failed, 13 passed in 23.07s
+the aircraft side is read as radio readings                    KILLED   11 failed, 13 passed in 23.43s
+a claim's receivers come from whichever bid sorts first        KILLED   1 failed, 23 passed in 27.51s
+a claim nothing recorded receivers for gets none rather than a refusal KILLED   1 failed, 23 passed in 27.81s
+an interference zone keeps only its first receiver             KILLED   1 failed, 23 passed in 27.35s
+a producer is dropped from the account                         KILLED   1 failed, 23 passed in 27.27s
+the rate excess forgets the zones it declined to measure       KILLED   1 failed, 23 passed in 27.48s
+the fault count counts every reported claim                    KILLED   1 failed, 23 passed in 27.53s
+the counts are taken over every bid rather than the reported ones KILLED   1 failed, 23 passed in 27.76s
+the baseline's quiet runs are dropped from the record          KILLED   2 failed, 22 passed in 27.28s
+the radio threshold is recorded from the wrong field           KILLED   3 failed, 21 passed in 27.35s
+the box is always recorded as absent                           KILLED   1 failed, 23 passed in 27.43s
+the gap threshold is recorded in minutes                       KILLED   1 failed, 23 passed in 27.36s
+the pass stores the bundles a caller did not ask it to store   KILLED   1 failed, 23 passed in 28.86s
+the bids are offered to the ladder in the other order          SURVIVED 24 passed in 27.57s
+
+restored
+
+19 killed of 20 valid mutants
+no unexpected survivors
+
+EQUIVALENT as expected: the bids are offered to the ladder in the other order
+  anom-013 sorts bids by a declared constant precisely so arrival order cannot decide a contest. A surviving mutant here is the guarantee holding.

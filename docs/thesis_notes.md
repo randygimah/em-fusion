@@ -8447,3 +8447,107 @@ measurement was taken against an object hand-written in a script while nothing i
 serialised the real one: a right number about the wrong object, which is harder to notice than a wrong
 number because every check you could run on the measurement passes.
 
+### The detection chain was composed only in a measurement script
+
+By the time the detection layer was finished, eight rules each had their own test suite and each sat
+at full line coverage. What nothing covered was the order they run in. That ordering -- baselines,
+radio episodes, fault attribution, track gaps, spatial clustering, fusion, then the precedence ladder
+-- existed in exactly one place: a measurement script, which sits deliberately outside the linter, the
+type checker, the test suite and the coverage gate.
+
+So the composition that produced every detection figure this project quotes was the one part of the
+chain that nothing checked. The AI half of the system has an assembly item for precisely this reason,
+written after finding that five separately working parts admitted three ways of being joined, two of
+which produce a system that runs perfectly and reports something false. The detection half had no
+equivalent, and the gap was invisible because each rule's own tests passed and the figures looked
+reasonable.
+
+It is the same class of defect as the egress measurement taken against a hand-written object while
+nothing in the application serialised the real one: a right number about the wrong thing, which is
+harder to notice than a wrong number because every check you could run on the measurement passes.
+
+### Validating a refactor by reproducing a figure byte for byte
+
+Moving the composition into the application raised an obvious question: does it still compute the same
+thing? The answer is available in a way that most refactors do not enjoy, because the figures of
+record are committed as a log.
+
+The measurement script was pointed at the new composition and re-run over the same 300 runs. Of
+forty-three lines of output, **one** differed -- the provenance stamp. Recall, precision, F1, the
+latency distribution, both false-positive rates, the confusion matrix and the population are all
+identical to the character.
+
+The stamp moved for a reason that is itself the point. It is a digest over the provenance record, and
+that record gained a field: the sixty quiet runs normality was measured over, which it had never
+carried. Two passes under identical thresholds and different baselines produce different findings and
+were previously indistinguishable in the record -- the thresholds were there, the thing they were
+measured *against* was not. A digest that stayed the same while the record changed would be the
+failure; a digest that moves makes a row exported under the old record fail to resolve rather than
+quietly resolve to the wrong settings.
+
+The cost is that any change to provenance makes a documentation sweep mandatory rather than optional,
+because every previously quoted stamp is now unresolvable. That is the right way round, and it is
+worth stating as a consequence of the design rather than discovering it as a nuisance.
+
+### Three design corrections the tests forced, and what each was protecting
+
+The first version of the pass took a run's observations as parameters. The test suite rejected it, and
+the reason generalises. The evidence bundles the pass builds are resolved against *stored*
+observations, so the values the rules reason from and the rows the citations resolve against have to be
+the same thing. Passing them in makes "assess run 7 using run 9's observations" representable, and the
+only thing that catches it is a citation resolution at the very end -- by which point run 7's findings
+have already been written from run 9's data. A partial wrong write, not a loud refusal. Reading them
+inside the pass makes the mismatch unrepresentable.
+
+The second: each claim must keep the receivers whose evidence it rested on. No claim carries them --
+the rules retain derived evidence on purpose, so a fault cannot say when its own evidence matured --
+and the latency item's registry states a *count of receivers* rather than a formula, because an
+interference zone's window is the union of its receivers'. The pass is the only place both halves are
+in view at once, so a pass that dropped them would make latency unmeasurable from its own output.
+
+The third is a line between two kinds of persistence, and it was drawn under pressure from a
+pre-registration. The pass persists findings, which are derived, replaced wholesale per run per rule,
+and referred to by nothing. It **builds but does not store** the evidence bundles, because the
+pre-registered scoring sample names its twenty bundles *by id*: a pass that rebuilt them corpus-wide
+would renumber that population and stop the draw reproducing itself. Storing them is therefore a
+decision with consequences outside the pass, which makes it the caller's. The general principle is
+worth keeping: a row whose identity something else cites is not a row a derived-data pass may replace
+on its own initiative.
+
+### A test that looked for the right thing in the wrong place
+
+The pass writes the track findings before the two rules that query them, because those rules are
+spatial database queries over stored rows. A test asserted exactly that, by recording the statements
+the engine issued and checking that a write to the findings table preceded the first spatial query.
+
+The mutation pass showed it worthless. Removing the track write -- the one edit the test exists to
+catch -- left it green, because the pass also writes the *radio* findings, and that write still
+preceded the query. The assertion was about a table when the claim is about a rule.
+
+Two changes followed. The statement check now names the rule whose findings must be down first, and
+the test additionally asserts the *consequence*: on a run with a staged gap, the clustering rule
+returns something. That second assertion is the one that makes the ordering load-bearing rather than a
+preference, and it is the one a reader can check without knowing how the test instruments the engine.
+
+### Every test produced one claim, which hid four separate defects
+
+The mutation pass over the composition left six survivors on its first run, and five shared a single
+cause: every database-tier test produced exactly one reported claim, with nothing suppressed. On such
+a run, four distinct mistakes are invisible.
+
+Counting the bids a rule made rather than the claims that reached an analyst gives the same number
+when nothing was suppressed. Counting "how many claims" rather than "how many of this type" gives the
+same number when there is only one. Taking a zone's first receiver gives the whole set when a zone has
+one receiver. And omitting the zones the rate rule declined to measure costs nothing when none were
+declined -- though on the real corpus 47 of 61 zones cannot be measured at all.
+
+The remedy was two kinds of test. Three assertions over a *constructed* assessment, carrying a
+suppressed bid, two claim types and a declined zone -- none of which the fixture corpus produces. And
+one over a real run with every receiver raised through the same window, which is the environmental
+verdict the fusion rule consumes and the only way to get a claim spanning several receivers.
+
+The same shape is already on record from the latency item: every test there had given a rule exactly
+as many receivers as it required, which made "the second to qualify" and "the last" indistinguishable
+on a corpus that carries three-receiver zones. Twice now, a suite has been strongest exactly where the
+fixtures were simplest, and blind in the direction the real data is more complicated.
+
