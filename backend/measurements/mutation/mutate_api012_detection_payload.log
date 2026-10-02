@@ -1,0 +1,41 @@
+sentinel killed (19 failed, 126 passed in 89.13s (0:01:29)) -- source edits reach the tests
+
+an unexamined run is served a detection summary anyway                 KILLED   4 failed, 141 passed in 87.65s (0:01:27)
+the pass leaves no record that it ran                                  KILLED   3 failed, 142 passed in 87.47s (0:01:27)
+the run is stamped before its findings are written                     KILLED   1 failed, 144 passed in 89.29s (0:01:29)
+a run with an unset stamp reads as examined                            KILLED   11 failed, 134 passed in 89.80s (0:01:29)
+stamping one run stamps every run                                      KILLED   18 failed, 127 passed in 86.42s (0:01:26)
+a stamp that matched no run is reported as written                     KILLED   1 failed, 144 passed in 88.80s (0:01:28)
+the stamp carries no policy                                            KILLED   3 failed, 142 passed in 90.05s (0:01:30)
+the fault attributions are not written down                            KILLED   1 failed, 144 passed in 90.10s (0:01:30)
+the interference zones are not written down                            KILLED   1 failed, 144 passed in 89.54s (0:01:29)
+a claim the ladder suppressed is written beside the one that beat it   KILLED   2 failed, 143 passed in 89.52s (0:01:29)
+claims are matched to their findings by value rather than identity     KILLED   1 failed, 144 passed in 87.21s (0:01:27)
+a zone's row keeps only the receiver it is filed under                 KILLED   1 failed, 144 passed in 89.72s (0:01:29)
+a fault's row loses the neighbours its attribution rested on           KILLED   1 failed, 144 passed in 90.16s (0:01:30)
+the account lists only the producers that found something              KILLED   6 failed, 139 passed in 89.65s (0:01:29)
+a rule that does not exist reports zero                                KILLED   1 failed, 144 passed in 90.16s (0:01:30)
+a producer whose findings are not stored reports zero                  KILLED   2 failed, 143 passed in 90.39s (0:01:30)
+every producer is labelled a conclusion                                KILLED   1 failed, 144 passed in 89.39s (0:01:29)
+the account keys on the rule and not on the pair                       KILLED   1 failed, 144 passed in 89.54s (0:01:29)
+a count may sit beside a reason for its own absence                    KILLED   1 failed, 144 passed in 89.49s (0:01:29)
+the persisted set omits a rule the pass does write                     KILLED   1 failed, 144 passed in 89.15s (0:01:29)
+the anomaly level is the mildest deviation rather than the worst       KILLED   2 failed, 143 passed in 89.23s (0:01:29)
+a stored level is capitalised rather than refused                      KILLED   1 failed, 144 passed in 88.92s (0:01:28)
+signal integrity reads the deviations rather than the receivers        KILLED   1 failed, 144 passed in 88.08s (0:01:28)
+a broken receiver leaves signal integrity no worse than a loud one     KILLED   1 failed, 144 passed in 88.83s (0:01:28)
+a receiver nothing has examined reports itself nominal                 KILLED   2 failed, 143 passed in 87.90s (0:01:27)
+the receiver strip is served only for a run that was examined          KILLED   2 failed, 143 passed in 87.94s (0:01:27)
+a deviating reading overwrites a fault attribution                     KILLED   2 failed, 143 passed in 88.22s (0:01:28)
+an interference zone marks its receivers broken                        KILLED   1 failed, 144 passed in 87.38s (0:01:27)
+a finding naming a receiver outside the layout is dropped              KILLED   1 failed, 144 passed in 86.48s (0:01:26)
+the timeline lists the working material beside the conclusions         KILLED   1 failed, 144 passed in 86.35s (0:01:26)
+the timeline arrives in whatever order the store returned              KILLED   1 failed, 144 passed in 86.90s (0:01:26)
+a timeline event is a sentence rather than the finding type            KILLED   3 failed, 142 passed in 86.94s (0:01:26)
+the screen's heading announces the scenario type again                 KILLED   6 failed, 139 passed in 86.74s (0:01:26)
+
+restored
+
+33 killed of 33 valid mutants
+no unexpected survivors
+EXIT=0

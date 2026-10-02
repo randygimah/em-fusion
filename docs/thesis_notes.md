@@ -8551,3 +8551,220 @@ as many receivers as it required, which made "the second to qualify" and "the la
 on a corpus that carries three-receiver zones. Twice now, a suite has been strongest exactly where the
 fixtures were simplest, and blind in the direction the real data is more complicated.
 
+### The pass persisted its evidence and not its conclusions
+
+Building the endpoint that serves detection output found that the detection pass had written down
+everything *except* the thing it exists to produce. Two rules' output was persisted -- the radio
+deviations and the gaps in aircraft position reporting -- and both for an incidental reason: two
+*later* rules read those rows back out of the database, because they are spatial queries rather than
+in-memory computations. The two rules at the end of the ladder, which decide that a receiver is
+broken or that an area is being interfered with, returned their conclusions on the object the pass
+hands back and wrote nowhere.
+
+Inside a single process that is invisible. The returned object is complete; a measurement script that
+calls the pass and reads the object sees the full result, and every test of the pass reads the same
+object. The defect only exists across a process boundary, and the endpoint is a different process,
+where a conclusion nothing stored does not exist at all.
+
+What made it hard to notice earlier is a *premise that expired between the specification and the
+code*. The item's own amendment had recorded that the reportable claims already had a persisted form
+-- the evidence record, of which 103 were in the database -- so storing them looked settled. Those
+103 were written by a measurement script. When the pass was implemented it deliberately declined to
+store evidence records, because the pre-registered scoring sample names its twenty records by id and
+a pass rebuilding them corpus-wide would renumber the population the sample was drawn from. That
+decision was right, is recorded, and left the reportable claims with no persisted form at all. The
+consequence was not recorded, because nothing in the item was still looking at that question.
+
+This is the same shape as the expired justification one layer up, where three payload fields stayed
+empty "because no detector exists" long after eight detectors existed. In both cases the reasoning
+was sound when written and nothing re-read it. The difference is the window: the field's justification
+went stale over weeks, and this premise went stale between an amendment and the commit that followed
+it, in a single session.
+
+### Zero is unrecordable in a table that replaces at zero
+
+The endpoint's sharpest constraint is that a run nobody examined must not produce the same payload as
+a run the detectors found nothing in. The constraint was specified before any mechanism existed for
+it, and designing the implementation showed there was none available.
+
+Findings are written per run per rule, replacing whatever was there -- including when a rule found
+nothing, which is deliberate and argued: findings are derived and regenerable from a seed, so
+appending would leave a stale set beside a fresh one with every count including both. The
+consequence is that four situations leave an identical empty table:
+
+| Situation | Rows |
+|---|---|
+| Examined, nothing found | none |
+| Re-examined under new thresholds that found nothing | none |
+| Never examined | none |
+| Examined with the detectors pointed at the wrong observations | none |
+
+Three of those are failures. No count can separate them, which is the correct-non-detection control's
+argument arriving at a second boundary: that control grades a quiet run against an account of every
+registered producer and refuses to return a verdict when one is missing, and the *refusal* rather
+than any number is what answers "did this detector look".
+
+So the run itself is now stamped with when it was examined and the settings it was examined under --
+two nullable columns, absence meaning *not known to have been scored*, exactly parallel to the
+nullable completion stamp that already means *not known to have finished*. The settings sit beside
+the stamp as well as on each finding, and the reason is the case that matters most: a quiet run has
+no findings to carry them, and a quiet run scored under thresholds nobody recorded is precisely the
+configuration the measured quiet-run bands were taken under.
+
+The stamp is written last, after every other write the pass makes. Written first, a pass that died
+part-way would leave a run claiming a complete examination over a partial set of findings, and
+nothing on either side could detect it. Written last, the same crash leaves a run that is not known
+to have been scored -- which is true -- and re-running is the whole recovery, because the writes
+replace rather than append.
+
+### The payload's heading announced the answer key
+
+The operational picture served the scenario's display name from the run's recorded scenario type, so
+the heading at the top of the analyst's screen read `gnss-degradation`: the name of the thing
+deliberately injected into the data whose detectors are being measured against it. There is a
+standing requirement that the injected ground truth never leaves the evaluation harness, and its
+written failure case is, almost word for word, this endpoint carrying the scenario type for the
+active run.
+
+It survived for seven weeks, and the reason it survived is the interesting part. The run record was
+built with real care against exactly this: the object the endpoint reads has **no field for ground
+truth at all**, with the argument recorded that a shape which cannot hold the answer key cannot leak
+it on any run, which is stronger than remembering to strip it per endpoint. A second object carrying
+the replay parameters was kept deliberately separate, on the stated grounds that the incident's
+radius, elevation, offset and duration "would describe the staged incident to the analyst whose
+detectors are being measured against it".
+
+The scenario type sat on the shared object throughout. The distinction being conflated is that **the
+type is not the event, it is the name of the event** -- and a name that discloses the mechanism, the
+targeted band, and the fact that anything was injected at all is not a weaker disclosure than the
+parameters that were carefully withheld. "No ground-truth field" was read as "no ground truth".
+
+Two properties of the failure are worth carrying into the write-up. First, it is invisible to a
+repository-wide search, because the same string is entirely legitimate on the harness's own control
+screen, which exists to show what was generated, and disqualifying on the analyst's screen, which
+shows a detector's output. Second, every screenshot taken of that screen so far shows the answer --
+which makes it a threat to the validity of any figure that rests on a human reading that screen, and
+the figures that do are the ones not yet taken.
+
+The payload test that replaced it asserts over the **serialised payload** and over all five scenario
+types, rather than over the one field that held it: the failure case says "whether as a field, a
+label or an inferable artefact", and a per-field test only ever proves the field somebody thought of.
+
+### Two reasons for a missing number, and why they cannot be one
+
+The detection summary carries an account of every registered rule and what each produced. Three of
+the entries carry no number, for two different reasons, and collapsing them would misreport the
+system in opposite directions.
+
+One rule is registered and **not built**: it was attempted twice, measured, closed on the corpus as
+generated, and kept in the register so that its silence reads as an absent rule rather than a clean
+one. A zero for it would, in the control's own words, quote the absence of a rule as the accuracy of
+one -- a figure that cannot be wrong because nothing produced it.
+
+Two rules **ran and persist nothing**. The clustering rule's findings are deliberately unstored,
+because their citation shape is one the traceability check refuses by name -- an aircraft identifier
+with no instant matches every report that aircraft made rather than one row. The rate-excess rule is
+internal to the fusion decision and produces a ratio rather than a located finding. Both looked;
+neither leaves a row this boundary can count.
+
+Reported as *unbuilt*, a built detector reads as a missing one. Reported as a zero, a rule that ran
+reads as a rule that found nothing. So the payload carries which of the two it is, with exactly one
+of the count and the reason present and both directions refused at construction -- the same rule the
+evidence item applies to its citation declaration, where a declaration that can be a lie either way
+is not a declaration.
+
+The set of rules whose output is persisted is also a *second* declaration of what the pass writes,
+which makes it a thing that can drift. It is held to the pass itself by a test that parses the pass's
+source and requires the rule identifiers it hands to the storage layer to be exactly that set -- so a
+rule that starts persisting its output cannot leave the endpoint reporting it unpersisted. A
+misspelling there is silent: the key simply never matches a register entry, and the real count is
+discarded with the entry reading *not persisted*.
+
+### A nullability whose meaning no stored value could establish
+
+The specification for the payload had said the two level fields should stay nullable so that a pass
+which could judge no cell at all could not report a clean reading -- on the radio rule's own
+principle that it reports the cells it cannot judge precisely so a clean verdict cannot be satisfied
+by not having looked. The reasoning is sound and had to be withdrawn, because the data cannot carry
+it: the unjudged cells are a list of cells rather than findings, nothing persists them, and from the
+findings table *judged everything, found nothing* and *judged nothing* are the same empty result.
+
+A nullability whose meaning no stored value can establish is worse than none, because it reads as a
+distinction being made. So the fields became non-nullable and the whole summary became the absence:
+no summary means nobody looked, and inside a summary that is present every value is a reading. One
+absence with one meaning.
+
+What makes that honest rather than merely convenient is that the pass refuses a run with no radio
+observations at all, so a stamped run is one whose radio side was read, and the account's own entry
+for that rule reports whether it produced anything. What remains is recorded as a limitation rather
+than closed: this boundary cannot distinguish a receiver measured and nominal from one whose cells
+had no baseline, and the fix belongs to whatever persists the unjudged cells.
+
+### A guard whose allowlist named a module where it meant a role
+
+The route purity check holds that a handler may name only two storage modules -- the repository and
+the session dependency -- because anything else under the database package is the implementation and
+reaching for it goes around the port. Serving stored findings failed that check.
+
+The rule's own wording is "handlers obtain data only by calling a repository function", and the
+function in question is one. What had happened is that the database package grew three more modules
+of repository functions after the check was written, so a list of module names that was an exact
+description of the role in a one-module world had quietly become narrower than the role.
+
+Widened by the one module actually needed rather than by a prefix, so the list stays a decision: the
+two other modules are still outside it and a route reaching for one has to argue for it. And the
+widening came with a guard on the guard, because an allowlist is the one part of a check that can be
+edited to let a violation through: every entry must exist and be a storage module, and none may be a
+storage engine -- a package name spelled into that set would disable the check's first rule for every
+route at once.
+
+This is the second time a guard in this project has had to be told apart from its own
+implementation. The distinction worth carrying is that the check's *teeth* are the three rules it
+also enforces -- no SQL in a handler, no session or engine constructed there, no spatial function
+named -- and those were untouched. A widened allowlist beside unchanged teeth is a different act from
+a relaxed rule.
+
+### A one-item fixture hid a defect for the third time
+
+The mutation pass over the payload left two survivors, and one of them is the same shape this
+project has now recorded three times. The test asserting that the per-rule account is keyed on the
+*pair* of rule identifier and finding type -- rather than on the rule alone, which does not identify,
+because the rate-excess rule borrows the continuity rule's identifier -- was written with a single
+continuity finding in its fixture. One finding of that rule is one finding either way, so an
+implementation keyed on the rule alone passed the test written to forbid it.
+
+The two earlier occurrences were the latency registry, where every test gave a rule exactly as many
+receivers as it required and so could not tell "the second to qualify" from "the last", and the
+detection pass, where every test produced one claim with nothing suppressed and four distinct
+mistakes gave identical answers. The pattern is not that the fixtures are too small in general --
+they are small on purpose, and most of them are right. It is that they are small **along the axis the
+property is about**: a property about distinguishing two things cannot be tested on one thing, and a
+fixture with one of something looks complete while testing nothing about which one it is.
+
+The practical form this has taken is a standing question for any assertion about identity, ordering,
+or precedence: *how many of the thing does the fixture carry, and would the assertion hold if the
+implementation ignored the distinguishing field entirely?* All three defects answer yes.
+
+The other survivor was simpler and worth noting only for what it says about documentation: the fault
+row's stored neighbours were unasserted, while the converter's own docstring argued that a row
+carrying the verdict without the receivers "states a conclusion an analyst cannot test". The
+argument was written and the test was not. A docstring is not a guard.
+
+### Three concurrent test suites, and a cascade that looked like a schema defect
+
+A full-suite run reported 33 failures and 158 errors, with `relation "scenario_runs" does not exist`
+on tests that passed in isolation and PostgreSQL deadlock reports between two processes. The first
+explanation considered was the new migration, and it was wrong: the migration applies cleanly from
+empty, the test database was at head with every table present, and each affected file passed on its
+own.
+
+The cause was that three full suites were running at once against the same test database, started
+from the same session because the first two had produced no visible output and had been assumed
+finished. Every database test drops and recreates the schema, so three suites interleaved were
+dropping it under one another -- which is why the symptom was a missing table rather than a wrong
+answer, and why two processes ended up deadlocked on an exclusive lock.
+
+Worth recording for two reasons. The suite is serial and shares one database by design, which makes
+it safe to run and unsafe to run twice, and nothing in the tooling says so. And the diagnosis cost
+real time because the symptom was indistinguishable from a broken migration, which is the thing a new
+migration makes you suspect first.

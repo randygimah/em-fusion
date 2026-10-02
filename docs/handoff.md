@@ -8,231 +8,188 @@ Abstraction Layer, detects deviations deterministically, and turns evidence bund
 schema-validated, grounding-checked AI hypotheses for analyst review. Decision support, not
 autonomous decision-making.
 
-Three items closed this session, and one question reframed the roadmap.
+One item this session, and it is the second half of the question that reframed the roadmap last
+session — *does detector output on injected anomalies show in the app at all?*
 
-1. **`api-011`, one batch at a time** — a defect fix. Several starts in quick succession left the
-   backend serving nothing at all.
-2. **`eval-001`, the batch runner** — closed on a **measurement rather than code**.
-3. **The question:** *does detector output on injected anomalies show in the app at all?* No. Two
-   items were written in response, and the first is now built.
-4. **`anom-015`, the detection pass** — the composition of the eight rules moves out of a
-   measurement script and into the application.
+**`api-012`, the operational picture carries detection.** The main screen's detection panel,
+receiver strip and timeline have been on screen since the first week and fed nothing. The endpoint
+served a hard-coded empty list for the sensors, an empty list for the timeline and two nulls for the
+summary, under a justification — *no detector, RF source or generator exists* — that was true when
+written and false once eight rules, the synthetic source, the generator, 103 bundles and 155
+hypothesis rows existed. Nothing noticed, because three items *consume* those fields and no item
+produced them.
+
+Building it reopened **`anom-015`**, whose amendment is half the work: the detection pass persisted
+its evidence and not its conclusions, and nothing recorded that it had run.
 
 ## Current state
 
-Backlog **71 of 106**. Tree clean.
+Backlog **72 of 106** (`anom-015` was reopened by its amendment and re-closed; `api-012` is new).
+Tree clean at the write-up commit, which is the last on `main`.
 
-- Backend: **1,781 passed at 99.92%** in containers. `make lint` and mypy clean.
-- Frontend: **86 passed across 8 files, exit 0** (it exited non-zero before `api-011`).
-- `app/detection/chain.py` — new, 102 statements, **100%**, 24 tests.
-- `app/scenario/guard.py` — new, 39 statements, **100%**.
-- Mutation: **17 of 17** (`api-011`), **19 of 20 with one proven equivalent** (`anom-015`).
-- New measurements of record: `batch_reproducibility.log`, `mutate_anom015_chain.log`.
-- **The detection figures were re-measured and are byte-identical.** The one line that moved is the
-  provenance stamp: **`c421c41506fd` → `79ef76db46ba`**, because the record gained the sixty quiet
-  runs normality was measured over. `docs/qa.md` and `docs/progress_note.html` are corrected.
+- Backend: **1,830 passed, 99% total coverage, exit 0**, in containers.
+- Every module this item touched is at **100%**: `app/api/v1/schemas/operational_picture.py` (155
+  statements), `app/detection/chain.py` (109), `app/db/repository.py` (78), `app/detection/findings.py`
+  (36), `app/api/v1/operational_picture.py` (15).
+- Frontend: **89 passed across 8 files, exit 0** (86 before).
+- `make lint`, `make format` and mypy clean (78 source files).
+- Mutation: **33 of 33 killed, no survivors** over four files
+  (`measurements/mutation/mutate_api012_detection_payload.log`). First pass: 26 of 28 valid, five
+  invalid anchors (black had reflowed three of the lines after the table was drafted — recorded as
+  the seventh hazard in `measurements/README.md`), and two real survivors, both test gaps rather
+  than figures. 2 tests strengthened, 0 implementation changes.
 
-### `anom-015` — the detection pass
+### What the payload now carries
 
-**Why it existed to be built.** Each of the eight rules had its own suite at 100%. The *ordering*
-lived in one place only — `measurements/corpus/detection_metrics.py` — which sits outside ruff, mypy,
-pytest and the coverage gate. So the composition behind every detection figure the project quotes was
-the one part nothing checked. `ai-011` exists because five separately working parts admitted three
-ways of being joined, two of which run perfectly and report something false; detection had no
-equivalent.
+| Section | Before | Now |
+|---|---|---|
+| `detectionSummary` | two nulls, always | `null` when no pass has run; otherwise two levels and an **account** of every registered rule |
+| `rfSensors` | `[]` | all seven of `scn-005`'s receivers, with `health` — `unknown` without a pass, else `nominal`/`deviating`/`fault` |
+| `timelineEvents` | `[]` | the reportable claims, oldest first, finding type verbatim |
+| `scenario.name` | **the run's scenario type** (`gnss-degradation`) | `Run <id>` |
+| `hypotheses` | `[]` | `[]` — the one section still empty, and now named as such |
 
-**Validated by reproduction.** The script was re-pointed at the new composition and re-run over the
-same 300 runs. Forty-three lines of output, **one** differed — the stamp. Every figure identical.
+### The three things worth knowing
 
-**Measured, as the item required before choosing a trigger:**
+**Zero was unrecordable.** The item's sharpest constraint is that an unexamined run must not produce
+the same payload as a quiet one, and no mechanism existed: findings are replaced per run per rule
+*including at zero*, so examined-and-clean, re-examined-and-clean, never-examined and
+pointed-at-the-wrong-observations all leave an identical empty table. Three are failures. So
+`0009_detection_pass_stamp.py` puts `detection_pass_at` and `detection_policy` on `scenario_runs`,
+nullable, absence meaning *not known to have been scored* — parallel to `db-007`'s completion stamp.
+The pass stamps **last**, after every write, so a pass that dies part-way leaves a run that is not
+known to have been scored rather than one claiming an examination it did not finish.
 
-| | |
-|---|---|
-| One run | 1.04–1.29 s, median **1.22 s** |
-| …of which reading observations | ~1.0 s. The rules are 0.11–0.23 s |
-| Normality, once per session | 11.2 s over 60 quiet runs |
-| A 20-run batch | **~35 s** against the batch's own ~105 s |
+**The pass persisted its evidence and not its conclusions.** `anom-015` wrote the radio deviations
+and the track gaps, both because *later* rules query those rows. The two rules at the end of the
+ladder returned their claims on the `Assessment` and wrote nowhere — invisible inside one process,
+and from a web request the conclusions do not exist. The premise that hid it had expired between the
+amendment and the code: the item recorded the bundle as the reportable claim's persisted form, true
+of 103 rows a measurement script had stored and never true of this pass, which withdrew bundle
+storage on `eval-004`'s argument. Reported claims are now `db-008` findings, suppressed ones never.
 
-So the stage **can** fire when a batch completes. It still cannot run per request — the baseline, not
-the pass, is the reason.
-
-**Three design corrections the suite forced.** Each is a line worth keeping:
-
-- **It reads its own observations.** Taking them as parameters made `assess(run 7, observations of run
-  9)` representable, and the citation check that catches it runs *after* run 7's findings are written
-  from run 9's data — a partial wrong write, not a loud refusal. "The failure is loud so the risk is
-  low" only holds when the failure is loud *before* the damage.
-- **Each claim keeps the receivers its evidence rested on.** No claim carries them, and `anom-009`'s
-  registry states a count of receivers rather than a formula because `anom-005`'s window is the union
-  of its receivers'. The pass is the only place both halves are in view.
-- **It builds but does not store the bundles.** Findings are derived, replaced per run per rule and
-  cited by nothing; `eval-004`'s pre-registered sample names its twenty bundles **by id**, so a pass
-  rebuilding them corpus-wide would renumber that population and stop the draw reproducing itself. A
-  row whose identity something else cites is not one a derived-data stage may replace on its own
-  initiative.
-
-`0008` adds a **nullable** policy column: null means *written before this item*, which is true, where
-`NOT NULL` would need a server default inventing provenance or deleting the residue rows.
-
-### The gap that remains
-
-**`api-012` is unbuilt, so nothing the detection layer produces is on screen yet.** Live,
-`/api/v1/operational-picture` still returns aircraft tracks and four hardcoded empties. `api-002`'s
-justification for them — *"because no detector, RF source or generator exists"* — expired without
-anyone noticing, and three items consume those fields while none produced them.
+**The heading announced the answer key.** `scenario.name` was the run's scenario type, so the screen's
+`h1` read `gnss-degradation` — `api-009`'s named failure case, live, in every screenshot of that
+screen so far. It survived because `ScenarioRunSummary` was built with no ground-truth field and the
+check stopped there: *the type is not the event, it is the label for it*, and it discloses the
+mechanism, the band, and that anything was injected. Invisible to a repository-wide search, because
+the same string is legitimate on Scenario Control and disqualifying here. Now asserted over the
+serialised payload across all five arms.
 
 ## Files in flight
 
-Tree is clean. Nothing half-finished.
+None. The tree is clean.
 
 ## Changed
 
-| Commit | What |
+Commits, oldest first:
+
+| Commit | Message |
 |---|---|
-| `a310896` | `spec: amend api-011 — the lease, the refusal channel, and the clock` |
-| `299c6bf` | `test: add tests for api-011` |
-| `80ace99` | `feat(api-011): one batch at a time - tests pass` |
-| `fe1eca3` | `test(api-011): mutation pass, 17 of 17` |
-| `b1e6bb3` | `docs: api-011 write-up` |
-| `b7c8efe` | `docs: record api-011's manual verification` |
-| `ab22843` | `spec: amend eval-001, add anom-015 and api-012` |
-| `7ca1968` | `feat(eval-001): the batch runner's reproducibility, proved - tests pass` |
-| `c53943d` | `docs: eval-001 write-up, and the gap the app question found` |
-| `3e68427` | `spec: amend anom-015 — the baseline is an input, and two readers invent fields` |
-| `a907814` | `test: add tests for anom-015` |
-| `ffcfe43` | `feat(anom-015): the detection pass, in the application - tests pass` |
-| `19dd7b7` | `test(anom-015): mutation pass, 19 of 20 with one proven equivalent` |
+| `f834b27` | `spec: amend anom-015, api-012, api-002` |
+| `addbe06` | `spec: amend api-012 — one absence, one meaning` |
+| `61a8532` | `test: add tests for api-012, anom-015 (amended)` |
+| `48cdee9` | `style: make format over twelve files committed unformatted` (unrelated to this item; AST-identical except one docstring black spaced) |
+| `9a22279` | `feat(api-012, anom-015): the picture carries detection - tests pass` |
+| *last on `main`* | `docs: api-012 write-up` |
 
-New files: `app/scenario/guard.py`, `app/detection/chain.py`,
-`alembic/versions/0008_detection_finding_policy.py`, `tests/test_eval_batch_runner.py`,
-`tests/test_anom_chain.py`, `measurements/mutation/mutate_api011_guard.py` + `.log`,
-`measurements/mutation/mutate_anom015_chain.py` + `.log`,
-`measurements/corpus/batch_reproducibility.py` + `.log`.
+**New files**
 
-Backend edited: `app/api/v1/scenario.py`, `app/api/v1/schemas/scenario.py`, `app/scenario/batch.py`,
-`app/db/findings.py` (the policy on every row), `app/db/repository.py` (`observations_for_run`),
-`measurements/corpus/detection_metrics.py` (re-pointed at the chain) + `.log` and its six exports,
-`tests/conftest.py` (the guard ceiling), plus five test modules.
+- `backend/alembic/versions/0009_detection_pass_stamp.py` — two nullable columns on `scenario_runs`.
+- `backend/measurements/mutation/mutate_api012_detection_payload.py` + `.log`.
 
-Frontend edited: `types/scenarioControl.ts`, `lib/api.ts`, `hooks/useScenarioControl.ts`, `App.tsx`,
-`screens/scenarioControl.tsx`, `test/scenarioAccess.test.tsx`, `test/navigation.test.tsx`.
+**Changed, backend**
 
-Docs: `docs/spec.jsonl` (`api-011`, `eval-001`, `anom-015` amended and passing; `api-002` amended;
-`anom-015` and `api-012` added), `docs/qa.md` (§124-137 + 16 glossary rows), `docs/thesis_notes.md`
-(17 subsections, now 253), `docs/implementation.md`, `docs/progress_note.html` (the stamp only),
-`backend/measurements/README.md`, `CLAUDE.md`.
+- `app/dal/models.py` — `DetectionPass`. A separate object, not two fields on `ScenarioRunSummary`:
+  carried there it would travel to `/scenario/runs`, where `api-006`'s contract does not ask for it,
+  and a nullable pair makes a stamp without its policy representable.
+- `app/db/repository.py` — `record_detection_pass`, `detection_pass_for_run`.
+- `app/detection/findings.py` — `from_sensor_fault`, `from_interference_zone`. No refs: both rules
+  reason about another rule's output and measure nothing, which is `evb-001`'s `DERIVED`.
+- `app/detection/chain.py` — `reported_findings` (pure, identity-matched), the two writes, the stamp.
+- `app/api/v1/schemas/operational_picture.py` — `DetectionCount`, the reshaped `DetectionSummary`,
+  `PERSISTED_PRODUCERS`, `RECEIVER_STATES`, `_level`, `_band`, `_receiver_health`, `_account`,
+  `_detection_summary`, `_timeline`.
+- `app/api/v1/operational_picture.py` — four reads and the layout.
+- `tests/test_api_route_purity.py` — allowlist widened by one module, with a guard on the allowlist.
 
-No new dependencies. No new requirements. The progress note was otherwise **not** rewritten: nothing
-this session changes the story it tells. `api-012` will.
+**Changed, frontend**
+
+- `types/operationalPicture.ts` — `ProducerKind`, `CountUnavailable`, `DetectionCount`, nullable
+  `detectionSummary`, non-nullable inner levels.
+- `mocks/operationalPictureMock.ts`, `screens/operationalPicture.tsx`,
+  `test/operationalPicture.test.tsx`, `test/dataAccess.test.tsx`.
 
 ## Failed attempts
 
-- **`api-011`'s scope line was wrong**, and reading the code before writing tests caught it. It said
-  "one sentence of screen copy"; there was nowhere to put a sentence, because the seam dropped the
-  feed's refusal and every 422 the backend ever returned was invisible.
-- **The item said the launcher releases the guard in a `finally`.** It cannot — `launch_batch` starts a
-  thread and returns, so releasing there frees the guard before a run row is opened.
-- **A frontend test passed before its implementation**, asserting no refusal is shown before anything
-  is refused — vacuously true while nothing rendered a refusal. Only prove-red said so.
-- **`api-011`'s mutation pass found a limit on what a test can observe.** A check-then-set `take`
-  survived the barrier test: two threads released together are usually scheduled so one completes both
-  halves first. A test that catches a defect *occasionally* reads as coverage, so atomicity is now
-  asserted against the parsed source.
-- **The frontend suite had been passing and failing at the same time** — 86 green while the runner
-  exited non-zero on an unhandled exception, so any CI gate over it was broken regardless of the code.
-  A defect in a test's fixture, which is the part nothing tests.
-- **I was about to add an `app/` module `eval-001` did not need**, reaching for the argument written
-  into `anom-015` — which is about eight rules, not a three-line comparison. Caught before writing.
-- **`eval-001`'s first test asserted over the wrong population**, expecting only the 20 runs it wrote;
-  the shared fixture seeds one more. Reshaped to assert the property rather than the count.
-- **The test-database guard's ceiling was exactly one too low, and its comment is why nobody checked.**
-  20 runs, against a batch floor of 20 plus the fixture's run. The comment read "set nowhere near
-  either edge" and the value sat on the edge that sentence named. Raised to 40, relationship asserted.
-- **`batch_reproducibility.py` first grouped on the base seed alone** and reported a batch of twenty
-  holding a hundred runs. A base seed behind 100 runs is **five** batches of twenty, one per scenario
-  type — which is *why* twenty derived seeds appear five times, and is the mechanism behind every
-  seed-matched comparison. The seed-matching check came out of noticing it.
-- **`anom-015`'s first design took observations as parameters.** Rejected by a `ResolutionError` the
-  suite produced, and the reason generalises — see Current state.
-- **`anom-015`'s central test was worthless and the mutation pass proved it.** It asserted the
-  aircraft findings are written before the rules that query them, by watching the statements the
-  engine issued — and removing that write left it green, because the *radio* write still preceded the
-  query. The assertion named a table where the claim names a rule.
-- **Five further survivors were one cause: every test produced a single claim with nothing
-  suppressed.** On such a run, counting bids instead of reported claims, counting claims instead of
-  claims-of-this-type, keeping a zone's first receiver and dropping the declined zones all give
-  identical answers. **Second time this has happened** — `anom-009` recorded the same shape — so it is
-  now a standing caution: a suite is weakest exactly where its fixtures are simplest.
-- **I wrote a mutation result into the README before the pass had finished.** Caught and replaced with
-  a placeholder, then filled from the log. A predicted figure in a document of record is the thing
-  this project's whole measurement discipline exists to prevent.
-- **`make migrate` had to be run by hand** before the re-measurement, because nothing applies
-  migrations to the application database in the ordinary path. The standing open item, biting.
-- **Workflow deviations, recorded.** `api-011`: three tests added after first green from the mutation
-  pass. `eval-001`: **no red run was possible**, there being no production code — the substitute is a
-  paired test that feeds the assertion a corrupted row and requires it to fail, stated in the test
-  module's docstring. `anom-015`: six tests added after first green, from the mutation pass.
+**Three concurrent test suites, diagnosed as a migration defect.** A full-suite run reported 33
+failures and 158 errors with `relation "scenario_runs" does not exist` and PostgreSQL deadlocks
+between two processes. The first suspicion was the new migration and it was wrong: the migration
+applies cleanly from empty, the test database was at head with every table present, and each
+affected file passed alone. The cause was mine — three suites running at once against the same test
+database, started because the first two had produced no visible output and were assumed finished.
+Every database test drops and recreates the schema, so they dropped it under one another. The suite
+is serial and shares one database by design, which makes it safe to run and unsafe to run twice, and
+nothing in the tooling says so.
+
+**A test that passed before its implementation, again.** The frontend test asserting that a
+*scored-clean* run does not say "no detection pass" passed during the red run — vacuously, since the
+screen never said it. Folded into one test that renders both payloads and requires the sentence in
+one and not the other, which cannot pass that way. Same shape as `api-011`'s, and the second time
+prove-red has caught it.
+
+**A live test that was vacuous for a month.** `test_the_payload_carries_no_decimal_score` fetched
+`detectionSummary` from the endpoint and asserted every value was a level or null — on a payload
+whose summary was *always* two nulls, so it held whatever the levels would have been. It failed on
+the full-suite run (`.values()` on `None`) and was rewritten against a **scored** run, which is the
+only payload that can carry a decimal.
+
+**I edited a source file while the container suite was running**, which bind-mounts the source. The
+run's result was valid (the module was already imported) but the figure was for pre-edit code, so
+the whole suite was re-run. Worth not repeating.
+
+**A guard whose allowlist named a module where it meant a role.** The route purity check admits
+`app.db.repository` and `app.db.session` only, and serving stored findings needed
+`app.db.findings` — a repository function in a package that grew three more such modules after the
+check was written. Widened by the one module needed, not by a prefix, with a new guard on the
+allowlist (every entry exists, is a storage module, and is not a storage engine) and the check's
+three real rules untouched.
+
+**The spec was amended twice, and the second was a correction to the first.** The first amendment
+kept the two level fields nullable so a pass that could judge no cell could not report clean.
+Designing the assembly showed the data cannot carry that: `anom-001`'s unjudged cells are a list of
+cells, nothing persists them, and from the findings table *judged everything, found nothing* and
+*judged nothing* are the same empty result. A nullability whose meaning no stored value can
+establish reads as a distinction being made, so the summary's own absence became the only absence,
+with the gap recorded as a limitation.
 
 ## Next step
 
-1. **`api-012`** — the operational picture carries detection. Now the shortest path to something
-   visible: `anom-015` produces the findings and nothing serves them. Its sharpest constraint is
-   already written: **a run with no detection pass must not produce the same payload as a run the pass
-   found nothing in** — `anom-008`'s argument at the API boundary. Needs a repository read over stored
-   findings, and `findings_for_run` has had no caller outside tests until now.
-2. **`eval-006`** — the blind-score ingest. Still blocked until the second rater returns mid-October,
-   and still the only thing between here and a complete evaluation chapter.
-3. **The Hypotheses arc** — ten items, all unblocked. `ui-001` → `api-004` → `hyp-001` → `hyp-002` →
-   `hyp-003` → `hyp-004` → `ai-010` → `api-005` → `fbk-001` → `fbk-002`, with **`api-009`** folded in
-   along the way. With `api-012` this is the other half of one problem: nothing this system computes
-   can be seen in it.
-4. **A corpus with near-misses** would turn the detection table from a consistency result into an
-   accuracy one. Out of scope, named in five places.
+1. **Fire the pass when a batch completes.** Not yet specced. At 1.22 s a run plus 11.2 s of
+   baseline it belongs at the end of a generation batch and not inside a five-second poll
+   (`api-003`), so until it exists every run honestly reports as unexamined and nothing on screen
+   changes without scoring a run by hand. This is the shortest remaining path to the user seeing
+   detection output. Its own constraints are already visible: a pass that fails must not fail the
+   batch (`scn-003`'s record-and-skip), and a store with no quiet runs must refuse rather than
+   baseline against staged data — which a fresh database always is.
+2. **Re-score the corpus**, once 1 exists or by hand. The 300 stored runs have findings and **no
+   stamp**, so every one of them reads as unexamined — which is correct and is also why the screen
+   will show nothing until the pass is re-run. ~6 minutes at 1.22 s a run.
+3. **`op-003` and `op-006`**, the two panels this item unblocked. Both now have a producer for the
+   first time; the summary panel is deliberately minimal and the timeline strip is not rendered at
+   all.
+4. **`hypotheses`**, the last producer-less field. 155 rows exist. Its own questions: which arm an
+   analyst sees, whether a row whose grounding check FAILED may be shown, and what `db-002`'s
+   three-valued `NOT_CHECKED` renders as.
+5. **`eval-006`** still waits on a second rater, mid-October.
 
-### Open and unowned
+Open and unowned:
 
-- **Who triggers the detection pass.** `anom-015` is built and nothing calls it outside the
-  measurement script and the suite. Measured at ~35 s for a twenty-run batch, so chaining it to a
-  completed batch is affordable — but that is a decision, and the pass deliberately does not make it.
-- **`CORPUS=v1` selects nothing, and nothing refuses an empty population.** Every run in the store
-  carries a base seed, so v1's predicate matches zero rows. A script run under it would print figures
-  over no runs. Noted in `measurements/README.md`; retiring v1 is a decision rather than an edit.
-- **The `anomalies` table is dead** — created by `0001`, never written to by anything. `evb-001`'s
-  one-bundle-per-claim is the claims' persisted form. Retiring it is a migration nobody has taken.
-- **A malformed response from `/scenario/runs` would white-screen the application** rather than
-  degrade. The other screen's data source was not audited the same way.
-- **Giving batch work its own Engine** is the complementary fix to `api-011`. Nothing sets
-  `pool_size` or `max_overflow` either.
-- **Reporting a batch that failed after acceptance.** `api-011` says a batch is running; nothing says
-  one died.
-- **Nothing applies migrations to the application database in the ordinary path** — this session had
-  to run `make migrate` by hand mid-measurement.
-- **Serialising enough for the campaign record to round-trip** (`ai-012`) — decided against, **trigger:
-  do it first if a second campaign is ever run.**
-- **`cost_is_complete` is vacuously true on an arm that made no calls** — recorded, not changed.
-- Mutation harnesses for `pack.py`, `sampling.py`, `statistics.py`, `workbook.py` — 104 tests with
-  nothing establishing they are load-bearing. The four recent passes found seventeen real gaps.
-- Six measurement harnesses lack the guard-file-and-sentinel pattern.
-- `measurements/README.md`'s section filing has drifted; recent rows landed under
-  `### The source-gap rule` regardless of topic until this session refiled two.
-- The 0.39 rate-excess singleton, seen once at n=40 and surviving to n=60 with no second example.
-- 12 files not Black-formatted; `make format` touches them on every run.
-- `ai-011`'s harness has not been re-run since the corpus was regenerated.
-- The credential loader is not generalised.
-- `ai-008`'s superseded case has no corpus demonstration.
-- `docs/phase9_hypothesis_layer.md` §8 still says N=1, which the twenty-bundle figures settle.
-- Rebuilding evidence bundles corpus-wide would renumber the scored population (ids 247-308) — now
-  **enforced** rather than only recorded, since `anom-015` refuses to store bundles itself.
-- The three progress-note charts still want a real visual pass.
-- **The application database holds 380 runs, ids 21-400.** The last 20 came from `api-011`'s manual
-  test and are excluded from every measurement by the corpus seed pin.
-
-### Two limitations from earlier sessions that must not be dropped
-
-**The detection table measures wiring, not accuracy.** Every rate is 1.000 or 0.000. The radio side is
-synthetic with the incident well above threshold by construction, the corpus holds no near-misses, and
-one of three reportable types has no rule. The only figure carrying information from outside the
-generator is the per-aircraft recall, 0.587 on two arms of three.
-
-**The retry and fallback paths never fired.** Nothing was refused and nothing fell back on the scored
-campaign, so a fallback rate of zero reports that the path was *not exercised* — not that it works.
+- The progress note has not been updated for `anom-015` or `api-012`, and both change the story it
+  tells — the pipeline spine's detection stage and the "what it deliberately does not do yet"
+  section. Offer before the next item.
+- This boundary cannot distinguish a receiver *measured and nominal* from one whose cells had **no
+  baseline**, because `anom-001`'s unjudged cells are not persisted. Recorded as a limitation on
+  `_receiver_health`; the fix belongs to whatever stores them.
+- With bundles unstored, a **suppression is persisted nowhere**, so the ladder's own workings are
+  reconstructible only by re-running the pass.

@@ -241,6 +241,7 @@ no observable behaviour), and an **invalid mutant** (the edit I wrote does not m
 | `mutate_scn008_batch_provenance.py` | `app/scenario/emitter.py` | — |
 | `mutate_api011_guard.py` | `app/scenario/guard.py`, `app/api/v1/scenario.py`, `app/scenario/batch.py` | **17 of 17 killed**, three files, because the item is a seam. One survivor on the first run: a check-then-set `take`, which the barrier test caught only sometimes -- two threads released together are usually scheduled so one finishes both halves first, and a test that catches a defect occasionally is worse than none because it reads as coverage. Atomicity is now asserted against the parsed source. Reasoning about mutants before running also found two gaps: both posts in the refusal test carried one configuration, and under an inline thread a batch always finishes so *released in the thread* and *released at the call site* looked identical. |
 | `mutate_anom015_chain.py` | `app/detection/chain.py` | **19 of 20 killed with one proven equivalent**, after a first pass left **six survivors** (`.log`). The worst was the item's own central claim: a test watching the statements the database received asserted that the aircraft findings are written before the rules that query them, and removing that write left it **green**, because the pass also writes the radio findings and *that* write still preceded the query -- the assertion was about a table when the claim is about a rule. Five of the six shared one cause: every database-tier test produced exactly one claim with nothing suppressed, which makes counting bids instead of reported claims, counting claims instead of claims-of-this-type, keeping a zone's first receiver, and dropping the declined zones all give identical answers. Fixed with three assertions over a *constructed* assessment carrying a suppressed bid, two claim types and a declined zone, plus one real run with every receiver raised. The same shape is on record from `anom-009`: a suite is weakest exactly where its fixtures are simplest. The equivalent mutant offers the bids to the ladder in the other order, which `anom-013` sorts by a declared constant precisely so arrival order cannot decide a contest. |
+| `mutate_api012_detection_payload.py` | `app/api/v1/schemas/operational_picture.py`, `app/detection/chain.py`, `app/db/repository.py`, `app/detection/findings.py` | **33 of 33 killed, no survivors**, after a first pass killed **26 of 28 valid** and reported **five invalid anchors** -- recorded as the seventh hazard below, because black had reflowed three of those lines and one function had been rewritten after the table was drafted. Four files, because the item is a seam: the pass writes, the repository stamps and reads, the converter shapes, the payload assembles. Runs in the container rather than on the host, which is not a convenience -- half of these mutants are only observable against a database, and a host-only run would skip every chain and repository test and score their mutants as survivors of a suite that never ran them. The shape of the risk is that **almost every mutant leaves the endpoint serving a plausible payload**: the screen renders, the levels are bands rather than percentages, the receivers appear, and the only thing wrong is a distinction nobody can see -- which is exactly how the defect this item closes survived, three fields read by three planned panels and written by nothing. **Both genuine survivors were test gaps rather than figures.** One was the third occurrence of a shape this project now treats as a standing caution: the test forbidding the account from being keyed on the rule alone carried **one** finding of that rule, so rule-only and pair keying agreed -- exactly as `anom-009`'s receiver counts and `anom-015`'s single claim had agreed before it, and a property about distinguishing two things cannot be tested on one of them. The other was a docstring standing in for a test: `from_sensor_fault` argues in prose that a row carrying the verdict without the receivers "states a conclusion an analyst cannot test", and nothing asserted the receivers were stored. 2 tests strengthened, 0 implementation changes. |
 | `determinism_test_reliability.py` | `app/db/findings.py` | Not a mutation pass but the same question one level up: is the determinism test a reliable detector, or did it get lucky once? |
 
 **A mutation score is measured against the tests, and the tests can share the code's wrong
@@ -391,6 +392,28 @@ violation, not the query.
 **Never commit `PSEUDONYM_SEED`**, and never let a log capture it. The `"PSEUDONYM_SEED is not set"`
 warning at the head of several logs is Compose noise and carries no value.
 
+
+## A seventh hazard: an anchor written before the formatter ran, found 2026-10-02
+
+Five of the thirty-three mutants in `mutate_api012_detection_payload.py` reported `INVALID (0)` on
+their first pass: the anchor text matched the source **zero** times. Nothing was wrong with the
+source or the mutants. The script had been drafted while the implementation was being written, and
+`make format` ran afterwards -- black reflowed a generator expression onto one line, split a
+three-branch conditional across three, and one of the functions had been rewritten in between for an
+unrelated reason.
+
+The guard did its job: `INVALID` is reported separately, excluded from the denominator, and listed by
+name, so the score was *26 of 28 valid* rather than a silently inflated 26 of 33. That is the design
+working -- the second hazard in this series exists because an earlier harness would have scored
+them as passes.
+
+What it costs is a wasted pass. Five mutants over four surfaces tested nothing for fifty minutes,
+and three of them cover the two claims the item is most about -- that a suppressed claim is never
+written and that the timeline carries no intermediate findings. The practical rule is **write the
+anchors against the formatted source**: run `make format` before drafting the mutant table, and if
+the implementation changes afterwards, re-read every anchor rather than the ones that look affected.
+Two of these five were anchors I had no reason to suspect, because the lines they name were never
+edited -- only reflowed around.
 
 ## A hazard in the mutation harnesses themselves, found 2026-09-19
 

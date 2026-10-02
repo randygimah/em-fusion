@@ -237,6 +237,32 @@ with a *place*, distinguishable from an hour where aircraft positions merely go 
 this arm has no test, its 60-of-60 "correct" score is correct only because nothing looks at it, and
 it must not be reported as though the system had been tested on it.
 
+### What now reaches the application, and what does not
+
+Until October 2026 **nothing this layer produced could be seen in the system**, twice over: no
+shipped code path ran the rules, and no endpoint carried their output. The main screen's detection
+panel, receiver strip and timeline were served empty by a justification written before any detector
+existed and never re-read.
+
+Both halves are closed. A detection pass runs the eight rules over one finished hour in the right
+order, stores what they found, and **stamps the hour** with when it was examined and under what
+settings. The endpoint serves that: counts per rule, the receivers with the state each was found in,
+and the conclusions oldest first.
+
+The stamp is the part worth understanding, because it is this layer's correct-non-detection argument
+at a second boundary. Findings are rewritten per hour per rule, including when a rule found nothing,
+so **four situations leave an identical empty table** — examined and clean, re-examined and clean,
+never examined, and examined with the detectors pointed at the wrong hour. Three are failures. No
+count separates them, so the payload answers *did a detector look* with the presence of a complete
+account of every rule, and never with a number in it.
+
+Two things still do not reach the screen. **Nothing fires the pass automatically** — at about a
+second an hour plus eleven seconds to establish what normal looks like, it belongs at the end of a
+generation batch and not inside a five-second poll, and that trigger is unbuilt, so an hour reports
+itself unexamined until something scores it. And the **hypotheses** section is still empty: 155 rows
+exist, and serving them raises questions about which arm an analyst sees and whether a hypothesis
+that failed its grounding check may be shown at all.
+
 ## The RF knowledge this project actually needs
 
 All of it:
