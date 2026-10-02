@@ -8768,3 +8768,149 @@ Worth recording for two reasons. The suite is serial and shares one database by 
 it safe to run and unsafe to run twice, and nothing in the tooling says so. And the diagnosis cost
 real time because the symptom was indistinguishable from a broken migration, which is the thing a new
 migration makes you suspect first.
+
+### The detector settings behind every figure lived only in a measurement script
+
+`anom-015` moved the *order* the detection rules run in out of
+`measurements/corpus/detection_metrics.py` and into the application, on the grounds that
+`measurements/` sits outside the linter, the type checker, the test suite and the coverage gate --
+so the composition behind every detection figure the project quotes was the one part of the chain
+nothing checked. Building the batch trigger found the same defect one step along: the *settings* the
+rules run under were in the same place, and nowhere else.
+
+Those settings are what every quoted figure means. Set the radio threshold to 8 dB instead of 6 and
+every catch rate, precision figure and latency moves on the same hours, with the seeds unchanged --
+which is the argument `eval-003` already records for exporting thirteen of them beside the seeds. The
+values existed in exactly two places, both outside `app/`: the measurement script that produced the
+figures, and a copy in the test suite annotated *exactly the policies of record*. The application
+held none of them.
+
+That is harmless for precisely as long as nothing inside the application runs a detector, which was
+true until this item. A trigger has to hand the pass a set of settings, so without this move it would
+have declared a third set with the same standing as the other two. The failure that follows is quiet
+in the way this project keeps rediscovering: three copies that have drifted apart are each internally
+consistent, so no test anywhere fails, and the screen simply shows figures taken under settings that
+differ from the ones every quoted number was measured under. `eval-003` settled the same point at the
+export boundary -- *a recorded setting that is not the one in force is worse than none, because it
+looks like provenance* -- and a screen is a second such boundary with the same property.
+
+**What was actually homeless turned out to be smaller than the first description of it, and the
+correction is the useful part.** The explanation given before the item was written said "thirteen
+detector settings". Thirteen is a figure about what the *export* records, not about what is missing:
+four of the six policy objects -- the sensor-fault rule, the fusion rule, the precedence ladder and
+the clustering rule -- are taken at their defaults, and defaults have always lived in the package.
+What existed nowhere in `app/` is `ThresholdPolicy`'s five required fields, `GapPolicy`'s two, and
+the corpus bounding box's four coordinates. **Eleven numbers**, of which the application carried the
+box only as an example value in a command-line help string.
+
+That makes the finding sharper rather than smaller. Most of the record was already in the right
+place, which is most of why nobody noticed the rest was not -- a reader checking whether the
+application knows its own detector settings would find `FaultPolicy()`, `FusionPolicy()` and the
+rest sitting there with their measured defaults and reasonably conclude that it does.
+
+### One definition, plus one pin, and they are not the same thing
+
+Moving the eleven values into `app/detection/settings.py` removes the copies. It does not make a
+change to them audible: someone edits a threshold, every test still passes, and every figure on
+record is now quoted under settings that are not the ones in force. So the item carries a second
+mechanism that looks like the duplication it just removed -- the eleven values written out verbatim
+in a test.
+
+The distinction worth keeping is that **a definition is what something runs under and a pin is an
+assertion about it**. Only one object is ever handed to a detector; the test is a statement that its
+values are the ones the figures of record were measured under, and it fails when they move. Elsewhere
+in this project that job is done by a digest -- `ai-004` pins the prompt by SHA-256, `eval-003` pins a
+provenance record by a twelve-character hash over canonical JSON -- and a digest is unavailable here
+for the obvious reason that the values themselves are the thing being pinned.
+
+A second test pins the other half of the claim: that four of the six policy objects equal their own
+defaults. If one of them grows a required field, the eleven becomes twelve and a test says so, rather
+than the trigger quietly acquiring a value nothing was measured under.
+
+Recorded as a limitation: nothing mechanical prevents a *third* file from declaring its own eleven
+values. The guard catches the regrowth of the two copies that existed, by parsing them, and the pin
+catches a change to the values; a new file declaring its own is caught by neither. Stating that is
+better than a guard that appears to cover it.
+
+### Two code paths that differ on purpose, asserted in both directions
+
+The command that builds the corpus deliberately does not score, and the button on the screen does.
+Two paths that differ is normally a smell, and here it is the point: the 300 hours behind every
+figure were generated by `python -m app.pipeline`, and a command that scored them would stamp them
+with whatever settings happened to be current, after which the same hours could never be re-scored
+under a different threshold. That is `eval-001`'s amended argument for keeping the corpus and the
+detector settings separable, applied to the one command where it matters most.
+
+The mechanism is **placement, not a flag**. `main()` calls the batch function directly; the
+interactive launcher calls the same function and then scores what it returns. So the corpus command is
+unscored by construction rather than by a parameter somebody must remember not to pass -- and the
+difference is asserted by walking the import graph, because only one of the two directions is a
+guard. "Nothing reachable from the corpus command imports a detector" is satisfied by a project with
+no detection in it at all, so the positive direction is asserted beside it.
+
+Two existing tests of the launcher broke on this, and the way they broke is worth a note. Both
+patched the batch function with a fake returning `None`, which was faithful while the launcher ignored
+the return value and stopped being faithful the moment it scored it. The fix was to make the fakes
+return what the real function returns -- an empty batch summary, which the scoring stage treats as
+nothing to examine -- rather than to stub the new call out. A stub would have left those tests passing
+over a launcher whose new half had been removed.
+
+### A refusal whose message was about the wrong thing
+
+The baseline builder was written with no refusal of its own for an empty list of quiet runs, on the
+reasoning that two refusals already exist upstream: the baseline computation will not accept an empty
+allowlist of runs, and the `Normality` object will not hold an empty provenance. A third seemed like
+duplication.
+
+The test written for the fresh-database case failed, and the reason is the useful part. The refusal
+that actually fires first is the baseline computation's, and what it says is that an empty allowlist
+cannot mean *accept anything* -- a true statement about its own input and the wrong statement for the
+caller. The fact the caller needs is that **this store holds no quiet runs at all**, which is what a
+freshly generated database always looks like: generate twenty interference runs into an empty
+database and there is nothing to measure normal against.
+
+So the refusal is not duplication. Three refusals exist for one condition because each is a different
+statement: one about an allowlist, one about a provenance record, one about the state of the store.
+Without the third, a trigger reports a fresh database in the vocabulary of a detector defect -- and
+since this refusal reaches a log line and nothing else, the wording is the entire diagnostic.
+
+### The baseline's metric was declared twice
+
+The measurement script built its baseline over `RfMetric.POWER_DBM` and separately set the threshold
+policy's metric to `RfMetric.POWER_DBM`. Two declarations of one fact, agreeing by hand. Disagree and
+the baseline is a mean of received power while the deviation is read in signal-to-noise ratio, or the
+reverse: every threshold measured in the wrong units, with both halves individually valid and nothing
+able to fail.
+
+Moving the baseline build into the application resolved it by derivation -- the metric comes from the
+policy the deviation will be read against, so the two cannot differ. Worth recording as an instance
+of a pattern this project has now hit several times: a fact stated in two places with no mechanism
+tying them together is a defect waiting on an edit, and the repair is always to derive the second
+statement from the first rather than to assert that they agree.
+
+### An import cycle that had never fired because nothing imported the domain module first
+
+Importing the batch launcher directly, to test the scoring stage without standing up a FastAPI app,
+produced a circular import: the launcher imports a request schema from the API package, importing
+anything under that package runs its `__init__`, that `__init__` imports the route module, and the
+route module imports the launcher. The cycle had existed since the launcher was written and had never
+fired, because every path into it went through the API package first.
+
+The schema is used only as a type annotation and the module already postpones annotation evaluation,
+so moving the import behind `TYPE_CHECKING` removes the cycle outright. Recorded for the general
+shape: an import cycle whose only symptom is *which module you import first* is invisible to a test
+suite that always enters through the same door, and a new test that enters through a different one is
+how it surfaces.
+
+### Scoring a quiet batch baselines partly over itself
+
+A limitation rather than a defect, stated because the alternative is for a reader to find it. The
+baseline is a property of the store -- every completed quiet run in it -- and not of the batch being
+scored. So generating a batch of `normal-baseline` runs and scoring it measures those runs against a
+baseline that includes them.
+
+This is the same self-reference the quiet-run control's measured bands already carry: they are taken
+on the sixty quiet runs they grade, so they cannot fail on the data that produced them, and their
+value is entirely prospective. Here the consequence is narrower -- a quiet batch's own readings pull
+the baseline very slightly toward themselves -- and the honest alternative, excluding the batch from
+its own baseline, would mean a store holding only one batch could not be scored at all.

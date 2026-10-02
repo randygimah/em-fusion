@@ -1,0 +1,39 @@
+sentinel killed (1 failed, 125 passed in 61.98s (0:01:01)) -- source edits reach the tests
+
+the corpus-building command reaches a detector                         KILLED   1 failed, 125 passed in 62.01s (0:01:02)
+the batch generates and never scores                                   KILLED   1 failed, 125 passed in 62.31s (0:01:02)
+the batch scores before it generates                                   KILLED   1 failed, 125 passed in 61.99s (0:01:01)
+the runs scored are not the runs just generated                        KILLED   1 failed, 125 passed in 62.55s (0:01:02)
+every run of the batch is examined, finished or not                    KILLED   1 failed, 125 passed in 62.01s (0:01:02)
+a run the batch never opened is handed to the pass                     SURVIVED 126 passed in 62.39s (0:01:02)
+the run is taken from the batch's claim rather than from its row       KILLED   1 failed, 125 passed in 62.00s (0:01:01)
+a batch that completed nothing is reported as a refusal                KILLED   1 failed, 125 passed in 62.71s (0:01:02)
+normality is measured over the runs being scored                       KILLED   5 failed, 121 passed in 63.11s (0:01:03)
+the baseline is rebuilt for every run of the batch                     KILLED   1 failed, 125 passed in 62.42s (0:01:02)
+the baseline's metric is hard-coded rather than taken from the policy  KILLED   1 failed, 125 passed in 61.80s (0:01:01)
+an empty store is baselined against whatever it holds                  KILLED   1 failed, 125 passed in 62.24s (0:01:02)
+a quiet run that did not finish is baselined over                      KILLED   1 failed, 125 passed in 62.04s (0:01:02)
+the quiet runs come back in whatever order the store found them        KILLED   1 failed, 125 passed in 62.06s (0:01:02)
+every run in the store counts as a quiet one                           KILLED   4 failed, 122 passed in 63.07s (0:01:03)
+a store with no quiet runs fails the batch                             KILLED   4 failed, 122 passed in 62.19s (0:01:02)
+one run failing stops the rest of the batch being examined             KILLED   3 failed, 123 passed in 61.77s (0:01:01)
+a run whose pass failed is reported as examined                        KILLED   3 failed, 123 passed in 62.07s (0:01:02)
+the run summary reports whichever row the store returned first         KILLED   2 failed, 124 passed in 60.74s (0:01:00)
+a run that is not in the store raises instead of reporting its absence KILLED   1 failed, 125 passed in 62.38s (0:01:02)
+the pass reads the label for what was injected                         KILLED   1 failed, 125 passed in 62.39s (0:01:02)
+the radio threshold is loosened by two decibels                        KILLED   5 failed, 121 passed in 62.90s (0:01:02)
+the medium severity step moves by a decibel                            KILLED   1 failed, 125 passed in 62.76s (0:01:02)
+the high severity step moves by a decibel                              KILLED   1 failed, 125 passed in 62.84s (0:01:02)
+the box is a degree north of the corpus's own                          KILLED   2 failed, 124 passed in 62.61s (0:01:02)
+the baseline looks back one hour rather than two                       KILLED   1 failed, 125 passed in 62.61s (0:01:02)
+contact counts as fresh for a different span                           KILLED   1 failed, 125 passed in 62.26s (0:01:02)
+the gap threshold is a minute and a half                               KILLED   2 failed, 124 passed in 62.74s (0:01:02)
+the measurement script declares the record for itself again            KILLED   1 failed, 125 passed in 62.28s (0:01:02)
+
+restored
+
+28 killed of 29 valid mutants
+no unexpected survivors
+
+EQUIVALENT as expected: a run the batch never opened is handed to the pass
+  the None check narrows a type rather than guarding a case: a completed RunOutcome always carries an id, so nothing the generator emits reaches it.
