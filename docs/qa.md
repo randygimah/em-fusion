@@ -8197,6 +8197,109 @@ Two wrong answers are available:
 
 So every producer's count is carried, and each one is labelled **intermediate** or **reportable**. The account stays complete for the machine; the screen is told which figures are a conclusion and which are working material. The panel item decides how to render that; the endpoint's job is only to make the distinction available, because a payload that does not carry it forces the screen to hard-code a list of rule names — and a list like that outlives the reason it was written.
 
+## 143. Firing the pass when a batch finishes is one function call. Why does it need the detector settings moved into the application first?
+
+**Because the call needs an argument the application cannot supply.** The pass takes the
+settings it reads a run through as a parameter, deliberately — that is what lets the same
+hours be re-scored under a different threshold later. Every detection figure this project
+quotes was taken under one specific set of those settings, and that set exists in two
+places, **both outside the application**: the measurement script that produced the figures,
+and a copy in the test suite annotated *exactly the policies of record*. So a trigger living
+inside the application has nothing to hand the pass, and whatever it invents becomes a third
+set with exactly the same standing as the other two.
+
+That is the failure the item exists to prevent, and it is a quiet one. Three copies that have
+drifted apart are each internally consistent, so nothing anywhere fails; the screen simply
+shows figures taken under settings that differ from the ones every quoted number was measured
+under. It is the same argument the export boundary already settled — *a recorded setting that
+is not the one in force is worse than none, because it looks like provenance* — and the same
+argument that moved the rules' **order** into the application one item earlier. That one moved
+the order they run in; this moves the settings they run under.
+
+### What is actually homeless is smaller than it first looked
+
+A correction worth recording, because the first version of this explanation overstated it.
+"Thirteen settings" is a figure about what the **export** writes beside its seeds, not about
+what is missing from the application. Four of the six policy objects — the sensor-fault rule,
+the fusion rule, the precedence ladder and the clustering rule — are taken at their defaults,
+and defaults live in the application already.
+
+| Setting | Value of record | Where it lives today |
+|---|---|---|
+| How far a radio reading must deviate | 6.0 dB, with 10.0 and 15.0 as the severity steps | measurement script only |
+| Which quantity, and which direction | the power a receiver reports, upwards | measurement script only |
+| How stale a position report may be | 100 s, with contact counted fresh within 30 s | measurement script only |
+| The ground the aircraft rule applies over | 49–54° N, 3–11° E | measurement script only — the application names it once, as an example value in a command-line help string |
+| The shortest episode that counts as an event | 10 s | **in the application**, as a default |
+| The three radii and the one corroboration ratio | — | **in the application**, as defaults |
+
+Eleven numbers: five for the radio rule, two for the aircraft rule, four for the box. Everything
+else was already where it needed to be, which is most of why nobody had noticed.
+
+### One definition, plus one pin, and they are not the same thing
+
+The values also get written out verbatim in a test, which looks like the duplication this item
+exists to remove and is not.
+
+| | What it is | What it is for |
+|---|---|---|
+| **Definition** | the one object the pass is actually handed | there must be exactly one, or the figures and the screen can disagree |
+| **Pin** | those same values spelled out in a test | changing one then fails a test that names the figures they were measured under |
+
+A definition is what something *runs under*; a pin is an *assertion about* it. Without the pin,
+the move makes drift less likely and keeps it just as silent — someone edits a threshold, every
+test still passes, and every figure on record is now quoted under settings that are not the ones
+in force. Elsewhere this job is done by a digest over the recorded values; here a digest is
+unavailable, because the values themselves are the thing being pinned.
+
+### The harness may read the answer key's label. The detectors may not
+
+Working out what "normal" is means measuring it over the quiet hours — the ones with nothing
+injected — and never over the hour being judged. Picking them out means asking which runs are of
+the quiet *kind*, and the kind of a run is the label for what was injected: the one thing that
+must never reach a detector.
+
+| Step | What it sees |
+|---|---|
+| Choosing which runs count as quiet | the scenario type — the label for what was staged |
+| Measuring normal from them | the observations of those runs |
+| Judging a run | observations, plus a list of run numbers with no labels attached |
+
+The distinction is not a detail of this item; it is why an observation carries no scenario type at
+all. The selection is a decision the harness makes in the open, and what crosses into the
+detection layer is run numbers. Stated here because it has so far been a thing that happened to be
+done correctly rather than a thing that was written down.
+
+### Two paths that differ, on purpose
+
+| | Scores? | Why |
+|---|---|---|
+| The command that builds the corpus | **No** | The 300 hours behind every figure were built by it. If it scored them it would stamp them with whatever settings were current, and the hours could never be re-scored under a different threshold |
+| The button on the screen | **Yes** | Its whole purpose is to put something on a screen, and until it scores, a freshly generated run honestly reports as unexamined and nothing on screen changes |
+
+Two code paths that differ is normally a smell. Here it is the point, and the difference is a
+matter of placement rather than a flag somebody has to remember: the corpus command calls the
+generator directly, and only the screen's path calls the generator and then the pass.
+
+### What it costs, and what it will not do
+
+11.2 s to establish normality once per batch, then 1.22 s a run — about 35 s added to a batch of
+twenty, against the batch's own seventy seconds or so. That fits at the end of a batch and cannot
+fit inside a five-second poll, and the **baseline** is the reason rather than the pass.
+
+Nothing is scheduled and nothing is retried. A batch completing is the only trigger, which keeps
+true the fact that nothing in this project runs on a timer.
+
+### Worth recording as a limitation
+
+A batch of *quiet* runs is scored against a baseline that includes its own runs, because the
+baseline is a property of the store rather than of the batch. That is the same self-reference the
+quiet-run control's measured bands already carry — they are taken on the runs they grade, so they
+cannot fail on the data that produced them — and it is recorded rather than prevented. A
+freshly generated store with no quiet runs at all is the opposite case and is **refused**: the
+hours stay generated and stored, and every run of the batch reports itself unexamined, which is
+exactly the state it is in.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -8433,3 +8536,6 @@ So every producer's count is carried, and each one is labelled **intermediate** 
 | **Intermediate finding** | Something a rule found that is working material rather than a conclusion — an aircraft stopping its position reports, a channel deviating. A quiet run holds about 138. Carried in the account, labelled as such, never presented as an anomaly count. See §142. |
 | **Reportable claim** | A conclusion that survived the precedence ladder and reached the analyst: this receiver is broken, this area is being interfered with. Now persisted as findings; before that, returned to the caller and stored nowhere. See §138. |
 | **The type is not the event** | A scenario type is the *name* of what was injected, and discloses everything the injected event would. A record with no ground-truth field can still leak the answer through its label. See §140. |
+| **Settings of record** | The one set of detector settings every quoted figure was measured under. Distinct from *the settings a run was scored under*, which is recorded per run: the second is provenance, the first is a commitment. See §143. |
+| **Definition versus pin** | A definition is the single object something actually runs under; a pin is those values spelled out in a test so a change to them fails loudly. Removing a copy makes drift less likely; pinning makes it audible. See §143. |
+| **Harness-side selection** | Choosing which runs a measurement uses, done outside the detectors, so a label that must never reach a detector can be read safely. What crosses the boundary is run numbers. See §143. |
