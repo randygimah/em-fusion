@@ -59,8 +59,9 @@ SUMMARY = (
 ACTION = "Confirm against an independent spectrum source before escalating."
 
 
-def citation(rule_id: str = "RF-NOISE",
-             finding_type: str = "rf_noise_deviation") -> Citation:
+def citation(
+    rule_id: str = "RF-NOISE", finding_type: str = "rf_noise_deviation"
+) -> Citation:
     return Citation(
         rule_id=rule_id,
         finding_type=finding_type,
@@ -110,7 +111,7 @@ def test_a_decimal_confidence_is_unrepresentable():
 
 
 def test_a_plausible_fourth_level_is_refused():
-    """"Very High" is what a model produces when it wants a fourth level.
+    """ "Very High" is what a model produces when it wants a fourth level.
     The three are ordinal and the UI renders exactly three pips."""
     # spec: ai-001, NFR-203
     with pytest.raises(ValidationError):
@@ -253,8 +254,10 @@ def test_the_uncertainty_list_may_be_explicitly_empty():
     # Asserted against its counterpart in one test, so that giving both
     # fields a floor -- or neither -- fails here. Separately, each half
     # passes against a schema that constrains nothing.
-    assert hypothesis(evidence_against_or_uncertainty=()) \
-        .evidence_against_or_uncertainty == ()
+    assert (
+        hypothesis(evidence_against_or_uncertainty=()).evidence_against_or_uncertainty
+        == ()
+    )
     with pytest.raises(ValidationError):
         hypothesis(alternative_explanations=())
 
@@ -343,9 +346,7 @@ def test_the_derived_schema_describes_a_citation_rather_than_a_string():
     # spec: ai-001, ai-004, ai-008
     schema = hypothesis_json_schema()
     citation_schema = schema["$defs"]["Citation"]
-    assert set(citation_schema["required"]) == {
-        "rule_id", "finding_type", "statement"
-    }
+    assert set(citation_schema["required"]) == {"rule_id", "finding_type", "statement"}
 
 
 def test_the_derived_schema_is_stable_across_calls():
@@ -411,9 +412,14 @@ def test_a_citation_given_as_plain_json_becomes_a_citation():
     """What a model actually returns is parsed JSON, so this is the shape
     the hosted arm exercises and the one above is not."""
     # spec: ai-001, ai-004
-    built = hypothesis(supporting_evidence=[
-        {"rule_id": "SENSOR-FAULT", "finding_type": "neighbour_nominal",
-         "statement": "RF-02 stayed within 2.0 dB of its baseline"}
-    ])
+    built = hypothesis(
+        supporting_evidence=[
+            {
+                "rule_id": "SENSOR-FAULT",
+                "finding_type": "neighbour_nominal",
+                "statement": "RF-02 stayed within 2.0 dB of its baseline",
+            }
+        ]
+    )
     assert isinstance(built.supporting_evidence[0], Citation)
     assert built.supporting_evidence[0].finding_type == "neighbour_nominal"

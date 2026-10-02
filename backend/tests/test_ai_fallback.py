@@ -660,9 +660,9 @@ def test_a_fallback_with_nothing_to_fall_back_from_is_impossible():
 def test_the_records_are_frozen():
     # spec: ai-007, NFR-602 -- the trail is evidence about a campaign, and
     # evidence that can be edited after the fact is not evidence.
-    outcome = a_fallback(
-        _ScriptedArm(model_result()), check=None
-    ).generate_recorded(fault_bundle())
+    outcome = a_fallback(_ScriptedArm(model_result()), check=None).generate_recorded(
+        fault_bundle()
+    )
 
     with pytest.raises(dataclasses.FrozenInstanceError):
         outcome.fell_back = True
@@ -684,9 +684,7 @@ def test_the_trail_is_a_tuple_rather_than_the_list_it_was_built_from():
         refused_call=None,
     )
 
-    outcome = FallbackOutcome(
-        result=model_result(), refusals=[refusal], fell_back=True
-    )
+    outcome = FallbackOutcome(result=model_result(), refusals=[refusal], fell_back=True)
 
     assert isinstance(outcome.refusals, tuple)
 

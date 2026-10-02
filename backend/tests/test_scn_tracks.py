@@ -644,9 +644,9 @@ def test_the_selection_does_not_depend_on_the_order_records_arrive_in() -> None:
 def test_the_selection_is_reproducible_from_the_seed_alone() -> None:
     # spec: scn-007, scn-001
     records = _pool(60)
-    assert _selection(records, minimum=3).chosen == _selection(
-        records, minimum=3
-    ).chosen
+    assert (
+        _selection(records, minimum=3).chosen == _selection(records, minimum=3).chosen
+    )
 
 
 def test_a_different_seed_chooses_a_different_set() -> None:
@@ -654,9 +654,10 @@ def test_a_different_seed_chooses_a_different_set() -> None:
     # Otherwise the floor would stage the same aircraft every run, and the
     # arm would carry one repeated experiment rather than forty.
     records = _pool(60)
-    assert _selection(records, minimum=3).chosen != _selection(
-        records, minimum=3, seed=SEED + 1
-    ).chosen
+    assert (
+        _selection(records, minimum=3).chosen
+        != _selection(records, minimum=3, seed=SEED + 1).chosen
+    )
 
 
 def test_an_aircraft_on_the_ground_is_not_eligible() -> None:
@@ -896,8 +897,6 @@ def test_the_shipped_floor_is_five_aircraft() -> None:
     # a pool of 20 draws 2 on the fraction alone and must yield 5.
     perturbation = plan_track_perturbation(LAYOUT, _spec())
     assert perturbation is not None
-    selection = select_targets(
-        perturbation, _pool(20), pseudonymiser=PSEUDONYMISER
-    )
+    selection = select_targets(perturbation, _pool(20), pseudonymiser=PSEUDONYMISER)
     assert selection.requested == 5
     assert len(selection.chosen) == 5

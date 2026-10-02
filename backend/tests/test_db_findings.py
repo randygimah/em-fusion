@@ -241,8 +241,7 @@ def test_a_track_gap_becomes_a_canonical_finding() -> None:
         location=WHERE,
         # What the rule read, which for this shape is not the window: the
         # start is reconstructed from the reported staleness (`evb-002`).
-        observed_at=(START + timedelta(seconds=150),
-                     START + timedelta(seconds=200)),
+        observed_at=(START + timedelta(seconds=150), START + timedelta(seconds=200)),
     )
 
     converted = from_track_gap(gap, scenario_run_id=RUN_ID)

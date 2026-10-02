@@ -150,14 +150,13 @@ def track(
     )
 
 
-def rf_ref(*, sensor: str = SENSOR, channel: int = CHANNEL,
-           at: datetime = START) -> dict[str, Any]:
-    return {"sensor_id": sensor, "channel_index": channel,
-            "timestamp": at.isoformat()}
+def rf_ref(
+    *, sensor: str = SENSOR, channel: int = CHANNEL, at: datetime = START
+) -> dict[str, Any]:
+    return {"sensor_id": sensor, "channel_index": channel, "timestamp": at.isoformat()}
 
 
-def track_ref(*, aircraft_id: str = AIRCRAFT,
-              at: datetime = START) -> dict[str, Any]:
+def track_ref(*, aircraft_id: str = AIRCRAFT, at: datetime = START) -> dict[str, Any]:
     return {"aircraft_id": aircraft_id, "at": at.isoformat()}
 
 
@@ -188,8 +187,11 @@ def derived(*, source: str = SENSOR) -> EvidenceItem:
     )
 
 
-def bundle(*evidence: EvidenceItem, run_id: int = RUN_ID,
-           superseded: tuple[SupersededClaim, ...] = ()) -> EvidenceBundle:
+def bundle(
+    *evidence: EvidenceItem,
+    run_id: int = RUN_ID,
+    superseded: tuple[SupersededClaim, ...] = (),
+) -> EvidenceBundle:
     return EvidenceBundle(
         scenario_run_id=run_id,
         anomaly_type="possible_sensor_fault",
@@ -236,8 +238,11 @@ def test_a_frozen_position_finding_separates_what_it_read_from_what_it_concluded
         track(timestamp=START + timedelta(seconds=10), position_staleness_s=400.0),
         track(timestamp=START + timedelta(seconds=20), position_staleness_s=410.0),
     ]
-    found = [f for f in detect_track_gaps(reports, POLICY)
-             if f.shape is GapShape.FROZEN_POSITION]
+    found = [
+        f
+        for f in detect_track_gaps(reports, POLICY)
+        if f.shape is GapShape.FROZEN_POSITION
+    ]
     assert len(found) == 1
     finding = found[0]
 
@@ -245,8 +250,10 @@ def test_a_frozen_position_finding_separates_what_it_read_from_what_it_concluded
         "the window must start before anything was observed, or the "
         "reconstruction has been lost"
     )
-    assert finding.observed_at == (START + timedelta(seconds=10),
-                                   START + timedelta(seconds=20))
+    assert finding.observed_at == (
+        START + timedelta(seconds=10),
+        START + timedelta(seconds=20),
+    )
 
 
 def test_a_not_heard_finding_read_exactly_the_reports_its_window_names():
@@ -270,14 +277,19 @@ def test_a_frozen_findings_refs_cite_reports_and_not_the_reconstructed_start():
         track(timestamp=START + timedelta(seconds=10), position_staleness_s=400.0),
         track(timestamp=START + timedelta(seconds=20), position_staleness_s=410.0),
     ]
-    finding = [f for f in detect_track_gaps(reports, POLICY)
-               if f.shape is GapShape.FROZEN_POSITION][0]
+    finding = [
+        f
+        for f in detect_track_gaps(reports, POLICY)
+        if f.shape is GapShape.FROZEN_POSITION
+    ][0]
     stored = from_track_gap(finding, scenario_run_id=RUN_ID)
 
     cited = [ref["at"] for ref in stored.evidence_refs]
     assert finding.started_at.isoformat() not in cited
-    assert cited == [finding.observed_at[0].isoformat(),
-                     finding.observed_at[1].isoformat()]
+    assert cited == [
+        finding.observed_at[0].isoformat(),
+        finding.observed_at[1].isoformat(),
+    ]
 
 
 # --------------------------------------- an item declares what it is claiming
@@ -290,9 +302,14 @@ def test_an_item_claiming_an_observation_must_cite_one():
     # spec: evb-001, evb-002
     with pytest.raises(ValueError, match="cites nothing"):
         EvidenceItem(
-            source=SENSOR, finding="power deviated", rule_id="RF-NOISE",
-            finding_type="rf_power_excess", grounding=Grounding.OBSERVED,
-            data_mode=DataMode.SYNTHETIC, started_at=START, ended_at=END,
+            source=SENSOR,
+            finding="power deviated",
+            rule_id="RF-NOISE",
+            finding_type="rf_power_excess",
+            grounding=Grounding.OBSERVED,
+            data_mode=DataMode.SYNTHETIC,
+            started_at=START,
+            ended_at=END,
         )
 
 
@@ -301,10 +318,15 @@ def test_an_item_making_a_judgement_must_not_cite_observations():
     # spec: evb-001, evb-002
     with pytest.raises(ValueError, match="judgement"):
         EvidenceItem(
-            source=SENSOR, finding="its neighbours stayed nominal",
-            rule_id="SENSOR-FAULT", finding_type="possible_sensor_fault",
-            grounding=Grounding.DERIVED, data_mode=DataMode.SYNTHETIC,
-            started_at=START, ended_at=END, refs=(rf_ref(),),
+            source=SENSOR,
+            finding="its neighbours stayed nominal",
+            rule_id="SENSOR-FAULT",
+            finding_type="possible_sensor_fault",
+            grounding=Grounding.DERIVED,
+            data_mode=DataMode.SYNTHETIC,
+            started_at=START,
+            ended_at=END,
+            refs=(rf_ref(),),
         )
 
 
@@ -329,8 +351,9 @@ def test_a_ref_in_neither_known_shape_is_refused_by_name():
     # appears in the not-found message, so the check could be deleted
     # entirely and this test would still pass -- it was, and it did.
     with pytest.raises(ResolutionError, match="neither"):
-        resolve_bundles(_ExplodingFactory(),
-                        [bundle(observed({"aircraft_id": AIRCRAFT}))])
+        resolve_bundles(
+            _ExplodingFactory(), [bundle(observed({"aircraft_id": AIRCRAFT}))]
+        )
 
 
 def test_an_empty_ref_is_refused_rather_than_matching_everything():
@@ -406,8 +429,14 @@ def factory(migrated_database: Engine) -> sessionmaker:
     return sessionmaker(bind=migrated_database, autoflush=False)
 
 
-def insert_rf(engine: Engine, *, run_id: int = RUN_ID, sensor: str = SENSOR,
-              channel: int = CHANNEL, at: datetime = START) -> int:
+def insert_rf(
+    engine: Engine,
+    *,
+    run_id: int = RUN_ID,
+    sensor: str = SENSOR,
+    channel: int = CHANNEL,
+    at: datetime = START,
+) -> int:
     with engine.connect() as connection:
         row = connection.execute(
             text(
@@ -433,8 +462,13 @@ def insert_rf(engine: Engine, *, run_id: int = RUN_ID, sensor: str = SENSOR,
     return int(row)
 
 
-def insert_track(engine: Engine, *, run_id: int = RUN_ID,
-                 aircraft_id: str = AIRCRAFT, at: datetime = START) -> int:
+def insert_track(
+    engine: Engine,
+    *,
+    run_id: int = RUN_ID,
+    aircraft_id: str = AIRCRAFT,
+    at: datetime = START,
+) -> int:
     with engine.connect() as connection:
         row = connection.execute(
             text(
@@ -492,7 +526,8 @@ def test_ids_come_back_in_the_order_the_refs_were_cited(
     second = insert_rf(migrated_database, at=later)
     first = insert_rf(migrated_database, at=START)
     resolved = resolve_bundles(
-        factory, [bundle(observed(rf_ref(at=START), rf_ref(at=later)))])
+        factory, [bundle(observed(rf_ref(at=START), rf_ref(at=later)))]
+    )
     assert resolved[0].evidence[0].observation_ids == (first, second)
 
 
@@ -559,10 +594,16 @@ def test_a_track_citation_resolves_on_its_own_coordinate(
     # spec: evb-002
     row_id = insert_track(migrated_database)
     item = EvidenceItem(
-        source=AIRCRAFT, finding="reporting broke during the window",
-        rule_id="TRACK-GAP", finding_type="track_continuity_gap",
-        grounding=Grounding.OBSERVED, data_mode=DataMode.REPLAYED,
-        started_at=START, ended_at=END, refs=(track_ref(),))
+        source=AIRCRAFT,
+        finding="reporting broke during the window",
+        rule_id="TRACK-GAP",
+        finding_type="track_continuity_gap",
+        grounding=Grounding.OBSERVED,
+        data_mode=DataMode.REPLAYED,
+        started_at=START,
+        ended_at=END,
+        refs=(track_ref(),),
+    )
     resolved = resolve_bundles(factory, [bundle(item)])
     assert resolved[0].evidence[0].observation_ids == (row_id,)
 
@@ -580,10 +621,16 @@ def test_track_resolution_is_scoped_to_the_run_as_well(
     mine = insert_track(migrated_database, run_id=RUN_ID)
     insert_track(migrated_database, run_id=OTHER_RUN_ID)
     item = EvidenceItem(
-        source=AIRCRAFT, finding="reporting broke during the window",
-        rule_id="TRACK-GAP", finding_type="track_continuity_gap",
-        grounding=Grounding.OBSERVED, data_mode=DataMode.REPLAYED,
-        started_at=START, ended_at=END, refs=(track_ref(),))
+        source=AIRCRAFT,
+        finding="reporting broke during the window",
+        rule_id="TRACK-GAP",
+        finding_type="track_continuity_gap",
+        grounding=Grounding.OBSERVED,
+        data_mode=DataMode.REPLAYED,
+        started_at=START,
+        ended_at=END,
+        refs=(track_ref(),),
+    )
     resolved = resolve_bundles(factory, [bundle(item)])
     assert resolved[0].evidence[0].observation_ids == (mine,)
 
@@ -596,10 +643,16 @@ def test_a_track_coordinate_only_in_another_run_is_refused(
     # spec: evb-002
     insert_track(migrated_database, run_id=OTHER_RUN_ID)
     item = EvidenceItem(
-        source=AIRCRAFT, finding="reporting broke during the window",
-        rule_id="TRACK-GAP", finding_type="track_continuity_gap",
-        grounding=Grounding.OBSERVED, data_mode=DataMode.REPLAYED,
-        started_at=START, ended_at=END, refs=(track_ref(),))
+        source=AIRCRAFT,
+        finding="reporting broke during the window",
+        rule_id="TRACK-GAP",
+        finding_type="track_continuity_gap",
+        grounding=Grounding.OBSERVED,
+        data_mode=DataMode.REPLAYED,
+        started_at=START,
+        ended_at=END,
+        refs=(track_ref(),),
+    )
     with pytest.raises(ResolutionError, match="no stored observation"):
         resolve_bundles(factory, [bundle(item)])
 
@@ -655,12 +708,19 @@ def test_a_bundle_spanning_both_shapes_resolves_both(
     rf_id = insert_rf(migrated_database)
     track_id = insert_track(migrated_database)
     track_item = EvidenceItem(
-        source=AIRCRAFT, finding="reporting broke during the window",
-        rule_id="TRACK-GAP", finding_type="track_continuity_gap",
-        grounding=Grounding.OBSERVED, data_mode=DataMode.REPLAYED,
-        started_at=START, ended_at=END, refs=(track_ref(),))
+        source=AIRCRAFT,
+        finding="reporting broke during the window",
+        rule_id="TRACK-GAP",
+        finding_type="track_continuity_gap",
+        grounding=Grounding.OBSERVED,
+        data_mode=DataMode.REPLAYED,
+        started_at=START,
+        ended_at=END,
+        refs=(track_ref(),),
+    )
     resolved = resolve_bundles(
-        factory, [bundle(observed(rf_ref()), track_item, derived())])
+        factory, [bundle(observed(rf_ref()), track_item, derived())]
+    )
     ids = [item.observation_ids for item in resolved[0].evidence]
     assert ids == [(rf_id,), (track_id,), ()]
 
@@ -687,9 +747,16 @@ def test_the_bundles_table_carries_what_a_bundle_actually_is(
             )
         }
     assert {
-        "scenario_run_id", "rule_id", "subject", "started_at", "ended_at",
-        "affected_area", "affected_channels", "evidence",
-        "known_uncertainties", "superseded",
+        "scenario_run_id",
+        "rule_id",
+        "subject",
+        "started_at",
+        "ended_at",
+        "affected_area",
+        "affected_channels",
+        "evidence",
+        "known_uncertainties",
+        "superseded",
     } <= columns
 
 
@@ -722,8 +789,9 @@ def test_a_saved_bundle_comes_back_with_its_resolved_ids(
     survive the round trip attached to the item that cited them."""
     # spec: evb-002, ai-008
     row_id = insert_rf(migrated_database)
-    save_bundles(factory, scenario_run_id=RUN_ID,
-                 bundles=[bundle(observed(rf_ref()), derived())])
+    save_bundles(
+        factory, scenario_run_id=RUN_ID, bundles=[bundle(observed(rf_ref()), derived())]
+    )
 
     read = bundles_for_run(factory, RUN_ID)
     assert len(read) == 1
@@ -749,10 +817,16 @@ def test_a_superseded_claim_survives_the_round_trip_outside_the_evidence(
     # spec: evb-002, evb-001, anom-013
     insert_rf(migrated_database)
     loser = SupersededClaim(
-        rule_id="FUSION-SPATIAL", anomaly_type="possible_interference_zone",
-        claimed_by="SENSOR-FAULT", reason="an earlier rule claimed this zone")
-    save_bundles(factory, scenario_run_id=RUN_ID,
-                 bundles=[bundle(observed(rf_ref()), superseded=(loser,))])
+        rule_id="FUSION-SPATIAL",
+        anomaly_type="possible_interference_zone",
+        claimed_by="SENSOR-FAULT",
+        reason="an earlier rule claimed this zone",
+    )
+    save_bundles(
+        factory,
+        scenario_run_id=RUN_ID,
+        bundles=[bundle(observed(rf_ref()), superseded=(loser,))],
+    )
 
     read = bundles_for_run(factory, RUN_ID)
     assert read[0].superseded == (loser,)
@@ -838,8 +912,11 @@ def test_one_runs_bundles_are_not_cleared_by_another_runs_save(
     insert_rf(migrated_database, run_id=RUN_ID)
     insert_rf(migrated_database, run_id=OTHER_RUN_ID)
     save_bundles(factory, scenario_run_id=RUN_ID, bundles=[bundle(observed(rf_ref()))])
-    save_bundles(factory, scenario_run_id=OTHER_RUN_ID,
-                 bundles=[bundle(observed(rf_ref()), run_id=OTHER_RUN_ID)])
+    save_bundles(
+        factory,
+        scenario_run_id=OTHER_RUN_ID,
+        bundles=[bundle(observed(rf_ref()), run_id=OTHER_RUN_ID)],
+    )
     assert len(bundles_for_run(factory, RUN_ID)) == 1
     assert len(bundles_for_run(factory, OTHER_RUN_ID)) == 1
 
@@ -856,8 +933,11 @@ def test_a_bundle_from_another_run_is_refused(
     # "run" appears in every resolution failure, including the one this
     # bundle would cause anyway by citing a coordinate from the other run.
     with pytest.raises(ResolutionError, match="was handed to a save"):
-        save_bundles(factory, scenario_run_id=RUN_ID,
-                     bundles=[bundle(observed(rf_ref()), run_id=OTHER_RUN_ID)])
+        save_bundles(
+            factory,
+            scenario_run_id=RUN_ID,
+            bundles=[bundle(observed(rf_ref()), run_id=OTHER_RUN_ID)],
+        )
 
 
 @pytest.mark.database
@@ -880,6 +960,7 @@ def test_the_revision_is_reversible(migrated_database: Engine) -> None:
         "sqlalchemy.url",
         migrated_database.url.render_as_string(hide_password=False),
     )
+
     def columns() -> set[str]:
         with migrated_database.connect() as connection:
             return {

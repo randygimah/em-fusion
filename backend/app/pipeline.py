@@ -455,11 +455,11 @@ def run_batch(
             seed=seed,
             start=window.start,
             duration_seconds=duration_seconds,
-        # `scn-008`. The base seed has always been carried on the summary and
-        # printed in the report, and it reached nothing durable -- of the base
-        # seeds behind the first 240 runs exactly one survives anywhere. Three
-        # integers per row, and any run can now re-derive its own seed from
-        # what its row records.
+            # `scn-008`. The base seed has always been carried on the summary and
+            # printed in the report, and it reached nothing durable -- of the base
+            # seeds behind the first 240 runs exactly one survives anywhere. Three
+            # integers per row, and any run can now re-derive its own seed from
+            # what its row records.
         ).with_batch(base_seed=base_seed, index=index, runs=count)
         try:
             outcome = execute_run(

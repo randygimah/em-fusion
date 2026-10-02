@@ -127,25 +127,36 @@ def neighbours(migrated_database: Engine, factory: sessionmaker) -> dict[str, in
 
     # The run first: observations carry a NOT NULL foreign key to it.
     with migrated_database.connect() as connection:
-        connection.execute(text(
-            "INSERT INTO scenario_runs "
-            "(id, scenario_type, parameters, seed, started_at) "
-            "VALUES (:id, 'rf-sensor-fault', '{}'::jsonb, 43, now())"),
-            {"id": OTHER_RUN_ID})
+        connection.execute(
+            text(
+                "INSERT INTO scenario_runs "
+                "(id, scenario_type, parameters, seed, started_at) "
+                "VALUES (:id, 'rf-sensor-fault', '{}'::jsonb, 43, now())"
+            ),
+            {"id": OTHER_RUN_ID},
+        )
         connection.commit()
     for sensor in ("RF-03", "RF-04"):
         insert_rf(migrated_database, run_id=RUN_ID, sensor=sensor, channel=4, at=START)
-        insert_rf(migrated_database, run_id=OTHER_RUN_ID, sensor=sensor, channel=4,
-                  at=START)
+        insert_rf(
+            migrated_database, run_id=OTHER_RUN_ID, sensor=sensor, channel=4, at=START
+        )
 
     # One call, two bundles: save_bundles replaces per run, so two calls
     # would leave only the second.
-    save_bundles(factory, scenario_run_id=RUN_ID, bundles=[
-        replace(zone_bundle(tracks=False), scenario_run_id=RUN_ID),
-        replace(fault_bundle(), scenario_run_id=RUN_ID),
-    ])
-    save_bundles(factory, scenario_run_id=OTHER_RUN_ID, bundles=[
-        replace(zone_bundle(tracks=False), scenario_run_id=OTHER_RUN_ID)])
+    save_bundles(
+        factory,
+        scenario_run_id=RUN_ID,
+        bundles=[
+            replace(zone_bundle(tracks=False), scenario_run_id=RUN_ID),
+            replace(fault_bundle(), scenario_run_id=RUN_ID),
+        ],
+    )
+    save_bundles(
+        factory,
+        scenario_run_id=OTHER_RUN_ID,
+        bundles=[replace(zone_bundle(tracks=False), scenario_run_id=OTHER_RUN_ID)],
+    )
 
     here = stored_bundles_for_run(factory, RUN_ID)
     there = stored_bundles_for_run(factory, OTHER_RUN_ID)
@@ -368,8 +379,9 @@ def test_the_revision_is_reversible(migrated_database: Engine) -> None:
     assert "summary" not in columns
     assert "recommended_human_action" not in columns
     assert "title" in columns, "the old name did not come back"
-    assert "hypotheses" in _tables(migrated_database), \
-        "the downgrade took the table with it"
+    assert "hypotheses" in _tables(
+        migrated_database
+    ), "the downgrade took the table with it"
 
     command.upgrade(config, "head")
 
@@ -380,9 +392,13 @@ def test_the_revision_is_reversible(migrated_database: Engine) -> None:
 def _tables(engine: Engine) -> set[str]:
     with engine.connect() as connection:
         return {
-            row[0] for row in connection.execute(text(
-                "SELECT table_name FROM information_schema.tables "
-                "WHERE table_schema = 'public'"))
+            row[0]
+            for row in connection.execute(
+                text(
+                    "SELECT table_name FROM information_schema.tables "
+                    "WHERE table_schema = 'public'"
+                )
+            )
         }
 
 
@@ -435,9 +451,7 @@ def test_the_raw_response_is_stored_verbatim_and_not_reserialised(
     # is deliberately NOT valid against the schema it came with.
     ragged = '  {"hypothesis_title": "x", "extra": 1}\n\n trailing prose  '
 
-    store(
-        factory, bundle_id=bundle_id, result=hosted_result(raw_response=ragged)
-    )
+    store(factory, bundle_id=bundle_id, result=hosted_result(raw_response=ragged))
 
     assert hypotheses_for_bundle(factory, bundle_id)[0].raw_response == ragged
 
@@ -515,10 +529,13 @@ def test_a_template_row_stores_no_parameters_rather_than_a_json_null(
     store(factory, bundle_id=bundle_id, result=template_result())
 
     with factory.begin() as session:
-        sql_null, json_null = session.execute(text(
-            "SELECT generation_params IS NULL, "
-            "  generation_params = 'null'::jsonb "
-            "FROM hypotheses")).one()
+        sql_null, json_null = session.execute(
+            text(
+                "SELECT generation_params IS NULL, "
+                "  generation_params = 'null'::jsonb "
+                "FROM hypotheses"
+            )
+        ).one()
 
     assert sql_null is True
     assert json_null is None, "a JSONB null would compare, not return NULL"
@@ -612,13 +629,20 @@ def test_hypotheses_come_back_in_the_order_they_were_written(
     # scan returns them in insertion order anyway, so dropping ORDER BY
     # changed nothing. Updating a row rewrites it to the end of the heap
     # under MVCC, which is what makes physical order differ from id order.
-    made = [store(factory, bundle_id=bundle_id, result=hosted_result(
-        raw_response=f'{{"attempt": {n}}}')) for n in range(4)]
+    made = [
+        store(
+            factory,
+            bundle_id=bundle_id,
+            result=hosted_result(raw_response=f'{{"attempt": {n}}}'),
+        )
+        for n in range(4)
+    ]
 
     with factory.begin() as session:
-        session.execute(text(
-            "UPDATE hypotheses SET summary = summary || :s WHERE id = :i"),
-            {"s": " (revised)", "i": made[0]})
+        session.execute(
+            text("UPDATE hypotheses SET summary = summary || :s WHERE id = :i"),
+            {"s": " (revised)", "i": made[0]},
+        )
 
     assert [s.id for s in hypotheses_for_bundle(factory, bundle_id)] == made
 
@@ -691,8 +715,9 @@ def test_a_blank_model_id_does_not_count_as_present() -> None:
 
     for blank in ("", "   "):
         with pytest.raises(HypothesisWriteError):
-            check_reproducibility(generator=GeneratorKind.HOSTED, model_id=blank,
-                                  raw_response='{"a": 1}')
+            check_reproducibility(
+                generator=GeneratorKind.HOSTED, model_id=blank, raw_response='{"a": 1}'
+            )
 
 
 def test_a_blank_raw_response_does_not_count_as_present() -> None:
@@ -700,8 +725,9 @@ def test_a_blank_raw_response_does_not_count_as_present() -> None:
     from app.db.hypotheses import check_reproducibility
 
     with pytest.raises(HypothesisWriteError):
-        check_reproducibility(generator=GeneratorKind.LOCAL, model_id="m-2026",
-                              raw_response="   ")
+        check_reproducibility(
+            generator=GeneratorKind.LOCAL, model_id="m-2026", raw_response="   "
+        )
 
 
 def test_a_model_arm_row_without_its_raw_response_is_refused() -> None:
@@ -1010,10 +1036,12 @@ def test_the_asked_for_arm_revision_is_reversible(migrated_database: Engine) -> 
     command.downgrade(config, "0006_hypothesis_columns")
 
     assert "requested_generator" not in column_names(migrated_database)
-    assert "hypotheses" in _tables(migrated_database), \
-        "the downgrade took the table with it"
-    assert "summary" in column_names(migrated_database), \
-        "the downgrade went further back than the revision it was given"
+    assert "hypotheses" in _tables(
+        migrated_database
+    ), "the downgrade took the table with it"
+    assert "summary" in column_names(
+        migrated_database
+    ), "the downgrade went further back than the revision it was given"
 
     command.upgrade(config, "head")
 

@@ -266,17 +266,19 @@ def build_bundles(
             bundle = _fault_bundle(claim, producer, findings, scenario_run_id)
         else:
             bundle = _zone_bundle(
-                claim, producer, findings, track_findings, scenario_run_id)
+                claim, producer, findings, track_findings, scenario_run_id
+            )
         built.append(
-            replace(bundle, superseded=_superseded_for(claim, resolution, radius)))
+            replace(bundle, superseded=_superseded_for(claim, resolution, radius))
+        )
     return tuple(built)
 
 
 def _zone_of(producer: SensorFault | InterferenceZone) -> Zone:
-    centre = (producer.location if isinstance(producer, SensorFault)
-              else producer.centre)
-    return Zone(centre=centre, started_at=producer.started_at,
-                ended_at=producer.ended_at)
+    centre = producer.location if isinstance(producer, SensorFault) else producer.centre
+    return Zone(
+        centre=centre, started_at=producer.started_at, ended_at=producer.ended_at
+    )
 
 
 def _producer_for(
@@ -306,8 +308,7 @@ def _overlaps(a: tuple[datetime, datetime], b: tuple[datetime, datetime]) -> boo
 
 
 def _episode_items(
-    findings: RfNoiseFindings, sensors: Sequence[str],
-    window: tuple[datetime, datetime]
+    findings: RfNoiseFindings, sensors: Sequence[str], window: tuple[datetime, datetime]
 ) -> list[EvidenceItem]:
     """Every `anom-001` episode on these receivers during this window.
 
@@ -321,24 +322,34 @@ def _episode_items(
             continue
         if not _overlaps((episode.started_at, episode.ended_at), window):
             continue
-        items.append(EvidenceItem(
-            source=f"{episode.cell.sensor_id}:{episode.cell.channel_index}",
-            finding=(f"{episode.metric.value} deviated by "
-                     f"{episode.peak_deviation:.2f} dB at its peak"),
-            rule_id=episode.rule_id,
-            finding_type=episode.anomaly_type,
-            grounding=Grounding.OBSERVED,
-            data_mode=DataMode.SYNTHETIC,
-            started_at=episode.started_at,
-            ended_at=episode.ended_at,
-            refs=tuple({"sensor_id": ref.sensor_id,
+        items.append(
+            EvidenceItem(
+                source=f"{episode.cell.sensor_id}:{episode.cell.channel_index}",
+                finding=(
+                    f"{episode.metric.value} deviated by "
+                    f"{episode.peak_deviation:.2f} dB at its peak"
+                ),
+                rule_id=episode.rule_id,
+                finding_type=episode.anomaly_type,
+                grounding=Grounding.OBSERVED,
+                data_mode=DataMode.SYNTHETIC,
+                started_at=episode.started_at,
+                ended_at=episode.ended_at,
+                refs=tuple(
+                    {
+                        "sensor_id": ref.sensor_id,
                         "channel_index": ref.channel_index,
-                        "timestamp": ref.timestamp.isoformat()}
-                       for ref in episode.triggering),
-            details={"metric": episode.metric.value,
-                     "severity": episode.severity.value,
-                     "peak_deviation": episode.peak_deviation},
-        ))
+                        "timestamp": ref.timestamp.isoformat(),
+                    }
+                    for ref in episode.triggering
+                ),
+                details={
+                    "metric": episode.metric.value,
+                    "severity": episode.severity.value,
+                    "peak_deviation": episode.peak_deviation,
+                },
+            )
+        )
     return items
 
 
@@ -350,25 +361,33 @@ def _rf_uncertainties(
     for cell in findings.unjudged:
         if cell.cell.sensor_id not in sensors:
             continue
-        out.append(Uncertainty(
-            kind=UncertaintyKind.NOT_MEASURABLE,
-            subject=f"{cell.cell.sensor_id}:{cell.cell.channel_index}",
-            statement=(f"channel {cell.cell.channel_index} of "
-                       f"{cell.cell.sensor_id} was not judged: {cell.reason}. "
-                       "This is a cell that was not looked at, not a cell "
-                       "that was looked at and found quiet."),
-        ))
+        out.append(
+            Uncertainty(
+                kind=UncertaintyKind.NOT_MEASURABLE,
+                subject=f"{cell.cell.sensor_id}:{cell.cell.channel_index}",
+                statement=(
+                    f"channel {cell.cell.channel_index} of "
+                    f"{cell.cell.sensor_id} was not judged: {cell.reason}. "
+                    "This is a cell that was not looked at, not a cell "
+                    "that was looked at and found quiet."
+                ),
+            )
+        )
     for brief in findings.suppressed:
         if brief.cell.sensor_id not in sensors:
             continue
-        out.append(Uncertainty(
-            kind=UncertaintyKind.MEASURED_NEGATIVE,
-            subject=f"{brief.cell.sensor_id}:{brief.cell.channel_index}",
-            statement=(f"a deviation on channel {brief.cell.channel_index} of "
-                       f"{brief.cell.sensor_id} lasted {brief.readings} reading(s), "
-                       f"under the {brief.minimum.total_seconds():.0f} s minimum, "
-                       "so it was observed and not called an event."),
-        ))
+        out.append(
+            Uncertainty(
+                kind=UncertaintyKind.MEASURED_NEGATIVE,
+                subject=f"{brief.cell.sensor_id}:{brief.cell.channel_index}",
+                statement=(
+                    f"a deviation on channel {brief.cell.channel_index} of "
+                    f"{brief.cell.sensor_id} lasted {brief.readings} reading(s), "
+                    f"under the {brief.minimum.total_seconds():.0f} s minimum, "
+                    "so it was observed and not called an event."
+                ),
+            )
+        )
     return out
 
 
@@ -388,77 +407,105 @@ def _fault_bundle(
         # A nominal neighbour is the *discriminating observation* -- the
         # reason this is a fault and not the environment -- so it is a
         # positive evidence item, never an absence.
-        evidence.append(EvidenceItem(
-            source=neighbour,
-            finding=(f"{neighbour} was measured and stayed within "
-                     f"{spatial.nominal_within_db:.1f} dB of its baseline"),
+        evidence.append(
+            EvidenceItem(
+                source=neighbour,
+                finding=(
+                    f"{neighbour} was measured and stayed within "
+                    f"{spatial.nominal_within_db:.1f} dB of its baseline"
+                ),
+                rule_id=producer.rule_id,
+                finding_type="neighbour_nominal",
+                # A judgement, and an unusual one: this item exists precisely
+                # because no episode was raised for this neighbour, so there is
+                # nothing for it to cite by construction.
+                grounding=Grounding.DERIVED,
+                data_mode=DataMode.SYNTHETIC,
+                started_at=producer.started_at,
+                ended_at=producer.ended_at,
+                details={
+                    "db": elevations.get(neighbour, 0.0),
+                    "nominal_within_db": spatial.nominal_within_db,
+                    "radius_km": spatial.radius_km,
+                },
+            )
+        )
+
+    spectral = producer.spectral
+    evidence.append(
+        EvidenceItem(
+            source=producer.sensor_id,
+            finding=(
+                "the deviation is confined to "
+                f"{len(spectral.channels)} of {spectral.plan_size} channels"
+            ),
             rule_id=producer.rule_id,
-            finding_type="neighbour_nominal",
-            # A judgement, and an unusual one: this item exists precisely
-            # because no episode was raised for this neighbour, so there is
-            # nothing for it to cite by construction.
+            finding_type="channel_adjacency",
             grounding=Grounding.DERIVED,
             data_mode=DataMode.SYNTHETIC,
             started_at=producer.started_at,
             ended_at=producer.ended_at,
-            details={"db": elevations.get(neighbour, 0.0),
-                     "nominal_within_db": spatial.nominal_within_db,
-                     "radius_km": spatial.radius_km},
-        ))
+            details={
+                "channels": list(spectral.channels),
+                "adjacent_checked": list(spectral.adjacent_checked),
+                "adjacent_abnormal": list(spectral.adjacent_abnormal),
+            },
+        )
+    )
+    evidence.append(
+        EvidenceItem(
+            source=producer.sensor_id,
+            finding=(
+                "one receiver deviated while its measured neighbours stayed "
+                "nominal, which attributes the deviation to the instrument"
+            ),
+            rule_id=producer.rule_id,
+            finding_type=producer.anomaly_type,
+            grounding=Grounding.DERIVED,
+            data_mode=DataMode.SYNTHETIC,
+            started_at=producer.started_at,
+            ended_at=producer.ended_at,
+            # Confidence qualifies the *attribution*, not the deviation, whose
+            # severity `anom-001` already carries on its own items.
+            details={"confidence": producer.confidence.value},
+        )
+    )
 
-    spectral = producer.spectral
-    evidence.append(EvidenceItem(
-        source=producer.sensor_id,
-        finding=("the deviation is confined to "
-                 f"{len(spectral.channels)} of {spectral.plan_size} channels"),
-        rule_id=producer.rule_id,
-        finding_type="channel_adjacency",
-        grounding=Grounding.DERIVED,
-        data_mode=DataMode.SYNTHETIC,
-        started_at=producer.started_at,
-        ended_at=producer.ended_at,
-        details={"channels": list(spectral.channels),
-                 "adjacent_checked": list(spectral.adjacent_checked),
-                 "adjacent_abnormal": list(spectral.adjacent_abnormal)},
-    ))
-    evidence.append(EvidenceItem(
-        source=producer.sensor_id,
-        finding=("one receiver deviated while its measured neighbours stayed "
-                 "nominal, which attributes the deviation to the instrument"),
-        rule_id=producer.rule_id,
-        finding_type=producer.anomaly_type,
-        grounding=Grounding.DERIVED,
-        data_mode=DataMode.SYNTHETIC,
-        started_at=producer.started_at,
-        ended_at=producer.ended_at,
-        # Confidence qualifies the *attribution*, not the deviation, whose
-        # severity `anom-001` already carries on its own items.
-        details={"confidence": producer.confidence.value},
-    ))
-
-    uncertainties = [Uncertainty(
-        kind=UncertaintyKind.NOT_APPLICABLE,
-        subject="track",
-        statement=("the aircraft side was not consulted. A single-receiver "
-                   "fault verdict does not reach the fusion rule, so the "
-                   "absence of track evidence here is by design and is not a "
-                   "measurement that came back empty."),
-    )]
+    uncertainties = [
+        Uncertainty(
+            kind=UncertaintyKind.NOT_APPLICABLE,
+            subject="track",
+            statement=(
+                "the aircraft side was not consulted. A single-receiver "
+                "fault verdict does not reach the fusion rule, so the "
+                "absence of track evidence here is by design and is not a "
+                "measurement that came back empty."
+            ),
+        )
+    ]
     for neighbour in spatial.unjudged:
-        uncertainties.append(Uncertainty(
-            kind=UncertaintyKind.NOT_MEASURABLE,
-            subject=neighbour,
-            statement=(f"{neighbour} is inside the {spatial.radius_km:.0f} km "
-                       "radius and could not be judged, so it is not evidence "
-                       "either way."),
-        ))
+        uncertainties.append(
+            Uncertainty(
+                kind=UncertaintyKind.NOT_MEASURABLE,
+                subject=neighbour,
+                statement=(
+                    f"{neighbour} is inside the {spatial.radius_km:.0f} km "
+                    "radius and could not be judged, so it is not evidence "
+                    "either way."
+                ),
+            )
+        )
     for channel in spectral.adjacent_unjudged:
-        uncertainties.append(Uncertainty(
-            kind=UncertaintyKind.NOT_MEASURABLE,
-            subject=f"{producer.sensor_id}:{channel}",
-            statement=(f"adjacent channel {channel} could not be judged, so the "
-                       "spectral test rests on the channels that could."),
-        ))
+        uncertainties.append(
+            Uncertainty(
+                kind=UncertaintyKind.NOT_MEASURABLE,
+                subject=f"{producer.sensor_id}:{channel}",
+                statement=(
+                    f"adjacent channel {channel} could not be judged, so the "
+                    "spectral test rests on the channels that could."
+                ),
+            )
+        )
     uncertainties.extend(_rf_uncertainties(findings, sensors))
 
     return EvidenceBundle(
@@ -475,26 +522,33 @@ def _fault_bundle(
 
 
 def _zone_bundle(
-    claim: Claim, producer: InterferenceZone, findings: RfNoiseFindings,
-    track_findings: Sequence[DetectionFinding], run_id: int
+    claim: Claim,
+    producer: InterferenceZone,
+    findings: RfNoiseFindings,
+    track_findings: Sequence[DetectionFinding],
+    run_id: int,
 ) -> EvidenceBundle:
     """Interference, and whatever the aircraft side could contribute."""
     window = (producer.started_at, producer.ended_at)
     evidence = _episode_items(findings, producer.sensors, window)
 
-    evidence.append(EvidenceItem(
-        source=", ".join(producer.sensors),
-        finding=producer.reason,
-        rule_id=producer.rule_id,
-        finding_type=producer.anomaly_type,
-        grounding=Grounding.DERIVED,
-        data_mode=DataMode.SYNTHETIC,
-        started_at=producer.started_at,
-        ended_at=producer.ended_at,
-        details={"sensors": list(producer.sensors),
-                 "confidence": producer.confidence.value,
-                 "corroboration": producer.corroboration.value},
-    ))
+    evidence.append(
+        EvidenceItem(
+            source=", ".join(producer.sensors),
+            finding=producer.reason,
+            rule_id=producer.rule_id,
+            finding_type=producer.anomaly_type,
+            grounding=Grounding.DERIVED,
+            data_mode=DataMode.SYNTHETIC,
+            started_at=producer.started_at,
+            ended_at=producer.ended_at,
+            details={
+                "sensors": list(producer.sensors),
+                "confidence": producer.confidence.value,
+                "corroboration": producer.corroboration.value,
+            },
+        )
+    )
 
     uncertainties: list[Uncertainty] = []
     excess = producer.excess
@@ -502,50 +556,64 @@ def _zone_bundle(
         # Measured, whichever way it came out. `not_corroborated` means the
         # rate WAS measured and showed nothing, which is a finding and
         # belongs here rather than among the things that are not known.
-        evidence.append(EvidenceItem(
-            source=f"{excess.radius_km:.0f} km disc",
-            finding=(f"{excess.during} discontinuities during the window "
-                     f"against {excess.outside} outside it, a rate ratio of "
-                     f"{excess.ratio:.2f}"),
-            rule_id=TRACK_RULE_ID,
-            finding_type=RATE_EXCESS_FINDING_TYPE,
-            # A ratio over counts. The discontinuities it counted are their
-            # own OBSERVED items in this same bundle.
-            grounding=Grounding.DERIVED,
-            data_mode=DataMode.REPLAYED,
-            started_at=excess.window[0],
-            ended_at=excess.window[1],
-            details={"during": excess.during, "outside": excess.outside,
-                     "ratio": excess.ratio, "radius_km": excess.radius_km},
-        ))
+        evidence.append(
+            EvidenceItem(
+                source=f"{excess.radius_km:.0f} km disc",
+                finding=(
+                    f"{excess.during} discontinuities during the window "
+                    f"against {excess.outside} outside it, a rate ratio of "
+                    f"{excess.ratio:.2f}"
+                ),
+                rule_id=TRACK_RULE_ID,
+                finding_type=RATE_EXCESS_FINDING_TYPE,
+                # A ratio over counts. The discontinuities it counted are their
+                # own OBSERVED items in this same bundle.
+                grounding=Grounding.DERIVED,
+                data_mode=DataMode.REPLAYED,
+                started_at=excess.window[0],
+                ended_at=excess.window[1],
+                details={
+                    "during": excess.during,
+                    "outside": excess.outside,
+                    "ratio": excess.ratio,
+                    "radius_km": excess.radius_km,
+                },
+            )
+        )
     if producer.corroboration is Corroboration.NOT_MEASURABLE:
-        uncertainties.append(Uncertainty(
-            kind=UncertaintyKind.NOT_MEASURABLE,
-            subject="track",
-            statement=("the local discontinuity rate could not be measured: the "
-                       "reference period outside this window held no track "
-                       "findings, so the ratio would consist of nothing but the "
-                       "smoothing constant and is not a comparison of two "
-                       "observed rates. This is the majority case, and it means "
-                       "the aircraft side neither supports nor contradicts the "
-                       "radio evidence here."),
-        ))
+        uncertainties.append(
+            Uncertainty(
+                kind=UncertaintyKind.NOT_MEASURABLE,
+                subject="track",
+                statement=(
+                    "the local discontinuity rate could not be measured: the "
+                    "reference period outside this window held no track "
+                    "findings, so the ratio would consist of nothing but the "
+                    "smoothing constant and is not a comparison of two "
+                    "observed rates. This is the majority case, and it means "
+                    "the aircraft side neither supports nor contradicts the "
+                    "radio evidence here."
+                ),
+            )
+        )
 
     for finding in track_findings:
         if not _overlaps((finding.started_at, finding.ended_at), window):
             continue
-        evidence.append(EvidenceItem(
-            source=finding.subject,
-            finding=("reporting from this aircraft broke during the window"),
-            rule_id=finding.rule_id,
-            finding_type=finding.finding_type,
-            grounding=Grounding.OBSERVED,
-            data_mode=DataMode.REPLAYED,
-            started_at=finding.started_at,
-            ended_at=finding.ended_at,
-            refs=tuple(finding.evidence_refs),
-            details=dict(finding.details),
-        ))
+        evidence.append(
+            EvidenceItem(
+                source=finding.subject,
+                finding=("reporting from this aircraft broke during the window"),
+                rule_id=finding.rule_id,
+                finding_type=finding.finding_type,
+                grounding=Grounding.OBSERVED,
+                data_mode=DataMode.REPLAYED,
+                started_at=finding.started_at,
+                ended_at=finding.ended_at,
+                refs=tuple(finding.evidence_refs),
+                details=dict(finding.details),
+            )
+        )
 
     uncertainties.extend(_rf_uncertainties(findings, producer.sensors))
 
@@ -570,8 +638,12 @@ def _channels(
     Taken from the items rather than from the rule's own summary, so the
     field describes the bundle instead of describing the rule that fed it.
     """
-    seen = {ref["channel_index"] for item in evidence for ref in item.refs
-            if "channel_index" in ref}
+    seen = {
+        ref["channel_index"]
+        for item in evidence
+        for ref in item.refs
+        if "channel_index" in ref
+    }
     return tuple(sorted(seen or set(declared)))
 
 
@@ -593,19 +665,34 @@ def _superseded_for(
         other = suppression.claim.zone
         if not claim.zone.overlaps(other):
             continue
-        if great_circle_km(claim.zone.centre.lat, claim.zone.centre.lon,
-                           other.centre.lat, other.centre.lon) > radius:
+        if (
+            great_circle_km(
+                claim.zone.centre.lat,
+                claim.zone.centre.lon,
+                other.centre.lat,
+                other.centre.lon,
+            )
+            > radius
+        ):
             continue
-        out.append(SupersededClaim(
-            rule_id=suppression.claim.rule_id,
-            anomaly_type=suppression.claim.anomaly_type,
-            claimed_by=suppression.claimed_by,
-            reason=suppression.reason,
-        ))
+        out.append(
+            SupersededClaim(
+                rule_id=suppression.claim.rule_id,
+                anomaly_type=suppression.claim.anomaly_type,
+                claimed_by=suppression.claimed_by,
+                reason=suppression.reason,
+            )
+        )
     return tuple(out)
 
 
 __all__ = [
-    "BundleError", "EvidenceBundle", "EvidenceItem", "Grounding", "SupersededClaim",
-    "Uncertainty", "UncertaintyKind", "build_bundles",
+    "BundleError",
+    "EvidenceBundle",
+    "EvidenceItem",
+    "Grounding",
+    "SupersededClaim",
+    "Uncertainty",
+    "UncertaintyKind",
+    "build_bundles",
 ]

@@ -468,10 +468,7 @@ def test_selecting_one_runs_observations_does_not_scan_the_table(
         connection.execute(text("SET enable_seqscan = off"))
         plan = "\n".join(
             connection.execute(
-                text(
-                    "EXPLAIN SELECT id FROM observations "
-                    "WHERE scenario_run_id = 1"
-                )
+                text("EXPLAIN SELECT id FROM observations " "WHERE scenario_run_id = 1")
             )
             .scalars()
             .all()

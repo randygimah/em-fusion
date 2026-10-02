@@ -235,14 +235,10 @@ def ground_truth(
         # `eval-002` unable to say whether a miss was the detector's or the
         # corpus's. None where no survey ran.
         "aircraft_eligible": (
-            perturber.selection.eligible
-            if perturber and perturber.selection
-            else None
+            perturber.selection.eligible if perturber and perturber.selection else None
         ),
         "aircraft_requested": (
-            perturber.selection.requested
-            if perturber and perturber.selection
-            else None
+            perturber.selection.requested if perturber and perturber.selection else None
         ),
         "aircraft_floor_reached": (
             perturber.selection.floor_reached

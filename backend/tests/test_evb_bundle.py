@@ -72,84 +72,143 @@ RUN = 412
 WHY = "an earlier rule claimed this zone"
 
 
-def episode(sensor: str, channel: int, *, started=START, ended=END,
-            severity=Severity.HIGH, peak=8.4) -> RfNoiseAnomaly:
+def episode(
+    sensor: str,
+    channel: int,
+    *,
+    started=START,
+    ended=END,
+    severity=Severity.HIGH,
+    peak=8.4,
+) -> RfNoiseAnomaly:
     cell = RfCell(sensor_id=sensor, channel_index=channel)
     return RfNoiseAnomaly(
-        cell=cell, metric=RfMetric.POWER_DBM, severity=severity,
-        started_at=started, ended_at=ended, location=HERE, peak_deviation=peak,
-        triggering=(ReadingRef(sensor_id=sensor, channel_index=channel,
-                               timestamp=started),))
+        cell=cell,
+        metric=RfMetric.POWER_DBM,
+        severity=severity,
+        started_at=started,
+        ended_at=ended,
+        location=HERE,
+        peak_deviation=peak,
+        triggering=(
+            ReadingRef(sensor_id=sensor, channel_index=channel, timestamp=started),
+        ),
+    )
 
 
-def spatial(*, neighbours=("RF-02", "RF-05"), abnormal=(),
-            unjudged=()) -> SpatialEvidence:
+def spatial(
+    *, neighbours=("RF-02", "RF-05"), abnormal=(), unjudged=()
+) -> SpatialEvidence:
     return SpatialEvidence(
-        radius_km=85.0, nominal_within_db=2.0, neighbours=neighbours,
-        abnormal=abnormal, unjudged=unjudged,
-        elevations=tuple((s, 0.4) for s in neighbours))
+        radius_km=85.0,
+        nominal_within_db=2.0,
+        neighbours=neighbours,
+        abnormal=abnormal,
+        unjudged=unjudged,
+        elevations=tuple((s, 0.4) for s in neighbours),
+    )
 
 
-def spectral(*, channels=(4,), adjacent_checked=(3, 5), adjacent_abnormal=(),
-             adjacent_unjudged=()) -> SpectralEvidence:
+def spectral(
+    *,
+    channels=(4,),
+    adjacent_checked=(3, 5),
+    adjacent_abnormal=(),
+    adjacent_unjudged=(),
+) -> SpectralEvidence:
     return SpectralEvidence(
-        channels=channels, adjacent_checked=adjacent_checked,
-        adjacent_abnormal=adjacent_abnormal, adjacent_unjudged=adjacent_unjudged,
-        plan_size=8)
+        channels=channels,
+        adjacent_checked=adjacent_checked,
+        adjacent_abnormal=adjacent_abnormal,
+        adjacent_unjudged=adjacent_unjudged,
+        plan_size=8,
+    )
 
 
 def fault(sensor="RF-03", **kw) -> SensorFault:
     return SensorFault(
-        sensor_id=sensor, started_at=START, ended_at=END, location=HERE,
-        confidence=Confidence.HIGH, spatial=kw.pop("spatial", spatial()),
-        spectral=kw.pop("spectral", spectral()))
+        sensor_id=sensor,
+        started_at=START,
+        ended_at=END,
+        location=HERE,
+        confidence=Confidence.HIGH,
+        spatial=kw.pop("spatial", spatial()),
+        spectral=kw.pop("spectral", spectral()),
+    )
 
 
-def zone(*, sensors=("RF-03", "RF-04"), centre=HERE,
-         corroboration=Corroboration.CORROBORATED, excess=None,
-         started=START, ended=END) -> InterferenceZone:
+def zone(
+    *,
+    sensors=("RF-03", "RF-04"),
+    centre=HERE,
+    corroboration=Corroboration.CORROBORATED,
+    excess=None,
+    started=START,
+    ended=END,
+) -> InterferenceZone:
     if excess is None and corroboration is not Corroboration.NOT_MEASURABLE:
         excess = RateExcess(
-            centre=centre, radius_km=60.0, window=(started, ended),
-            during=14, outside=3, during_per_minute=2.8, outside_per_minute=0.3,
-            ratio=9.61)
+            centre=centre,
+            radius_km=60.0,
+            window=(started, ended),
+            during=14,
+            outside=3,
+            during_per_minute=2.8,
+            outside_per_minute=0.3,
+            ratio=9.61,
+        )
     return InterferenceZone(
-        sensors=sensors, centre=centre, started_at=started, ended_at=ended,
-        corroboration=corroboration, confidence=Confidence.HIGH, excess=excess,
-        reason="two receivers deviated together")
+        sensors=sensors,
+        centre=centre,
+        started_at=started,
+        ended_at=ended,
+        corroboration=corroboration,
+        confidence=Confidence.HIGH,
+        excess=excess,
+        reason="two receivers deviated together",
+    )
 
 
 def claim_for(source) -> Claim:
-    centre = (source.location if isinstance(source, SensorFault)
-              else source.centre)
-    z = Zone(centre=centre, started_at=source.started_at,
-             ended_at=source.ended_at)
+    centre = source.location if isinstance(source, SensorFault) else source.centre
+    z = Zone(centre=centre, started_at=source.started_at, ended_at=source.ended_at)
     return Claim(rule_id=source.rule_id, anomaly_type=source.anomaly_type, zone=z)
 
 
 def track_finding(pseudonym="AC-48089ab4e5a9", at=START) -> DetectionFinding:
     return DetectionFinding(
-        scenario_run_id=RUN, rule_id="TRACK-GAP", finding_type="track_continuity_gap",
-        subject=pseudonym, started_at=at, ended_at=at + timedelta(seconds=120),
+        scenario_run_id=RUN,
+        rule_id="TRACK-GAP",
+        finding_type="track_continuity_gap",
+        subject=pseudonym,
+        started_at=at,
+        ended_at=at + timedelta(seconds=120),
         location=HERE,
-        evidence_refs=({"aircraft_id": pseudonym, "at": at.isoformat()},))
+        evidence_refs=({"aircraft_id": pseudonym, "at": at.isoformat()},),
+    )
 
 
 def build(reported, *, faults=(), zones=(), rf=None, tracks=(), suppressed=()):
     return build_bundles(
         Resolution(reported=tuple(reported), suppressed=tuple(suppressed)),
-        scenario_run_id=RUN, faults=tuple(faults), zones=tuple(zones),
-        rf=rf or RfNoiseFindings(), track_findings=tuple(tracks))
+        scenario_run_id=RUN,
+        faults=tuple(faults),
+        zones=tuple(zones),
+        rf=rf or RfNoiseFindings(),
+        track_findings=tuple(tracks),
+    )
 
 
 # --------------------------------------------------------------- the unit
+
 
 def test_one_reported_claim_makes_one_bundle():
     # spec: evb-001 -- the unit is a claim, and the item's phrase "a group of
     # related anomalies from one scenario run" predates the ladder.
     f = fault()
-    bundles = build([claim_for(f)], faults=[f], rf=RfNoiseFindings(
-        anomalies=(episode("RF-03", 4),)))
+    bundles = build(
+        [claim_for(f)], faults=[f], rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),))
+    )
     assert len(bundles) == 1
     assert bundles[0].anomaly_type == f.anomaly_type
 
@@ -159,12 +218,20 @@ def test_two_events_in_one_run_make_two_bundles():
     # anom-013 already refuses to merge them (suppression is cross-rule
     # only), so a builder grouping by run would silently cap each run at one.
     a = fault("RF-03")
-    b = SensorFault(sensor_id="RF-07", started_at=START, ended_at=END,
-                    location=THERE, confidence=Confidence.HIGH,
-                    spatial=spatial(), spectral=spectral())
-    bundles = build([claim_for(a), claim_for(b)], faults=[a, b],
-                    rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),
-                                                  episode("RF-07", 4))))
+    b = SensorFault(
+        sensor_id="RF-07",
+        started_at=START,
+        ended_at=END,
+        location=THERE,
+        confidence=Confidence.HIGH,
+        spatial=spatial(),
+        spectral=spectral(),
+    )
+    bundles = build(
+        [claim_for(a), claim_for(b)],
+        faults=[a, b],
+        rf=RfNoiseFindings(anomalies=(episode("RF-03", 4), episode("RF-07", 4))),
+    )
     assert len(bundles) == 2
     assert {bundle.subject for bundle in bundles} == {"RF-03", "RF-07"}
 
@@ -175,13 +242,20 @@ def test_the_builder_does_not_regroup_nearby_claims():
     # a rule that this repository has recorded falling into once over
     # distance. Two claims the ladder kept apart stay apart, however close.
     a = fault("RF-03")
-    b = SensorFault(sensor_id="RF-04", started_at=START, ended_at=END,
-                    location=Location(lat=51.51, lon=6.01),  # ~1 km away
-                    confidence=Confidence.HIGH, spatial=spatial(),
-                    spectral=spectral())
-    bundles = build([claim_for(a), claim_for(b)], faults=[a, b],
-                    rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),
-                                                  episode("RF-04", 4))))
+    b = SensorFault(
+        sensor_id="RF-04",
+        started_at=START,
+        ended_at=END,
+        location=Location(lat=51.51, lon=6.01),  # ~1 km away
+        confidence=Confidence.HIGH,
+        spatial=spatial(),
+        spectral=spectral(),
+    )
+    bundles = build(
+        [claim_for(a), claim_for(b)],
+        faults=[a, b],
+        rf=RfNoiseFindings(anomalies=(episode("RF-03", 4), episode("RF-04", 4))),
+    )
     assert len(bundles) == 2
 
 
@@ -203,16 +277,19 @@ def test_a_claim_with_no_producer_is_refused():
 
 # ------------------------------------------------- the two stated failures
 
+
 def test_an_evidence_item_without_a_rule_id_is_refused():
     # spec: evb-001 (stated failure case), FR-402 -- the rule ID is what
     # makes an explanation checkable, so an item without one is not evidence.
     f = fault()
-    bundles = build([claim_for(f)], faults=[f],
-                    rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),)))
+    bundles = build(
+        [claim_for(f)], faults=[f], rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),))
+    )
     assert all(item.rule_id for item in bundles[0].evidence)
     with pytest.raises(BundleError):
         bundles[0].with_evidence(
-            tuple(item.without_rule_id() for item in bundles[0].evidence))
+            tuple(item.without_rule_id() for item in bundles[0].evidence)
+        )
 
 
 def test_a_bundle_with_no_evidence_is_refused():
@@ -220,10 +297,16 @@ def test_a_bundle_with_no_evidence_is_refused():
     # with nothing behind it is the thing this object exists to prevent.
     with pytest.raises(BundleError):
         EvidenceBundle(
-            scenario_run_id=RUN, anomaly_type="possible_sensor_fault",
-            rule_id="SENSOR-FAULT", subject="RF-03", time_window=(START, END),
-            affected_area=HERE, affected_channels=(4,), evidence=(),
-            known_uncertainties=())
+            scenario_run_id=RUN,
+            anomaly_type="possible_sensor_fault",
+            rule_id="SENSOR-FAULT",
+            subject="RF-03",
+            time_window=(START, END),
+            affected_area=HERE,
+            affected_channels=(4,),
+            evidence=(),
+            known_uncertainties=(),
+        )
 
 
 def test_adjacent_channels_of_one_sensor_group_into_one_bundle():
@@ -238,10 +321,14 @@ def test_adjacent_channels_of_one_sensor_group_into_one_bundle():
     # can produce a wide event. This proves the mechanism; that the
     # mechanism matters is owed to a broadband generation arm that does not
     # exist. Recorded on the item rather than discovered in a write-up.
-    wide = fault(spectral=spectral(channels=(0, 1, 2, 3, 4, 5, 6, 7),
-                                   adjacent_checked=(), adjacent_abnormal=()))
-    rf = RfNoiseFindings(anomalies=tuple(
-        episode("RF-03", channel) for channel in range(8)))
+    wide = fault(
+        spectral=spectral(
+            channels=(0, 1, 2, 3, 4, 5, 6, 7), adjacent_checked=(), adjacent_abnormal=()
+        )
+    )
+    rf = RfNoiseFindings(
+        anomalies=tuple(episode("RF-03", channel) for channel in range(8))
+    )
     bundles = build([claim_for(wide)], faults=[wide], rf=rf)
     assert len(bundles) == 1
     assert bundles[0].affected_channels == tuple(range(8))
@@ -250,6 +337,7 @@ def test_adjacent_channels_of_one_sensor_group_into_one_bundle():
 
 # ----------------------------------------------------- data mode, per item
 
+
 def test_a_fusion_bundle_spans_both_data_modes():
     # spec: evb-001 (amended) -- RF is ingested SYNTHETIC and replayed
     # tracks REPLAYED, so a fusion bundle draws on both by definition. A
@@ -257,11 +345,13 @@ def test_a_fusion_bundle_spans_both_data_modes():
     # SYNTHETIC ENVIRONMENT DATA badge is specified to reflect the data
     # rather than a UI constant.
     z = zone()
-    bundles = build([claim_for(z)], zones=[z], tracks=[track_finding()],
-                    rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),
-                                                  episode("RF-04", 4))))
-    assert bundles[0].data_modes == frozenset({DataMode.SYNTHETIC,
-                                               DataMode.REPLAYED})
+    bundles = build(
+        [claim_for(z)],
+        zones=[z],
+        tracks=[track_finding()],
+        rf=RfNoiseFindings(anomalies=(episode("RF-03", 4), episode("RF-04", 4))),
+    )
+    assert bundles[0].data_modes == frozenset({DataMode.SYNTHETIC, DataMode.REPLAYED})
     assert {item.data_mode for item in bundles[0].evidence} == bundles[0].data_modes
 
 
@@ -269,15 +359,21 @@ def test_every_evidence_item_carries_its_own_data_mode():
     # spec: evb-001 (amended) -- the mode belongs to the observation, not to
     # the bundle, so an RF item says synthetic even inside a fused bundle.
     z = zone()
-    bundles = build([claim_for(z)], zones=[z], tracks=[track_finding()],
-                    rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),)))
+    bundles = build(
+        [claim_for(z)],
+        zones=[z],
+        tracks=[track_finding()],
+        rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),)),
+    )
     # Keyed on the PAIR, not on `rule_id` alone: the rate excess and the
     # discontinuity both carry `TRACK-GAP`, because `anom-012` has no rule
     # id of its own, so a dict keyed on the rule id silently keeps one and
     # drops the other -- which a mutation pass caught here as two surviving
     # mutants rather than one failing test.
-    modes = {(item.rule_id, item.finding_type): item.data_mode
-             for item in bundles[0].evidence}
+    modes = {
+        (item.rule_id, item.finding_type): item.data_mode
+        for item in bundles[0].evidence
+    }
     assert modes[("RF-NOISE", "rf_noise_deviation")] is DataMode.SYNTHETIC
     assert modes[("TRACK-GAP", "track_rate_excess")] is DataMode.REPLAYED
     assert modes[("TRACK-GAP", "track_continuity_gap")] is DataMode.REPLAYED
@@ -285,6 +381,7 @@ def test_every_evidence_item_carries_its_own_data_mode():
 
 
 # --------------------------------------------- every absence is typed
+
 
 def test_not_measurable_corroboration_carries_its_reason_not_just_a_flag():
     # spec: evb-001 (amended), anom-005 -- this is the 41-of-60 case and the
@@ -294,10 +391,14 @@ def test_not_measurable_corroboration_carries_its_reason_not_just_a_flag():
     # bundle must say that, because the project's fusion claim is weaker
     # than it sounds and this object is what tells the model so.
     z = zone(corroboration=Corroboration.NOT_MEASURABLE, excess=None)
-    bundles = build([claim_for(z)], zones=[z],
-                    rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),)))
-    unmeasurable = [u for u in bundles[0].known_uncertainties
-                    if u.kind is UncertaintyKind.NOT_MEASURABLE]
+    bundles = build(
+        [claim_for(z)], zones=[z], rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),))
+    )
+    unmeasurable = [
+        u
+        for u in bundles[0].known_uncertainties
+        if u.kind is UncertaintyKind.NOT_MEASURABLE
+    ]
     assert len(unmeasurable) == 1
     assert unmeasurable[0].statement.strip()
     assert unmeasurable[0].statement != Corroboration.NOT_MEASURABLE.value
@@ -310,8 +411,9 @@ def test_measured_and_found_nothing_is_evidence_not_an_uncertainty():
     # ignorance the system does not have, which is the same collapse this
     # bundle exists to prevent, pointed the other way.
     z = zone(corroboration=Corroboration.NOT_CORROBORATED)
-    bundles = build([claim_for(z)], zones=[z],
-                    rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),)))
+    bundles = build(
+        [claim_for(z)], zones=[z], rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),))
+    )
     #
     # Asserted on `finding_type` and not on `rule_id`, because `anom-012`
     # has NO rule id of its own -- it reads `anom-010`'s findings and
@@ -320,10 +422,10 @@ def test_measured_and_found_nothing_is_evidence_not_an_uncertainty():
     # `finding_type` separates them. Recorded as a gap in FR-402's "every
     # item carries a rule ID": here the rule id alone is not identifying,
     # which matters for `ai-008` because grounding resolves rule ids.
-    assert any(item.finding_type == "track_rate_excess"
-               for item in bundles[0].evidence)
-    assert not any(u.kind is UncertaintyKind.NOT_MEASURABLE
-                   for u in bundles[0].known_uncertainties)
+    assert any(item.finding_type == "track_rate_excess" for item in bundles[0].evidence)
+    assert not any(
+        u.kind is UncertaintyKind.NOT_MEASURABLE for u in bundles[0].known_uncertainties
+    )
 
 
 def test_a_sensor_fault_bundle_states_the_track_side_is_not_applicable():
@@ -332,13 +434,18 @@ def test_a_sensor_fault_bundle_states_the_track_side_is_not_applicable():
     # it reads as not-measurable, which would be a false uncertainty claim
     # and the mirror image of the corroboration problem above.
     f = fault()
-    bundles = build([claim_for(f)], faults=[f],
-                    rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),)))
-    not_applicable = [u for u in bundles[0].known_uncertainties
-                      if u.kind is UncertaintyKind.NOT_APPLICABLE]
+    bundles = build(
+        [claim_for(f)], faults=[f], rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),))
+    )
+    not_applicable = [
+        u
+        for u in bundles[0].known_uncertainties
+        if u.kind is UncertaintyKind.NOT_APPLICABLE
+    ]
     assert len(not_applicable) == 1
-    assert not any(u.kind is UncertaintyKind.NOT_MEASURABLE
-                   for u in bundles[0].known_uncertainties)
+    assert not any(
+        u.kind is UncertaintyKind.NOT_MEASURABLE for u in bundles[0].known_uncertainties
+    )
 
 
 def test_nominal_neighbours_are_positive_evidence_with_their_margins():
@@ -347,10 +454,12 @@ def test_nominal_neighbours_are_positive_evidence_with_their_margins():
     # rather than the environment. It is evidence, not an absence, and the
     # margin is what an analyst would check.
     f = fault(spatial=spatial(neighbours=("RF-02", "RF-05")))
-    bundles = build([claim_for(f)], faults=[f],
-                    rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),)))
-    nominal = [item for item in bundles[0].evidence
-               if item.source in {"RF-02", "RF-05"}]
+    bundles = build(
+        [claim_for(f)], faults=[f], rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),))
+    )
+    nominal = [
+        item for item in bundles[0].evidence if item.source in {"RF-02", "RF-05"}
+    ]
     assert len(nominal) == 2
     assert all(item.rule_id == "SENSOR-FAULT" for item in nominal)
     assert all("db" in item.details for item in nominal)
@@ -360,16 +469,21 @@ def test_unjudged_cells_and_channels_become_uncertainties():
     # spec: evb-001 (amended), anom-001, anom-007 -- "I had no baseline, so
     # I did not look" is not "I looked and saw nothing", and only the second
     # is evidence.
-    f = fault(spatial=spatial(unjudged=("RF-06",)),
-              spectral=spectral(adjacent_unjudged=(5,)))
+    f = fault(
+        spatial=spatial(unjudged=("RF-06",)), spectral=spectral(adjacent_unjudged=(5,))
+    )
     rf = RfNoiseFindings(
         anomalies=(episode("RF-03", 4),),
         # On THIS receiver: a cell on another one is not about this event,
         # and the first version of this test put it on RF-08 and then
         # asserted a loose `>= 2`, so it passed without the cell ever
         # reaching the bundle. An exact count is what makes it load-bearing.
-        unjudged=(UnjudgedCell(cell=RfCell(sensor_id="RF-03", channel_index=2),
-                               reason="no baseline"),))
+        unjudged=(
+            UnjudgedCell(
+                cell=RfCell(sensor_id="RF-03", channel_index=2), reason="no baseline"
+            ),
+        ),
+    )
     bundles = build([claim_for(f)], faults=[f], rf=rf)
     kinds = [u.kind for u in bundles[0].known_uncertainties]
     assert kinds.count(UncertaintyKind.NOT_MEASURABLE) == 3
@@ -383,17 +497,27 @@ def test_suppressed_episodes_are_reported_as_looked_at_and_too_brief():
     f = fault()
     rf = RfNoiseFindings(
         anomalies=(episode("RF-03", 4),),
-        suppressed=(SuppressedEpisode(
-            cell=RfCell(sensor_id="RF-03", channel_index=6),
-            started_at=START, ended_at=START, readings=1,
-            minimum=timedelta(seconds=10)),))
+        suppressed=(
+            SuppressedEpisode(
+                cell=RfCell(sensor_id="RF-03", channel_index=6),
+                started_at=START,
+                ended_at=START,
+                readings=1,
+                minimum=timedelta(seconds=10),
+            ),
+        ),
+    )
     bundles = build([claim_for(f)], faults=[f], rf=rf)
-    brief = [u for u in bundles[0].known_uncertainties
-             if u.kind is UncertaintyKind.MEASURED_NEGATIVE]
+    brief = [
+        u
+        for u in bundles[0].known_uncertainties
+        if u.kind is UncertaintyKind.MEASURED_NEGATIVE
+    ]
     assert len(brief) == 1
 
 
 # ------------------------------------------------------ superseded claims
+
 
 def test_a_superseded_claim_is_carried_but_never_as_evidence():
     # spec: evb-001 (amended), ai-008 -- a suppressed claim is another
@@ -408,13 +532,17 @@ def test_a_superseded_claim_is_carried_but_never_as_evidence():
     # and 0 are suppressed, because exactly one rule bids per run. This path
     # is dormant until a second producing rule exists.
     f = fault()
-    loser = Claim(rule_id="SOURCE-GAP", anomaly_type="possible_data_source_issue",
-                  zone=claim_for(f).zone)
-    bundles = build([claim_for(f)], faults=[f],
-                    rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),)),
-                    suppressed=[Suppression(claim=loser,
-                                            claimed_by="SENSOR-FAULT",
-                                            reason=WHY)])
+    loser = Claim(
+        rule_id="SOURCE-GAP",
+        anomaly_type="possible_data_source_issue",
+        zone=claim_for(f).zone,
+    )
+    bundles = build(
+        [claim_for(f)],
+        faults=[f],
+        rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),)),
+        suppressed=[Suppression(claim=loser, claimed_by="SENSOR-FAULT", reason=WHY)],
+    )
     assert len(bundles[0].superseded) == 1
     assert bundles[0].superseded[0].rule_id == "SOURCE-GAP"
     assert "SOURCE-GAP" not in {item.rule_id for item in bundles[0].evidence}
@@ -425,13 +553,17 @@ def test_a_superseded_claim_names_the_rule_that_won_and_why():
     # than as a bare co-occurring fact, because the phrasing is what stops
     # it reading as support.
     f = fault()
-    loser = Claim(rule_id="SOURCE-GAP", anomaly_type="possible_data_source_issue",
-                  zone=claim_for(f).zone)
-    bundles = build([claim_for(f)], faults=[f],
-                    rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),)),
-                    suppressed=[Suppression(claim=loser,
-                                            claimed_by="SENSOR-FAULT",
-                                            reason=WHY)])
+    loser = Claim(
+        rule_id="SOURCE-GAP",
+        anomaly_type="possible_data_source_issue",
+        zone=claim_for(f).zone,
+    )
+    bundles = build(
+        [claim_for(f)],
+        faults=[f],
+        rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),)),
+        suppressed=[Suppression(claim=loser, claimed_by="SENSOR-FAULT", reason=WHY)],
+    )
     superseded = bundles[0].superseded[0]
     assert superseded.claimed_by == "SENSOR-FAULT"
     assert superseded.reason.strip()
@@ -442,29 +574,42 @@ def test_a_suppression_for_another_zone_does_not_reach_this_bundle():
     # in. Attaching every run's suppressions to every bundle would put a
     # competing explanation for somewhere else beside this event.
     a = fault("RF-03")
-    b = SensorFault(sensor_id="RF-07", started_at=START, ended_at=END,
-                    location=THERE, confidence=Confidence.HIGH,
-                    spatial=spatial(), spectral=spectral())
-    elsewhere = Claim(rule_id="SOURCE-GAP",
-                      anomaly_type="possible_data_source_issue",
-                      zone=claim_for(b).zone)
-    bundles = build([claim_for(a)], faults=[a],
-                    rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),)),
-                    suppressed=[Suppression(claim=elsewhere,
-                                            claimed_by="SENSOR-FAULT",
-                                            reason=WHY)])
+    b = SensorFault(
+        sensor_id="RF-07",
+        started_at=START,
+        ended_at=END,
+        location=THERE,
+        confidence=Confidence.HIGH,
+        spatial=spatial(),
+        spectral=spectral(),
+    )
+    elsewhere = Claim(
+        rule_id="SOURCE-GAP",
+        anomaly_type="possible_data_source_issue",
+        zone=claim_for(b).zone,
+    )
+    bundles = build(
+        [claim_for(a)],
+        faults=[a],
+        rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),)),
+        suppressed=[
+            Suppression(claim=elsewhere, claimed_by="SENSOR-FAULT", reason=WHY)
+        ],
+    )
     assert bundles[0].superseded == ()
 
 
 # ------------------------------------------------------------- boundaries
+
 
 def test_the_bundle_carries_no_ground_truth():
     # spec: evb-001, api-009 -- a consumer that can see the answer key
     # invalidates every metric computed from it. The answer lives on the run
     # record and nowhere else.
     f = fault()
-    bundles = build([claim_for(f)], faults=[f],
-                    rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),)))
+    bundles = build(
+        [claim_for(f)], faults=[f], rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),))
+    )
     forbidden = {"ground_truth", "staged", "answer", "injected", "scenario_type"}
     assert not (forbidden & {field.name for field in fields(bundles[0])})
 
@@ -475,8 +620,12 @@ def test_no_raw_aircraft_identifier_reaches_a_bundle():
     # Pseudonymisation happens far upstream, so the guarantee is INHERITED
     # -- and inherited is not proved, which is why this test exists.
     z = zone()
-    bundles = build([claim_for(z)], zones=[z], tracks=[track_finding()],
-                    rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),)))
+    bundles = build(
+        [claim_for(z)],
+        zones=[z],
+        tracks=[track_finding()],
+        rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),)),
+    )
     rendered = repr(bundles[0])
     assert "AC-" in rendered
     assert "icao24" not in rendered
@@ -504,16 +653,21 @@ def test_the_same_inputs_build_the_same_bundle():
 # be kept out of one, which is the more dangerous half: a bundle carrying a
 # neighbouring event's evidence is not malformed, it is wrong.
 
+
 def test_an_abnormal_neighbour_is_not_reported_as_nominal():
     # spec: evb-001, anom-007 -- the nominal neighbours are the whole
     # discriminating argument, so counting a deviating one among them would
     # manufacture the evidence that makes this a fault rather than the
     # environment.
     f = fault(spatial=spatial(neighbours=("RF-02", "RF-05"), abnormal=("RF-02",)))
-    bundles = build([claim_for(f)], faults=[f],
-                    rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),)))
-    nominal = {item.source for item in bundles[0].evidence
-               if item.finding_type == "neighbour_nominal"}
+    bundles = build(
+        [claim_for(f)], faults=[f], rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),))
+    )
+    nominal = {
+        item.source
+        for item in bundles[0].evidence
+        if item.finding_type == "neighbour_nominal"
+    }
     assert nominal == {"RF-05"}
 
 
@@ -533,10 +687,17 @@ def test_an_episode_outside_the_window_does_not_reach_this_bundle():
     # excludes a late episode and wrongly admits an early one, so a test
     # using a late episode would pass against a half-written comparison.
     f = fault("RF-03")
-    early = episode("RF-03", 2, started=START - timedelta(seconds=600),
-                    ended=START - timedelta(seconds=300))
-    bundles = build([claim_for(f)], faults=[f],
-                    rf=RfNoiseFindings(anomalies=(episode("RF-03", 4), early)))
+    early = episode(
+        "RF-03",
+        2,
+        started=START - timedelta(seconds=600),
+        ended=START - timedelta(seconds=300),
+    )
+    bundles = build(
+        [claim_for(f)],
+        faults=[f],
+        rf=RfNoiseFindings(anomalies=(episode("RF-03", 4), early)),
+    )
     assert all(item.started_at >= START for item in bundles[0].evidence)
 
 
@@ -545,10 +706,15 @@ def test_a_track_finding_outside_the_window_does_not_reach_this_bundle():
     # early side for the same reason.
     z = zone()
     stale = track_finding(at=START - timedelta(seconds=900))
-    bundles = build([claim_for(z)], zones=[z], tracks=[stale],
-                    rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),)))
-    assert not any(item.finding_type == "track_continuity_gap"
-                   for item in bundles[0].evidence)
+    bundles = build(
+        [claim_for(z)],
+        zones=[z],
+        tracks=[stale],
+        rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),)),
+    )
+    assert not any(
+        item.finding_type == "track_continuity_gap" for item in bundles[0].evidence
+    )
 
 
 def test_affected_channels_come_from_the_evidence_not_the_rules_summary():
@@ -557,8 +723,9 @@ def test_affected_channels_come_from_the_evidence_not_the_rules_summary():
     # would name channels no evidence item mentions, and `ai-008` would
     # have nothing to resolve them against.
     f = fault(spectral=spectral(channels=(0, 1, 2)))
-    bundles = build([claim_for(f)], faults=[f],
-                    rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),)))
+    bundles = build(
+        [claim_for(f)], faults=[f], rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),))
+    )
     assert bundles[0].affected_channels == (4,)
 
 
@@ -567,13 +734,17 @@ def test_a_suppression_claimed_by_another_rule_does_not_reach_this_bundle():
     # actually took the zone from it. Attaching one a different rule won
     # would credit this bundle with beating an argument it never met.
     f = fault()
-    loser = Claim(rule_id="SOURCE-GAP", anomaly_type="possible_data_source_issue",
-                  zone=claim_for(f).zone)
-    bundles = build([claim_for(f)], faults=[f],
-                    rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),)),
-                    suppressed=[Suppression(claim=loser,
-                                            claimed_by="FUSION-SPATIAL",
-                                            reason=WHY)])
+    loser = Claim(
+        rule_id="SOURCE-GAP",
+        anomaly_type="possible_data_source_issue",
+        zone=claim_for(f).zone,
+    )
+    bundles = build(
+        [claim_for(f)],
+        faults=[f],
+        rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),)),
+        suppressed=[Suppression(claim=loser, claimed_by="FUSION-SPATIAL", reason=WHY)],
+    )
     assert bundles[0].superseded == ()
 
 
@@ -583,12 +754,18 @@ def test_a_suppression_from_another_window_does_not_reach_this_bundle():
     # bundle must scope the same way or it reports a competitor from an
     # hour it has nothing to do with.
     f = fault()
-    later = Zone(centre=HERE, started_at=END + timedelta(seconds=600),
-                 ended_at=END + timedelta(seconds=900))
-    loser = Claim(rule_id="SOURCE-GAP", anomaly_type="possible_data_source_issue",
-                  zone=later)
-    bundles = build([claim_for(f)], faults=[f],
-                    rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),)),
-                    suppressed=[Suppression(claim=loser, claimed_by="SENSOR-FAULT",
-                                            reason=WHY)])
+    later = Zone(
+        centre=HERE,
+        started_at=END + timedelta(seconds=600),
+        ended_at=END + timedelta(seconds=900),
+    )
+    loser = Claim(
+        rule_id="SOURCE-GAP", anomaly_type="possible_data_source_issue", zone=later
+    )
+    bundles = build(
+        [claim_for(f)],
+        faults=[f],
+        rf=RfNoiseFindings(anomalies=(episode("RF-03", 4),)),
+        suppressed=[Suppression(claim=loser, claimed_by="SENSOR-FAULT", reason=WHY)],
+    )
     assert bundles[0].superseded == ()

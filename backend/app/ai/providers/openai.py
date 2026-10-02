@@ -331,7 +331,6 @@ def _client_from_environment() -> Any:
     return openai.OpenAI(api_key=key)
 
 
-
 __all__ = [
     "API_KEY_VARIABLE",
     "UNSUPPORTED_BY_STRICT_MODE",
