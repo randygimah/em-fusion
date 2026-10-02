@@ -90,10 +90,9 @@ from app.detection.track_gap import RULE_ID as GAP_RULE
 from app.main import app
 from app.scenario.layout import load_layout
 from tests.conftest import live_database_url, requires_database
-from tests.contracts import contract_paths
+from tests.contracts import contract_paths, union_members
 from tests.contracts import interfaces as _interfaces
 from tests.contracts import read_contract as _read
-from tests.contracts import union_members
 
 CONTRACT_PATHS = contract_paths("operationalPicture.ts")
 
@@ -295,7 +294,9 @@ def test_the_sections_with_no_producer_are_empty_rather_than_invented(
     is the field the detection stamp governs.
     """
     # spec: api-002, api-012
-    picture = build_operational_picture(layout=LAYOUT, run=_run(), observations=[_observation()])
+    picture = build_operational_picture(
+        layout=LAYOUT, run=_run(), observations=[_observation()]
+    )
 
     assert getattr(picture, section) == []
 
@@ -312,7 +313,9 @@ def test_the_detection_summary_is_absent_rather_than_optimistic() -> None:
     the same empty result. One absence, one meaning.
     """
     # spec: api-002, api-012, db-007
-    picture = build_operational_picture(layout=LAYOUT, run=_run(), observations=[_observation()])
+    picture = build_operational_picture(
+        layout=LAYOUT, run=_run(), observations=[_observation()]
+    )
 
     assert picture.detectionSummary is None
 
@@ -322,7 +325,9 @@ def test_altitude_is_converted_from_metres_to_feet() -> None:
     # 5753.1 m is 18,874 ft: a conversion that silently did nothing would still
     # produce a plausible-looking altitude, so the fixture value is one where
     # the two units are not confusable.
-    picture = build_operational_picture(layout=LAYOUT, run=_run(), observations=[_observation()])
+    picture = build_operational_picture(
+        layout=LAYOUT, run=_run(), observations=[_observation()]
+    )
 
     assert picture.aircraftTracks[0].altitudeFt == ALTITUDE_FT
 
@@ -331,8 +336,7 @@ def test_a_track_with_no_altitude_survives_rather_than_being_dropped() -> None:
     # spec: api-002 -- 22.7% of positioned rows in the corpus carry no altitude,
     # and an aircraft with an unknown height is still an aircraft on the map
     picture = build_operational_picture(
-        layout=LAYOUT,
-        run=_run(), observations=[_observation(altitude_m=None)]
+        layout=LAYOUT, run=_run(), observations=[_observation(altitude_m=None)]
     )
 
     assert len(picture.aircraftTracks) == 1
@@ -345,7 +349,8 @@ def test_the_track_name_is_the_pseudonym_it_was_stored_under() -> None:
     # identifier would surface in if one ever survived ingest
     picture = build_operational_picture(
         layout=LAYOUT,
-        run=_run(), observations=[_observation(aircraft_id="AC-deadbeef0001")]
+        run=_run(),
+        observations=[_observation(aircraft_id="AC-deadbeef0001")],
     )
 
     assert picture.aircraftTracks[0].name == "AC-deadbeef0001"
@@ -354,7 +359,9 @@ def test_the_track_name_is_the_pseudonym_it_was_stored_under() -> None:
 def test_the_data_mode_comes_from_the_observations_actually_served() -> None:
     # spec: api-002 -- reported rather than assumed. A run row does not record a
     # data mode; the observations do, and they are what is on the screen.
-    picture = build_operational_picture(layout=LAYOUT, run=_run(), observations=[_observation()])
+    picture = build_operational_picture(
+        layout=LAYOUT, run=_run(), observations=[_observation()]
+    )
 
     assert picture.scenario is not None
     assert picture.scenario.dataMode == DataMode.REPLAYED.value
@@ -394,7 +401,9 @@ def test_a_run_with_no_observations_reports_an_unknown_data_mode() -> None:
 
 def test_the_scenario_reports_the_run_it_came_from() -> None:
     # spec: api-002 -- the id is what makes a screenshot traceable to a run
-    picture = build_operational_picture(layout=LAYOUT, run=_run(run_id=8), observations=[])
+    picture = build_operational_picture(
+        layout=LAYOUT, run=_run(run_id=8), observations=[]
+    )
 
     assert picture.scenario is not None
     assert picture.scenario.id == "8"
@@ -608,17 +617,38 @@ def test_no_source_identifier_reaches_the_payload(
 def test_the_payload_carries_no_decimal_score(
     picture_database: Engine, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # spec: api-002, FR-715, AC-11 -- asserted on the wire, not only on the two
-    # declarations, because this is the form an analyst would actually receive
+    """`FR-715`, `AC-11`, on the wire rather than on the two declarations.
+
+    Scored, which is `api-012`'s correction to this test rather than a
+    convenience: before it, the summary this fetched was null on every run, so
+    the assertion ran over two nulls and held whatever the levels would have
+    been. An absence assertion over an absent object is the vacuous pass this
+    project keeps finding -- and the only payload that can carry a decimal is
+    the one that carries readings.
+    """
+    # spec: api-002, api-012, FR-715, AC-11
     _insert_run(picture_database, RUN_ID, completed=True)
     _save(picture_database, [_observation()])
+    factory = sessionmaker(bind=picture_database, autoflush=False)
+    save_findings(
+        factory,
+        scenario_run_id=RUN_ID,
+        rule_id=RF_RULE,
+        findings=[_rf()],
+        policy={"RF-NOISE.threshold_db": "6.0"},
+    )
+    record_detection_pass(factory, RUN_ID, policy={"RF-NOISE.threshold_db": "6.0"})
 
     summary = _get(picture_database, monkeypatch)["detectionSummary"]
 
-    assert all(
-        value is None or value in {"Low", "Medium", "High"}
-        for value in summary.values()
-    )
+    assert summary is not None, "a scored run served no summary to check"
+    assert summary["anomalyLevel"] in {"Low", "Medium", "High"}
+    assert summary["signalIntegrity"] in {"Low", "Medium", "High"}
+    # Over the counts too, because a count is the one place a number belongs
+    # here and so the one place a decimal could pass for a reading.
+    for entry in summary["counts"]:
+        assert entry["count"] is None or isinstance(entry["count"], int)
+        assert not isinstance(entry["count"], float)
 
 
 # Mutation results, 2026-09-04. Three of the assertions above claim an absence
@@ -733,9 +763,7 @@ def _scored(
 def _count_for(picture: OperationalPicture, key: tuple[str, str]) -> DetectionCount:
     assert picture.detectionSummary is not None
     found = [
-        c
-        for c in picture.detectionSummary.counts
-        if (c.ruleId, c.findingType) == key
+        c for c in picture.detectionSummary.counts if (c.ruleId, c.findingType) == key
     ]
     assert len(found) == 1, f"{key} appears {len(found)} times in the account"
     return found[0]
@@ -882,11 +910,28 @@ def test_the_account_keys_on_the_pair_and_not_on_the_rule() -> None:
     `anom-012` borrows `anom-010`'s rule id, so a rate excess and a
     discontinuity are identical by rule id while making different claims. The
     fourth place in this project that collision has had to be handled.
+
+    **The fixture has to carry both halves of the collision.** Written with one
+    discontinuity and nothing else, this test passed against an account keyed on
+    the rule alone -- one `TRACK-GAP` finding is one either way -- and the
+    mutation pass found it. That is the third time a one-item fixture has hidden
+    a defect here, after `anom-009` and `anom-015`, and the shape is now a
+    standing caution: a suite is weakest exactly where its fixtures are
+    simplest.
     """
     # spec: api-012, ai-001, anom-012
-    picture = _scored([_gap()])
+    picture = _scored(
+        [
+            _gap(),
+            _finding(
+                rule_id=GAP_RULE, finding_type=EXCESS_TYPE, subject="RF-01", details={}
+            ),
+        ]
+    )
 
     assert _count_for(picture, (GAP_RULE, GAP_TYPE)).count == 1
+    # Not persisted, so it carries no count either way -- which is why the
+    # assertion that matters is the one above: keyed on the rule, it reads 2.
     assert _count_for(picture, (GAP_RULE, EXCESS_TYPE)).count is None
 
 
@@ -1208,9 +1253,7 @@ def test_the_endpoint_serves_a_run_the_pass_has_scored(
         findings=[_fault()],
         policy={"RF-NOISE.threshold_db": "6.0"},
     )
-    record_detection_pass(
-        factory, RUN_ID, policy={"RF-NOISE.threshold_db": "6.0"}
-    )
+    record_detection_pass(factory, RUN_ID, policy={"RF-NOISE.threshold_db": "6.0"})
 
     payload = _get(picture_database, monkeypatch)
 
@@ -1242,3 +1285,40 @@ def test_the_endpoint_reports_an_unscored_run_as_unscored(
     assert payload["detectionSummary"] is None
     assert payload["timelineEvents"] == []
     assert {sensor["health"] for sensor in payload["rfSensors"]} == {"unknown"}
+
+
+def test_a_finding_naming_a_receiver_outside_the_layout_is_refused() -> None:
+    """Spec: api-012, scn-005.
+
+    The findings and the layout have to be the same layout. Dropped silently,
+    the receiver a rule named faulty is absent from the strip while the seven
+    served read nominal -- a reassurance nothing checked, on a run where
+    something was checked and found broken. Loud is the right failure here
+    because the only way to reach it is serving findings produced against a
+    different configuration, which no correct pass does.
+    """
+    # spec: api-012, scn-005
+    with pytest.raises(PictureError, match="RF-99"):
+        _scored([_fault("RF-99")])
+
+
+def test_a_layout_whose_channels_span_two_bands_is_refused() -> None:
+    """Spec: api-012, scn-005.
+
+    The contract carries one band per receiver and the layout carries a channel
+    plan, so the two agree only while that plan is one band -- which the shipped
+    layout is. Taking the first channel's band would label every receiver with
+    it, which on a two-band layout is silently wrong for whichever receivers
+    watch the other, in the field an analyst reads to know what is monitored.
+    """
+    # spec: api-012, scn-005
+    channels = (
+        LAYOUT.channels[0],
+        LAYOUT.channels[1].model_copy(update={"band": "GNSS-L5"}),
+    )
+    split = LAYOUT.model_copy(update={"channels": channels})
+
+    with pytest.raises(PictureError, match="GNSS-L5"):
+        build_operational_picture(
+            layout=split, run=_run(), observations=[_observation()]
+        )

@@ -199,6 +199,38 @@ class ScenarioRunSummary(BaseModel):
     completed_at: datetime | None
 
 
+class DetectionPass(BaseModel):
+    """That a run was examined, when, and under what settings. Spec: anom-015.
+
+    **A separate object rather than two more fields on `ScenarioRunSummary`**,
+    and for `ScenarioRunDetail`'s reason in reverse. The summary is served on
+    the operational picture, and this is read there too -- but it is read as an
+    *answer to a different question*, "has anything looked at this run", which
+    `api-012` turns into the presence or absence of a whole section of the
+    payload. Carried on the summary it would also travel to `/scenario/runs`,
+    where `api-006` serves a contract that does not ask for it.
+
+    The value of this type is that it **cannot exist for a run nothing
+    examined**. A nullable pair of fields on the summary makes a stamp without
+    its policy, and a policy without its stamp, both representable -- and the
+    second is a run claiming settings for an examination that never happened.
+
+    `at` is the **database's** clock, written by `now()` where the row is
+    stamped, following `complete_scenario_run`: when something happened to a run
+    is one clock's to keep, or two producers on two machines write times that
+    cannot be ordered against each other.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    scenario_run_id: int
+    at: datetime
+    #: `eval-003`'s vocabulary verbatim, as `anom-015` records it. Required: a
+    #: pass with no settings recorded is the unprovenanced state, and that state
+    #: is the *absence of this object*, not an empty mapping inside one.
+    policy: dict[str, str]
+
+
 class ScenarioRunDetail(ScenarioRunSummary):
     """A run as the Scenario Control screen lists it. Spec: api-006.
 

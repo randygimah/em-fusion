@@ -39,11 +39,26 @@ API_ROOT = BACKEND_ROOT / "app" / "api"
 #: different hat.
 STORAGE_PACKAGES = ("sqlalchemy", "geoalchemy2", "psycopg", "alembic")
 
-#: The only two storage modules the API may name. `repository` is the port
-#: `FR-904` requires everything to go through; `session` supplies the
-#: dependency and the type alias for it. Anything else under `app.db` is the
-#: implementation, and a handler that reaches for it has gone around the port.
-ALLOWED_STORAGE_MODULES = {"app.db.repository", "app.db.session"}
+#: The storage modules the API may name. `repository` is the port `FR-904`
+#: requires everything to go through; `session` supplies the dependency and the
+#: type alias for it. Anything else under `app.db` is reaching past the port.
+#:
+#: `app.db.findings` was added 2026-10-02 with `api-012`, and the reason is that
+#: this list encodes a **role** and was written when the role had one module.
+#: `db-006`'s own wording is "handlers obtain data only by calling a repository
+#: function", and `findings_for_run` is one -- `app/db/` grew `findings.py`,
+#: `bundles.py` and `hypotheses.py` after this check was written, all of them
+#: the same layer doing the same job. What would be a violation is a handler
+#: holding the SQL itself, constructing a session, or naming a PostGIS
+#: function, and those are the three rules below; they are unchanged and they
+#: are where this check's teeth are. Widened by the module actually needed
+#: rather than by a prefix, so the list stays a decision: `bundles` and
+#: `hypotheses` are not here, and a route reaching for one has to argue for it.
+ALLOWED_STORAGE_MODULES = {
+    "app.db.repository",
+    "app.db.session",
+    "app.db.findings",
+}
 
 #: Enough of a SQL statement to be a SQL statement. Anchored on a keyword
 #: followed by whitespace so that a route path or a tag cannot trip it.
@@ -299,3 +314,20 @@ def test_each_forbidden_shape_is_recognised(statement: str) -> None:
 # than it should be for a structural test: `app/api/v1/operational_picture.py`
 # imported `sqlalchemy.orm` to annotate a parameter it never constructed. Fixed
 # by naming the type in `app/db/session.py` instead.
+
+
+def test_the_allowlist_names_only_real_repository_modules() -> None:
+    """The guard on the guard. Spec: db-006, api-012.
+
+    An allowlist is the one part of a check that can be widened to let a
+    violation through, so two things are asserted about it rather than left to
+    review: every entry exists, and none of them is a module that would
+    otherwise be caught -- a storage engine spelled into this set would disable
+    the first rule for every route at once.
+    """
+    # spec: db-006, api-012
+    for module in ALLOWED_STORAGE_MODULES:
+        path = BACKEND_ROOT / Path(*module.split(".")).with_suffix(".py")
+        assert path.is_file(), f"{module} is allowed and does not exist"
+        assert module.startswith("app.db."), f"{module} is not a storage module"
+    assert not ALLOWED_STORAGE_MODULES & set(STORAGE_PACKAGES)

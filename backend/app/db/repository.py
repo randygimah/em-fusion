@@ -45,6 +45,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.dal.models import (
     PAYLOAD_TYPES,
     CanonicalObservation,
+    DetectionPass,
     Location,
     ObservationType,
     Provenance,
@@ -304,6 +305,88 @@ def complete_scenario_run(session_factory: sessionmaker[Session], run_id: int) -
                 f"scenario run {run_id} does not exist, so it cannot be marked "
                 f"complete: {result.rowcount} rows updated."
             )
+
+
+def record_detection_pass(
+    session_factory: sessionmaker[Session],
+    run_id: int,
+    *,
+    policy: Mapping[str, str],
+) -> None:
+    """Record that the detection pass examined this run. Spec: anom-015.
+
+    Beside `complete_scenario_run` and shaped like it, for the same reasons:
+    a free function because not every producer of a pass holds an observation
+    repository, `now()` because when something happened to a run is one clock's
+    to keep, and a refusal on nothing updated because PostgreSQL reports no
+    error for an `UPDATE` that matches nothing.
+
+    That last one bites harder here than it does on completion. A silent
+    no-match leaves the run reporting itself **unexamined after a complete
+    examination**, and `api-012` then serves no detection summary -- which is
+    exactly what it serves before any pass has run. The failure is invisible in
+    the one direction nobody would think to check.
+
+    The write **replaces**, following `db-008`: a re-scored run holds one set of
+    findings, so a stamp that accumulated would leave the run claiming two
+    examinations under two policies while the rows came from one of them.
+    """
+    with session_factory.begin() as session:
+        # `session.connection()` rather than `session.execute()`, for
+        # `rowcount`, as `complete_scenario_run` above.
+        result = session.connection().execute(
+            text(
+                "UPDATE scenario_runs "
+                "SET detection_pass_at = now(), "
+                "    detection_policy = CAST(:policy AS jsonb) "
+                "WHERE id = :run_id"
+            ),
+            {"policy": json.dumps(dict(policy)), "run_id": run_id},
+        )
+        if result.rowcount != 1:
+            raise LookupError(
+                f"scenario run {run_id} does not exist, so a detection pass "
+                f"cannot be recorded against it: {result.rowcount} rows "
+                "updated. An UPDATE matching nothing succeeds at the database "
+                "while losing the fact here, and the run then reports itself "
+                "unexamined -- indistinguishable from never having been looked "
+                "at."
+            )
+
+
+def detection_pass_for_run(
+    session_factory: sessionmaker[Session], run_id: int
+) -> DetectionPass | None:
+    """What examined this run, or None if nothing is known to have. Spec: anom-015.
+
+    None covers a run nothing ever looked at, a pass that died before stamping,
+    and a run id that does not exist. The three are one answer on purpose:
+    every caller of this is asking whether there is a detection result to
+    serve, and for that question they are the same state -- `db-007`'s
+    *not known to have finished* one column along.
+
+    The policy is read back with the stamp rather than separately, because a
+    stamp without its settings is the state `eval-003` calls worse than none.
+    """
+    with session_factory.begin() as session:
+        row = (
+            session.execute(
+                text(
+                    "SELECT id, detection_pass_at, detection_policy "
+                    "FROM scenario_runs WHERE id = :run_id"
+                ),
+                {"run_id": run_id},
+            )
+            .mappings()
+            .first()
+        )
+    if row is None or row["detection_pass_at"] is None:
+        return None
+    return DetectionPass(
+        scenario_run_id=row["id"],
+        at=row["detection_pass_at"],
+        policy=dict(row["detection_policy"] or {}),
+    )
 
 
 def latest_run(session_factory: sessionmaker[Session]) -> ScenarioRunSummary | None:

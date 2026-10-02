@@ -20,13 +20,43 @@ const operationalPicture: OperationalPicture = {
   detectionSummary: {
     anomalyLevel: "High",
     signalIntegrity: "Medium",
+    counts: [
+      {
+        ruleId: "SENSOR-FAULT",
+        findingType: "possible_sensor_fault",
+        kind: "reportable",
+        count: 0,
+        unavailable: null,
+      },
+      {
+        ruleId: "FUSION-SPATIAL",
+        findingType: "possible_interference_zone",
+        kind: "reportable",
+        count: 1,
+        unavailable: null,
+      },
+      {
+        ruleId: "SOURCE-GAP",
+        findingType: "possible_data_source_issue",
+        kind: "reportable",
+        count: null,
+        unavailable: "rule-not-built",
+      },
+      {
+        ruleId: "RF-NOISE",
+        findingType: "rf_noise_deviation",
+        kind: "intermediate",
+        count: 12,
+        unavailable: null,
+      },
+    ],
   },
   rfSensors: [
     {
       id: "sensor-001",
       stationName: "Station Gamma",
-      signalId: "AZ-402",
-      health: "healthy",
+      signalId: "GNSS-L1",
+      health: "deviating",
       lat: 34.0522,
       lon: -118.2437,
     },

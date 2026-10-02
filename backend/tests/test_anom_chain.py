@@ -1148,6 +1148,20 @@ def test_a_reported_fault_is_written_as_a_finding(migrated_database: Engine) -> 
     # The confidence travels in `details`, as `anom-001`'s severity does: it
     # qualifies the attribution and the table has no column for either.
     assert stored[0].details["confidence"] in {"low", "medium", "high"}
+    # And the neighbours it was asked about, which the mutation pass found
+    # unasserted. "Every receiver within 70 km read nominal" is the claim this
+    # rule makes; a row carrying the verdict without the receivers states a
+    # conclusion an analyst cannot test, and `anom-007` is explicit that an
+    # empty neighbour set is a *refusal* and never a pass -- so the one value
+    # that must not be stored here is the one the mutant wrote.
+    assert stored[0].details["neighbours"], (
+        "the attribution was stored without the receivers it rested on: "
+        "no neighbours is anom-007's refusal, not its verdict"
+    )
+    assert set(stored[0].details["neighbours"]) <= {
+        site.sensor_id for site in LAYOUT.sensors
+    }
+    assert stored[0].details["neighbour_radius_km"] > 0
 
 
 @requires_database

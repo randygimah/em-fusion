@@ -69,13 +69,13 @@ scripts grew, each inventing five fields the row already holds.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import timedelta
 
 from app.dal.models import ObservationType, ScenarioRunSummary
 from app.db.findings import save_findings
-from app.db.repository import observations_for_run
+from app.db.repository import observations_for_run, record_detection_pass
 from app.detection.baseline import BaselineTable
 from app.detection.bundle import EvidenceBundle, build_bundles
 from app.detection.clustering import FINDING_TYPE as CLUSTER_TYPE
@@ -85,7 +85,13 @@ from app.detection.clustering import (
     TrackGapCluster,
     cluster_track_gaps,
 )
-from app.detection.findings import DetectionFinding, from_rf_noise, from_track_gap
+from app.detection.findings import (
+    DetectionFinding,
+    from_interference_zone,
+    from_rf_noise,
+    from_sensor_fault,
+    from_track_gap,
+)
 from app.detection.fusion import ANOMALY_TYPE as INTERFERENCE_TYPE
 from app.detection.fusion import RULE_ID as FUSION_RULE
 from app.detection.fusion import (
@@ -309,6 +315,36 @@ class Assessment:
         }
 
 
+def reported_findings(
+    resolution: Resolution,
+    *,
+    evidence: Sequence[tuple[Claim, DetectionFinding]],
+) -> tuple[DetectionFinding, ...]:
+    """The findings for the claims `anom-013` reported, and no others.
+
+    Pure, and separated from the write for the reason the write cannot be: the
+    decision is "which conclusions reached the analyst", which is checkable with
+    two constructed claims, while the write needs a database and a whole run to
+    stage a contest in.
+
+    **A suppressed claim is never written.** It is a *competing conclusion* and
+    not a second event -- `evb-001` carries one in `superseded` and never in the
+    evidence list, precisely so that co-occurrence is not read as concurrence --
+    and stored beside the claim that beat it, every count over the table reads
+    two events where there was one.
+
+    Matched on **identity**, as `Assessment.receivers_for` is and for the same
+    reason sharpened: a `Claim` is a frozen dataclass of a rule id, a type and a
+    zone, so two claims of one rule over one zone are *equal*. A membership test
+    would write the finding of a claim the ladder never reported. The ladder
+    passes claims through unchanged, so the object reported is the object bid.
+    """
+    reported = resolution.reported
+    return tuple(
+        finding for claim, finding in evidence if any(claim is won for won in reported)
+    )
+
+
 def assess(
     run: ScenarioRunSummary,
     *,
@@ -426,6 +462,44 @@ def assess(
     )
     resolution = resolve([*fault_claims, *zone_claims], layout, policies.ladder)
 
+    # The conclusions, written down. Until `anom-015`'s second amendment they
+    # were not: only the rules something later *queries* had rows, so from any
+    # other process the two claims this whole chain exists to produce did not
+    # exist. Per rule, because `db-008` replaces per run per rule -- and both
+    # calls happen whether or not either rule claimed anything, since the
+    # replace at zero is what clears a previous pass's rows.
+    conclusions = reported_findings(
+        resolution,
+        evidence=(
+            *(
+                (claim, from_sensor_fault(fault, scenario_run_id=run.id))
+                for claim, fault in zip(fault_claims, faults.faults, strict=True)
+            ),
+            *(
+                (claim, from_interference_zone(zone, scenario_run_id=run.id))
+                for claim, zone in zip(zone_claims, interference.zones, strict=True)
+            ),
+        ),
+    )
+    # Written out rather than looped, and the reason is a test: `api-012`
+    # declares which producers this pass persists, and the only honest way to
+    # hold that declaration to the pass is to read the rule ids off these calls.
+    # A loop variable hides them from a reader of this module as well.
+    save_findings(
+        session_factory,  # type: ignore[arg-type]
+        scenario_run_id=run.id,
+        rule_id=FAULT_RULE,
+        findings=[f for f in conclusions if f.rule_id == FAULT_RULE],
+        policy=policy,
+    )
+    save_findings(
+        session_factory,  # type: ignore[arg-type]
+        scenario_run_id=run.id,
+        rule_id=FUSION_RULE,
+        findings=[f for f in conclusions if f.rule_id == FUSION_RULE],
+        policy=policy,
+    )
+
     # Built, not stored -- see the module docstring. A caller with no
     # pre-registered population to protect stores them with `db/bundles.save_bundles`.
     bundles = build_bundles(
@@ -435,6 +509,23 @@ def assess(
         zones=interference.zones,
         rf=episodes,
         track_findings=gaps,
+    )
+
+    # **Last**, after every write. A pass that dies midway then leaves a run
+    # that is not known to have been scored, rather than one claiming an
+    # examination it did not finish -- and `db-008`'s replace semantics make
+    # running it again the whole recovery. Stamped first, a crash would leave a
+    # complete-looking record over a partial set of findings, which nothing can
+    # detect from either side.
+    #
+    # Written whether or not anything was found, which is the point of it: the
+    # findings write replaces per run per rule *including at zero*, so a run
+    # examined and found clean leaves exactly what a run nobody examined leaves.
+    # This is the only thing that tells the two apart (`anom-008`, `api-012`).
+    record_detection_pass(
+        session_factory,  # type: ignore[arg-type]
+        run.id,
+        policy=policy,
     )
     return Assessment(
         scenario_run_id=run.id,

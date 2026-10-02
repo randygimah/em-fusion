@@ -32,8 +32,13 @@ from app.detection.track_gap import TrackGapFinding
 if TYPE_CHECKING:
     # Under TYPE_CHECKING only: `app.detection.clustering` reaches the
     # database through `app.db.findings`, which imports this module, so a
-    # runtime import here would close the loop.
+    # runtime import here would close the loop. `app.detection.fusion` reaches
+    # it the same way, through `app.detection.rate_excess`. `sensor_fault` does
+    # not, and is here anyway: the two conclusions arrive together and a reader
+    # should not have to work out which of them could be imported.
     from app.detection.clustering import TrackGapCluster
+    from app.detection.fusion import InterferenceZone
+    from app.detection.sensor_fault import SensorFault
 
 
 @dataclass(frozen=True, slots=True)
@@ -184,5 +189,90 @@ def from_track_cluster(
             "size": cluster.size,
             "members": list(cluster.members),
             "hull_wkt": cluster.hull_wkt,
+        },
+    )
+
+
+def from_sensor_fault(fault: SensorFault, *, scenario_run_id: int) -> DetectionFinding:
+    """An `anom-007` attribution as a storable finding. Spec: anom-015.
+
+    Added with `anom-015`'s second amendment, and the gap it closes is worth
+    stating: the pass persisted its *evidence* and not its *conclusions*. The
+    two rules at the end of the ladder returned their claims on the assessment
+    and wrote nowhere, because the only reason the earlier rules were written
+    down was that `anom-004` and `anom-012` read those rows back. Nothing reads
+    a conclusion back inside one process -- and `api-012` is another process,
+    where a conclusion nothing stored does not exist.
+
+    **No refs, and the declaration is the point.** This rule measures no
+    readings of its own: it judges the *shape* of an abnormality from
+    `anom-001`'s episodes and the readings around them, so there is no row that
+    is the fault. That is `evb-001`'s `Grounding.DERIVED` -- a judgement has no
+    citation -- and writing the window here as a ref would be the defect
+    `from_track_gap` records, one rule along.
+
+    **The confidence travels in `details` and qualifies the attribution**, never
+    the deviation, whose severity `anom-001` already carries on its own rows.
+    The neighbour evidence travels with it because the attribution is only
+    checkable against what was asked: "every receiver within 70 km read nominal"
+    is the claim, and a row carrying the verdict without the receivers states a
+    conclusion an analyst cannot test.
+    """
+    return DetectionFinding(
+        scenario_run_id=scenario_run_id,
+        rule_id=fault.rule_id,
+        finding_type=fault.anomaly_type,
+        subject=fault.sensor_id,
+        started_at=fault.started_at,
+        ended_at=fault.ended_at,
+        location=fault.location,
+        details={
+            "confidence": fault.confidence.value,
+            "neighbours": list(fault.spatial.neighbours),
+            "neighbour_radius_km": fault.spatial.radius_km,
+            "channels": list(fault.spectral.channels),
+        },
+    )
+
+
+def from_interference_zone(
+    zone: InterferenceZone, *, scenario_run_id: int
+) -> DetectionFinding:
+    """An `anom-005` zone as a storable finding. Spec: anom-015.
+
+    **The subject names one receiver and `details` names them all**, which is
+    not redundancy. `anom-005`'s zone is established by more than one receiver
+    deviating together and its window is the **union** of theirs, so a row
+    keeping only the subject misreports which receivers the claim rests on --
+    and `anom-009` computes this rule's latency from a count of receivers
+    precisely because the union's start is the first one's and not the claim's.
+    `from_track_cluster` joined its subjects into one field and recorded the
+    strain; here the subject stays one receiver and the set goes in `details`,
+    because a reader of this row needs to know which receiver it is *filed*
+    under as well as which ones it spans.
+
+    `corroboration` is carried as its own value and not folded into the
+    confidence: it is three-valued, and the third value is the common one -- 47
+    of 61 zones on the real corpus could not be measured at all, because a
+    period holding no findings has a rate consisting of nothing but the
+    smoothing constant. Collapsed to a boolean, *measured and below threshold*
+    and *not measurable* become one answer, which is the distinction `anom-012`
+    exists to keep.
+
+    No refs, for `from_sensor_fault`'s reason: this rule consumes another rule's
+    verdict and measures nothing itself.
+    """
+    return DetectionFinding(
+        scenario_run_id=scenario_run_id,
+        rule_id=zone.rule_id,
+        finding_type=zone.anomaly_type,
+        subject=zone.sensors[0],
+        started_at=zone.started_at,
+        ended_at=zone.ended_at,
+        location=zone.centre,
+        details={
+            "confidence": zone.confidence.value,
+            "sensors": list(zone.sensors),
+            "corroboration": zone.corroboration.value,
         },
     )

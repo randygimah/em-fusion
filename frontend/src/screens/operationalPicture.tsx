@@ -8,11 +8,19 @@ interface Props {
 }
 
 const OperationalPictureScreen = ({ operationalPicture, degraded = false }: Props) => {
-  // A level or a dash. Never a percentage and never a decimal (FR-715,
-  // AC-11), and null is "no detector has run" rather than "nothing detected".
+  // A null summary means no detection pass has run on this run, which is not
+  // the same as a pass that found nothing (api-012). The panel says so in
+  // words rather than showing dashes: a reader cannot tell "—" meaning
+  // *nothing to report* from "—" meaning *nobody looked*, and the second is a
+  // broken pipeline. Inside a summary that is present, every value is a
+  // reading — a level, never a percentage and never a decimal (FR-715, AC-11).
   const { scenario, detectionSummary } = operationalPicture;
-  const anomalyLabel = detectionSummary.anomalyLevel ?? "—";
-  const signalIntegrityLabel = detectionSummary.signalIntegrity ?? "—";
+  // Only the conclusions. A quiet run genuinely holds about 138 track
+  // discontinuities, and an analyst shown that as an anomaly count reads a
+  // correct non-detection as a storm (api-012).
+  const reportable = (detectionSummary?.counts ?? []).filter(
+    (entry) => entry.kind === "reportable",
+  );
   return (
     <main className="min-h-screen bg-[#0b0e15] text-[#e1e2ec]">
       <header className="flex items-center justify-between border-b border-[#424754] bg-[#1d2027] px-6 py-4">
@@ -36,15 +44,24 @@ const OperationalPictureScreen = ({ operationalPicture, degraded = false }: Prop
       <section className="grid gap-4 p-6 lg:grid-cols-[1fr_360px]">
         <div className="min-h-[480px] border border-[#424754] bg-black p-4">
           <p className="font-mono text-xs uppercase tracking-[0.05em] text-[#8c909f]">Operational Picture</p>
-          {operationalPicture.rfSensors.map((sensor) => (
-            <div
-              key={sensor.id}
-              className="mt-4 border border-dashed border-[#df7412] p-8 text-center"
-            >
-              <p className="font-mono text-sm text-[#ffb786]">{sensor.signalId} Signal Noise</p>
-              <p className="mt-2 text-[#4cd7f6]">{sensor.stationName}</p>
-            </div>
-          ))}
+          {/* Every receiver in the layout, with the state the pass found it
+              in — not only the ones in trouble, which on a quiet run is an
+              empty map and on a staged one is a map with no reference points
+              to read the incident against (api-012, scn-005). This block
+              previously labelled each one "Signal Noise", which with a single
+              mock receiver was invisible and with seven claims noise on all
+              of them. */}
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            {operationalPicture.rfSensors.map((sensor) => (
+              <div key={sensor.id} className="border border-[#424754] p-3">
+                <p className="font-mono text-xs uppercase tracking-[0.05em] text-[#8c909f]">
+                  {sensor.id} · {sensor.signalId}
+                </p>
+                <p className="mt-1 text-[#4cd7f6]">{sensor.stationName}</p>
+                <p className="mt-1 font-mono text-sm text-[#ffb786]">{sensor.health}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
         <aside className="space-y-4">
@@ -77,16 +94,38 @@ const OperationalPictureScreen = ({ operationalPicture, degraded = false }: Prop
 
           <section className="border border-[#424754] bg-[#1d2027] p-4">
             <h2 className="font-mono text-sm uppercase tracking-[0.05em] text-[#c2c6d6]">Detection Summary</h2>
-            <dl className="mt-4 space-y-3">
-              <div className="flex justify-between">
-                <dt>Anomaly Level</dt>
-                <dd className="font-mono text-[#ffb786]">{anomalyLabel}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt>Signal Integrity</dt>
-                <dd className="font-mono text-[#4cd7f6]">{signalIntegrityLabel}</dd>
-              </div>
-            </dl>
+            {detectionSummary === null ? (
+              <p className="mt-4 text-sm text-[#8c909f]">
+                No detection pass has run on this run. Nothing has been examined, which is
+                not the same as nothing having been found.
+              </p>
+            ) : (
+              <>
+                <dl className="mt-4 space-y-3">
+                  <div className="flex justify-between">
+                    <dt>Anomaly Level</dt>
+                    <dd className="font-mono text-[#ffb786]">{detectionSummary.anomalyLevel}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt>Signal Integrity</dt>
+                    <dd className="font-mono text-[#4cd7f6]">
+                      {detectionSummary.signalIntegrity}
+                    </dd>
+                  </div>
+                </dl>
+                <dl className="mt-4 space-y-2 border-t border-[#424754] pt-3 text-sm">
+                  {reportable.map((entry) => (
+                    <div key={`${entry.ruleId}:${entry.findingType}`} className="flex justify-between gap-4">
+                      <dt className="text-[#8c909f]">{entry.findingType}</dt>
+                      {/* A rule that does not exist gets no number. A zero
+                          there would quote the absence of a rule as the
+                          accuracy of one (api-012, anom-008). */}
+                      <dd className="font-mono">{entry.count ?? "—"}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </>
+            )}
           </section>
         </aside>
       </section>

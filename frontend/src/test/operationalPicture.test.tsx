@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import operationalPicture from "../mocks/operationalPictureMock";
 import OperationalPictureScreen from "../screens/operationalPicture";
-import type { OperationalPicture } from "../types/operationalPicture";
+import type { DetectionSummary, OperationalPicture } from "../types/operationalPicture";
 
 const renderScreen = (picture: OperationalPicture = operationalPicture) =>
   render(<OperationalPictureScreen operationalPicture={picture} />);
@@ -52,38 +52,37 @@ describe("OperationalPictureScreen", () => {
     expect(valueFor("Confidence")).toMatch(/^(Low|Medium|High)$/);
   });
 
-  it("says no detection pass has run rather than showing dashes", () => {
-    // spec: api-012, anom-008 — the dashes were the defect, not the fix. A
-    // level of "—" beside a level of "Low" is the difference between a
-    // detector that found nothing and one that never looked, and a reader
-    // cannot tell a dash meaning "nothing to report" from one meaning "nobody
-    // asked". The sentence is what makes the distinction legible.
-    renderScreen({ ...operationalPicture, detectionSummary: null });
+  it("tells an unexamined run from a clean one in words, not by a dash", () => {
+    // spec: api-012, anom-008 — the pair the whole item is about, asserted in
+    // both directions in one test on purpose. The dash was the defect and not
+    // the fix: a reader cannot tell "—" meaning *nothing to report* from "—"
+    // meaning *nobody looked*, and the second is a broken pipeline. Written as
+    // two tests, the clean half asserts only that a sentence is absent, which
+    // is true of a screen that never says it — the vacuous pass api-011 was
+    // caught by. One test over both payloads cannot pass that way.
+    const clean = {
+      anomalyLevel: "Low",
+      signalIntegrity: "High",
+      counts: [
+        {
+          ruleId: "SENSOR-FAULT",
+          findingType: "possible_sensor_fault",
+          kind: "reportable",
+          count: 0,
+          unavailable: null,
+        },
+      ],
+    } satisfies DetectionSummary;
 
+    const unexamined = render(
+      <OperationalPictureScreen
+        operationalPicture={{ ...operationalPicture, detectionSummary: null }}
+      />,
+    );
     expect(screen.getByText(/no detection pass/i)).toBeInTheDocument();
-    expect(screen.queryByText("Anomaly Level")).not.toBeInTheDocument();
-  });
+    unexamined.unmount();
 
-  it("shows a scored run that found nothing as a reading rather than a gap", () => {
-    // spec: api-012, anom-008 — the pair the whole item is about, asserted on
-    // the screen: these two payloads must not look the same to an analyst.
-    renderScreen({
-      ...operationalPicture,
-      detectionSummary: {
-        anomalyLevel: "Low",
-        signalIntegrity: "High",
-        counts: [
-          {
-            ruleId: "SENSOR-FAULT",
-            findingType: "possible_sensor_fault",
-            kind: "reportable",
-            count: 0,
-            unavailable: null,
-          },
-        ],
-      },
-    });
-
+    renderScreen({ ...operationalPicture, detectionSummary: clean });
     expect(screen.queryByText(/no detection pass/i)).not.toBeInTheDocument();
     expect(valueFor("Anomaly Level")).toBe("Low");
   });
