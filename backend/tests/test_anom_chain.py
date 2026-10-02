@@ -22,6 +22,7 @@ quiet corpus.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -52,25 +53,23 @@ from app.detection.chain import (
     Assessment,
     Bid,
     ChainError,
-    DetectorPolicies,
     Normality,
     assess,
     reported_findings,
 )
-from app.detection.clustering import ClusterPolicy
 from app.detection.control import REGISTER
 from app.detection.findings import DetectionFinding
 from app.detection.fusion import ANOMALY_TYPE as INTERFERENCE_TYPE
 from app.detection.fusion import RULE_ID as FUSION_RULE
-from app.detection.fusion import Declination, FusionPolicy, InterferenceFindings
-from app.detection.precedence import Claim, PrecedencePolicy, Resolution, Zone
+from app.detection.fusion import Declination, InterferenceFindings
+from app.detection.precedence import Claim, Resolution, Zone
 from app.detection.rate_excess import FINDING_TYPE as EXCESS_TYPE
-from app.detection.rf_noise import Direction, RfNoiseFindings, ThresholdPolicy
+from app.detection.rf_noise import RfNoiseFindings
 from app.detection.sensor_fault import ANOMALY_TYPE as FAULT_TYPE
 from app.detection.sensor_fault import RULE_ID as FAULT_RULE
-from app.detection.sensor_fault import FaultPolicy, SensorFaultFindings
+from app.detection.sensor_fault import SensorFaultFindings
+from app.detection.settings import POLICIES_OF_RECORD
 from app.detection.track_gap import RULE_ID as GAP_RULE
-from app.detection.track_gap import BoundingBox, GapPolicy
 from app.evaluation.export import REQUIRED_POLICIES
 from app.scenario.layout import load_layout
 from tests.conftest import requires_database
@@ -84,26 +83,12 @@ RUN_END = START + timedelta(seconds=600)
 QUIET_DBM = -95.0
 QUIET_SNR = 20.0
 
-#: Exactly the policies of record, so a test that passes here is a test about the
-#: settings the figures were measured under rather than about convenient ones.
-POLICIES = DetectorPolicies(
-    rf=ThresholdPolicy(
-        metric=RfMetric.POWER_DBM,
-        direction=Direction.ABOVE,
-        threshold=6.0,
-        medium_at=10.0,
-        high_at=15.0,
-    ),
-    fault=FaultPolicy(),
-    gap=GapPolicy(
-        threshold=timedelta(seconds=100),
-        contact_fresh_within=timedelta(seconds=30),
-        box=BoundingBox(lat_min=49.0, lat_max=54.0, lon_min=3.0, lon_max=11.0),
-    ),
-    cluster=ClusterPolicy(),
-    fusion=FusionPolicy(),
-    ladder=PrecedencePolicy(),
-)
+#: The policies of record, read from the application rather than restated here
+#: (`anom-016`). It used to be a copy annotated "exactly the policies of record",
+#: which is a promise and not a mechanism: a copy that has drifted is still
+#: internally consistent, so every test here would pass while describing settings
+#: no figure was measured under.
+POLICIES = POLICIES_OF_RECORD
 
 
 def _rf(
@@ -396,20 +381,10 @@ def test_the_policy_record_names_the_quiet_runs_the_baseline_came_from() -> None
 def test_the_policy_record_moves_when_a_threshold_moves() -> None:
     """Otherwise it is a label rather than provenance. Spec: anom-015, eval-003."""
     # spec: anom-015, eval-003
-    loosened = DetectorPolicies(
-        rf=ThresholdPolicy(
-            metric=RfMetric.POWER_DBM,
-            direction=Direction.ABOVE,
-            threshold=8.0,
-            medium_at=10.0,
-            high_at=15.0,
-        ),
-        fault=POLICIES.fault,
-        gap=POLICIES.gap,
-        cluster=POLICIES.cluster,
-        fusion=POLICIES.fusion,
-        ladder=POLICIES.ladder,
-    )
+    # `replace` and not a second construction: the four values this test does not
+    # move are the record's, and writing them out again is the copy `anom-016`
+    # removed. What is under test is one threshold moving, so only it is named.
+    loosened = replace(POLICIES, rf=replace(POLICIES.rf, threshold=8.0))
 
     tight = POLICIES.record(_normality(), layout=LAYOUT)
     loose = loosened.record(_normality(), layout=LAYOUT)

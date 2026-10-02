@@ -44,53 +44,44 @@ Run:  make measure SCRIPT=corpus/detection_metrics.py
 from __future__ import annotations
 
 import os
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from pathlib import Path
 
 import _corpus
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-from app.dal.models import (CanonicalObservation, DataMode, Location, ObservationType,
+from app.dal.models import (CanonicalObservation, DataMode, Location,
                             Provenance, RfPayload, SourceType, TrackPayload,
                             ValidationStatus)
 from app.db.findings import save_findings
-from app.detection.baseline import RfMetric, compute_rf_baselines
-from app.detection.clustering import ClusterPolicy, cluster_track_gaps
+from app.detection.clustering import cluster_track_gaps
 from app.detection.control import audit
 from app.detection.findings import from_track_gap
-from app.detection.fusion import (FusionPolicy, claims_from_interference,
-                                  detect_interference)
+from app.detection.fusion import claims_from_interference, detect_interference
 from app.detection.latency import measure as measure_latency
-from app.detection.precedence import (PrecedenceError, PrecedencePolicy,
-                                      claims_from_sensor_faults, resolve)
-from app.detection.rf_noise import Direction, ThresholdPolicy, detect_rf_noise
-from app.detection.sensor_fault import FaultPolicy, detect_sensor_faults
-from app.detection.track_gap import BoundingBox, GapPolicy, detect_track_gaps
+from app.detection.precedence import (PrecedenceError, claims_from_sensor_faults,
+                                      resolve)
+from app.detection.rf_noise import detect_rf_noise
+from app.detection.sensor_fault import detect_sensor_faults
+from app.detection.track_gap import detect_track_gaps
 from app.evaluation.export import DetectionProvenance, export_metrics
 from app.evaluation.metrics import STAGED_TYPE, RunOutcome, TrackSideRecall, compute
-from app.detection.rate_excess import DEFAULT_RADIUS_KM as EXCESS_RADIUS_KM
-from app.detection.rf_noise import DEFAULT_MINIMUM_DURATION
-from app.db.repository import observations_for_run
-from app.dal.models import ObservationType, ScenarioRunSummary
-from app.detection.chain import DetectorPolicies, Normality, assess
+from app.dal.models import ScenarioRunSummary
+from app.detection.chain import assess, measure_normality
+from app.detection.settings import BASELINE_WINDOW, POLICIES_OF_RECORD
 from app.scenario.layout import load_layout
 
-RF_POLICY = ThresholdPolicy(metric=RfMetric.POWER_DBM, direction=Direction.ABOVE,
-                            threshold=6.0, medium_at=10.0, high_at=15.0)
-FAULT, FUSION, LADDER, CLUSTER = (FaultPolicy(), FusionPolicy(), PrecedencePolicy(),
-                                  ClusterPolicy())
-BOX = BoundingBox(lat_min=49.0, lat_max=54.0, lon_min=3.0, lon_max=11.0)
-GAP = GapPolicy(threshold=timedelta(seconds=100),
-                contact_fresh_within=timedelta(seconds=30), box=BOX)
-
-#: `anom-015`. The eight rules are composed in `app/detection/chain.py` rather
-#: than here, which is the whole of that item: this file held the only copy of
-#: the ordering that produces every figure below, and `measurements/` is outside
-#: ruff, mypy, pytest and the coverage gate. The policies are the same objects;
-#: what moved is the sequence they are applied in and the reader in front of it.
-POLICIES = DetectorPolicies(rf=RF_POLICY, fault=FAULT, gap=GAP, cluster=CLUSTER,
-                            fusion=FUSION, ladder=LADDER)
+#: `anom-015` then `anom-016`. The eight rules are composed in
+#: `app/detection/chain.py` and the settings they run under live in
+#: `app/detection/settings.py`, which together is the whole of those two items:
+#: this file held the only copy of both, and `measurements/` is outside ruff,
+#: mypy, pytest and the coverage gate. **The values are unchanged** -- eleven
+#: numbers moved, byte for byte, from here to there -- and the gain is that the
+#: application now reads a run under the same settings every figure below was
+#: measured under, where before a trigger inside `app/` would have had to declare
+#: a third copy with the same standing as this one.
+POLICIES = POLICIES_OF_RECORD
 
 #: `anom-011`'s figures, read off the final block of `track_gap_recall.log`
 #: ("v2, every batch"). Not recomputed: two measurements of one quantity
@@ -111,8 +102,6 @@ TRACK_SIDE = {
 #: the reading that they are one measurement.
 EXPORTS = Path(__file__).resolve().parents[1] / "exports" / "detection"
 
-BASELINE_WINDOW = timedelta(hours=2)
-
 print(_corpus.describe())
 
 engine = create_engine(os.environ["DATABASE_URL"], pool_pre_ping=True)
@@ -120,30 +109,19 @@ factory = sessionmaker(bind=engine, autoflush=False)
 layout = load_layout()
 
 
-def obs_for(run_id, kind):
-    """Through the repository (`anom-015`, seventh finding), not by hand.
-
-    The version this replaces invented five fields: `source_id="o"`, a source type
-    and data mode derived from the observation type rather than read, `VALID`
-    asserted without checking, and a `Provenance` built from scratch. The mapping
-    happened to agree with what the generator writes, which made it a right answer
-    from a wrong source -- `ai-004`'s defect, in the input rather than the output.
-    """
-    return observations_for_run(
-        factory,
-        run_id,
-        ObservationType.TRACK if kind == "track" else ObservationType.RF,
-    )
-
-
 with factory.begin() as _s:
     quiet = _corpus.quiet_runs(_s)
 print(f"baseline from {len(quiet)} quiet runs of this corpus", flush=True)
-table = compute_rf_baselines([o for q in quiet for o in obs_for(q, "rf")],
-                             RfMetric.POWER_DBM, baseline_run_ids=quiet,
-                             window=timedelta(hours=2))
 
-NORMALITY = Normality(table=table, quiet_run_ids=tuple(quiet), window=BASELINE_WINDOW)
+# `anom-016`. Built through the application rather than here, for one reason the
+# version this replaces got away with: the metric was named twice -- once when the
+# table was built and once on `RF_POLICY`, which the deviation is read against.
+# Agreeing by hand is not the same as being unable to disagree. It also retires the
+# last caller of this file's own observation reader, which `anom-015` had already
+# cut back to one use: the reader it replaced invented five fields the row holds,
+# and a right answer from a wrong source is `ai-004`'s defect in the input.
+NORMALITY = measure_normality(factory, quiet_run_ids=tuple(quiet),
+                              policies=POLICIES, window=BASELINE_WINDOW)
 
 with factory.begin() as s:
     runs = s.execute(text(

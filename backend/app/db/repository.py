@@ -53,6 +53,7 @@ from app.dal.models import (
     ScenarioRunSummary,
 )
 from app.dal.repository import QuarantineRecord
+from app.scenario.incident import ScenarioType
 
 OBSERVATIONS = "observations"
 QUARANTINED_RECORDS = "quarantined_records"
@@ -412,6 +413,72 @@ def latest_run(session_factory: sessionmaker[Session]) -> ScenarioRunSummary | N
                     "ORDER BY (completed_at IS NOT NULL) DESC, "
                     "started_at DESC, id DESC LIMIT 1"
                 )
+            )
+            .mappings()
+            .first()
+        )
+        return None if row is None else ScenarioRunSummary(**row)
+
+
+def quiet_run_ids(session_factory: sessionmaker[Session]) -> tuple[int, ...]:
+    """The completed runs nothing was injected into. Spec: anom-016, anom-002.
+
+    `anom-002` measures normality over the corpus's **quiet** runs and never over
+    the run being scored, so something has to name them -- and naming them means
+    reading `scenario_type`, which is the label for what was staged and the one
+    thing `api-009` keeps out of an observation. That is why this is a repository
+    query the harness calls rather than something a detector does for itself: the
+    selection happens out here in the open and what crosses into the detection
+    layer is a list of ids with no labels attached, which is `anom-008`'s rule for
+    its own caller.
+
+    **Completion is part of it.** A run that died holds part of an hour, and a
+    baseline measured partly over a fragment is a number that changes when the run
+    is regenerated. `db-007` records the absence of a completion stamp as exactly
+    that, and `anom-015` already refuses to *score* such a run; this is the other
+    side of the same rule.
+
+    **Empty is an answer, not an error.** `Normality` refuses a baseline over no
+    quiet runs, which is the fresh-database case, and a second refusal here would
+    leave a caller unable to tell which fired. Ordered by id, because a baseline
+    built over a population in heap order is reproducible only by accident.
+    """
+    with session_factory.begin() as session:
+        rows = session.execute(
+            text(
+                "SELECT id FROM scenario_runs WHERE scenario_type = :quiet "
+                "AND completed_at IS NOT NULL ORDER BY id"
+            ),
+            {"quiet": ScenarioType.NORMAL_BASELINE.value},
+        ).all()
+        return tuple(int(row[0]) for row in rows)
+
+
+def run_summary(
+    session_factory: sessionmaker[Session], run_id: int
+) -> ScenarioRunSummary | None:
+    """One run as its row holds it, or None. Spec: anom-016.
+
+    `latest_run` beside this chooses *which* run to serve and prefers a finished
+    one; this is handed an id and reports what is there. It exists because a batch
+    summary carries only its own claim that a run completed, while what decides
+    whether the pass may score it is the completion stamp on the row -- `db-007`'s
+    own definition, and `anom-015` refuses on it. Two sources for one fact, and
+    only one of them is the record.
+
+    A missing row is None rather than a refusal: the ids come from a batch summary
+    and an absent run is a fact about the store, reported like any other.
+
+    Ground truth is not selected, as everywhere else `api-009` reaches.
+    """
+    with session_factory.begin() as session:
+        row = (
+            session.execute(
+                text(
+                    "SELECT id, scenario_type, seed, started_at, completed_at "
+                    "FROM scenario_runs WHERE id = :run_id"
+                ),
+                {"run_id": run_id},
             )
             .mappings()
             .first()

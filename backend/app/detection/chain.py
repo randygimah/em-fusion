@@ -76,7 +76,7 @@ from datetime import timedelta
 from app.dal.models import ObservationType, ScenarioRunSummary
 from app.db.findings import save_findings
 from app.db.repository import observations_for_run, record_detection_pass
-from app.detection.baseline import BaselineTable
+from app.detection.baseline import BaselineTable, compute_rf_baselines
 from app.detection.bundle import EvidenceBundle, build_bundles
 from app.detection.clustering import FINDING_TYPE as CLUSTER_TYPE
 from app.detection.clustering import RULE_ID as CLUSTER_RULE
@@ -313,6 +313,71 @@ class Assessment:
                 1 for t in types if t == INTERFERENCE_TYPE
             ),
         }
+
+
+def measure_normality(
+    session_factory: object,
+    *,
+    quiet_run_ids: Sequence[int],
+    policies: DetectorPolicies,
+    window: timedelta,
+) -> Normality:
+    """What normal is, measured over the store's quiet runs. Spec: anom-016.
+
+    Here rather than at the call site because of one thing a call site gets wrong
+    silently: **the metric is declared twice**. A baseline is built over one
+    metric and `anom-001` reads its deviation against another, and the script this
+    replaces named `RfMetric.POWER_DBM` once when building the table and again on
+    the policy. Disagree and every threshold is measured in the wrong units with
+    nothing failing, because both halves are individually valid. Taken from
+    `policies.rf.metric` here, so they cannot differ.
+
+    **The runs are the caller's choice and arrive as ids.** Which runs count as
+    quiet is answered by the scenario type, which is the label for what was
+    injected -- the one thing `api-009` keeps out of an observation. So the
+    selection happens outside the detection layer and what crosses into it is a
+    list of numbers, exactly as `anom-008` requires of its own caller.
+
+    **It refuses an empty list itself**, which was a correction. Two refusals of
+    that condition already exist upstream -- `compute_rf_baselines` will not take
+    an empty allowlist and `Normality` will not hold an empty provenance -- so this
+    looked like a third. It is not the same statement: the one that actually fires
+    first is the baseline's, and it talks about an *allowlist* an engine cannot
+    widen, while the fact a caller needs is that **this store holds no quiet runs
+    at all**, which is what a freshly generated database always looks like. A
+    refusal whose message is about the wrong thing is how a trigger reports a fresh
+    database as a detector defect. Decided before any read, because there is
+    nothing to read.
+    """
+    ids = tuple(quiet_run_ids)
+    if not ids:
+        raise ChainError(
+            "no quiet runs in the store: normality is measured over the quiet "
+            "runs and never over the run being scored, so there is nothing here "
+            "to measure it over. A batch generated into an empty database is "
+            "exactly this case, and the alternative -- baselining against the "
+            "staged runs -- would measure the injected incident as normal and "
+            "report every arm clean."
+        )
+    observations = [
+        observation
+        for run_id in ids
+        for observation in observations_for_run(
+            session_factory,  # type: ignore[arg-type]
+            run_id,
+            ObservationType.RF,
+        )
+    ]
+    return Normality(
+        table=compute_rf_baselines(
+            observations,
+            policies.rf.metric,
+            baseline_run_ids=ids,
+            window=window,
+        ),
+        quiet_run_ids=ids,
+        window=window,
+    )
 
 
 def reported_findings(

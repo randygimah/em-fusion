@@ -41,7 +41,7 @@ from app.api.v1.schemas.scenario import BatchRequest
 from app.dal.models import ScenarioRunSummary
 from app.db.migrations import alembic_config
 from app.main import app
-from app.pipeline import MAX_RUNS, MIN_RUNS
+from app.pipeline import MAX_RUNS, MIN_RUNS, BatchSummary
 from app.replay import MANIFEST_NAME
 from app.scenario import batch
 from app.scenario.guard import (
@@ -479,6 +479,13 @@ def test_a_failing_batch_is_logged_rather_than_raised(
     assert _InlineThread.last.daemon is True
 
 
+def _empty_batch() -> BatchSummary:
+    """A batch that produced nothing, for the tests that stand in for one."""
+    return BatchSummary(
+        base_seed=20220627, scenario_type="gnss-degradation", runs=(), seconds=0.0
+    )
+
+
 def test_the_batch_borrows_the_applications_engine_rather_than_building_one(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -492,8 +499,13 @@ def test_the_batch_borrows_the_applications_engine_rather_than_building_one(
     (tmp_path / MANIFEST_NAME).write_text("{}")
     seen: dict[str, Any] = {}
 
-    def fake_run_batch(layout: Any, **kwargs: Any) -> None:
+    # Returning a summary and not None, because `run_batch_now` now scores what
+    # the batch produced (`anom-016`). An empty one so this test stays about the
+    # Engine: a batch with no completed runs has nothing to examine, so the
+    # scoring stage touches neither the store nor the detectors.
+    def fake_run_batch(layout: Any, **kwargs: Any) -> BatchSummary:
         seen.update(kwargs)
+        return _empty_batch()
 
     monkeypatch.setattr(batch, "run_batch", fake_run_batch)
     monkeypatch.setattr(batch, "available_window", lambda manifest: "window")
@@ -566,7 +578,11 @@ def test_the_launcher_reads_the_seed_from_the_env_file(
     env_file.write_text("PSEUDONYM_SEED=a-seed-from-the-file\n")
     seen: dict[str, Any] = {}
 
-    monkeypatch.setattr(batch, "run_batch", lambda layout, **kw: seen.update(kw))
+    monkeypatch.setattr(
+        batch,
+        "run_batch",
+        lambda layout, **kw: (seen.update(kw), _empty_batch())[1],
+    )
     monkeypatch.setattr(batch, "available_window", lambda manifest: "window")
     monkeypatch.setattr(batch, "load_layout", lambda: "layout")
     monkeypatch.setattr(batch, "load_exclusions", lambda path: frozenset())
