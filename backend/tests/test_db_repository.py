@@ -51,7 +51,12 @@ from app.dal.pseudonymise import Pseudonymiser
 from app.dal.repository import ObservationRepository, QuarantineRecord
 from app.dal.validation import IngestContext
 from app.db.migrations import alembic_config
-from app.db.repository import PostgisObservationRepository, complete_scenario_run
+from app.db.repository import (
+    PostgisObservationRepository,
+    complete_scenario_run,
+    detection_pass_for_run,
+    record_detection_pass,
+)
 from tests.conftest import requires_database
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
@@ -751,3 +756,119 @@ def test_completing_a_run_that_does_not_exist_raises(
 # the point of holding a second run in the first of those. An UPDATE with no
 # predicate marks every run in the database complete and satisfies a test that
 # only ever looks at the run it asked for.
+
+
+# --------------------------------------------------------- the detection stamp
+#
+# Spec: anom-015 (second amendment), api-012. Parallel to `db-007`'s completion
+# stamp and nullable for its reason: absence means *not known to have been
+# scored*, which is the only state the findings table cannot express -- the
+# write replaces per run per rule including at zero, so a run examined and found
+# clean leaves exactly what a run nobody examined leaves.
+
+
+POLICY = {"RF-NOISE.threshold_db": "6.0", "BASELINE.quiet_run_count": "60"}
+
+
+@pytest.mark.database
+@requires_database
+def test_a_run_never_scored_reports_no_detection_pass(
+    migrated_database: Engine,
+) -> None:
+    # spec: anom-015, api-012 -- null is the informative state, as db-007's
+    # completion stamp is. Nothing has examined this run.
+    factory = sessionmaker(bind=migrated_database, autoflush=False)
+
+    assert detection_pass_for_run(factory, RUN_ID) is None
+
+
+@pytest.mark.database
+@requires_database
+def test_recording_a_detection_pass_stamps_the_run(migrated_database: Engine) -> None:
+    """Spec: anom-015, api-012, eval-003.
+
+    The policy travels with the stamp because a quiet run has no findings to
+    carry it. The time is the **database's** clock and not the caller's,
+    following `complete_scenario_run` one function up: when something happened
+    to a run is one clock's to keep, or two producers on two machines write
+    times that cannot be ordered against each other.
+    """
+    # spec: anom-015, api-012, eval-003, db-007
+    factory = sessionmaker(bind=migrated_database, autoflush=False)
+
+    record_detection_pass(factory, RUN_ID, policy=POLICY)
+    recorded = detection_pass_for_run(factory, RUN_ID)
+
+    assert recorded is not None
+    assert recorded.scenario_run_id == RUN_ID
+    assert recorded.at.tzinfo is not None
+    assert recorded.policy == POLICY
+
+
+@pytest.mark.database
+@requires_database
+def test_recording_one_pass_does_not_stamp_another_run(
+    migrated_database: Engine,
+) -> None:
+    """The WHERE clause, asserted rather than read.
+
+    `db-007`'s own test records why: an UPDATE with no predicate marks every run
+    in the database and passes every other test here, the fixture holding one
+    run. Worse on this column than on that one -- a stamp claims a run was
+    examined, so a missing predicate reports the whole corpus as scored.
+    """
+    # spec: anom-015, db-007
+    other_run = RUN_ID + 1
+    _insert_second_run(migrated_database, other_run)
+    factory = sessionmaker(bind=migrated_database, autoflush=False)
+
+    record_detection_pass(factory, RUN_ID, policy=POLICY)
+
+    assert detection_pass_for_run(factory, RUN_ID) is not None
+    assert detection_pass_for_run(factory, other_run) is None
+
+
+@pytest.mark.database
+@requires_database
+def test_stamping_a_run_that_does_not_exist_is_refused(
+    migrated_database: Engine,
+) -> None:
+    """Spec: anom-015, db-002.
+
+    `db-002`'s grounding write established the rule: an UPDATE matching nothing
+    succeeds at the database while losing the fact here. A pass that silently
+    recorded nothing would leave the run reporting itself unexamined after a
+    complete examination, which is the one direction that cannot be noticed --
+    the endpoint simply serves no summary, exactly as it would before any pass.
+    """
+    # spec: anom-015, db-002
+    factory = sessionmaker(bind=migrated_database, autoflush=False)
+
+    with pytest.raises(LookupError, match=str(MISSING_RUN_ID)):
+        record_detection_pass(factory, MISSING_RUN_ID, policy=POLICY)
+
+
+@pytest.mark.database
+@requires_database
+def test_a_second_pass_replaces_the_first_rather_than_appending(
+    migrated_database: Engine,
+) -> None:
+    """Spec: anom-015, db-008.
+
+    The findings write replaces per run per rule, so a re-scored run holds one
+    set of findings. A stamp that accumulated would leave the run claiming two
+    examinations under two policies while the rows came from one of them.
+    """
+    # spec: anom-015, db-008
+    factory = sessionmaker(bind=migrated_database, autoflush=False)
+
+    record_detection_pass(factory, RUN_ID, policy=POLICY)
+    first = detection_pass_for_run(factory, RUN_ID)
+    record_detection_pass(
+        factory, RUN_ID, policy={**POLICY, "RF-NOISE.threshold_db": "8.0"}
+    )
+
+    recorded = detection_pass_for_run(factory, RUN_ID)
+    assert first is not None and recorded is not None
+    assert recorded.at >= first.at
+    assert recorded.policy["RF-NOISE.threshold_db"] == "8.0"

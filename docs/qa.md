@@ -8093,6 +8093,110 @@ indistinguishable on a corpus that carries three-receiver zones. **Twice now a s
 weakest exactly where its fixtures were simplest, and blind in the direction real data is more
 complicated.** Worth carrying as a standing caution rather than a one-off.
 
+## 138. Does the detector output on injected anomalies show in the app at all, and not just local measurement? (the second half of the answer)
+
+**No, and the reason split into two halves — only one of which was obvious.** §129 recorded the first: three fields on the main screen are read by three planned panels and written by nothing, so every consumer could be built and pass while the fields stayed empty. Building the producer found the second, and it is sharper.
+
+The detection pass stores **its evidence and not its conclusions**.
+
+| What the chain produces | Where it goes |
+|---|---|
+| Radio deviations per receiver per channel | Written to the findings table |
+| Gaps in aircraft position reporting | Written to the findings table |
+| **"this receiver is broken"** | Returned to the caller. Stored nowhere. |
+| **"this area is being interfered with"** | Returned to the caller. Stored nowhere. |
+| The evidence record built around each conclusion | Built, then dropped |
+
+The two that are written are written because two *later* rules read them back out of the database — the clustering rule and the rate-excess rule are PostGIS queries over stored rows, so the gap findings have to be on disk before those rules run. Nothing reads the conclusions back, so nothing wrote them down.
+
+Inside one process that is invisible: the pass hands back an object holding everything, and a measurement script that calls the pass and reads the object sees a complete result. A web request is a different process. From there the conclusions **do not exist**. The endpoint had nothing to serve, and no test could have caught it, because every test of the pass reads the returned object.
+
+The reason it was not noticed when the pass was specified is worth keeping. The spec item had recorded that the reportable claims already had a persisted form — the evidence record, of which 103 were in the database — so storing them looked like a solved problem. But those 103 were written by a measurement script, and when the pass was *implemented* it deliberately declined to store evidence records, because a pre-registered scoring sample names its twenty records **by id** and a pass rebuilding them corpus-wide would renumber the population the sample was drawn from. That decision was right and is recorded. Its consequence — that the reportable claims then had no persisted form at all — was not. **The premise expired between the amendment and the code**, which is the same failure mode as §129's expired justification, one layer in.
+
+The fix is that the two end-of-chain rules write findings like every other rule. That is not a new representation: the finding is explicitly *one shape every rule becomes*, with what is rule-specific in a details field, so a third detector needs no change to the storage layer. These two rules had no rows for an incidental reason — only the rules something later *queries* were written down — and not for a principled one.
+
+Only the claims that **won** the precedence ladder are written. A suppressed claim is a competing conclusion, not a second event, and stored beside the claim that beat it every count over the table would read two events where there was one. The cost is recorded rather than glossed: with evidence records unstored, a suppression is now persisted nowhere, so the ladder's own workings are reconstructible only by re-running the pass.
+
+## 139. If a quiet run and an unexamined run both have zero findings, how can the payload tell them apart?
+
+**It cannot, from the findings — and that is why the run itself is now stamped.** This is the correct-non-detection argument arriving at the API boundary, and it is the one constraint on this endpoint that cannot be satisfied by being careful.
+
+The findings write **replaces per run per rule, including at zero**. So:
+
+| Case | Rows in the findings table |
+|---|---|
+| Examined, nothing found | none |
+| Examined, then re-examined under new settings that found nothing | none |
+| Never examined | none |
+| Examined with the detectors pointed at the wrong observations | none |
+
+Four cases, three of them failures, one table state. No property of the output separates them, so **no count can answer "did a detector look"**. Only an account can: a list of every rule that exists and what each one found, including the ones that found nothing. The *presence* of the list is the answer; the numbers in it are the result.
+
+The account needs somewhere to live that survives a run with no findings, so the pass now stamps the run with when it was examined and the settings it was examined under — two nullable columns, null meaning *not known to have been scored*, exactly parallel to the nullable completion stamp that already means *not known to have finished*. The settings go beside the stamp and not only on the findings, because **a quiet run has no findings to carry them**, and a quiet run scored under thresholds nobody recorded is precisely the case the measured quiet-run bands were taken under.
+
+It is stamped **last**, after every write the pass makes. A pass that dies midway then leaves a run that is not known to have been scored, rather than one claiming an examination it did not finish. Re-running is the whole recovery, because the writes replace rather than append.
+
+On the wire this becomes three states and not two, each absence typed:
+
+| Payload | Means |
+|---|---|
+| no detection summary at all | nobody looked |
+| a summary; an entry whose count is `null` | that rule does not exist yet |
+| a summary; an entry with a number | that rule looked and found that many |
+
+The middle row matters more than it looks. One reportable rule of three is unbuilt. An entry reading **0** for it would quote the absence of a rule as the accuracy of one — a figure that cannot be wrong because nothing produced it.
+
+## 140. Why does the screen's own headline break the no-ground-truth rule?
+
+**Because the check stopped at the field that held the answer and never looked at the field that labelled it.** The main screen's `h1` currently reads **`gnss-degradation`**.
+
+There is a standing rule that the injected ground truth never leaves the evaluation harness, and its written failure case is almost word for word *this endpoint carrying the scenario type for the active run*. The reason it is written that way is that a detector or an analyst able to see the answer invalidates every metric computed from that run.
+
+The run record was built with real care against exactly this. The object the endpoint reads has **no field for ground truth at all**, and the reasoning is recorded: a shape that cannot hold the answer key cannot leak it on any run, which is stronger than remembering to strip it per endpoint. A second object carrying the replay parameters was kept deliberately separate, because the incident's radius, elevation, offset and duration "would describe the staged incident to the analyst whose detectors are being measured against it".
+
+And the scenario **type** sat on the shared object the whole time, served as the scenario's display name.
+
+The distinction that was being conflated: **the type is not the event, it is the name of the event.** "No ground truth field" was read as "no ground truth", and a label that discloses everything the event would is not a weaker disclosure. `gnss-degradation` tells an analyst which band is being attacked, which mechanism to expect, and that something was injected at all.
+
+Worth recording as a limitation: the scenario type is entirely legitimate on the Scenario Control screen, which is the harness's own face and exists to show what was generated. It is not legitimate on the operational picture, where a detector's output is being shown to an analyst. The same string is fine in one place and disqualifying in the other, which is why a repository-wide search for it finds nothing wrong, and why **every screenshot taken of that screen so far shows the answer**.
+
+## 141. Why not roll the detection summary up into one number?
+
+**Because the two readings on it measure different kinds of thing, and one number over both describes neither.** The panel shows an anomaly level and a signal-integrity reading, and the temptation is to combine them into an overall figure.
+
+The rules themselves are explicit about the split. The receiver-fault rule states that **confidence qualifies the attribution** — how sure we are that *this receiver* is the cause — while **severity qualifies the deviation** — how far the measurement actually moved. Those are not two measurements of one quantity on different scales; they are answers to different questions.
+
+A worked case. A receiver shows a 9 dB power excursion, well past the 6 dB threshold, and every neighbour inside the discrimination radius is nominal:
+
+| Reading | Value | What it is about |
+|---|---|---|
+| Severity | High | the deviation: 9 dB is a long way out |
+| Confidence | High | the attribution: nothing else deviated, so it is this receiver |
+
+Now the same 9 dB excursion with two neighbours also loud through the same window:
+
+| Reading | Value | What it is about |
+|---|---|---|
+| Severity | High | unchanged. The measurement moved just as far. |
+| Confidence | — | the attribution is *environmental*, so there is no receiver fault to be confident about |
+
+Averaging the first pair gives High and the second pair gives something lower, and the thing that changed between them is **what the anomaly is**, not how bad it is. A single number moves for the wrong reason and cannot be read back.
+
+So the two fields stay two fields, each with exactly one kind of thing behind it, and neither is an average: one reports the worst deviation measured, the other the state of the receiver layout. And both stay Low / Medium / High — never a percentage and never a decimal — which the contract has asserted since the screen was caught rendering `74.2%` and `0.92`.
+
+## 142. A quiet run holds about 138 track discontinuities. Does the panel show 138?
+
+**It shows the number, labelled as the kind of thing it is.** This is the one place the account's completeness and the screen's legibility pull against each other, and both have to be served.
+
+The continuity rule's output is an **intermediate finding, not a reportable anomaly**. A perfectly quiet run genuinely holds around 138 of them, because aircraft stop reporting for ordinary reasons all the time — out of receiver range, on the ground, transponder off. The correct-non-detection control counts only the fused rules for exactly this reason.
+
+Two wrong answers are available:
+
+- **Omit the intermediate counts.** The account is then incomplete, and an incomplete account cannot answer whether a detector looked — which is the whole purpose of carrying it (§139).
+- **Show them as anomaly counts.** An analyst reads "138 anomalies" on a run where nothing happened, and a correct non-detection renders as a storm.
+
+So every producer's count is carried, and each one is labelled **intermediate** or **reportable**. The account stays complete for the machine; the screen is told which figures are a conclusion and which are working material. The panel item decides how to render that; the endpoint's job is only to make the distinction available, because a payload that does not carry it forces the screen to hard-code a list of rule names — and a list like that outlives the reason it was written.
+
 ## Appendix: quick glossary
 
 | Term | Short definition |
@@ -8324,3 +8428,8 @@ complicated.** Worth carrying as a standing caution rather than a one-off.
 | **Normality** | What *normal* is, measured over the corpus's quiet runs rather than the run being judged — plus the list of those runs, because two baselines under identical thresholds give different findings and were otherwise indistinguishable in the record. See §134. |
 | **A bid** | One rule's claim on one place, before the precedence ladder decides which claim wins. A suppressed bid is a competing conclusion, never an answer the analyst was given. See §137. |
 | **Unprovenanced finding** | A stored finding with no record of the detector settings that produced it — meaning *written before the pass existed*, which is true, rather than *wrong*. Same distinction as a run with no batch record. See §134. |
+| **The account** | A list of every detection rule that exists and what each one found, carried on the payload including where a rule found nothing. The *presence* of the list is what says a detector looked; no count can say it. See §139. |
+| **Run stamp** | When a run was examined by the detection pass and under what settings, recorded on the run itself. Nullable: absent means not known to have been scored, exactly as an absent completion stamp means not known to have finished. See §139. |
+| **Intermediate finding** | Something a rule found that is working material rather than a conclusion — an aircraft stopping its position reports, a channel deviating. A quiet run holds about 138. Carried in the account, labelled as such, never presented as an anomaly count. See §142. |
+| **Reportable claim** | A conclusion that survived the precedence ladder and reached the analyst: this receiver is broken, this area is being interfered with. Now persisted as findings; before that, returned to the caller and stored nowhere. See §138. |
+| **The type is not the event** | A scenario type is the *name* of what was injected, and discloses everything the injected event would. A record with no ground-truth field can still leak the answer through its label. See §140. |

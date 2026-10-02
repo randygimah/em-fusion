@@ -14,7 +14,7 @@ const served: OperationalPicture = {
   hypotheses: [],
   rfSensors: [],
   timelineEvents: [],
-  detectionSummary: { anomalyLevel: null, signalIntegrity: null },
+  detectionSummary: null,
   aircraftTracks: [
     { id: "opensky-replay:AC-served", name: "AC-served", altitudeFt: 29800, lat: 51.79, lon: 10.36 },
   ],

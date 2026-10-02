@@ -24,7 +24,7 @@ describe("OperationalPictureScreen", () => {
     // endpoint existed, which is the violation the contract change removes.
     renderScreen();
 
-    expect(valueFor("Anomaly Level")).toBe(operationalPicture.detectionSummary.anomalyLevel);
+    expect(valueFor("Anomaly Level")).toBe(operationalPicture.detectionSummary?.anomalyLevel);
   });
 
   it("renders signal integrity as a band rather than a decimal", () => {
@@ -32,7 +32,7 @@ describe("OperationalPictureScreen", () => {
     renderScreen();
 
     expect(valueFor("Signal Integrity")).toBe(
-      operationalPicture.detectionSummary.signalIntegrity,
+      operationalPicture.detectionSummary?.signalIntegrity,
     );
   });
 
@@ -52,15 +52,119 @@ describe("OperationalPictureScreen", () => {
     expect(valueFor("Confidence")).toMatch(/^(Low|Medium|High)$/);
   });
 
-  it("shows an absent detection summary as a dash rather than as a value", () => {
-    // spec: api-002 — the endpoint serves null while no detector exists, so
-    // null is a state the screen receives in normal operation, not an error.
+  it("says no detection pass has run rather than showing dashes", () => {
+    // spec: api-012, anom-008 — the dashes were the defect, not the fix. A
+    // level of "—" beside a level of "Low" is the difference between a
+    // detector that found nothing and one that never looked, and a reader
+    // cannot tell a dash meaning "nothing to report" from one meaning "nobody
+    // asked". The sentence is what makes the distinction legible.
+    renderScreen({ ...operationalPicture, detectionSummary: null });
+
+    expect(screen.getByText(/no detection pass/i)).toBeInTheDocument();
+    expect(screen.queryByText("Anomaly Level")).not.toBeInTheDocument();
+  });
+
+  it("shows a scored run that found nothing as a reading rather than a gap", () => {
+    // spec: api-012, anom-008 — the pair the whole item is about, asserted on
+    // the screen: these two payloads must not look the same to an analyst.
     renderScreen({
       ...operationalPicture,
-      detectionSummary: { anomalyLevel: null, signalIntegrity: null },
+      detectionSummary: {
+        anomalyLevel: "Low",
+        signalIntegrity: "High",
+        counts: [
+          {
+            ruleId: "SENSOR-FAULT",
+            findingType: "possible_sensor_fault",
+            kind: "reportable",
+            count: 0,
+            unavailable: null,
+          },
+        ],
+      },
     });
 
-    expect(valueFor("Anomaly Level")).toBe("—");
-    expect(valueFor("Signal Integrity")).toBe("—");
+    expect(screen.queryByText(/no detection pass/i)).not.toBeInTheDocument();
+    expect(valueFor("Anomaly Level")).toBe("Low");
+  });
+
+  it("counts the reportable rules and not the intermediate ones", () => {
+    // spec: api-012, anom-010 — a quiet run genuinely holds about 138 track
+    // discontinuities. Shown as an anomaly count, a correct non-detection
+    // reads as a storm, which is why the payload labels each producer's kind.
+    renderScreen({
+      ...operationalPicture,
+      detectionSummary: {
+        anomalyLevel: "High",
+        signalIntegrity: "Low",
+        counts: [
+          {
+            ruleId: "SENSOR-FAULT",
+            findingType: "possible_sensor_fault",
+            kind: "reportable",
+            count: 2,
+            unavailable: null,
+          },
+          {
+            ruleId: "TRACK-GAP",
+            findingType: "track_continuity_gap",
+            kind: "intermediate",
+            count: 138,
+            unavailable: null,
+          },
+        ],
+      },
+    });
+
+    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.queryByText("138")).not.toBeInTheDocument();
+  });
+
+  it("leaves a rule that does not exist without a number", () => {
+    // spec: api-012, anom-008 — a zero here quotes the absence of a rule as
+    // the accuracy of one, which is a figure that cannot be wrong because
+    // nothing produced it.
+    renderScreen({
+      ...operationalPicture,
+      detectionSummary: {
+        anomalyLevel: "Low",
+        signalIntegrity: "High",
+        counts: [
+          {
+            ruleId: "SOURCE-GAP",
+            findingType: "possible_data_source_issue",
+            kind: "reportable",
+            count: null,
+            unavailable: "rule-not-built",
+          },
+        ],
+      },
+    });
+
+    expect(screen.queryByText("0")).not.toBeInTheDocument();
+    expect(screen.getByText("—")).toBeInTheDocument();
+  });
+
+  it("renders every receiver in the layout with the state it is in", () => {
+    // spec: api-012, scn-005 — all seven, whether or not any was found to be
+    // deviating, so a quiet run still has a map with reference points. The
+    // screen previously labelled every receiver "Signal Noise", which with one
+    // mock receiver was invisible and with seven claims noise on all of them.
+    renderScreen({
+      ...operationalPicture,
+      rfSensors: [
+        { ...operationalPicture.rfSensors[0], id: "RF-01", health: "fault" },
+        {
+          ...operationalPicture.rfSensors[0],
+          id: "RF-02",
+          stationName: "Rotterdam",
+          health: "nominal",
+        },
+      ],
+    });
+
+    expect(screen.getByText("fault")).toBeInTheDocument();
+    expect(screen.getByText("nominal")).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/Signal Noise/);
   });
 });

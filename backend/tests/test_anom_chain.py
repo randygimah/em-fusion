@@ -41,7 +41,12 @@ from app.dal.models import (
     TrackPayload,
     ValidationStatus,
 )
-from app.db.repository import PostgisObservationRepository, observations_for_run
+from app.db.findings import findings_for_run
+from app.db.repository import (
+    PostgisObservationRepository,
+    detection_pass_for_run,
+    observations_for_run,
+)
 from app.detection.baseline import RfMetric, compute_rf_baselines
 from app.detection.chain import (
     Assessment,
@@ -50,9 +55,11 @@ from app.detection.chain import (
     DetectorPolicies,
     Normality,
     assess,
+    reported_findings,
 )
 from app.detection.clustering import ClusterPolicy
 from app.detection.control import REGISTER
+from app.detection.findings import DetectionFinding
 from app.detection.fusion import ANOMALY_TYPE as INTERFERENCE_TYPE
 from app.detection.fusion import RULE_ID as FUSION_RULE
 from app.detection.fusion import Declination, FusionPolicy, InterferenceFindings
@@ -1002,3 +1009,303 @@ def test_receivers_deviating_together_all_reach_the_claim(
         f"a claim over several receivers kept only {sorted(carried)}: anom-005's "
         "window is the union of its receivers', so a subset understates latency"
     )
+
+
+# ------------------------------------------- the conclusions, and that it ran
+#
+# Added 2026-10-02 with `anom-015`'s second amendment. The pass persisted its
+# *evidence* and not its *conclusions*: the two rules at the end of the ladder
+# returned their claims on the `Assessment` and wrote nowhere, which inside one
+# process is invisible and from a web request means they do not exist. And
+# nothing recorded that a pass had happened at all, so a run examined and found
+# clean left exactly what a run nobody examined left.
+
+
+def _finding(subject: str, *, rule_id: str = FAULT_RULE) -> DetectionFinding:
+    site = LAYOUT.site(SENSORS[0])
+    return DetectionFinding(
+        scenario_run_id=2,
+        rule_id=rule_id,
+        finding_type=FAULT_TYPE if rule_id == FAULT_RULE else INTERFERENCE_TYPE,
+        subject=subject,
+        started_at=START,
+        ended_at=RUN_END,
+        location=Location(lat=site.lat, lon=site.lon),
+        details={"confidence": "high"},
+    )
+
+
+def test_only_the_claims_the_ladder_reported_are_written() -> None:
+    """Spec: anom-015, anom-013, evb-001.
+
+    A suppressed claim is a competing conclusion and not a second event. Stored
+    beside the claim that beat it, every count taken over the table reads two
+    events where there was one -- which is `evb-001`'s reason for carrying a
+    suppressed claim in `superseded` and never in the evidence list.
+    """
+    # spec: anom-015, anom-013
+    won = Claim(rule_id=FAULT_RULE, anomaly_type=FAULT_TYPE, zone=_zone())
+    lost = Claim(
+        rule_id=FUSION_RULE, anomaly_type=INTERFERENCE_TYPE, zone=_zone("RF-02")
+    )
+
+    written = reported_findings(
+        Resolution(reported=(won,)),
+        evidence=(
+            (won, _finding("RF-01")),
+            (lost, _finding("RF-02", rule_id=FUSION_RULE)),
+        ),
+    )
+
+    assert [f.subject for f in written] == ["RF-01"]
+
+
+def test_a_claim_is_matched_to_its_finding_on_identity() -> None:
+    """Spec: anom-015, and `receivers_for`'s own rule one function along.
+
+    Two claims of one rule over one zone are **equal by value** -- a frozen
+    dataclass of a rule id, a type and a zone -- so a membership test writes the
+    finding of a claim the ladder never reported. The ladder passes claims
+    through unchanged, so the object reported is the object bid, and identity is
+    the only comparison that distinguishes them.
+    """
+    # spec: anom-015, anom-013
+    reported = Claim(rule_id=FAULT_RULE, anomaly_type=FAULT_TYPE, zone=_zone())
+    twin = Claim(rule_id=FAULT_RULE, anomaly_type=FAULT_TYPE, zone=_zone())
+    assert reported == twin and reported is not twin
+
+    written = reported_findings(
+        Resolution(reported=(reported,)),
+        evidence=((reported, _finding("RF-01")), (twin, _finding("RF-07"))),
+    )
+
+    assert [f.subject for f in written] == ["RF-01"]
+
+
+def test_the_rules_the_pass_persists_are_the_rules_the_endpoint_claims() -> None:
+    """Spec: anom-015, api-012, anom-008.
+
+    `api-012` reports two registered producers as *not persisted* -- `anom-004`'s
+    clusters, whose citation shape `evb-002` refuses by name, and `anom-012`'s
+    rate excess, which is internal to the fusion decision. That is a second
+    declaration of what this pass writes, and a declaration that cannot drift is
+    worth more than one that is merely correct today: a rule which starts
+    persisting its output must not leave the endpoint reporting it unpersisted.
+
+    Read off the calls rather than matched as text, on `db-006`'s rule: a
+    substring search is satisfied by the rule id appearing in this module's prose,
+    which it does, several times.
+    """
+    # spec: anom-015, api-012, db-006
+    import ast
+    from pathlib import Path
+
+    from app.api.v1.schemas.operational_picture import PERSISTED_PRODUCERS
+    from app.detection import chain
+
+    tree = ast.parse(Path(chain.__file__).read_text(encoding="utf-8"))
+    named = [
+        keyword.value.id
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "save_findings"
+        for keyword in node.keywords
+        if keyword.arg == "rule_id" and isinstance(keyword.value, ast.Name)
+    ]
+
+    assert named, "no save_findings call names a rule id"
+    assert {getattr(chain, name) for name in named} == {
+        rule_id for rule_id, _ in PERSISTED_PRODUCERS
+    }
+
+
+@requires_database
+def test_a_reported_fault_is_written_as_a_finding(migrated_database: Engine) -> None:
+    """Spec: anom-015, db-008, api-012.
+
+    One receiver raised with its neighbours nominal is `anom-007`'s attribution,
+    and the ladder reports it. Before this the claim existed only on the returned
+    object, so an endpoint in another process had nothing to serve -- and the
+    whole chain's purpose is that conclusion.
+    """
+    # spec: anom-015, db-008, api-012
+    factory = sessionmaker(bind=migrated_database, autoflush=False)
+    _store(factory, 2, elevate={(SENSORS[0], channel): 20.0 for channel in CHANNELS})
+
+    assessment = assess(
+        _run(),
+        normality=_normality(),
+        policies=POLICIES,
+        layout=LAYOUT,
+        session_factory=factory,
+    )
+
+    assert assessment.faults.faults, "the fault rule attributed nothing"
+    stored = findings_for_run(factory, 2, rule_id=FAULT_RULE)
+    assert [f.subject for f in stored] == [SENSORS[0]]
+    assert [f.finding_type for f in stored] == [FAULT_TYPE]
+    # The confidence travels in `details`, as `anom-001`'s severity does: it
+    # qualifies the attribution and the table has no column for either.
+    assert stored[0].details["confidence"] in {"low", "medium", "high"}
+
+
+@requires_database
+def test_a_reported_interference_zone_is_written_as_a_finding(
+    migrated_database: Engine,
+) -> None:
+    """Spec: anom-015, anom-005, db-008, api-012.
+
+    Every receiver raised through one window is the environmental verdict, which
+    is what `anom-005` consumes. Its zone spans several receivers, so the row has
+    to keep all of them -- the subject names one and `details` names the set,
+    because the window is the union of theirs.
+    """
+    # spec: anom-015, anom-005, api-012
+    factory = sessionmaker(bind=migrated_database, autoflush=False)
+    everywhere = {(sensor, channel): 20.0 for sensor in SENSORS for channel in CHANNELS}
+    _store(factory, 2, elevate=everywhere)
+
+    assessment = assess(
+        _run(),
+        normality=_normality(),
+        policies=POLICIES,
+        layout=LAYOUT,
+        session_factory=factory,
+    )
+
+    assert assessment.interference.zones, "no zone was established"
+    stored = findings_for_run(factory, 2, rule_id=FUSION_RULE)
+    assert stored, "a reported interference zone was not written"
+    assert {f.finding_type for f in stored} == {INTERFERENCE_TYPE}
+    assert len(stored[0].details["sensors"]) > 1, (
+        "a zone row kept one receiver: anom-005's window is the union of its "
+        "receivers', so a subset misreports which deviated together"
+    )
+
+
+@requires_database
+def test_the_run_is_stamped_with_when_it_was_examined_and_under_what_policy(
+    migrated_database: Engine,
+) -> None:
+    """Spec: anom-015, api-012, eval-003.
+
+    The policy sits beside the stamp and not only on the findings, because a
+    quiet run has **no findings to carry it** -- and a quiet run scored under
+    thresholds nobody recorded is exactly the case `anom-008`'s measured bands
+    were taken under.
+    """
+    # spec: anom-015, api-012, eval-003
+    factory = sessionmaker(bind=migrated_database, autoflush=False)
+    _store(factory, 2)
+
+    assessment = assess(
+        _run(),
+        normality=_normality(),
+        policies=POLICIES,
+        layout=LAYOUT,
+        session_factory=factory,
+    )
+
+    recorded = detection_pass_for_run(factory, 2)
+    assert recorded is not None, "the pass left no record that it ran"
+    assert recorded.policy == dict(assessment.policy)
+    assert recorded.at.tzinfo is not None
+
+
+@requires_database
+def test_a_run_the_pass_found_nothing_in_is_still_stamped(
+    migrated_database: Engine,
+) -> None:
+    """The capability, stated as plainly as it can be. Spec: anom-015, anom-008.
+
+    Zero findings is the answer a quiet run gives and the answer a run nobody
+    examined gives, and the findings write replaces per run per rule *including
+    at zero*, so the table cannot tell them apart. The stamp is the only thing
+    that can, which is why it is written whether or not anything was found.
+    """
+    # spec: anom-015, anom-008, api-012
+    factory = sessionmaker(bind=migrated_database, autoflush=False)
+    _store(factory, 2)
+    _open_run(factory, 3)
+
+    assess(
+        _run(2),
+        normality=_normality(),
+        policies=POLICIES,
+        layout=LAYOUT,
+        session_factory=factory,
+    )
+
+    assert findings_for_run(factory, 2, rule_id=FAULT_RULE) == []
+    assert detection_pass_for_run(factory, 2) is not None, "a clean run was not stamped"
+    assert detection_pass_for_run(factory, 3) is None, "an unexamined run was stamped"
+
+
+@requires_database
+def test_the_stamp_is_written_after_every_finding(migrated_database: Engine) -> None:
+    """Spec: anom-015.
+
+    A pass that dies midway must leave a run that is **not known to have been
+    scored** rather than one claiming an examination it did not finish. Stamped
+    first, a crash between the stamp and the last write leaves a run reporting a
+    complete pass over a partial set of findings, and nothing can detect it.
+
+    Asserted on the statements the engine issued, because no property of a
+    successful pass distinguishes the two orders.
+    """
+    # spec: anom-015, db-008
+    factory = sessionmaker(bind=migrated_database, autoflush=False)
+    _store(factory, 2, elevate={(SENSORS[0], channel): 20.0 for channel in CHANNELS})
+    issued: list[str] = []
+
+    @event.listens_for(migrated_database, "before_cursor_execute")
+    def record(conn, cursor, statement, parameters, context, executemany):  # type: ignore[no-untyped-def]
+        issued.append(statement)
+
+    try:
+        assess(
+            _run(),
+            normality=_normality(),
+            policies=POLICIES,
+            layout=LAYOUT,
+            session_factory=factory,
+        )
+    finally:
+        event.remove(migrated_database, "before_cursor_execute", record)
+
+    stamped = next(
+        i for i, s in enumerate(issued) if "detection_pass_at" in s and "UPDATE" in s
+    )
+    last_write = max(
+        i
+        for i, s in enumerate(issued)
+        if "detection_findings" in s
+        and ("INSERT" in s.upper() or "DELETE" in s.upper())
+    )
+
+    assert last_write < stamped, "the run was stamped before its findings were written"
+
+
+@requires_database
+def test_a_refused_pass_leaves_the_run_unstamped(migrated_database: Engine) -> None:
+    """Spec: anom-015, db-007.
+
+    The two refusals already promise to leave no partial write behind. The stamp
+    is the one write whose presence is itself a claim, so a refusal that stamped
+    anyway would assert an examination that did not happen.
+    """
+    # spec: anom-015, db-007
+    factory = sessionmaker(bind=migrated_database, autoflush=False)
+    _store(factory, 2, rf=False)
+
+    with pytest.raises(ChainError, match="no RF observations"):
+        assess(
+            _run(),
+            normality=_normality(),
+            policies=POLICIES,
+            layout=LAYOUT,
+            session_factory=factory,
+        )
+
+    assert detection_pass_for_run(factory, 2) is None

@@ -30,6 +30,7 @@ data absent, so absence is a state the contract is expected to carry.
 
 from __future__ import annotations
 
+import json
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -37,6 +38,7 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
@@ -44,10 +46,13 @@ from sqlalchemy.pool import NullPool
 from alembic import command
 from app.api.v1.operational_picture import FINAL_WINDOW_SECONDS
 from app.api.v1.schemas.operational_picture import (
+    PERSISTED_PRODUCERS,
     AircraftTrack,
+    DetectionCount,
     DetectionSummary,
     Hypothesis,
     OperationalPicture,
+    PictureError,
     RFSensor,
     Scenario,
     TimelineEvent,
@@ -56,6 +61,7 @@ from app.api.v1.schemas.operational_picture import (
 from app.dal.models import (
     CanonicalObservation,
     DataMode,
+    DetectionPass,
     Location,
     ObservationType,
     Provenance,
@@ -64,13 +70,30 @@ from app.dal.models import (
     TrackPayload,
     ValidationStatus,
 )
+from app.db.findings import save_findings
 from app.db.migrations import alembic_config
-from app.db.repository import PostgisObservationRepository
+from app.db.repository import PostgisObservationRepository, record_detection_pass
+from app.detection.clustering import FINDING_TYPE as CLUSTER_TYPE
+from app.detection.clustering import RULE_ID as CLUSTER_RULE
+from app.detection.control import REGISTER, Kind, Producer, build_register
+from app.detection.findings import DetectionFinding
+from app.detection.fusion import ANOMALY_TYPE as INTERFERENCE_TYPE
+from app.detection.fusion import RULE_ID as FUSION_RULE
+from app.detection.rate_excess import FINDING_TYPE as EXCESS_TYPE
+from app.detection.rf_noise import ANOMALY_TYPE as RF_TYPE
+from app.detection.rf_noise import RULE_ID as RF_RULE
+from app.detection.rf_noise import Severity
+from app.detection.sensor_fault import ANOMALY_TYPE as FAULT_TYPE
+from app.detection.sensor_fault import RULE_ID as FAULT_RULE
+from app.detection.track_gap import FINDING_TYPE as GAP_TYPE
+from app.detection.track_gap import RULE_ID as GAP_RULE
 from app.main import app
+from app.scenario.layout import load_layout
 from tests.conftest import live_database_url, requires_database
 from tests.contracts import contract_paths
 from tests.contracts import interfaces as _interfaces
 from tests.contracts import read_contract as _read
+from tests.contracts import union_members
 
 CONTRACT_PATHS = contract_paths("operationalPicture.ts")
 
@@ -80,6 +103,7 @@ CONTRACT_PATHS = contract_paths("operationalPicture.ts")
 MODELS = {
     "Scenario": Scenario,
     "Hypothesis": Hypothesis,
+    "DetectionCount": DetectionCount,
     "DetectionSummary": DetectionSummary,
     "RFSensor": RFSensor,
     "AircraftTrack": AircraftTrack,
@@ -105,6 +129,13 @@ ALTITUDE_M = 5753.1
 ALTITUDE_FT = 18875
 
 RUN_ID = 1
+
+#: `scn-005`'s shipped layout: seven receivers, eight channels, one band. The
+#: picture serves the receivers from here rather than from the findings, so a
+#: quiet run still has a map with reference points on it.
+LAYOUT = load_layout()
+RECEIVER = LAYOUT.sensors[0].sensor_id
+OTHER_RECEIVER = LAYOUT.sensors[1].sensor_id
 
 
 # ------------------------------------------------------------------- helpers
@@ -239,36 +270,51 @@ def test_a_picture_with_no_run_carries_no_scenario_and_no_tracks() -> None:
     expected to carry rather than one invented here.
     """
     # spec: api-002, op-001
-    picture = build_operational_picture(run=None, observations=[])
+    picture = build_operational_picture(layout=LAYOUT, run=None, observations=[])
 
     assert picture.scenario is None
     assert picture.aircraftTracks == []
 
 
-@pytest.mark.parametrize("section", ["hypotheses", "rfSensors", "timelineEvents"])
+@pytest.mark.parametrize("section", ["hypotheses", "timelineEvents"])
 def test_the_sections_with_no_producer_are_empty_rather_than_invented(
     section: str,
 ) -> None:
-    # spec: api-002 -- no detector, no RF source and no generator exist. An
-    # empty section is honest; a populated one would be invented data reaching
-    # an analyst through a system whose argument is that this must not happen.
-    picture = build_operational_picture(run=_run(), observations=[_observation()])
+    """`api-002`'s rule, kept, over a shorter list.
+
+    An empty section is honest; a populated one would be invented data reaching
+    an analyst through a system whose argument is that this must not happen.
+    `api-012` closed `timelineEvents` by giving it a producer, so it is empty
+    here because this picture was handed no findings -- a different fact from
+    the one `api-002` recorded. `hypotheses` is the last section whose emptiness
+    is still a statement about the system.
+
+    `rfSensors` has left this list rather than this rule: the receivers are
+    `scn-005`'s layout, configuration the generator itself reads, so serving
+    them invents nothing. What would be invented is a *health* reading, and that
+    is the field the detection stamp governs.
+    """
+    # spec: api-002, api-012
+    picture = build_operational_picture(layout=LAYOUT, run=_run(), observations=[_observation()])
 
     assert getattr(picture, section) == []
 
 
-@pytest.mark.parametrize("field", DETECTION_FIELDS)
-def test_the_detection_summary_is_absent_rather_than_optimistic(field: str) -> None:
-    """Null, not `Low`.
+def test_the_detection_summary_is_absent_rather_than_optimistic() -> None:
+    """Null, not `Low` -- and now the whole summary rather than its two fields.
 
-    `Low` is a claim about the data. With no detector in the system the only
-    truthful value is the absence of one — the same reasoning that made
-    `db-007`'s completion flag nullable rather than defaulted.
+    `Low` is a claim about the data; absence is a statement about the system,
+    which is the only one that can be made truthfully about a run nothing has
+    examined. `api-002` carried that on the fields. `api-012` moved it onto the
+    object, because the fields would otherwise carry a second meaning the store
+    cannot establish: `anom-001`'s unjudged cells are not persisted, so from the
+    findings table "judged everything, found nothing" and "judged nothing" are
+    the same empty result. One absence, one meaning.
     """
-    # spec: api-002, db-007
-    picture = build_operational_picture(run=_run(), observations=[_observation()])
+    # spec: api-002, api-012, db-007
+    picture = build_operational_picture(layout=LAYOUT, run=_run(), observations=[_observation()])
 
-    assert getattr(picture.detectionSummary, field) is None
+    assert picture.detectionSummary is None
 
 
 def test_altitude_is_converted_from_metres_to_feet() -> None:
@@ -276,7 +322,7 @@ def test_altitude_is_converted_from_metres_to_feet() -> None:
     # 5753.1 m is 18,874 ft: a conversion that silently did nothing would still
     # produce a plausible-looking altitude, so the fixture value is one where
     # the two units are not confusable.
-    picture = build_operational_picture(run=_run(), observations=[_observation()])
+    picture = build_operational_picture(layout=LAYOUT, run=_run(), observations=[_observation()])
 
     assert picture.aircraftTracks[0].altitudeFt == ALTITUDE_FT
 
@@ -285,6 +331,7 @@ def test_a_track_with_no_altitude_survives_rather_than_being_dropped() -> None:
     # spec: api-002 -- 22.7% of positioned rows in the corpus carry no altitude,
     # and an aircraft with an unknown height is still an aircraft on the map
     picture = build_operational_picture(
+        layout=LAYOUT,
         run=_run(), observations=[_observation(altitude_m=None)]
     )
 
@@ -297,6 +344,7 @@ def test_the_track_name_is_the_pseudonym_it_was_stored_under() -> None:
     # `name` is what a person reads on screen, so this is the field a real
     # identifier would surface in if one ever survived ingest
     picture = build_operational_picture(
+        layout=LAYOUT,
         run=_run(), observations=[_observation(aircraft_id="AC-deadbeef0001")]
     )
 
@@ -306,7 +354,7 @@ def test_the_track_name_is_the_pseudonym_it_was_stored_under() -> None:
 def test_the_data_mode_comes_from_the_observations_actually_served() -> None:
     # spec: api-002 -- reported rather than assumed. A run row does not record a
     # data mode; the observations do, and they are what is on the screen.
-    picture = build_operational_picture(run=_run(), observations=[_observation()])
+    picture = build_operational_picture(layout=LAYOUT, run=_run(), observations=[_observation()])
 
     assert picture.scenario is not None
     assert picture.scenario.dataMode == DataMode.REPLAYED.value
@@ -323,6 +371,7 @@ def test_observations_from_two_modes_are_reported_as_mixed() -> None:
     """
     # spec: api-002, scn-001
     picture = build_operational_picture(
+        layout=LAYOUT,
         run=_run(),
         observations=[
             _observation(),
@@ -337,7 +386,7 @@ def test_observations_from_two_modes_are_reported_as_mixed() -> None:
 def test_a_run_with_no_observations_reports_an_unknown_data_mode() -> None:
     # spec: api-002 -- the failure case for the line above: with nothing served,
     # naming a mode would be a guess
-    picture = build_operational_picture(run=_run(), observations=[])
+    picture = build_operational_picture(layout=LAYOUT, run=_run(), observations=[])
 
     assert picture.scenario is not None
     assert picture.scenario.dataMode == "unknown"
@@ -345,7 +394,7 @@ def test_a_run_with_no_observations_reports_an_unknown_data_mode() -> None:
 
 def test_the_scenario_reports_the_run_it_came_from() -> None:
     # spec: api-002 -- the id is what makes a screenshot traceable to a run
-    picture = build_operational_picture(run=_run(run_id=8), observations=[])
+    picture = build_operational_picture(layout=LAYOUT, run=_run(run_id=8), observations=[])
 
     assert picture.scenario is not None
     assert picture.scenario.id == "8"
@@ -587,3 +636,609 @@ def test_the_payload_carries_no_decimal_score(
 # On the frontend side, restoring the percentage sign to the anomaly label
 # turned three of the six screen tests red, including the whole-screen
 # assertion that no percentage appears anywhere (AC-11).
+
+
+# ---------------------------------------------------- detection on the picture
+#
+# Spec: api-012. Three collections `api-002` has always served empty, and the
+# justification it served them under -- "because no detector, RF source or
+# generator exists" -- expired without anything noticing, because three items
+# consume these fields and none produced them.
+#
+# The sharpest constraint is about zero, and it is `anom-008`'s argument at the
+# API boundary: a quiet run, a run nobody examined, and a pass pointed at the
+# wrong observations all produce no detections, and three of those are failures
+# no property of the output separates. So the payload reports *unscored* and
+# *clean* differently, and what carries the distinction is the presence of the
+# account rather than any number in it.
+
+
+def _detection_pass(policy: dict[str, str] | None = None) -> DetectionPass:
+    return DetectionPass(
+        scenario_run_id=RUN_ID,
+        at=HOUR_START + timedelta(seconds=30),
+        policy=policy or {"RF-NOISE.threshold_db": "6.0"},
+    )
+
+
+def _finding(
+    *,
+    rule_id: str,
+    finding_type: str,
+    subject: str,
+    offset_s: int = 0,
+    details: dict[str, Any] | None = None,
+) -> DetectionFinding:
+    return DetectionFinding(
+        scenario_run_id=RUN_ID,
+        rule_id=rule_id,
+        finding_type=finding_type,
+        subject=subject,
+        started_at=HOUR_START + timedelta(seconds=offset_s),
+        ended_at=HOUR_START + timedelta(seconds=offset_s + 300),
+        location=Location(lat=LAT, lon=LON),
+        details=details or {},
+    )
+
+
+def _rf(sensor: str = RECEIVER, *, channel: int = 0, severity: str = "high"):
+    return _finding(
+        rule_id=RF_RULE,
+        finding_type=RF_TYPE,
+        subject=f"{sensor}:{channel}",
+        details={"severity": severity, "metric": "power_dbm"},
+    )
+
+
+def _fault(sensor: str = RECEIVER, *, offset_s: int = 0):
+    return _finding(
+        rule_id=FAULT_RULE,
+        finding_type=FAULT_TYPE,
+        subject=sensor,
+        offset_s=offset_s,
+        details={"confidence": "high"},
+    )
+
+
+def _zone(*sensors: str, offset_s: int = 0):
+    return _finding(
+        rule_id=FUSION_RULE,
+        finding_type=INTERFERENCE_TYPE,
+        subject=sensors[0],
+        offset_s=offset_s,
+        details={"confidence": "medium", "sensors": list(sensors)},
+    )
+
+
+def _gap(aircraft: str = "AC-48089ab4e5a9"):
+    return _finding(
+        rule_id=GAP_RULE, finding_type=GAP_TYPE, subject=aircraft, details={}
+    )
+
+
+def _scored(
+    findings: Sequence[DetectionFinding] = (), **kwargs: Any
+) -> OperationalPicture:
+    """A picture for a run the pass has examined."""
+    kwargs.setdefault("run", _run())
+    kwargs.setdefault("observations", [_observation()])
+    return build_operational_picture(
+        layout=LAYOUT,
+        findings=findings,
+        detection_pass=_detection_pass(),
+        **kwargs,
+    )
+
+
+def _count_for(picture: OperationalPicture, key: tuple[str, str]) -> DetectionCount:
+    assert picture.detectionSummary is not None
+    found = [
+        c
+        for c in picture.detectionSummary.counts
+        if (c.ruleId, c.findingType) == key
+    ]
+    assert len(found) == 1, f"{key} appears {len(found)} times in the account"
+    return found[0]
+
+
+# ------------------------------------------------- unscored is not the same as clean
+
+
+def test_an_unscored_run_and_a_quiet_run_do_not_produce_the_same_payload() -> None:
+    """The item's sharpest constraint, and `anom-008` at the API boundary.
+
+    Zero is the answer a quiet run gives and also the answer a pipeline that
+    never ran gives, and most of those cases are failures no property of the
+    output can separate. The findings write replaces per run per rule *including
+    at zero*, so the table itself cannot tell them apart -- which is why the
+    distinction rests on `anom-015`'s run stamp and not on a count.
+    """
+    # spec: api-012, anom-008, anom-015
+    unscored = build_operational_picture(
+        layout=LAYOUT, run=_run(), observations=[_observation()]
+    )
+    clean = _scored()
+
+    assert unscored.detectionSummary is None
+    assert clean.detectionSummary is not None
+    assert unscored.model_dump() != clean.model_dump()
+
+
+def test_a_quiet_run_is_reported_clean_rather_than_silent() -> None:
+    """Spec: api-012, anom-008.
+
+    A pass that found nothing still accounts for every producer. The account is
+    what says the detectors looked; the zeroes in it are the result.
+    """
+    # spec: api-012, anom-008
+    summary = _scored().detectionSummary
+
+    assert summary is not None
+    assert summary.counts, "a scored run carried no account at all"
+    assert _count_for(_scored(), (RF_RULE, RF_TYPE)).count == 0
+
+
+# ------------------------------------------------------------------- the account
+
+
+def test_the_account_carries_every_registered_producer() -> None:
+    """Spec: api-012, anom-008.
+
+    `anom-008` refuses to grade a run against an account missing a producer,
+    because a detector that never ran and one that found nothing are
+    indistinguishable from the output. The same completeness is what makes this
+    payload answerable, and the register is the one place that list lives.
+    """
+    # spec: api-012, anom-008
+    summary = _scored().detectionSummary
+
+    assert summary is not None
+    assert {(c.ruleId, c.findingType) for c in summary.counts} == set(REGISTER)
+
+
+def test_an_unbuilt_rule_reports_no_count_rather_than_zero() -> None:
+    """Spec: api-012, anom-008, anom-006.
+
+    `anom-008`'s own words: reporting zero across quiet runs "quotes the absence
+    of a rule as the accuracy of one". A zero here is a figure that cannot be
+    wrong, because nothing produced it.
+
+    The register is injected rather than taken from the module, so this test
+    keeps asserting the rule rather than the current state of `anom-006`.
+    """
+    # spec: api-012, anom-008
+    register = build_register(
+        Producer(rule_id=FAULT_RULE, finding_type=FAULT_TYPE, kind=Kind.REPORTABLE),
+        Producer(
+            rule_id="SOURCE-GAP",
+            finding_type="possible_data_source_issue",
+            kind=Kind.REPORTABLE,
+            built=False,
+        ),
+    )
+
+    entry = _count_for(
+        _scored(register=register), ("SOURCE-GAP", "possible_data_source_issue")
+    )
+
+    assert entry.count is None
+    assert entry.unavailable == "rule-not-built"
+
+
+def test_a_producer_whose_output_is_not_persisted_is_not_reported_as_unbuilt() -> None:
+    """Spec: api-012, anom-004, anom-012.
+
+    Two registered producers leave no rows: `anom-004`'s clusters are
+    deliberately unstored because their citation shape `evb-002` refuses by
+    name, and `anom-012`'s rate excess is internal to the fusion decision. Both
+    ran. Collapsing that into the unbuilt case would report a built detector as
+    a missing one, which is the opposite of what the account is for.
+    """
+    # spec: api-012, anom-004, anom-012
+    clusters = _count_for(_scored(), (CLUSTER_RULE, CLUSTER_TYPE))
+    excess = _count_for(_scored(), (GAP_RULE, EXCESS_TYPE))
+
+    for entry in (clusters, excess):
+        assert entry.count is None
+        assert entry.unavailable == "not-persisted"
+
+
+def test_a_count_and_a_reason_for_its_absence_are_mutually_exclusive() -> None:
+    """Spec: api-012, evb-001.
+
+    Both directions refused at construction, on `EvidenceItem.grounding`'s rule:
+    a declaration that can be a lie either way is not a declaration. A count
+    beside a reason is unreadable, and neither is an absence nothing names.
+    """
+    # spec: api-012, evb-001
+    common = {"ruleId": FAULT_RULE, "findingType": FAULT_TYPE, "kind": "reportable"}
+
+    with pytest.raises(ValidationError):
+        DetectionCount(**common, count=0, unavailable="not-persisted")
+    with pytest.raises(ValidationError):
+        DetectionCount(**common, count=None, unavailable=None)
+
+
+def test_the_account_labels_an_intermediate_finding_as_intermediate() -> None:
+    """Spec: api-012, anom-010.
+
+    A quiet run genuinely holds about 138 track discontinuities, because
+    aircraft stop reporting for ordinary reasons. An analyst shown that as an
+    anomaly count reads a correct non-detection as a storm -- and a payload
+    that did not carry the distinction would force the screen to hard-code a
+    list of rule names, which outlives the reason it was written.
+    """
+    # spec: api-012, anom-010, anom-008
+    picture = _scored([_gap(), _gap("AC-000000000002")])
+
+    assert _count_for(picture, (GAP_RULE, GAP_TYPE)).kind == "intermediate"
+    assert _count_for(picture, (GAP_RULE, GAP_TYPE)).count == 2
+    assert _count_for(picture, (FAULT_RULE, FAULT_TYPE)).kind == "reportable"
+
+
+def test_the_account_keys_on_the_pair_and_not_on_the_rule() -> None:
+    """Spec: api-012, ai-001, anom-012.
+
+    `anom-012` borrows `anom-010`'s rule id, so a rate excess and a
+    discontinuity are identical by rule id while making different claims. The
+    fourth place in this project that collision has had to be handled.
+    """
+    # spec: api-012, ai-001, anom-012
+    picture = _scored([_gap()])
+
+    assert _count_for(picture, (GAP_RULE, GAP_TYPE)).count == 1
+    assert _count_for(picture, (GAP_RULE, EXCESS_TYPE)).count is None
+
+
+# -------------------------------------------------------------------- the levels
+
+
+def test_the_worst_deviation_sets_the_anomaly_level() -> None:
+    """Spec: api-012, anom-001, FR-715.
+
+    The level qualifies the **deviation**, which is the only thing the detection
+    layer measures a magnitude for, and it is the worst one rather than an
+    average: an average over the channels a receiver reports on falls as the
+    quiet channels outnumber the loud one.
+    """
+    # spec: api-012, anom-001
+    picture = _scored(
+        [
+            _rf(channel=0, severity="low"),
+            _rf(channel=1, severity="high"),
+            _rf(channel=2, severity="medium"),
+        ]
+    )
+
+    assert picture.detectionSummary is not None
+    assert picture.detectionSummary.anomalyLevel == "High"
+
+
+def test_a_scored_run_with_no_deviation_reports_the_lowest_level() -> None:
+    # spec: api-012, anom-008 -- the summary's presence is what says a pass ran,
+    # so inside one every value is a reading rather than a stand-in for absence
+    picture = _scored()
+
+    assert picture.detectionSummary is not None
+    assert picture.detectionSummary.anomalyLevel == "Low"
+
+
+def test_a_level_the_detection_layer_does_not_spell_is_refused() -> None:
+    """Spec: api-012, ai-002.
+
+    Joined by **enum member name**, which is `ai-002`'s rule: `.title()` would
+    launder any word at all into something that looks valid and fails later, at
+    a boundary that no longer holds the row it came from.
+    """
+    # spec: api-012, ai-002
+    with pytest.raises(PictureError, match="severe"):
+        _scored([_rf(severity="severe")])
+
+
+@pytest.mark.parametrize("severity", [s for s in Severity])
+def test_every_severity_the_detection_layer_can_produce_has_a_level(
+    severity: Severity,
+) -> None:
+    # spec: api-012, anom-001 -- a fourth severity added to the rule must not
+    # reach this boundary as a refusal on a legitimate run
+    picture = _scored([_rf(severity=severity.value)])
+
+    assert picture.detectionSummary is not None
+    assert picture.detectionSummary.anomalyLevel in ("Low", "Medium", "High")
+
+
+def test_signal_integrity_reads_the_receivers_and_not_the_deviations() -> None:
+    """Spec: api-012, anom-007.
+
+    The two readings stay two readings. `anom-007` is explicit that confidence
+    qualifies the **attribution** while severity qualifies the **deviation**, so
+    a single figure over both describes neither -- and this one is about the
+    state of the receiver layout, which is one kind of thing.
+    """
+    # spec: api-012, anom-007
+    nominal = _scored()
+    deviating = _scored([_rf()])
+    faulted = _scored([_rf(), _fault()])
+
+    assert nominal.detectionSummary is not None
+    assert deviating.detectionSummary is not None
+    assert faulted.detectionSummary is not None
+    assert nominal.detectionSummary.signalIntegrity == "High"
+    assert deviating.detectionSummary.signalIntegrity == "Medium"
+    assert faulted.detectionSummary.signalIntegrity == "Low"
+
+
+# ----------------------------------------------------------------- the receivers
+
+
+def test_the_receivers_come_from_the_layout_rather_than_from_the_findings() -> None:
+    """Spec: api-012, scn-005.
+
+    All seven, whether or not any of them was found to be deviating. Built the
+    other way the strip would show only the receivers in trouble, which on a
+    quiet run is an empty map and on a staged one is a map with no reference
+    points to read the incident against.
+    """
+    # spec: api-012, scn-005
+    picture = _scored([_rf()])
+
+    assert [s.id for s in picture.rfSensors] == [
+        site.sensor_id for site in LAYOUT.sensors
+    ]
+    assert {s.signalId for s in picture.rfSensors} == {
+        channel.band for channel in LAYOUT.channels
+    }
+
+
+def test_a_receiver_state_is_unknown_until_a_pass_has_run() -> None:
+    """Spec: api-012, anom-008.
+
+    The same two-valued rule as the summary, on the field that carries a claim:
+    a receiver reported `nominal` on a run nothing examined is a reassurance
+    nothing checked, which is `api-002`'s own argument for `scenario.health`.
+    """
+    # spec: api-012, api-002
+    picture = build_operational_picture(
+        layout=LAYOUT, run=_run(), observations=[_observation()]
+    )
+
+    assert {s.health for s in picture.rfSensors} == {"unknown"}
+
+
+def test_a_receiver_reports_the_worst_thing_said_about_it() -> None:
+    """Spec: api-012, anom-007.
+
+    A faulted receiver is also a deviating one -- the fault rule reads the radio
+    rule's episodes -- so the two states are not exclusive and the attribution
+    is the one that matters. Reported the other way round, a broken receiver
+    reads as a loud one.
+    """
+    # spec: api-012, anom-007
+    picture = _scored([_rf(), _rf(OTHER_RECEIVER), _fault()])
+    health = {sensor.id: sensor.health for sensor in picture.rfSensors}
+
+    assert health[RECEIVER] == "fault"
+    assert health[OTHER_RECEIVER] == "deviating"
+    assert health[LAYOUT.sensors[2].sensor_id] == "nominal"
+
+
+def test_a_receiver_inside_an_interference_zone_is_deviating_and_not_faulted() -> None:
+    """Spec: api-012, anom-005, anom-007.
+
+    An interference zone is `anom-007`'s *environmental* verdict: more than one
+    receiver deviated together, and the rule declined to blame any of them. A
+    zone that marked its receivers faulty would report the opposite of what the
+    ladder decided -- and the zone names all of them, because its window is the
+    union of theirs.
+    """
+    # spec: api-012, anom-005
+    picture = _scored([_zone(RECEIVER, OTHER_RECEIVER)])
+    health = {sensor.id: sensor.health for sensor in picture.rfSensors}
+
+    assert health[RECEIVER] == "deviating"
+    assert health[OTHER_RECEIVER] == "deviating"
+
+
+# ------------------------------------------------------------------ the timeline
+
+
+def test_the_timeline_carries_the_reportable_claims_oldest_first() -> None:
+    # spec: api-012, op-006 -- ordering is by event time and independent of the
+    # order the rows came back in
+    picture = _scored(
+        [_fault(offset_s=600), _zone(OTHER_RECEIVER, offset_s=0), _fault(offset_s=300)]
+    )
+
+    assert [event.time for event in picture.timelineEvents] == sorted(
+        event.time for event in picture.timelineEvents
+    )
+    assert len(picture.timelineEvents) == 3
+
+
+def test_the_timeline_carries_no_intermediate_findings() -> None:
+    """Spec: api-012, anom-010, anom-013.
+
+    A quiet run holds about 138 discontinuities and four clusters. A timeline
+    that listed them would bury the one line that is a conclusion, and would
+    present working material to an analyst as an event.
+    """
+    # spec: api-012, anom-010
+    picture = _scored([_gap(), _rf(), _fault()])
+
+    assert [event.event for event in picture.timelineEvents] == [FAULT_TYPE]
+
+
+def test_a_timeline_event_carries_the_finding_type_verbatim() -> None:
+    """Spec: api-012, api-011, ai-001.
+
+    Facts and never prose, which is `api-011`'s rule for the batch refusal: the
+    screen composes its sentence where the rest of that screen's copy lives, and
+    the payload stays assertable field by field. The vocabulary is `ai-001`'s,
+    shared with the grounding check and the scoring pack.
+    """
+    # spec: api-012, api-011, ai-001
+    picture = _scored([_zone(RECEIVER, OTHER_RECEIVER)])
+
+    assert [event.event for event in picture.timelineEvents] == [INTERFERENCE_TYPE]
+    assert [event.source for event in picture.timelineEvents] == [RECEIVER]
+
+
+# ------------------------------------------------------------- no ground truth
+
+
+def test_the_scenario_name_is_not_the_scenario_type() -> None:
+    """`api-009`'s named failure case, which this endpoint was live with.
+
+    `api-002` served `scenario.name` from the run's recorded type, so the
+    screen's heading read `gnss-degradation` -- the name of the thing injected
+    into the data the detectors are being measured against. It survived because
+    `ScenarioRunSummary` was built with no ground-truth field and the check
+    stopped there: the type is not the event, it is the **label** for it, and it
+    discloses everything the event would.
+    """
+    # spec: api-012, api-009
+    picture = build_operational_picture(
+        layout=LAYOUT,
+        run=_run(run_id=8, scenario_type="gnss-degradation"),
+        observations=[_observation(run_id=8)],
+    )
+
+    assert picture.scenario is not None
+    assert "gnss" not in picture.scenario.name.lower()
+    assert "8" in picture.scenario.name
+
+
+@pytest.mark.parametrize(
+    "scenario_type",
+    [
+        "normal-baseline",
+        "gnss-degradation",
+        "aircraft-coverage-gap",
+        "sensor-fault",
+        "ambiguous-mixed-evidence",
+    ],
+)
+def test_no_field_anywhere_in_the_payload_carries_the_scenario_type(
+    scenario_type: str,
+) -> None:
+    """Spec: api-012, api-009.
+
+    Asserted over the **serialised payload** rather than over the one field that
+    held it, because the failure case says "whether as a field, a label or an
+    inferable artefact" and a per-field test only ever proves the field somebody
+    thought of. Every one of the five arms, because a check written against one
+    is a check against the author's model of which one leaks.
+    """
+    # spec: api-012, api-009
+    picture = _scored(
+        [_fault()],
+        run=_run(scenario_type=scenario_type),
+    )
+
+    assert scenario_type not in json.dumps(picture.model_dump(mode="json"))
+
+
+def test_the_hypotheses_stay_empty() -> None:
+    """Spec: api-012, api-002.
+
+    155 hypothesis rows exist, so the condition that justified the other three
+    empty sections has expired here too. What holds this one is a decision with
+    its own failure cases -- which arm an analyst sees, whether a row whose
+    grounding check FAILED may be shown at all -- and so its own item. Named
+    rather than left silent, because the lesson of `api-002`'s amendment is that
+    a producer-less field is invisible in a backlog.
+    """
+    # spec: api-012, api-002, db-002
+    assert _scored([_fault()]).hypotheses == []
+
+
+def test_the_two_new_unions_match_their_literals_on_both_sides() -> None:
+    """Spec: api-012, api-002.
+
+    Two closed sets reach the frontend as union types, and a closed set that is
+    not compared against its origin is a list somebody edits one side of. The
+    same argument `scn-004` makes for the five scenario type ids.
+    """
+    # spec: api-012, api-002
+    source = _read(CONTRACT_PATHS)
+
+    assert set(union_members(source, "ProducerKind")) == {k.value for k in Kind}
+    assert set(union_members(source, "CountUnavailable")) == {
+        "rule-not-built",
+        "not-persisted",
+    }
+
+
+def test_every_producer_the_endpoint_calls_persisted_is_registered() -> None:
+    """Spec: api-012, anom-008.
+
+    A pair misspelled here is not a loud failure: the key simply never matches a
+    register entry, so a producer that does persist its findings is reported as
+    *not persisted*, with its real count discarded. Nothing else notices --
+    which is why the other half of this is asserted against `anom-015`'s own
+    source in `test_anom_chain.py`.
+    """
+    # spec: api-012, anom-008
+    assert PERSISTED_PRODUCERS <= set(REGISTER)
+    assert all(REGISTER[key].built for key in PERSISTED_PRODUCERS)
+
+
+# ------------------------------------- detection through the endpoint, live
+
+
+@pytest.mark.database
+@requires_database
+def test_the_endpoint_serves_a_run_the_pass_has_scored(
+    picture_database: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Spec: api-012, anom-015, FR-904.
+
+    The assembly is proved without a database above; this is the wiring, and the
+    wiring is where `api-002`'s own reads were put behind a repository function
+    so `db-006` had a real route to assert over. Four reads and no SQL here.
+    """
+    # spec: api-012, anom-015, db-006
+    _insert_run(picture_database, RUN_ID, completed=True)
+    _save(picture_database, [_observation()])
+    factory = sessionmaker(bind=picture_database, autoflush=False)
+    save_findings(
+        factory,
+        scenario_run_id=RUN_ID,
+        rule_id=FAULT_RULE,
+        findings=[_fault()],
+        policy={"RF-NOISE.threshold_db": "6.0"},
+    )
+    record_detection_pass(
+        factory, RUN_ID, policy={"RF-NOISE.threshold_db": "6.0"}
+    )
+
+    payload = _get(picture_database, monkeypatch)
+
+    assert payload["detectionSummary"] is not None
+    assert len(payload["detectionSummary"]["counts"]) == len(REGISTER)
+    assert [event["event"] for event in payload["timelineEvents"]] == [FAULT_TYPE]
+    assert len(payload["rfSensors"]) == len(LAYOUT.sensors)
+    health = {sensor["id"]: sensor["health"] for sensor in payload["rfSensors"]}
+    assert health[RECEIVER] == "fault"
+
+
+@pytest.mark.database
+@requires_database
+def test_the_endpoint_reports_an_unscored_run_as_unscored(
+    picture_database: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Spec: api-012, anom-008.
+
+    The same database, the same run, the same observations -- and no pass. This
+    is the pair the item's sharpest constraint is about, and the pair nothing in
+    the store could distinguish before `anom-015` stamped the run.
+    """
+    # spec: api-012, anom-008, anom-015
+    _insert_run(picture_database, RUN_ID, completed=True)
+    _save(picture_database, [_observation()])
+
+    payload = _get(picture_database, monkeypatch)
+
+    assert payload["detectionSummary"] is None
+    assert payload["timelineEvents"] == []
+    assert {sensor["health"] for sensor in payload["rfSensors"]} == {"unknown"}
