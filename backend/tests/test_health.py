@@ -8,11 +8,16 @@ client = TestClient(app)
 
 
 def test_health_returns_200_with_status_body() -> None:
-    # spec: api-001
+    # spec: api-001, ops-005 -- amended. The body gained the schema fields when
+    # `ops-005` made this route report whether the database is at the revision
+    # the code expects; the status field and the 200 are unchanged, which is the
+    # part this test was written for. No database is configured here, so the
+    # schema reads as unknown, which `api-001` requires to still answer 200.
     response = client.get("/api/v1/health")
 
     assert response.status_code == 200
-    assert response.json() == {"status": "healthy"}
+    assert response.json()["status"] == "healthy"
+    assert response.json()["schema"] == "unknown"
 
 
 def test_health_needs_no_database() -> None:
