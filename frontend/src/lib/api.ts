@@ -39,6 +39,11 @@ export const SELECTABLE_HOURS_PATH = "/api/v1/operational-picture/hours";
  */
 export const DEFAULT_POLL_INTERVAL_MS = 5000;
 
+/** STUB — nav-002 not implemented. */
+export const SYSTEM_HEALTH_PATH = "/api/v1/health";
+/** STUB — nav-002 not implemented. */
+export const SYSTEM_HEALTH_INTERVAL_MS = 0;
+
 /**
  * Fetch one hour's picture, or throw.
  *

@@ -1189,6 +1189,87 @@ def test_no_field_anywhere_in_the_payload_carries_the_scenario_type(
     assert scenario_type not in json.dumps(picture.model_dump(mode="json"))
 
 
+# ------------------------------------------- the scenario block loses a field
+
+
+#: Every field the scenario block carries after `api-014`, asserted exactly.
+SCENARIO_FIELDS = {"id", "name", "dataMode"}
+
+
+def test_the_scenario_block_carries_no_health_field() -> None:
+    """Spec: api-014.
+
+    The field was hard-coded to `unknown` with a comment recording that no
+    health monitoring existed. What changed is not that a producer arrived but
+    that another field took the job: `api-012`'s `signalIntegrity` is the state
+    of the receiver layout, has a producer, and is the run-level health signal
+    this one would have carried. Two health fields where one works is worse
+    than one, because the broken one reads as a second fact that never arrives.
+    """
+    # spec: api-014, api-012, api-002
+    assert _model_fields(Scenario) == SCENARIO_FIELDS
+
+
+def test_the_contract_declares_no_scenario_health_either() -> None:
+    # spec: api-014 -- the named failure case, one direction. The parity test
+    # above catches a mismatch; this says which side is right, so a removal
+    # that happened only in Python cannot be "fixed" by putting it back here.
+    assert set(_interfaces(_read(CONTRACT_PATHS))["Scenario"]) == SCENARIO_FIELDS
+
+
+def test_the_field_is_absent_rather_than_optional() -> None:
+    """Spec: api-014 -- the named failure case.
+
+    Making it nullable would leave the contract able to express a value nothing
+    produces, which is the state the removal exists to end rather than a
+    smaller version of it.
+    """
+    # spec: api-014
+    assert "health" not in str(Scenario.model_json_schema(by_alias=True))
+
+
+def test_no_scenario_in_a_served_payload_carries_health() -> None:
+    # spec: api-014 -- over the serialised payload, because a route is free to
+    # add a key the model does not declare
+    picture = _scored([_fault()])
+
+    assert picture.scenario is not None
+    assert set(picture.model_dump(mode="json")["scenario"]) == SCENARIO_FIELDS
+
+
+def test_an_empty_picture_carries_no_scenario_at_all() -> None:
+    # spec: api-014, api-002 -- the removal must not turn a null scenario into
+    # an object with two of its three fields
+    picture = build_operational_picture(run=None, observations=[], layout=LAYOUT)
+
+    assert picture.scenario is None
+
+
+def test_the_receivers_keep_their_own_health() -> None:
+    """Spec: api-014 -- the one real risk in this removal, asserted.
+
+    `rfSensors[].health` has a producer, carries per-receiver state, and is what
+    the screen renders for each of `scn-005`'s seven receivers. A removal that
+    took both would delete a working signal alongside a broken one, and the two
+    are spelled identically.
+    """
+    # spec: api-014, api-012, scn-005
+    picture = _scored([_fault()])
+
+    assert len(picture.rfSensors) == len(LAYOUT.sensors)
+    assert all(sensor.health for sensor in picture.rfSensors)
+    assert "health" in _model_fields(RFSensor)
+
+
+def test_the_run_level_health_signal_still_exists_under_its_own_name() -> None:
+    # spec: api-014 -- the removal is only honest because another field does the
+    # job. If this ever stops being true the field was deleted, not superseded.
+    summary = _scored([_fault()]).detectionSummary
+
+    assert summary is not None
+    assert summary.signalIntegrity in {"Low", "Medium", "High"}
+
+
 def test_the_hypotheses_stay_empty() -> None:
     """Spec: api-012, api-002.
 

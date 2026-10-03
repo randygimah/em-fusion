@@ -53,3 +53,39 @@ def test_health_route_is_tagged_system() -> None:
     schema = app.openapi()
 
     assert schema["paths"]["/api/v1/health"]["get"]["tags"] == ["system"]
+
+
+#: Every key the health body carries. Pinned for `nav-002`, which reads two of
+#: them to drive the nav footer's status strip.
+HEALTH_KEYS = {"status", "schema", "expected", "found", "detail"}
+
+
+def test_the_health_body_keys_are_pinned() -> None:
+    """Spec: nav-002, ops-005.
+
+    The strip reads `status` and `schema` by name out of a body that is a plain
+    dict rather than a declared model -- `ops-005` made this route answer with a
+    `JSONResponse` so it can carry a 503, so there is nothing for the contract
+    parser to compare against and no parity test can exist here.
+
+    That leaves one silent failure: rename `schema` and the strip reads
+    `undefined`, maps it to *could not tell*, and reports a plausible steady
+    state forever. Two guards sit either side of it, and this is the first --
+    the frontend's is that a body missing either key is treated as the service
+    being unreachable rather than as a verdict, so a rename degrades to a
+    visible failure instead of a believable one.
+    """
+    # spec: nav-002, ops-005
+    body = client.get("/api/v1/health").json()
+
+    assert set(body) == HEALTH_KEYS
+
+
+def test_the_two_keys_the_strip_reads_are_never_absent() -> None:
+    # spec: nav-002 -- asserted separately from the key set because these two
+    # are the ones a consumer outside this repository's test suite depends on
+    body = client.get("/api/v1/health").json()
+
+    assert body["status"]
+    assert body["schema"]
+
