@@ -186,15 +186,23 @@ describe("the Scenario Control screen against the backend", () => {
     vi.stubGlobal("fetch", fetchMock);
     vi.useFakeTimers();
 
+    // Only the runs endpoint. Amended by nav-002: this counted EVERY fetch,
+    // which was the same thing as counting this endpoint's while the screen's
+    // poll was the only one — and the status strip in the rail now polls the
+    // health route on its own interval, correctly, from every screen. Counting
+    // all of them would make this test forbid that.
+    const runsCalls = () =>
+      fetchMock.mock.calls.filter((call) => String(call[0]).includes(SCENARIO_RUNS_PATH)).length;
+
     render(<App />);
     await vi.advanceTimersByTimeAsync(DEFAULT_POLL_INTERVAL_MS * 2);
-    const polled = fetchMock.mock.calls.length;
+    const polled = runsCalls();
 
     fireEvent.click(screen.getByRole("link", { name: /hypotheses/i }));
     await vi.advanceTimersByTimeAsync(DEFAULT_POLL_INTERVAL_MS * 3);
 
     expect(polled).toBeGreaterThan(0);
-    expect(fetchMock.mock.calls).toHaveLength(polled);
+    expect(runsCalls()).toBe(polled);
   });
 
   it("starts a batch and names the seed the server used", async () => {

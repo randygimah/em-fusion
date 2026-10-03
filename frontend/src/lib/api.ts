@@ -39,10 +39,50 @@ export const SELECTABLE_HOURS_PATH = "/api/v1/operational-picture/hours";
  */
 export const DEFAULT_POLL_INTERVAL_MS = 5000;
 
-/** STUB — nav-002 not implemented. */
 export const SYSTEM_HEALTH_PATH = "/api/v1/health";
-/** STUB — nav-002 not implemented. */
-export const SYSTEM_HEALTH_INTERVAL_MS = 0;
+
+/**
+ * Fifteen seconds, and deliberately not the picture's five. spec: nav-002.
+ *
+ * What this reports changes only when somebody applies a migration or the
+ * database goes away. And `ops-005` reads the database's revision on **every
+ * probe** by design, so that a migration run against a live stack clears the
+ * refusal on the next one rather than after a restart — which means the
+ * picture's cadence here would be a database round trip every five seconds per
+ * open screen, for a value that cannot change that fast.
+ */
+export const SYSTEM_HEALTH_INTERVAL_MS = 15000;
+
+/** What the health route answers with, of which the strip reads two fields. */
+export interface SystemHealthBody {
+  status: string;
+  schema: string;
+}
+
+/**
+ * Ask the service about itself. spec: nav-002, ops-005.
+ *
+ * **It does not throw on a non-2xx**, which is the one place in this module
+ * that differs from every other fetcher, and the difference is the item. A 503
+ * from this route means the request *arrived* and the backend could not vouch
+ * for itself — so it is an answer and not a failure, and treating it as a
+ * failure would report a misconfigured deployment as a lost connection. That is
+ * the conflation `ops-005` removed, and the state that cost a day of the main
+ * screen returning 500 while the container called itself healthy.
+ *
+ * It throws only when the request itself fails, and returns **null** when the
+ * body does not carry the two fields the strip reads — so a renamed key
+ * degrades to a visible failure rather than to a plausible verdict.
+ */
+export const fetchSystemHealth = async (
+  baseUrl = "",
+  signal?: AbortSignal,
+): Promise<SystemHealthBody | null> => {
+  const response = await fetch(`${baseUrl}${SYSTEM_HEALTH_PATH}`, { signal });
+  const body = (await response.json()) as Partial<SystemHealthBody>;
+  if (typeof body?.status !== "string" || typeof body?.schema !== "string") return null;
+  return { status: body.status, schema: body.schema };
+};
 
 /**
  * Fetch one hour's picture, or throw.

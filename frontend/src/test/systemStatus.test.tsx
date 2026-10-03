@@ -2,6 +2,8 @@ import { render, screen, waitFor, within, fireEvent } from "@testing-library/rea
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../App";
 import { DEFAULT_POLL_INTERVAL_MS, SYSTEM_HEALTH_INTERVAL_MS, SYSTEM_HEALTH_PATH } from "../lib/api";
+import { EmSystemStatus } from "../components/em/EmSystemStatus";
+import type { Service } from "../hooks/useSystemHealth";
 import operationalPictureMock from "../mocks/operationalPictureMock";
 import { SCREENS } from "../routes";
 
@@ -64,6 +66,7 @@ const route = (input: RequestInfo | URL): Response => {
 
 beforeEach(() => {
   window.location.hash = "";
+  window.localStorage.clear();
   health = () => ok(AT_HEAD);
   fetchMock = vi.fn((input: RequestInfo | URL) => Promise.resolve(route(input)));
   vi.stubGlobal("fetch", fetchMock);
@@ -73,11 +76,17 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.useRealTimers();
   window.location.hash = "";
+  window.localStorage.clear();
 });
 
 const rail = () => screen.getByRole("navigation", { name: /screens/i });
-const strip = () => within(rail()).getByRole("group", { name: /system status/i });
-const row = (name: RegExp) => within(strip()).getByRole("status", { name });
+// Scoped to the rail rather than to a container element of the strip's own: the
+// strip carries no container role, because each row is a `status` with its own
+// accessible name and an invented role on top of that adds nothing. Scanning
+// the whole rail is also the stronger claim for the no-percentage test — no
+// percentage anywhere in the rail, not merely none inside one box.
+const strip = rail;
+const row = (name: RegExp) => within(rail()).getByRole("status", { name });
 
 describe("the strip, and where it reads from", () => {
   it("asks the service's own health route", async () => {
@@ -92,7 +101,9 @@ describe("the strip, and where it reads from", () => {
     window.location.hash = hash;
     render(<App />);
 
-    expect(await within(rail()).findByRole("group", { name: /system status/i })).toBeInTheDocument();
+    expect(await within(rail()).findByText(/system status/i)).toBeInTheDocument();
+    expect(row(/connectivity/i)).toBeInTheDocument();
+    expect(row(/service/i)).toBeInTheDocument();
   });
 
   it("does not read the picture payload", () => {
@@ -155,22 +166,19 @@ describe("the two rows, and the three states behind them", () => {
     expect(await within(strip()).findByText(/no connection/i)).toBeInTheDocument();
   });
 
-  it("keeps the two refusals distinguishable", async () => {
-    // Asserted as a pair rather than per state, because the failure is that
-    // they render identically and each test alone would still pass.
-    health = () => ok(DRIFTED, 503);
-    render(<App />);
-    const drifted = (await within(strip()).findByRole("status", { name: /service/i })).textContent;
+  it("keeps the two refusals distinguishable", () => {
+    // Asserted as a PAIR rather than per state, because the failure is that the
+    // two render identically — and each of the two tests above would still pass
+    // if they did, since each only checks that its own wording appears.
+    //
+    // Driven at the component rather than through App: two renders of the whole
+    // app in one test leaves two strips in the document and the comparison then
+    // reads whichever the query returned first, which is the unordered-result
+    // mistake this repository has recorded three times.
+    const render_ = (service: Service) =>
+      render(<EmSystemStatus connectivity="up" service={service} />).container.textContent;
 
-    vi.unstubAllGlobals();
-    health = () => ok(CANNOT_TELL);
-    fetchMock = vi.fn((input: RequestInfo | URL) => Promise.resolve(route(input)));
-    vi.stubGlobal("fetch", fetchMock);
-    render(<App />);
-    const unknown = (await within(strip()).findAllByRole("status", { name: /service/i })).at(-1)
-      ?.textContent;
-
-    expect(drifted).not.toEqual(unknown);
+    expect(render_("refusing")).not.toEqual(render_("cannot-tell"));
   });
 
   it("treats a body missing the keys it reads as unreachable, not as a verdict", async () => {

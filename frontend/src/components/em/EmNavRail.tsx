@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { cn } from "../../lib/utils";
 import type { ScreenRoute } from "../../routes";
 
@@ -6,6 +7,10 @@ interface Props {
   currentId: string;
   collapsed: boolean;
   onToggle: () => void;
+  // Composed in by the caller rather than built here, so this component stays
+  // dumb: the status strip fetches and the badge does not, and a rail that knew
+  // about either would know where data comes from (spec: op-001, nav-002).
+  footer?: ReactNode;
 }
 
 // Chevron pointing the way the rail will move.
@@ -48,7 +53,7 @@ const Glyph = ({ path, className }: GlyphProps) => (
  * all three stay in the DOM with their accessible names, so the rail reads
  * identically to assistive technology at either width.
  */
-export const EmNavRail = ({ screens, currentId, collapsed, onToggle }: Props) => (
+export const EmNavRail = ({ screens, currentId, collapsed, onToggle, footer }: Props) => (
   <nav
     aria-label="Screens"
     className={cn(
@@ -108,5 +113,10 @@ export const EmNavRail = ({ screens, currentId, collapsed, onToggle }: Props) =>
         );
       })}
     </ul>
+
+    {/* `mt-auto` rather than `justify-between`, so the footer sits at the
+        bottom without the entries drifting away from the header when the
+        viewport is tall. */}
+    {footer && <div className="mt-auto flex flex-col gap-2 pt-3">{footer}</div>}
   </nav>
 );

@@ -149,12 +149,30 @@ class PictureError(ValueError):
 
 
 class Scenario(BaseModel):
+    """The run on screen. Spec: api-002, api-012, api-014.
+
+    **No `health` field**, and the removal is the item (`api-014`). It was
+    hard-coded to `unknown` here, with a comment recording that no health
+    monitoring existed -- true when written. What changed is not that a producer
+    arrived but that another field took the job: `api-012`'s
+    `DetectionSummary.signalIntegrity` is the state of the receiver layout, has
+    a producer, and is the run-level health signal this one would have carried.
+    Two health fields where one works is worse than one, because the broken one
+    reads as a second fact that never arrives -- and the screen printed it as a
+    bare `unknown` beside the data mode.
+
+    `api-002`'s producer-less-field lesson named two routes out, produce it or
+    record that the reason it is empty is still true, and both assume the field
+    is wanted. This is the third: a field whose job another field already does
+    is deleted. **`RFSensor.health` is untouched** -- that one has a producer
+    and carries per-receiver state, and the two are spelled identically.
+    """
+
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     id: str
     name: str
     dataMode: str  # noqa: N815 -- mirrors the TypeScript contract
-    health: str
 
 
 class Hypothesis(BaseModel):
@@ -619,9 +637,6 @@ def build_operational_picture(
             # everything the event would. The label is the run.
             name=f"Run {run.id}",
             dataMode=_data_mode(observations),
-            # No health monitoring exists. `unknown` says so; `Healthy` would
-            # be a reassurance nothing has checked.
-            health=UNKNOWN,
         )
     )
     scored = detection_pass is not None

@@ -10,7 +10,7 @@ import type { OperationalPicture } from "../types/operationalPicture";
 
 const served: OperationalPicture = {
   ...operationalPicture,
-  scenario: { id: "8", name: "replay-only", dataMode: "replayed", health: "unknown" },
+  scenario: { id: "8", name: "replay-only", dataMode: "replayed" },
   hypotheses: [],
   rfSensors: [],
   timelineEvents: [],

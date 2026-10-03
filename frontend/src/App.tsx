@@ -1,10 +1,13 @@
 import { useState } from "react";
+import { EmDataModeBadge } from "./components/em/EmDataModeBadge";
 import { EmNavRail } from "./components/em/EmNavRail";
+import { EmSystemStatus } from "./components/em/EmSystemStatus";
 import { useCurrentScreen } from "./hooks/useCurrentScreen";
 import { useRailCollapsed } from "./hooks/useRailCollapsed";
 import { useScenarioControl } from "./hooks/useScenarioControl";
 import { useOperationalPicture } from "./hooks/useOperationalPicture";
 import { useSelectableHours } from "./hooks/useSelectableHours";
+import { useSystemHealth } from "./hooks/useSystemHealth";
 import { SCREENS } from "./routes";
 import HypothesesScreen from "./screens/hypotheses";
 import OperationalPictureScreen from "./screens/operationalPicture";
@@ -65,12 +68,25 @@ const ScenarioControlRoute = () => {
 const App = () => {
   const current = useCurrentScreen();
   const [railCollapsed, toggleRail] = useRailCollapsed();
+  // The two things in the rail footer, and they live here rather than one
+  // screen down for opposite reasons. The badge is unconditional and on every
+  // screen, so it must not hang off a screen's data (op-001). The status strip
+  // reads the service's own health route, which is cheap and is the same on
+  // every screen — unlike the picture, whose poll stays with the picture
+  // (nav-001, nav-002).
+  const systemHealth = useSystemHealth();
 
   return (
     <div className="flex min-h-screen bg-[#0b0e15]">
       <EmNavRail
         collapsed={railCollapsed}
         currentId={current.id}
+        footer={
+          <>
+            <EmDataModeBadge collapsed={railCollapsed} />
+            <EmSystemStatus collapsed={railCollapsed} {...systemHealth} />
+          </>
+        }
         onToggle={toggleRail}
         screens={SCREENS}
       />

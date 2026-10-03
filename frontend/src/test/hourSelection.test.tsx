@@ -58,7 +58,7 @@ const HOURS: SelectableHour[] = [
 
 const picture = (runId: number): OperationalPicture => ({
   ...operationalPictureMock,
-  scenario: { id: String(runId), name: `Run ${runId}`, dataMode: "mixed", health: "unknown" },
+  scenario: { id: String(runId), name: `Run ${runId}`, dataMode: "mixed" },
   hypotheses: [],
   rfSensors: [],
   timelineEvents: [],

@@ -5,7 +5,6 @@ const operationalPicture: OperationalPicture = {
     id: "scenario-001",
     name: "GNSS Sector A",
     dataMode: "Synthetic RF + Open Data Replay",
-    health: "Healthy",
   },
   hypotheses: [
     {

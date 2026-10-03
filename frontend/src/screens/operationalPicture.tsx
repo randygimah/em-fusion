@@ -12,6 +12,30 @@ import type {
 // An hour whose record holds no window is labelled by its number alone. The
 // alternative is the named failure case: the run's own timestamps are when the
 // generator ran, which for this corpus is four years after the hour it replays.
+// What this hour is made of, in words. spec: op-001.
+//
+// The other half of the badge that used to be one thing: the standing claim
+// that the system is not live is in the nav rail and needs no data, and this is
+// the per-hour claim, which changes with the hour and is only true of the screen
+// showing it.
+//
+// `unknown` is rendered as what it means rather than as the word. The payload
+// produces it for a run with no observations stored against it — not for any
+// uncertainty — so "unknown" would state the wrong thing, and this is the same
+// distinction api-012 drew between a run nobody examined and a run found clean.
+const DATA_MODE: Record<string, string> = {
+  mixed: "Synthetic RF + replayed tracks",
+  synthetic: "Synthetic RF",
+  replayed: "Replayed tracks",
+  unknown: "No observations in this hour",
+};
+
+// A mode the payload has never produced is named rather than printed, so an
+// unfamiliar token cannot reach the screen as a bare word — which is the defect
+// this item exists to fix, and reprinting it under a new name would be the same
+// defect wearing a label.
+const dataModeLabel = (mode: string): string => DATA_MODE[mode] ?? "Unrecognised data mode";
+
 const hourLabel = (hour: SelectableHour): string => {
   if (hour.observedFrom === null) return `Run ${hour.runId}`;
   const from = new Date(hour.observedFrom);
@@ -65,9 +89,12 @@ const OperationalPictureScreen = ({
           <p className="font-mono text-xs uppercase tracking-[0.05em] text-[#8c909f]">EM Fusion</p>
           <h1 className="text-xl font-semibold">{scenario?.name ?? "No scenario run"}</h1>
         </div>
-        <div className="text-left font-mono text-sm">
-          <p className="text-[#4cd7f6]">{scenario?.dataMode ?? "unknown"}</p>
-        </div>
+        {scenario && (
+          <div className="font-mono text-sm">
+            <p className="text-xs uppercase tracking-[0.05em] text-[#8c909f]">Data</p>
+            <p className="text-[#4cd7f6]">{dataModeLabel(scenario.dataMode)}</p>
+          </div>
+        )}
         {/* The hour selector (op-009). Following the newest and pinned to a
             chosen hour must be *visibly* different: pin an hour, let a batch
             land, and the screen goes on showing the pinned hour while looking
@@ -108,8 +135,12 @@ const OperationalPictureScreen = ({
             </p>
           )}
         </div>
+        {/* `scenario.health` used to sit here as a second bare word reading
+            `unknown` forever. api-014 removed the field: nothing produced it,
+            and the run-level health signal it would have carried is
+            `detectionSummary.signalIntegrity`, which has a producer. Service
+            health is a different layer and lives in the nav footer (nav-002). */}
         <div className="text-right font-mono text-sm">
-          <p className="text-[#4cd7f6]">{scenario?.health ?? "unknown"}</p>
           {degraded && (
             <p className="mt-1 border border-[#df7412] px-2 py-0.5 text-xs uppercase tracking-[0.05em] text-[#ffb786]">
               Degraded — not live

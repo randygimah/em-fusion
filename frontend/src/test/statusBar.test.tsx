@@ -52,6 +52,11 @@ const route = (input: RequestInfo | URL): Response => {
 
 beforeEach(() => {
   window.location.hash = "";
+  // The rail's collapse preference persists in storage, so a test that
+  // collapses it leaves the next one mounting already-collapsed — and the
+  // toggle's accessible name flips with it. navCollapse.test.tsx clears for
+  // the same reason.
+  window.localStorage.clear();
   fetchMock = vi.fn((input: RequestInfo | URL) => Promise.resolve(route(input)));
   vi.stubGlobal("fetch", fetchMock);
 });
@@ -60,6 +65,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.useRealTimers();
   window.location.hash = "";
+  window.localStorage.clear();
 });
 
 const rail = () => screen.getByRole("navigation", { name: /screens/i });

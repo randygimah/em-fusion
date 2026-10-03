@@ -1221,11 +1221,23 @@ def test_the_field_is_absent_rather_than_optional() -> None:
     """Spec: api-014 -- the named failure case.
 
     Making it nullable would leave the contract able to express a value nothing
-    produces, which is the state the removal exists to end rather than a
-    smaller version of it.
+    produces, which is the state the removal exists to end rather than a smaller
+    version of it. A nullable field still appears among the schema's properties,
+    so this is asserted there.
+
+    **Over the properties and not over the whole schema**, which is a correction
+    the first green run forced: written as a substring search across the
+    serialised schema, this test failed on the docstring explaining the removal.
+    Pydantic carries a model's docstring into its schema as `description`, so a
+    string scan of a schema is also a scan of its own documentation -- the same
+    shape as the checks in this repository that were satisfied by a comment, and
+    the reason those were rewritten to parse rather than to search.
     """
     # spec: api-014
-    assert "health" not in str(Scenario.model_json_schema(by_alias=True))
+    properties = Scenario.model_json_schema(by_alias=True)["properties"]
+
+    assert not any("health" in name.lower() for name in properties)
+    assert not any("null" in str(schema) for schema in properties.values())
 
 
 def test_no_scenario_in_a_served_payload_carries_health() -> None:

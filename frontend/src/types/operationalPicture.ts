@@ -5,11 +5,21 @@
 // that carry a level cannot drift into three different vocabularies.
 export type Level = "Low" | "Medium" | "High";
 
+// The run on screen (api-002, api-012). No `health` field: api-014 removed it.
+//
+// It was hard-coded to `unknown` in the payload builder, with a comment saying
+// no health monitoring existed. What changed is not that a producer arrived but
+// that another field took the job — `detectionSummary.signalIntegrity` is the
+// state of the receiver layout and has one. Two health fields where one works is
+// worse than one, because the broken one reads as a second fact that never
+// arrives, and the screen printed it as a bare `unknown`.
+//
+// `RFSensor.health` below is untouched: that one has a producer and carries
+// per-receiver state, and the two are spelled identically.
 export interface Scenario {
   id: string;
   name: string;
   dataMode: string;
-  health: string;
 }
 
 export interface Hypothesis {
