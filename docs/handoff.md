@@ -37,11 +37,15 @@ Backlog **74 of 108** (`anom-016` and `ops-005` are new; `api-001` amended and s
   11:18 on 2026-10-03; it generated in 83 s and the trigger stamped all twenty 30 s later. Run 420
   now serves anomaly **High**, integrity **Medium**, one `possible_interference_zone`, two of seven
   receivers **deviating**, one timeline event. Verified in the browser as well as in the payload.
-- Mutation: **28 of 29 valid killed, no unexpected survivors**, one proven equivalent declared
+- Mutation, `anom-016`: **28 of 29 valid killed, no unexpected survivors**, one proven equivalent
+  declared
   in advance (`measurements/mutation/mutate_anom016_batch_trigger.log`). **0 test changes, 0
   implementation changes** — the first pass here to need neither, which is attributable to the
   two corrections the red run had already forced out. Its first attempt aborted on its own
   sentinel: see Failed attempts.
+- Mutation, `ops-005`: **19 of 19 killed, no survivors**, after a first pass killed 18 and left one
+  real gap (`measurements/mutation/mutate_ops005_schema_drift.log`). 1 test added, 0 implementation
+  changes.
 
 ### `ops-005`: what the guard does, and the shape of its constraint
 
@@ -200,6 +204,27 @@ constructible — check by constructing each one first.
 
 **And then I re-ran it from the wrong directory.** `cd backend` from a session already in `backend`,
 so the pass never started and the stale log made it look like the same failure twice.
+
+**A survivor whose shape is worth keeping: a test at each end of a chain is not a test of the
+chain.** `ops-005`'s first mutation pass left one mutant alive. Two heads on disk was asserted on the
+function that *reads* them and refused by the function that *compares* them, and nothing tested the
+function between — so with two heads the expectation silently became whichever head sorted first,
+and an unreachable database would have named a bogus expectation beside its *could not tell*. One
+test closed it; no implementation change.
+
+**My first health route imported a storage engine, and the purity guard refused it.** Only to
+annotate a type — but `db-006` forbids a route module naming one at all, and the alias
+`app.db.session` exports exists for exactly that. More useful is what the same check prevented: the
+obvious implementation imports the Alembic configuration straight into the handler, which it also
+forbids. The comparison went behind the repository port instead, which is where the rule already
+said it belonged, and the `app.db` allowlist never widened.
+
+**A test that passed on the host and failed only in the container.** `ops-005` asserts that the two
+start commands migrate first, by reading the root Makefile — which is not in the backend image,
+Compose mounting only `./backend`. The project had already solved this and I had not read far
+enough: the Makefile is mounted read-only at `/repo/Makefile` for `test-backend`, and
+`test_replay.py` checks both locations and **raises rather than skips** when it finds neither,
+because a structural guard that silently does not run is a worse failure than the one it checks for.
 
 **A migration applied to the test database and never to the application's.** `0009`'s two columns
 were added by `api-012`; the suite's fixture brings the test database to head before every database
