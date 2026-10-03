@@ -101,3 +101,8 @@ export interface OperationalPicture {
   aircraftTracks: AircraftTrack[];
   timelineEvents: TimelineEvent[];
 }
+
+// STUB — api-013 not implemented.
+export interface SelectableHour {
+  runId: number;
+}

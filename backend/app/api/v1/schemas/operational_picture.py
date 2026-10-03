@@ -270,6 +270,12 @@ class TimelineEvent(BaseModel):
     source: str
 
 
+class SelectableHour(BaseModel):
+    """STUB -- api-013 not implemented. Fields deliberately absent."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+
 class OperationalPicture(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 

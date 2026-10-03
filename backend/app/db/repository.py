@@ -43,6 +43,7 @@ from sqlalchemy import MetaData, RowMapping, Table, insert, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.dal.models import (
+    SelectableRun,
     PAYLOAD_TYPES,
     CanonicalObservation,
     DetectionPass,
@@ -685,3 +686,15 @@ def _observation(row: RowMapping) -> CanonicalObservation:
         provenance=Provenance(**row["provenance"]),
         payload=PAYLOAD_TYPES[observation_type].model_validate(row["payload"]),
     )
+
+
+#: STUB -- api-013 not implemented.
+HOURS_LIMIT = 0
+
+
+def selectable_hours(
+    session_factory: sessionmaker[Session], limit: int = HOURS_LIMIT
+) -> list[SelectableRun]:
+    """STUB -- api-013 not implemented."""
+    raise NotImplementedError("api-013")
+

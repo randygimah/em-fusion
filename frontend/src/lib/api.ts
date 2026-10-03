@@ -14,6 +14,9 @@ import type { InFlightBatch, ScenarioConfiguration, ScenarioRunRecord } from "..
  */
 export const OPERATIONAL_PICTURE_PATH = "/api/v1/operational-picture";
 
+/** STUB — op-009 / api-013 not implemented. */
+export const SELECTABLE_HOURS_PATH = "/api/v1/operational-picture/hours";
+
 /**
  * Five seconds, chosen by hand rather than tuned (NFR-503).
  *

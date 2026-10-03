@@ -32,6 +32,7 @@ from fastapi import APIRouter, Depends
 
 from app.api.v1.schemas.operational_picture import (
     OperationalPicture,
+    SelectableHour,
     build_operational_picture,
 )
 from app.db.findings import findings_for_run
@@ -70,3 +71,11 @@ def get_operational_picture(
         findings=findings_for_run(sessions, run.id),
         detection_pass=detection_pass_for_run(sessions, run.id),
     )
+
+
+@router.get("/operational-picture/hours", tags=["operational-picture"])
+def get_selectable_hours(
+    sessions: SessionFactory = Depends(get_sessionmaker),
+) -> list[SelectableHour]:
+    """STUB -- api-013 not implemented."""
+    raise NotImplementedError("api-013")

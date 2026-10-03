@@ -55,6 +55,7 @@ from app.api.v1.schemas.operational_picture import (
     PictureError,
     RFSensor,
     Scenario,
+    SelectableHour,
     TimelineEvent,
     build_operational_picture,
 )
@@ -108,6 +109,11 @@ MODELS = {
     "AircraftTrack": AircraftTrack,
     "TimelineEvent": TimelineEvent,
     "OperationalPicture": OperationalPicture,
+    # `api-013`. Declared in the picture's own contract rather than in a file
+    # of its own, so this parser check -- every interface has a model, both
+    # directions -- covers the new shape the moment it exists, instead of a
+    # second parity suite that can drift from this one.
+    "SelectableHour": SelectableHour,
 }
 
 #: The two fields that carried `74.2` and `0.92` before this item, rendered as

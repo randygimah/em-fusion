@@ -251,3 +251,10 @@ class ScenarioRunDetail(ScenarioRunSummary):
     #: it does not know, so a re-keying here would turn a replayable run into
     #: an unreplayable one at the point furthest from the mistake.
     parameters: dict[str, Any]
+
+
+class SelectableRun(BaseModel):
+    """STUB -- api-013 not implemented."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
