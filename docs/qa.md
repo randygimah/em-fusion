@@ -8539,3 +8539,65 @@ exactly the state it is in.
 | **Settings of record** | The one set of detector settings every quoted figure was measured under. Distinct from *the settings a run was scored under*, which is recorded per run: the second is provenance, the first is a commitment. See §143. |
 | **Definition versus pin** | A definition is the single object something actually runs under; a pin is those values spelled out in a test so a change to them fails loudly. Removing a copy makes drift less likely; pinning makes it audible. See §143. |
 | **Harness-side selection** | Choosing which runs a measurement uses, done outside the detectors, so a label that must never reach a detector can be read safely. What crosses the boundary is run numbers. See §143. |
+
+## 144. Re-examine the 300 stored hours, which puts detection on screen.
+
+**Done — and three things were not as expected.** 380 runs rather than 300, a migration that had
+never been applied to the real database, and a screen that now shows a correct non-detection rather
+than a detection.
+
+### The store holds 380 completed runs, not 300
+
+| Batch | Runs | Ids | What it is |
+|---|---|---|---|
+| Screen-started, 30 Sep | 20, all quiet | 381–400 | What the screen serves, being the most recent |
+| Corpus v2 | 300 | 81–380 | The hours every detection figure was measured on |
+| Dev batch | 60 | 21–80 | Generated to develop the AI layer against real evidence packages |
+
+Scoring only the 300 would have left the screen exactly as it was, because the run it displays is
+not one of them. All 380 were examined.
+
+### The endpoint had been returning 500, not an empty payload
+
+The two columns recording when an hour was examined were added by the previous item, and the
+migration had been applied to the **test** database — by the fixture that brings it to head before
+every database test — and never to the application's. So the endpoint that feeds the main screen had
+been failing outright since that item landed.
+
+**Worth recording as a limitation**, because the shape generalises: a suite that creates its own
+schema tests the migration and simultaneously hides whether anyone has applied it elsewhere, and
+those two facts cannot be told apart from inside the suite. The health endpoint answered 200
+throughout, because it touches no table. Nothing in the project compares the application database's
+revision against the migrations on disk.
+
+### What the re-score actually did
+
+| | |
+|---|---|
+| Runs examined | **380 of 380**, no refusals, no failures |
+| Time | 6.2 min at **0.99 s a run**, plus 13.7 s for the baseline |
+| Stamped | 0 before, 380 after, none left |
+| Distinct settings records across the store | **1** |
+| Reproduces the detection table? | **Exactly** — 60/60 on all three positive arms, 0/60 on both negative arms, no run claiming another's type |
+
+The 0.99 s is faster than the 1.22 s on record for the same work. The difference is the measurement,
+not the code: the earlier figure was taken a run at a time and this one sweeps 380 in sequence with
+warm caches. **1.22 s stays the figure to quote for one run**, because one run is what the trigger
+does.
+
+### Why the screen shows nothing found
+
+Because the run it shows is a quiet one. The endpoint serves the most recently completed run, and the
+most recent batch is twenty quiet hours. So the panel now says *examined, and nothing to report* —
+two mild levels, zero on every reportable rule, seven receivers nominal, an empty timeline — which
+is the correct answer for a quiet hour and is a different statement from the one it made yesterday,
+*nobody has examined this*.
+
+Across the corpus the detectors found 60 interference zones and 120 broken-receiver attributions.
+None of them can be put on screen, because **there is no way to ask the screen for a particular
+hour**: it serves the latest completed run and nothing else. That was the right scope when nothing
+produced detection output; it is now the thing between a working detection layer and a visible one.
+Seeing a detection means generating a staged batch, which the trigger then examines on its own.
+| **Stamped** | A run carrying a record of when it was examined and under what settings. Absent means *not known to have been examined*, which covers never looked at and a pass that died part way. See §144. |
+| **Schema drift** | A running system whose database is at an older migration than its code expects. Invisible to a test suite that creates its own schema, and invisible to a health check that touches no table. See §144. |
+| **Warm-cache figure** | A per-unit cost measured during a long sweep, which is lower than the same work done once. The single-run figure is the one to quote for a single run. See §144. |

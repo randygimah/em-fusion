@@ -8914,3 +8914,61 @@ on the sixty quiet runs they grade, so they cannot fail on the data that produce
 value is entirely prospective. Here the consequence is narrower -- a quiet batch's own readings pull
 the baseline very slightly toward themselves -- and the honest alternative, excluding the batch from
 its own baseline, would mean a store holding only one batch could not be scored at all.
+
+### A migration that was applied to the test database and never to the application's
+
+`api-012` added two columns to the run table — when an hour was examined and under what settings —
+and the migration was applied to the test database, where the suite runs, by the fixture that brings
+that database to head before every database-tier test. The application's own database was never
+migrated.
+
+The consequence is sharper than it sounds. The endpoint that feeds the main screen reads those
+columns, so from the moment that item landed it returned **500** against the real database rather
+than serving an empty payload. The whole session's work was verified against a suite of 1,874 tests,
+every one of which ran against a database the fixture had migrated, and the one thing none of them
+could observe is whether anybody had run the migration anywhere else.
+
+Worth recording for the general shape rather than the specific slip. A test suite that creates its
+own schema is testing the migration **and** hiding whether it has been applied, and those two facts
+are indistinguishable from inside the suite. The symptom was also invisible from the usual check: the
+health endpoint answered 200 throughout, because it touches no table.
+
+The repair is one command. What is missing is anything that notices: nothing in the project compares
+the application database's revision against the migrations on disk, and a container that starts
+against an out-of-date schema reports itself healthy. That is a gap worth naming rather than a defect
+to fix in passing, because the honest fix is a startup check with a decision behind it — refuse to
+serve, or serve and warn — and that is an item rather than a line.
+
+### Re-examining the whole store, and a figure that got faster
+
+Running the detection pass over every completed run took **6.2 minutes for 380 runs, 0.99 s a run**,
+with 13.7 s to establish what normal looks like, no refusals and no failures.
+
+That is faster than the 1.22 s a run `anom-015` measured, on the same code over the same hours, and
+the difference is the measurement rather than the work. The earlier figure was taken a run at a time;
+this one sweeps 380 in sequence, so the database's own caches are warm throughout and the dominant
+cost — about a second of reading observations — falls. **The slower figure remains the one to quote
+for a single run**, because a single run is what the trigger actually does, and quoting the sweep's
+figure would describe a batch of one using the economics of a batch of three hundred and eighty.
+
+The sweep also served as the first end-to-end reproduction of the detection table through the
+application rather than through the measurement script: 60 of 60 on all three positive arms, 0 of 60
+on both negative arms, and no run claiming the type of another. That is `eval-002`'s table exactly,
+now derived from stored rows that the application wrote, which is a stronger statement than the
+original — the figures and the screen are reading the same thing.
+
+### What the screen shows is decided by which run is newest, and that is worth stating
+
+With every run examined, the screen shows a **correct non-detection**: two mild levels, zero on every
+reportable rule, seven receivers reporting nominal, and an empty timeline. Not because detection
+found nothing in the corpus — it found 60 interference zones and 120 broken-receiver attributions
+across the three positive arms — but because the endpoint serves the most recently completed run, and
+the most recent batch in the store happens to be twenty quiet hours generated from the screen on 30
+September.
+
+This is the system behaving correctly and it is also a limitation of the screen as a demonstration.
+There is no way to ask it for a particular hour: `api-002` serves the latest completed run and
+nothing else, which was the right scope when nothing produced detection output and is now the thing
+standing between a working detection layer and a visible one. Seeing a detection on screen means
+generating a staged batch, which the trigger then examines — the demonstration path the trigger
+exists for, and also the only one.
