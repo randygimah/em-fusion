@@ -8685,3 +8685,114 @@ and what it buys is that the specific failure which cost a day cannot recur sile
 | **Startup gate** | A check that refuses to let a process start. Unavailable here: determining a schema revision needs a database connection, and this application deliberately opens none at startup so an outage cannot stop the service coming up. See §145. |
 | **Drifted** | A database at a different migration revision than the code expects — behind, ahead, never migrated, or facing a migration graph with two heads. The one state the health signal refuses on. See §145. |
 | **Reported, not asserted** | A fact a system publishes about itself rather than one it enforces by refusing to run. The form a check takes when the thing it needs is not available at the moment enforcement would have to happen. See §145. |
+
+## 146. Next should be a way to ask the screen for a particular hour.
+
+**Agreed, and the obvious implementation leaks the answer key.** The capability is small — name an
+hour, be shown it. Two decisions inside it are not small, and one of them is a repeat of a defect
+this project found only last week.
+
+### Why it is first rather than fifth
+
+The screen serves the most recently generated hour and nothing else. That was the right scope while
+nothing produced detection output. It is now the binding constraint:
+
+| | |
+|---|---|
+| Hours in the store | 400, **all examined** |
+| Hours holding a reportable claim | **240** — 100 interference zones, 140 with a receiver blamed (149 claims) |
+| Hours the screen can reach | **1** — whichever was generated last |
+
+So the entire body of detection evidence the project has produced is unreachable from the screen,
+and every other screen item — the labels, the summary vocabulary, the evidence panel, the map —
+can only be *looked at* against a staged hour by generating a fresh batch first. That is seventy
+seconds per look and twenty new runs into a store whose measured figures are fixed. It also matters
+for the write-up: every screenshot of a detection has to come from somewhere, and right now
+"somewhere" is a batch made minutes before the screenshot.
+
+### Decision one: the selector gets its own list, and the reason is §140
+
+**The wrong assumption:** the screen already has a list of runs, so the selector reuses it.
+
+It does. Scenario Control's recent-runs table fetches exactly what a selector wants — every run,
+newest first, with its window. That listing carries `scenarioType`, and it carries it
+**legitimately**: Scenario Control is the harness's own face and exists to show what was generated,
+so naming `gnss-degradation` there is correct. On the analyst's screen it is the answer key.
+
+This is §140 again, and the shape of why it survived there is the shape of why it would survive
+here. The heading of the operational picture read `gnss-degradation` for a year. Nothing caught it,
+and a repository-wide search for the offending string could not have: the same words are correct one
+screen over, so a search finds a justified use and stops.
+
+The guarantee that has protected this so far is **structural, not disciplinary**. The record a run
+is read back as has *no field for ground truth at all*, on the recorded argument that a shape which
+cannot hold the answer cannot leak it on any run — stronger than remembering to strip it per
+endpoint. Reusing the harness listing trades that for a convention somebody has to know:
+
+| | Harness listing reused | A list of its own |
+|---|---|---|
+| Where the type is | In the browser, on the analyst's screen, unrendered | Nowhere — no such field exists |
+| What stops it being rendered | Somebody knowing the rule | The shape |
+| How a violation is found | Reading the render code | The shape makes it unconstructible |
+
+So the picture gets an index of its own with no such field in it, and the check is the one §140
+settled on: serialise the whole index and search it for all five type names, because a check on one
+field only ever proves the field somebody thought of.
+
+### Decision two: the index deliberately says nothing about which hours are interesting
+
+**The wrong assumption** — and it is mine rather than the user's, recorded because it was nearly
+built: the index should carry each hour's reportable-finding count, so a person choosing an hour can
+find one with something in it. Four hundred unlabelled numbers is not a selector.
+
+It must not, and the reason is not the one you would expect. A detector's conclusion is **precisely
+what an analyst is meant to see** — it is served in full for the hour actually selected, and it is
+not the answer key: it is the system's claim, which is right or wrong and is the thing being
+measured. Exposing it is not a leak in principle.
+
+The problem is this corpus. Precision is 1.000 and recall is 60 of 60 on every positive arm, so on
+these hours *what the detector found* and *what was staged* coincide almost perfectly. A chooser
+ranked by findings would therefore be a chooser ranked by ground truth in all but name — and any
+future exercise in which a person reads this screen would be un-blind, with nothing in the code
+saying so. The second rater is still outstanding, so that cost is not hypothetical.
+
+What the index does carry is **examined or not**, which is a different kind of fact: it is whether
+anybody looked, which §139 established is answered by the presence of the account and never by a
+number in it. Carrying it means selecting an hour nothing has examined is not a surprise after the
+fact.
+
+### Decision three: following the newest and pinned to an hour are different states
+
+Today there is one state and it needs no name. With selection there are two, and the failure case
+writes itself: an analyst pins hour 200, a batch lands, and the screen goes on showing 200 while
+looking exactly like a live one. That is the same class of defect as §145's health signal reporting
+healthy through a broken screen and §139's summary reading clean when nothing had looked — **stale
+data wearing the costume of current data** — so the two states must be visibly different and there
+must be a way back.
+
+The poll follows the selection rather than stopping. Two reasons: a historical hour's detection
+state can still change, because re-examining a run restamps it and 380 of them changed in six
+minutes on 3 October; and a poll that kept asking for the newest hour would revert the screen under
+the analyst on the next tick, which is worse than having no control at all.
+
+### What it is, in two items
+
+| Item | Half |
+|---|---|
+| `api-013` | The endpoint accepts a run and serves that hour; a companion endpoint lists the selectable hours with no scenario type and nothing the detectors concluded. Unknown run is 404 and never a fall back to the newest |
+| `op-009` | The control on screen, the two states, the poll following the selection, and the structural check that the list does not come from the harness endpoint |
+
+With no parameter the endpoint behaves exactly as it does now, so the existing contract, its parity
+test and the frontend are untouched.
+
+### Worth recording as a limitation
+
+The index lists hours and says nothing about them beyond whether they were examined, which is
+honest and makes finding a particular staged hour a matter of already knowing its number. For the
+researcher that is fine — the numbers are in the measurement logs. For a demonstration to somebody
+else it means the hour has to be chosen in advance. That is a deliberate cost of keeping the chooser
+blind, and the alternative was measured above rather than assumed.
+
+| **The index of hours** | The list of stored hours the analyst's screen offers for selection: run number, replayed window, examined or not. Deliberately carries no scenario type and nothing the detectors concluded. Distinct from the harness's run listing, which carries both legitimately. See §146. |
+| **Following versus pinned** | Whether the screen is showing whatever hour is newest or an hour somebody chose. Two states that must look different, because a pinned hour otherwise presents stale data as current. See §146. |
+| **Blind chooser** | A selector that does not rank or label its options by the thing being measured. Here: hours are offered without saying which ones have findings, because on this corpus a finding count is a near-perfect proxy for ground truth. See §146. |

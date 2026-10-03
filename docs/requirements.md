@@ -190,6 +190,7 @@ the database, in API responses, and on every screen.
 | FR-716 | A view filter with three states — Anomalous only, Nominal only, All — shall drive the map and the exception panel together, defaulting to Anomalous only. Drill-down tables (FR-709) remain unfiltered; they are the show-everything view by definition. |
 | FR-717 | The Operational Picture shall provide a playback transport over a run's simulated time: play, pause, speed selection, and a scrub bar. The map shall render aircraft positions at the cursor with a trailing path, and anomaly zones shall appear and clear as their windows enter and leave the cursor. |
 | FR-718 | Playback shall run on polled data with client-side interpolation between buffered frames. No push transport, and the request rate shall not be coupled to the frame rate. |
+| FR-719 | The Operational Picture shall let an analyst select which stored hour it displays, defaulting to the most recent, and shall state visibly when it is pinned to a selected hour rather than following the most recent. The selector shall not name the scenario type of any hour. |
 
 ### FR-8xx — API
 
@@ -205,6 +206,7 @@ the database, in API responses, and on every screen.
 | FR-808 | CORS shall be restricted to known origins. |
 | FR-809 | `GET /operational-picture` shall accept a `view` parameter of `anomalous`, `nominal`, or `all`, and filter server-side. Because the payload then omits the excluded rows, the response shall carry the suppressed counts as metadata so FR-708's "+n nominal hidden" footer stays truthful. |
 | FR-810 | A time-windowed track query shall return aircraft positions across a span of simulated time, so the frontend can buffer ahead of the playback cursor rather than issue one request per frame. |
+| FR-811 | `GET /operational-picture` shall accept a `run` parameter naming one scenario run and serve that run's picture, refusing an unknown run rather than falling back to the most recent, and a companion endpoint shall list the hours available to select. Neither the parameter nor the index shall expose the scenario type or anything from which the injected event can be inferred, and the index shall carry nothing derived from what the detectors concluded. |
 
 ### FR-9xx — Persistence
 
@@ -340,6 +342,7 @@ The v1 build is accepted when this flow demonstrably works end to end, unassiste
 | AC-10 | The evaluation harness replays 20–30 runs per scenario type and exports precision, recall, F1, FPR, FNR, latency, and grounding statistics. | FR-1001–FR-1005 |
 | AC-11 | No percentage or decimal confidence, severity, or score appears anywhere in the UI. | FR-715, NFR-203 |
 | AC-12 | The whole system runs via Docker Compose from `make demo` on a clean machine, and CI runs tests and lint on both halves. | FR-1101–FR-1104 |
+| AC-13 | An analyst selects a stored hour on the Operational Picture, is shown that hour's detection output, and can tell from the screen that it is pinned rather than following the newest; no element of that screen names the selected hour's scenario type. | FR-719, FR-811, FR-207 |
 
 AC-04 and AC-10 are what turn a demo into a thesis. Neither is optional.
 
