@@ -37,6 +37,25 @@ time of writing.
   two corrections the red run had already forced out. Its first attempt aborted on its own
   sentinel: see Failed attempts.
 
+### The store, after today
+
+| | |
+|---|---|
+| Completed runs examined | **380 of 380** in 6.2 min at 0.99 s a run, no refusals, no failures |
+| Stamped | 0 before, 380 after, none left |
+| Distinct settings records across the store | **1** |
+| Reproduces `eval-002`? | **Exactly** — 60/60 on all three positive arms, 0/60 on both negative arms, diagonal matrix |
+| `/api/v1/operational-picture` | **200**, serving a scored payload (was 500) |
+
+Three batches, which matters because the screen shows the newest: 20 quiet runs from 30 September
+(ids 381–400, what the screen serves), 300 corpus v2 runs (81–380), 60 dev-batch runs (21–80). The
+re-score is baselined over corpus v2's **60** quiet runs via `_corpus.quiet_runs`, not the store's
+100, so the stamps match the provenance every quoted figure was taken under — and that is a
+deliberate difference from what the application itself does, recorded in `measurements/README.md`.
+
+0.99 s a run against 1.22 s on record: same code, same hours, warm caches across a 380-run sweep.
+**1.22 s stays the figure to quote for a single run.**
+
 ### What the item actually does
 
 | | |
@@ -75,10 +94,7 @@ the positive direction is asserted beside it.
 
 ## Files in flight
 
-- `docs/handoff.md` (this file), `docs/thesis_notes.md`, `docs/detection_layer.md`,
-  `docs/implementation.md`, `CLAUDE.md`, `backend/measurements/README.md` — the write-up commit.
-- `backend/measurements/mutation/mutate_anom016_batch_trigger.py` + `.log` — untracked until the
-  pass finishes.
+None. The tree is clean.
 
 ## Changed
 
@@ -90,6 +106,11 @@ Commits, oldest first:
 | `d552cf7` | `docs: qa entry 143 — why the batch trigger needs the settings moved first` |
 | `2a0f69c` | `test: add tests for anom-016` |
 | `8c2dd58` | `feat(anom-016): the detection pass fires when a batch completes - tests pass` |
+| `3c8a1ce` | `docs: anom-016 write-up` |
+| `b8d48c9` | `docs: progress note for anom-016` |
+| `74871c2` | `docs: stop tracking a progress-note URL in CLAUDE.md` |
+| `4587f9c` | `measure: examine every stored run with the detection pass` |
+| `8eab340` | `docs: the re-score, and three findings from it` |
 
 **New files**
 
@@ -157,19 +178,45 @@ constructible — check by constructing each one first.
 **And then I re-ran it from the wrong directory.** `cd backend` from a session already in `backend`,
 so the pass never started and the stale log made it look like the same failure twice.
 
+**A migration applied to the test database and never to the application's.** `0009`'s two columns
+were added by `api-012`; the suite's fixture brings the test database to head before every database
+test, so 1,874 tests passed over them while the real database sat at `0008` and the endpoint that
+reads them returned 500. Found today by querying the corpus before re-scoring it. The shape
+generalises: a suite that creates its own schema tests the migration **and** hides whether anybody
+has applied it elsewhere, and those two facts are indistinguishable from inside the suite.
+
+**I measured 0.99 s a run and nearly replaced a figure of record with it.** It is the same work as
+`anom-015`'s 1.22 s, measured differently — a 380-run sweep with warm caches rather than one run at a
+time — so it describes a batch of 380 and not the single run the trigger performs. Both are now on
+record with the conditions that produced them, and 1.22 s remains the per-run figure.
+
+**`make measure` passes `CORPUS=""` when the variable is unset**, and `_corpus.which()` refuses the
+empty string even though its own default is `v2`. The first re-score attempt died on that before
+touching the database. Every measurement has to name its corpus explicitly; the default is
+unreachable through the Makefile.
+
 **`make test-backend` spent ten minutes rebuilding before running anything.** Not a defect, but the
 first run looked hung. `test-backend-nobuild` exists for exactly this and is what the mutation pass
 uses.
 
 ## Next step
 
-1. **Re-score the corpus.** The 300 stored runs have findings and **no stamp**, so every one still
-   reads as unexamined — correct, and still the reason the screen shows nothing for them. `anom-016`
-   covers new batches only; the existing corpus needs one pass by hand, ~6 minutes at 1.22 s a run.
-   Deliberately not behaviour: a command you run once.
-2. **Re-run the figures of record.** `detection_metrics.py` now imports the settings and builds its
+1. **Nothing compares the application database's revision against the migrations on disk**, and the
+   gap just cost a working screen: `0009` was applied to the test database by the fixture that brings
+   it to head and never to the application's, so `/api/v1/operational-picture` returned **500** from
+   the moment `api-012` landed until `make migrate` was run today. `/api/v1/health` answered 200
+   throughout, because it touches no table. The honest fix is a startup check with a decision behind
+   it — refuse to serve, or serve and warn — which is an item rather than a line, and it is the
+   highest-value thing outstanding.
+2. **There is no way to ask the screen for a particular hour.** `api-002` serves the latest completed
+   run, which was the right scope when nothing produced detection output. Every run in the store is
+   now examined and the corpus holds 60 interference zones and 120 broken-receiver attributions, and
+   none of them can be shown, because the newest batch is twenty quiet hours. Seeing a detection means
+   generating a staged batch and letting the trigger examine it — currently the only path.
+3. **Re-run the figures of record.** `detection_metrics.py` now imports the settings and builds its
    baseline through `measure_normality`. The values are unchanged and the equivalence is asserted at
-   unit scale, but `anom-015` validated its own refactor by reproducing the figures byte for byte
+   unit scale, and the re-score reproduced `eval-002`'s table exactly from stored rows — but
+   `anom-015` validated its own refactor by reproducing all forty-three exported lines byte for byte,
    and that has not been done for this one.
 3. **`op-003` and `op-006`**, the two panels `api-012` unblocked and that now have something to
    show. The summary panel is deliberately minimal and the timeline strip is not rendered at all.
@@ -179,7 +226,7 @@ uses.
 
 Open and unowned:
 
-- The progress note has not been updated for `anom-016`. Its pipeline spine now has a trigger and
+- ~~The progress note has not been updated for `anom-016`.~~ Updated and published 2026-10-02. Its pipeline spine now has a trigger and
   its "what it deliberately does not do yet" section should lose the entry saying nothing fires the
   pass. Offer before the next item.
 - **`docs/thesis_notes.md` is misfiled from about line 6785 onwards.** Everything after `##
