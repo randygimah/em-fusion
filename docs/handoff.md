@@ -8,34 +8,57 @@ Abstraction Layer, detects deviations deterministically, and turns evidence bund
 schema-validated, grounding-checked AI hypotheses for analyst review. Decision support, not
 autonomous decision-making.
 
-One item this session, and it is the last piece of the question that reframed the roadmap two
-sessions ago — *does detector output on injected anomalies show in the app at all?*
+Two items this session, and between them they close the question that reframed the roadmap two
+sessions ago — *does detector output on injected anomalies show in the app at all?* It does now,
+and a user has seen it.
 
 **`anom-016`, the detection pass fires when a generation batch completes.** `anom-015` built the
-pass and `api-012` built the screen that renders it, and nothing called the pass. So every run in
-the store honestly reported itself unexamined, and finishing a batch from the screen changed
-nothing. This is the trigger.
+pass and `api-012` built the screen that renders it, and nothing called the pass. Its real cost was
+not the trigger: **the detector settings every figure of record was measured under lived only in a
+measurement script**, plus a copy in the test suite, so a trigger inside the application would have
+had to declare a third set with the same standing as the other two.
 
-Its real cost was not the trigger. **The detector settings every figure of record was measured
-under lived only in a measurement script**, plus a copy in the test suite — so a trigger inside the
-application would have had to declare a third set with the same standing as the other two.
+**`ops-005`, the health signal refuses when the schema is behind the code**, found while
+re-examining the stored runs. `0009` had been applied to the test database by the fixture that
+brings it to head and never to the application's, so `/api/v1/operational-picture` returned **500
+for a day** while 1,874 tests passed over those columns and the container reported itself healthy.
 
 ## Current state
 
-Backlog **73 of 107** (`anom-016` is new). Tree clean except `docs/` and the mutation log at the
-time of writing.
+Backlog **74 of 108** (`anom-016` and `ops-005` are new; `api-001` amended and still passing).
 
-- Backend: **1874 passed, 99.92% total coverage, exit 0**, in containers (1830 and 99.83% before).
-- `app/detection/settings.py` (15 statements) and `app/scenario/batch.py` (68) both at **100%**.
-  Total missed statements across the package went 9 → 4, and the five that disappeared are exactly
-  the ones `batch.py` had.
+- Backend: **1895 passed, 99.92% total coverage, exit 0**, in containers (1830 and 99.83% at the
+  start of the session).
+- At **100%**: `app/detection/settings.py` (15 statements), `app/scenario/batch.py` (68),
+  `app/db/migrations.py` (43), `app/api/v1/health.py` (14).
 - `make lint`, `make format` and mypy clean (79 source files, was 78).
-- Frontend untouched: the payload shape did not change, only whether a stamp exists.
+- Frontend untouched all session: no payload shape changed, only what the payload contains.
+- **Seen on screen.** The user started a 20-run `gnss-degradation` batch from Scenario Control at
+  11:18 on 2026-10-03; it generated in 83 s and the trigger stamped all twenty 30 s later. Run 420
+  now serves anomaly **High**, integrity **Medium**, one `possible_interference_zone`, two of seven
+  receivers **deviating**, one timeline event. Verified in the browser as well as in the payload.
 - Mutation: **28 of 29 valid killed, no unexpected survivors**, one proven equivalent declared
   in advance (`measurements/mutation/mutate_anom016_batch_trigger.log`). **0 test changes, 0
   implementation changes** — the first pass here to need neither, which is attributable to the
   two corrections the red run had already forced out. Its first attempt aborted on its own
   sentinel: see Failed attempts.
+
+### `ops-005`: what the guard does, and the shape of its constraint
+
+| | |
+|---|---|
+| Where | The health route — because that is what the container probe reads, and it said healthy all day |
+| Why not a startup gate | The lifespan opens no connection on purpose, so a database that is down does not stop the service coming up. Determining a revision needs one |
+| At the expected revision | 200, `at-head`, revision named |
+| Drifted (behind, ahead, never migrated, two heads) | **503**, naming the revision found *and* the one expected |
+| Unreachable | **200**, `unknown` — an outage is not a misconfiguration |
+| Caching | Expectation cached for the process's life (cannot change without a restart); the database's revision read **every probe** (a live migration must clear the refusal without one) |
+| Also | `up` and `demo` migrate first, amending `ops-003` — a guard that fires on every first run is one somebody switches off |
+
+Proved live against a scratch database rather than the corpus: 503 with
+`"this database has never been migrated"`, then 200 on the next probe after migrating it with the
+container still running. Scratch database dropped, throwaway containers removed, all 400 runs still
+stamped.
 
 ### The store, after today
 
@@ -201,19 +224,12 @@ uses.
 
 ## Next step
 
-1. **Nothing compares the application database's revision against the migrations on disk**, and the
-   gap just cost a working screen: `0009` was applied to the test database by the fixture that brings
-   it to head and never to the application's, so `/api/v1/operational-picture` returned **500** from
-   the moment `api-012` landed until `make migrate` was run today. `/api/v1/health` answered 200
-   throughout, because it touches no table. The honest fix is a startup check with a decision behind
-   it — refuse to serve, or serve and warn — which is an item rather than a line, and it is the
-   highest-value thing outstanding.
-2. **There is no way to ask the screen for a particular hour.** `api-002` serves the latest completed
+1. **There is no way to ask the screen for a particular hour.** `api-002` serves the latest completed
    run, which was the right scope when nothing produced detection output. Every run in the store is
    now examined and the corpus holds 60 interference zones and 120 broken-receiver attributions, and
    none of them can be shown, because the newest batch is twenty quiet hours. Seeing a detection means
    generating a staged batch and letting the trigger examine it — currently the only path.
-3. **Re-run the figures of record.** `detection_metrics.py` now imports the settings and builds its
+2. **Re-run the figures of record.** `detection_metrics.py` now imports the settings and builds its
    baseline through `measure_normality`. The values are unchanged and the equivalence is asserted at
    unit scale, and the re-score reproduced `eval-002`'s table exactly from stored rows — but
    `anom-015` validated its own refactor by reproducing all forty-three exported lines byte for byte,

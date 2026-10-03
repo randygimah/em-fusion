@@ -8972,3 +8972,37 @@ nothing else, which was the right scope when nothing produced detection output a
 standing between a working detection layer and a visible one. Seeing a detection on screen means
 generating a staged batch, which the trigger then examines — the demonstration path the trigger
 exists for, and also the only one.
+
+### A guard that could not be a startup check, and what that constraint produced
+
+The obvious shape for a schema-drift guard is a startup check: read the database's migration revision when the process boots, compare it against the migrations shipped with the code, and refuse to start if they disagree. That shape was unavailable, and the reason is a decision made much earlier and for a different purpose.
+
+The application builds its database connection pool at startup and deliberately **opens no connection** doing so. The argument recorded with that decision is that a database which is down must not stop the service coming up: an outage should present as a degraded database and not as an unreachable service, so the health route keeps answering and the failure stays legible as what it is. Determining a schema revision requires a connection. A startup gate would therefore have reversed a decision taken on purpose, and — worse — would have made a database outage and a deployment mistake produce the same symptom, which is exactly the conflation the guard exists to remove.
+
+So the check had to run where a connection is already in hand, and be **reported rather than asserted**. That pushed it to the health route, which is the right place for an independent reason: the health route is what the container probe reads, and the container reported itself healthy for the entire day the screen was broken. The signal that was silent is the signal to fix.
+
+The constraint also produced the design's most important feature, which would not have occurred to me from the startup-gate framing: **three states rather than two**. At the expected revision answers 200. Drifted — behind, ahead, never migrated, or a migration graph with more than one head — refuses with 503 and names both revisions. And *unreachable* answers **200** and says it could not tell. That third state is what preserves the original guarantee: an outage is not a misconfiguration, and refusing on one would do precisely what the health route was written to avoid. A two-valued check would have had to choose between missing the drift and reporting every outage as a deployment error.
+
+The general observation is worth keeping. A constraint inherited from an unrelated decision forced a better design than the unconstrained version would have been, because it made the difference between *the database is wrong* and *the database is unavailable* something the implementation had to represent rather than something it could gloss. That difference is the whole content of the guard.
+
+### The expectation has to come from somewhere the thing being checked cannot reach
+
+A schema-drift check compares two values, and the only subtle part is where the second one comes from. Reading the expected revision out of the version table — the same table being checked — produces a comparison that agrees with itself on every database in the world. It passes everywhere, it has no failure case, and it looks exactly like a working guard.
+
+So the expectation is read from the migration files on disk, and the two halves are cached differently on purpose. The on-disk head is cached for the life of the process, because it cannot change without restarting the process. The database's revision is read on **every** probe, because somebody running the migration against a running stack has to see the container become healthy on the next probe rather than after a restart — cached, the refusal would outlive the thing it was reporting. That asymmetry is not an optimisation; each half is cached exactly as long as the fact it holds stays true.
+
+This is the fourth instance in this project of a guard whose first natural implementation could not fail. The others were a traceability check that skipped items carrying no citations, an absence test satisfied by a docstring, and a blinding check that read its own fixture rather than the artefact. The pattern each time is the same: the guard is written from the inside of the thing it is guarding, so it inherits that thing's assumptions along with its data.
+
+### The two guards that shaped this item were both written for something else
+
+Neither of the two mechanisms that most shaped the implementation was written with this item in mind, and both caught me rather than merely passing.
+
+The route purity check forbids a route module from naming a storage engine at all, and the first draft of the health route imported one — purely to annotate a type. The rule's own stated reason is that a layer which cannot name a storage engine cannot use one, and that is checkable where "holds no SQL" is arguable. The repair was the type alias the session module already exports for exactly this purpose. More important is what the check prevented: the obvious implementation imports the migration configuration straight into the handler, and the same check forbids that too, on the grounds that a migration run from a request handler is the same mistake wearing a different hat. The comparison therefore went where the rule already said it belonged — behind the repository port, with the handler calling one function — rather than into the route where it would have been convenient.
+
+The second is a guard added one item earlier, asserting that every module on the route layer's storage allowlist is a repository module. Widening that allowlist to admit the migration configuration would have been the path of least resistance, and that guard closes it. The combined effect is that an item which had nothing to do with either check was pushed into the correct shape by both, which is the argument for structural guards in a form stronger than any statement of intent.
+
+### A test that passed locally and failed only in the container
+
+The item asserts that the two commands which start the stack apply the migrations first, and it does so by reading the root Makefile. It passed on the host and failed in the container, because Compose mounts only the backend directory into the image and the root Makefile is not in it.
+
+The project had already solved this and I had not read far enough: the Makefile is mounted read-only at a known path for the test target, and an existing test module checks both locations — the native checkout and the mount — and **raises rather than skips** when it finds neither. The argument recorded there is the part worth carrying: a structural guard that silently does not run is a worse failure than the one it is checking for, one level up. Skipping would have left the assertion green in the only environment where the suite actually runs everything.

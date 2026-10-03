@@ -1,0 +1,26 @@
+sentinel killed (3 failed, 38 passed in 5.18s) -- source edits reach the tests
+
+the expectation is read from the database it is checking               KILLED   1 failed, 40 passed in 5.13s
+any head will do when the graph has several                            KILLED   1 failed, 40 passed in 5.18s
+a graph with two heads is compared against one of them                 KILLED   1 failed, 40 passed in 5.10s
+a database nobody has migrated reads as up to date                     KILLED   1 failed, 40 passed in 5.15s
+an unreachable database is reported as drifted                         KILLED   7 failed, 34 passed in 5.23s
+a process with no engine is an error rather than an unknown            KILLED   5 failed, 36 passed in 6.31s
+a database that cannot be read is reported as up to date               KILLED   2 failed, 39 passed in 5.10s
+an absent version table is told apart from an outage by exception class KILLED   1 failed, 40 passed in 5.19s
+a version table holding no row reads as up to date                     KILLED   1 failed, 40 passed in 5.19s
+drift is healthy after all                                             KILLED   3 failed, 38 passed in 5.14s
+not knowing is treated as unhealthy                                    KILLED   7 failed, 34 passed in 5.16s
+the refusal is a 200 carrying a sad field                              KILLED   2 failed, 39 passed in 5.35s
+the body stops naming what it found                                    KILLED   2 failed, 39 passed in 5.36s
+the body stops naming what was expected                                KILLED   3 failed, 38 passed in 5.16s
+the detail no longer names the revision in force                       KILLED   2 failed, 39 passed in 5.16s
+a database ahead of the code is not called out as ahead                KILLED   1 failed, 40 passed in 5.27s
+the database's revision is cached and the refusal outlives it          KILLED   1 failed, 40 passed in 5.10s
+starting the stack no longer applies the migrations                    KILLED   1 failed, 40 passed in 5.32s
+the demo target no longer applies the migrations                       KILLED   1 failed, 40 passed in 5.16s
+
+restored
+
+19 killed of 19 valid mutants
+no unexpected survivors

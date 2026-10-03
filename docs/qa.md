@@ -8601,3 +8601,87 @@ Seeing a detection means generating a staged batch, which the trigger then exami
 | **Stamped** | A run carrying a record of when it was examined and under what settings. Absent means *not known to have been examined*, which covers never looked at and a pass that died part way. See §144. |
 | **Schema drift** | A running system whose database is at an older migration than its code expects. Invisible to a test suite that creates its own schema, and invisible to a health check that touches no table. See §144. |
 | **Warm-cache figure** | A per-unit cost measured during a long sweep, which is lower than the same work done once. The single-run figure is the one to quote for a single run. See §144. |
+
+## 145. Can we add logic that fails loudly when a migration hasn't been applied, or migrations are behind?
+
+**Yes, and it is built — but not in the shape the question suggests.** The obvious answer is a startup
+check: read the database's version when the process boots and refuse to start if it is behind. That
+shape was unavailable, and the reason is worth more than the feature.
+
+### Why it cannot be a startup check
+
+The application builds its connection pool at startup and **deliberately opens no connection** doing
+so. The recorded reason is that a database which is *down* must not stop the service coming up — an
+outage should look like a degraded database, not a dead service. Working out the schema version needs
+a connection. So a startup gate would reverse a decision taken on purpose, and it would make an
+outage and a deployment mistake produce the same symptom, which is the exact confusion the guard
+exists to remove.
+
+So the check runs where a connection is already in hand, and is **reported** rather than asserted.
+
+### Where it goes, and why there
+
+The health route — because that is what the container probe reads, and the container reported itself
+**healthy** for the whole day the main screen was broken. The signal that was silent is the signal to
+fix.
+
+### Three states, not two
+
+| What is true | HTTP | What the body says |
+|---|---|---|
+| Database is at the revision the code expects | **200** | `at-head`, with the revision named |
+| Database is **behind, ahead, never migrated, or the migration graph has two heads** | **503** | `drifted`, naming the revision found *and* the one expected |
+| Database cannot be reached at all | **200** | `unknown` — it could not tell |
+
+The third row is the whole design. An outage is not a misconfiguration, and refusing on one does
+precisely what the health route was written to avoid. A two-valued check would have had to choose
+between missing the drift and reporting every outage as a deployment error.
+
+**Ahead is refused as well as behind**, and the message says which way round: somebody deployed newer
+code and rolled back, and this code may now read columns that no longer exist. Told only that the
+revisions differ, an operator migrates a database that is already further on than the code.
+
+### What it looks like when it fires
+
+```
+HTTP 503
+{"status": "unhealthy", "schema": "drifted",
+ "expected": "0009_detection_pass_stamp", "found": null,
+ "detail": "this database has never been migrated: it names no revision,
+            and this code expects 0009_detection_pass_stamp. Run `make migrate`."}
+```
+
+**503 and not a 200 carrying a sad field**, because the probe runs a plain request against that path
+and only a non-2xx makes the container report unhealthy. A body nobody parses is what we already had.
+
+### The expectation must come from somewhere the database cannot reach
+
+Read the expected revision out of the version table — the same table being checked — and the
+comparison agrees with itself on every database there is. It passes everywhere and has no failure
+case. So it is read from the migration files, and the two halves are cached differently on purpose:
+
+| | Cached? | Why |
+|---|---|---|
+| The revision the code expects | **Yes**, for the life of the process | It cannot change without restarting the process |
+| The revision the database is at | **No**, read every probe | Running the migration against a live stack must clear the refusal on the next probe, not after a restart |
+
+Verified live: a container serving against an unmigrated database returned 503; the database was
+migrated while that container kept running; the next probe returned 200.
+
+### One consequence, accepted deliberately
+
+Nothing applied migrations when the stack started, so this check would have left every freshly built
+stack unhealthy until somebody ran the migration by hand — **and a guard that fires routinely is one
+somebody switches off.** So the two start commands now migrate first, which is a no-op when the
+database is already current. Migrating from the container's own entrypoint was rejected: migration
+stays a deliberate act, and an image that migrates on boot runs schema changes from however many
+instances start at once.
+
+### Worth recording as a limitation
+
+This catches schema drift and nothing else. A database at the right revision whose contents are wrong,
+a missing extension, a permissions problem — all still answer healthy. The check compares two strings,
+and what it buys is that the specific failure which cost a day cannot recur silently.
+| **Startup gate** | A check that refuses to let a process start. Unavailable here: determining a schema revision needs a database connection, and this application deliberately opens none at startup so an outage cannot stop the service coming up. See §145. |
+| **Drifted** | A database at a different migration revision than the code expects — behind, ahead, never migrated, or facing a migration graph with two heads. The one state the health signal refuses on. See §145. |
+| **Reported, not asserted** | A fact a system publishes about itself rather than one it enforces by refusing to run. The form a check takes when the thing it needs is not available at the moment enforcement would have to happen. See §145. |

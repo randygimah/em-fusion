@@ -150,6 +150,29 @@ def test_a_second_head_is_not_an_expectation(tmp_path: Path) -> None:
     assert len(heads_on_disk(config)) == 2
 
 
+def test_the_expectation_has_no_answer_when_the_graph_has_two_heads(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # spec: ops-005 -- found by the mutation pass, which is the point of running
+    # one. `heads_on_disk` returning two was asserted above and `compare_schema`
+    # refusing on two was asserted below, and **nothing tested the function
+    # between them**: with two heads it returned whichever sorted first, so an
+    # unreachable database would have reported a bogus expectation beside its
+    # "could not tell". A test on each end of a chain is not a test of the chain.
+    from app.db import migrations
+
+    monkeypatch.setattr(
+        migrations, "heads_on_disk", lambda _config: ("0002_a", "0002_b")
+    )
+    migrations.expected_revision.cache_clear()
+    try:
+        assert migrations.expected_revision() is None
+    finally:
+        # The real value is cached for the life of the process, so it has to be
+        # recomputed before anything else reads it.
+        migrations.expected_revision.cache_clear()
+
+
 def test_no_migrations_at_all_is_not_an_expectation(tmp_path: Path) -> None:
     # spec: ops-005 -- the empty case, which must not read as "anything goes".
     config = _script_dir(tmp_path)
