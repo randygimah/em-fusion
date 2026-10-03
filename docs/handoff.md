@@ -249,21 +249,57 @@ uses.
 
 ## Next step
 
-1. **There is no way to ask the screen for a particular hour.** `api-002` serves the latest completed
-   run, which was the right scope when nothing produced detection output. Every run in the store is
-   now examined and the corpus holds 60 interference zones and 120 broken-receiver attributions, and
-   none of them can be shown, because the newest batch is twenty quiet hours. Seeing a detection means
-   generating a staged batch and letting the trigger examine it — currently the only path.
-2. **Re-run the figures of record.** `detection_metrics.py` now imports the settings and builds its
+The next five items are all about the screen, and the order below was agreed with the user on
+2026-10-03. Each one makes the next easier to see. The reasoning for 1–5 is in **What the screen
+still does not do for an analyst**, further down; this is the sequence only.
+
+1. **`api-002` gains a way to select an hour.** Agreed as next. It serves the latest completed run,
+   which was the right scope when nothing produced detection output. Every run in the store is now
+   examined and the corpus holds 60 interference zones and 120 broken-receiver attributions, and
+   none can be shown, because the newest batch is twenty quiet hours. This gates the four below as a
+   demonstration: none of them can be looked at against a staged hour without generating a fresh
+   batch first. **Not yet specced.**
+2. **The two header labels** (`op-001`, plus the system-status strip in the nav footer). The
+   smallest item on the list: two correct values rendered as bare unlabelled words. Both items are
+   already specced and unbuilt.
+3. **The detection summary's vocabulary** (`op-003`, `ui-001`). Frontend only, no backend change:
+   the payload carries finding types verbatim on purpose and the screen never composed any copy.
+   Already specced and unbuilt. `op-006`'s timeline strip belongs here too — it is carried in the
+   payload and not rendered at all.
+4. **Serve an evidence bundle**, so the summary can say *why*. Needs a producer before it needs a
+   panel: the bundles exist and no endpoint serves one. **Not specced.** This is the thesis's own
+   subject — the claim is explainability and the screen shows a conclusion with no route to what it
+   rests on.
+5. **The map** (`map-001`–`map-004`). Largest, and last because the basemap question below wants
+   settling first. Already specced and unbuilt.
+
+Then, unchanged from before:
+
+6. **Re-run the figures of record.** `detection_metrics.py` now imports the settings and builds its
    baseline through `measure_normality`. The values are unchanged and the equivalence is asserted at
    unit scale, and the re-score reproduced `eval-002`'s table exactly from stored rows — but
    `anom-015` validated its own refactor by reproducing all forty-three exported lines byte for byte,
    and that has not been done for this one.
-3. **`op-003` and `op-006`**, the two panels `api-012` unblocked and that now have something to
-   show. The summary panel is deliberately minimal and the timeline strip is not rendered at all.
-4. **`hypotheses`**, the last producer-less field. 155 rows exist. Which arm an analyst sees,
+7. **`hypotheses`**, the last producer-less field. 155 rows exist. Which arm an analyst sees,
    whether a row whose grounding check FAILED may be shown, and what `NOT_CHECKED` renders as.
-5. **`eval-006`** still waits on a second rater, mid-October.
+8. **`eval-006`** still waits on a second rater, mid-October.
+
+### Waiting on a decision from the user
+
+**Does the map get a satellite basemap, and does the offline guarantee survive it?** NFR-105 says
+the whole system demonstrates offline — no network, no API key, no third-party account — and
+MapLibre was chosen over Mapbox for exactly that reason. A satellite layer means hosted raster tiles
+from a third party. Three options, with the recommendation:
+
+| Option | Offline guarantee | Cost |
+|---|---|---|
+| **Default basemap offline, satellite a documented opt-in needing network** *(recommended)* | Holds for the default, so AC-07 stays true | Two code paths and one caveat in the write-up |
+| Drop satellite | Holds | The view is lost |
+| Ship an offline raster extract of the corpus box | Holds | Tens of MB committed, and the box is fixed |
+
+`map-002` already requires a labelled placeholder when no tile source is configured, which is the
+behaviour the offline guarantee rests on either way. **Do not start `map-001` before this is
+settled** — it decides whether the adapter has one basemap or two.
 
 ## What the screen still does not do for an analyst
 
