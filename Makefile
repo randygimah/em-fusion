@@ -66,10 +66,18 @@ build-frontend-test: ## Refresh the frontend test image
 build-pipeline: ## Refresh the pipeline image before running a batch in it
 	@$(COMPOSE) --profile pipeline build pipeline
 
-up: ## Start backend + frontend in the background
+# `ops-005`. Both start targets apply the migrations first, and `alembic upgrade
+# head` against a database already at head is a no-op. The health route refuses
+# when the schema is behind the code, which is the signal that was missing when
+# `0009` reached the test database and not the application's -- and a guard that
+# fires on every first run is one somebody switches off. Migrating from the
+# container's own entrypoint is deliberately not the answer: `db-001` keeps
+# migration a deliberate act, and an image that migrates on boot runs schema
+# changes from however many instances start at once.
+up: migrate ## Apply migrations, then start backend + frontend in the background
 	$(COMPOSE) up --build -d
 
-demo: ensure-artifacts ## Build and run the full stack in the foreground
+demo: ensure-artifacts migrate ## Apply migrations, then run the full stack in the foreground
 	$(COMPOSE) up --build
 
 down: ## Stop everything and remove orphaned containers

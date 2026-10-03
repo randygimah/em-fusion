@@ -57,6 +57,22 @@ from tests.conftest import requires_database
 BACKEND = Path(__file__).resolve().parents[1]
 VERSIONS = BACKEND / "alembic" / "versions"
 
+#: Native checkout, then the read-only mount `test-backend` adds -- Compose
+#: mounts `./backend:/app`, so the root Makefile is not in the image.
+#: `test_replay.py`'s idiom, and its argument: **skipping is not an option**,
+#: because a structural guard that silently does not run is the failure one level
+#: up from the one it is checking for.
+MAKEFILE_PATHS = (BACKEND.parent / "Makefile", Path("/repo/Makefile"))
+
+
+def _makefile() -> str:
+    for path in MAKEFILE_PATHS:
+        if path.is_file():
+            return path.read_text(encoding="utf-8")
+    raise AssertionError(  # pragma: no cover -- a broken checkout or mount
+        f"the Makefile is at none of {[str(p) for p in MAKEFILE_PATHS]}."
+    )
+
 
 def _revision_ids() -> set[str]:
     """Every revision id declared under `alembic/versions/`."""
@@ -362,7 +378,7 @@ def test_starting_the_stack_applies_the_migrations_first() -> None:
     # somebody switches off. Nothing applies migrations on start, so without
     # this the check would make a freshly built stack permanently unhealthy and
     # the rational response would be to delete the check.
-    makefile = (BACKEND.parent / "Makefile").read_text()
+    makefile = _makefile()
 
     for target in ("up", "demo"):
         line = next(

@@ -53,6 +53,13 @@ from app.dal.models import (
     ScenarioRunSummary,
 )
 from app.dal.repository import QuarantineRecord
+from app.db.migrations import (
+    SchemaState,
+    alembic_config,
+    compare_schema,
+    heads_on_disk,
+    unreachable,
+)
 from app.scenario.incident import ScenarioType
 
 OBSERVATIONS = "observations"
@@ -418,6 +425,54 @@ def latest_run(session_factory: sessionmaker[Session]) -> ScenarioRunSummary | N
             .first()
         )
         return None if row is None else ScenarioRunSummary(**row)
+
+
+def schema_state(session_factory: sessionmaker[Session] | None) -> SchemaState:
+    """Which revision this database is at, against the code's. Spec: ops-005.
+
+    Here and not in the route, because this is a read against a table and
+    `FR-904` puts every one of those in the repository -- and `db-006` forbids a
+    route module naming `alembic` at all, on the grounds that a migration run
+    from a request handler is the same mistake wearing a different hat. The
+    allowlist of `app.db` modules a route may name deliberately does **not**
+    widen for this: `anom-016` added a guard asserting every entry on it is a
+    repository module, and `app/db/migrations.py` is configuration. So the
+    comparison lives on this side of the port and the handler calls one function.
+
+    **Read on every call and never cached.** The expectation is cached because it
+    cannot change without restarting the process; this cannot be, because
+    somebody running the migration against a live stack has to see the container
+    go healthy on the next probe rather than after a restart. Cached, the refusal
+    would outlive the thing it was reporting. The cost is one single-row read
+    against a one-row table, at the probe's five-second interval.
+
+    **Existence is asked before the row is read**, with `to_regclass`, rather than
+    inferred from which exception came back. A missing table and a refused
+    connection are both `DatabaseError` subclasses, and telling a deployment that
+    has not finished from an outage by exception class is exactly the conflation
+    this item exists to remove.
+
+    A `None` factory is `UNKNOWN` rather than an error: `get_sessionmaker` raises
+    before the lifespan has run, and `api-001` requires this route to answer
+    before persistence exists.
+    """
+    if session_factory is None:
+        return unreachable("no engine has been built in this process")
+    try:
+        with session_factory.begin() as session:
+            versioned = session.execute(
+                text("SELECT to_regclass('alembic_version') IS NOT NULL")
+            ).scalar_one()
+            found = (
+                session.execute(
+                    text("SELECT version_num FROM alembic_version LIMIT 1")
+                ).scalar_one_or_none()
+                if versioned
+                else None
+            )
+    except Exception as unreadable:  # noqa: BLE001 -- reported, never raised
+        return unreachable(f"{type(unreadable).__name__}")
+    return compare_schema(heads_on_disk(alembic_config()), found)
 
 
 def quiet_run_ids(session_factory: sessionmaker[Session]) -> tuple[int, ...]:
