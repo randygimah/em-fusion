@@ -233,8 +233,24 @@ if SIDE not in {"both", "backend", "frontend"}:
     raise SystemExit(f"SIDE must be backend, frontend or both, not {SIDE!r}")
 
 
+#: Which suite GUARDS a file, where that is not the suite its location implies.
+#: The TypeScript contract lives under `frontend/` and is held by a test in the
+#: BACKEND suite: `api-002`'s parity check parses that file and compares its
+#: field sets against the response models in both directions, so a field put
+#: back there is caught in Python and not in vitest.
+#:
+#: Found by this pass rather than reasoned out in advance. Dispatching on
+#: location scored the mutant that restores `scenario.health` to the contract as
+#: a SURVIVOR of the frontend suite -- which it is, and which says nothing,
+#: because no frontend test parses the contract and none should: the parser
+#: exists once, on the side that has one. That is README.md's fifth hazard, a
+#: harness scoped narrower than the thing it scores, in its most ordinary form.
+GUARDED_BY: dict[Path, str] = {CONTRACT: "backend"}
+
+
 def _side_of(path: Path) -> str:
-    return "frontend" if FRONTEND in path.parents else "backend"
+    located = "frontend" if FRONTEND in path.parents else "backend"
+    return GUARDED_BY.get(path, located)
 
 
 if SIDE != "both":

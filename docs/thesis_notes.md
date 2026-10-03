@@ -2224,6 +2224,101 @@ with the wall-clock minute the generator ran four years later, which is `anom-00
 in a different costume. The two clocks are deliberately four years apart in the test fixture so an
 implementation reaching for the nearest timestamp is caught by the year rather than by a subtlety.
 
+### One badge was making two claims, and only one of them belonged everywhere
+
+The visible defect was small: the Operational Picture's header showed `mixed` and `unknown` as bare
+unlabelled words. Both values were correct. Investigating why they read so badly turned up something
+larger — a requirement unmet since the shell was built, with nothing reporting it.
+
+FR-703 requires a data-mode badge on **every** screen and NFR-303 requires every screen to present
+the system as a prototype running on synthetic and replayed data. No screen carried one. `op-001`,
+the item that specifies the badge, is scoped to the Operational Picture; the other two screens said
+nothing at all, and the picture printed a payload token rather than a badge. A requirement scoped
+across three screens, implemented by an item scoped to one, is invisible in a backlog in exactly the
+way `api-002`'s producer-less fields were: every consumer can pass while the obligation goes unmet.
+
+**The design decision is a split rather than a widening.** The badge was carrying two claims that
+differ in what they depend on:
+
+| Claim | True where | Depends on |
+|---|---|---|
+| This system is not live | Every screen, always, whatever is loaded | Nothing |
+| This hour is synthetic RF plus replayed tracks | Only the screen showing that hour | The payload |
+
+Separating them is what makes the first satisfiable. It needs no input, so it lives in the
+navigation rail — the only component present on all three screens — without hoisting the picture's
+five-second poll onto screens that do not need it, which the routing work deliberately scoped to the
+picture. And it strengthens the guarantee past what the item asked for. `op-001` required a badge
+that "cannot be dismissed or collapsed"; a badge wired to no input has **nothing present that can be
+absent**, so a failed request, an empty store, a screen with no data and a backend that is down all
+leave it in place. A badge derived from `scenario.dataMode` would have been a badge a backend failure
+could remove.
+
+The wording changed for a reason found in the requirements rather than invented: `op-001` specified
+the literal `SYNTHETIC ENVIRONMENT DATA`, while FR-703 itself says "synthetic *or* replayed" and
+NFR-303 says "synthetic *and* replayed" — and the corpus's aircraft tracks are real recorded
+transponder data, pseudonymised but recorded. A badge claiming the whole environment is synthetic
+understates their provenance in the other direction. Collapsed to the 56px rail it reads **NOT
+LIVE**: the claim itself rather than an abbreviation of the words, because an abbreviation is cryptic
+and the claim is the thing that must not be lost.
+
+### A status strip whose specified input did not exist, and the value that arrived instead
+
+`nav-002` named its input as `operationalPicture.scenario.health`. That field was **hard-coded** to
+`unknown` in the payload builder, with a comment recording that no health monitoring existed. A strip
+reading it would have rendered `unknown` on every screen forever, which reads as a fault rather than
+as a gap — and it is the wrong *kind* of value, being a property of one run while the strip sits in
+the rail on all three screens.
+
+What arrived in the meantime is `ops-005`: the service's own health route stopped being a liveness
+stub and now reports whether the database is at the revision the code expects. That is a
+service-level fact, available on every screen from one cheap request, and it is what the design
+reference actually asks for — Connectivity and Service rows, neither of them about a run.
+
+**The two rows are `ops-005`'s own three states one layer further out**, which is what makes them two
+rows rather than a decoration. Connectivity is whether the request reached the backend; Service is
+what the backend said about reaching its database. The wiring carries one specific trap, and it is
+the item's sharpest constraint: **a 503 must not be read as a failed request.** It means the request
+arrived and the backend could not vouch for itself, so connectivity is up and the refusal belongs on
+the service row. Read the other way, a misconfigured deployment reports as a lost connection — the
+exact conflation `ops-005` was built to end, and the state that cost a day of the main screen
+returning 500 while the container called itself healthy. `fetchSystemHealth` is therefore the one
+fetcher in that module that does not throw on a non-2xx.
+
+One gap is recorded rather than closed. The health route answers with a plain body rather than a
+declared model, so there is nothing for the contract parser to compare against and **no parity test
+can exist** for it. That leaves a renamed key able to make the strip read `undefined`, map it to a
+verdict, and report a plausible steady state forever. Two guards sit either side: the backend suite
+pins the key set, and the frontend treats a body missing either key as the service being unreachable,
+so a rename degrades to a visible failure rather than a believable one.
+
+Also worth recording because it is concrete evidence about the design reference: that panel renders
+`99.9% UPTIME`, which is precisely the failure case `nav-002` names. The design is reference
+material and not gospel, and this is the second time this project has found a defect in it.
+
+### Deleting a producer-less field: the third route out, and the one the earlier lesson missed
+
+`api-002`'s amendment recorded that a producer-less field is invisible in a backlog, and named two
+resolutions: produce the field, or record that the reason it is empty is still true. Both assume the
+field is wanted.
+
+`scenario.health` is neither. The run-level health signal it would have carried already exists under
+another name — `api-012` added `detectionSummary.signalIntegrity`, which is the state of the receiver
+layout and has a producer. So the field was **deleted**, and that is the third route: a field whose
+job another field already does is neither produced nor justified. Two health fields where one works
+is worse than one, because the broken one reads as a second fact that never arrives.
+
+The deletion has to be *visible*, which is why it is its own item rather than a tidy-up inside
+another. A field nobody writes is exactly what hid the detection summary's own gap for a year, and a
+removal buried in a frontend commit would leave the contract and the response model to drift apart
+quietly. Contract parity is what makes a removal as checkable as an addition: gone from both sides,
+or it fails in whichever direction is wrong.
+
+One distinction carries all the risk, and it is spelled identically to the thing being removed:
+`rfSensors[].health` **stays**. It has a producer, carries per-receiver state, and is what the screen
+renders for each of the layout's seven receivers. A removal that took both would have deleted a
+working signal alongside a broken one, and the mutation pass fires a mutant at exactly that.
+
 ## Implementation
 
 <!-- Notable technical decisions per phase (link to implementation.md phases), challenges and
@@ -6930,6 +7025,41 @@ from it and the tree verified clean before anything else was read. The pass of r
 in two parts, which halves the peak and lets memory be reclaimed in between. Worth stating as a
 limit of the method rather than a mishap: a mutation pass is a loop that rebuilds the world once per
 mutant, and its cost grows with the number of mutants rather than with the size of the item.
+
+### Where a file lives and which suite guards it are different facts
+
+The mutation pass over the header labels scored 25 of 25 after a first frontend half reported 20 of
+21, and the survivor is the result worth keeping because **it was not a defect at all**.
+
+The mutant restores `health` to the TypeScript `Scenario` interface. That is caught by `api-002`'s
+contract parity check, which parses the TypeScript file and compares its field sets against the
+Python response models in both directions — and which lives in the **backend** suite, because the
+parser exists once, on the side that has one. So the mutant edits a file under `frontend/` and is
+guarded by a Python test. The harness dispatched it to vitest on the strength of its path; vitest
+has no reason to parse the contract and does not, so the mutant survived a suite that could not have
+seen it.
+
+This is the fifth hazard already recorded in this repository — a harness scoped narrower than the
+thing it scores — in a form that only a two-language pass can produce, and the general statement is
+worth having: **where a file lives and which suite guards it are different facts, and a harness that
+assumes they agree will report a green guard as a gap.** The fix is a per-file override consulted
+before the location fallback, with the reasoning in the code. Nothing changed in the tests or the
+implementation; the guard had been green throughout and the instrument was wrong about where to look.
+
+The direction of the error is worth noting too. The hazard's first recorded form produced a
+*flattering* score — a harness scoring fewer mutants than the item contains. This form produces a
+pessimistic one, which is the safer direction, but only in the sense that it sends you looking for a
+defect that is not there rather than letting one through. Both are failures of the instrument rather
+than of the system, which is now the fourth time on this project that an instrument rather than a
+measurement has been the thing at fault.
+
+One other property of this pass is worth recording for the methodology chapter. Four of the frontend
+tests **passed before any implementation existed**, and not because they assert existing correct
+behaviour: a test that something is absent from the screen passes trivially while the thing it
+watches is unbuilt. With no coverage tooling on that side of the project, a mutation pass is the only
+instrument that can say whether such a test holds anything up — and here two mutants turn all four
+red, one of them taking twenty tests with it. That is the clearest demonstration so far of why the
+frontend items are scored this way rather than by coverage.
 
 ## Evaluation
 

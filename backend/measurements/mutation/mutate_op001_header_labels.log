@@ -1,0 +1,80 @@
+Taken in two parts, SIDE=frontend then SIDE=backend, after the OOM killer had
+already interrupted three runs this session (see README.md's third hazard).
+
+The frontend half ran first and reported 20 of 21 with one survivor:
+
+  the contract keeps the field the payload dropped             SURVIVED 87 passed
+
+That survivor was NOT a gap in the tests. Restoring `health` to the TypeScript
+`Scenario` interface is caught by `api-002`'s contract parity check -- which
+parses that file, compares its field sets against the response models in both
+directions, and lives in the BACKEND suite, because the parser exists once, on
+the side that has one. So the mutant edits a file under `frontend/` and is
+guarded by a Python test, and dispatching on file location sent it to a runner
+that could not see it.
+
+README.md's FIFTH hazard -- a harness scoped narrower than the thing it scores
+-- in its most ordinary form, and invisible until a two-language pass existed to
+expose it. The harness now dispatches on which suite GUARDS a file rather than
+on where the file sits, with the contract declared backend-guarded. 0 test
+changes and 0 implementation changes: the guard was green throughout and the
+instrument was wrong about where to look.
+
+The frontend half below is the run as it stood; the mutant it scored as a
+survivor appears in the backend half, killed.
+
+================================================================ frontend
+frontend sentinel killed (Tests  8 failed | 79 passed (87)) -- edits reach the tests
+
+the badge is derived from the payload                          KILLED   Tests  2 failed | 85 passed (87)
+the badge is dropped when the rail collapses                   KILLED   Tests  1 failed | 86 passed (87)
+the collapsed badge loses the claim and keeps the abbreviation KILLED   Tests  1 failed | 86 passed (87)
+the badge stops naming replayed data                           KILLED   Tests  8 failed | 79 passed (87)
+the badge loses its accessible name when collapsed             KILLED   Tests  1 failed | 86 passed (87)
+the rail drops its footer                                      KILLED   Tests  20 failed | 67 passed (87)
+the screen prints the payload's token again                    KILLED   Tests  8 failed | 79 passed (87)
+an hour with no observations reads as uncertainty              KILLED   Tests  1 failed | 86 passed (87)
+a mixed hour names only the synthetic half                     KILLED   Tests  1 failed | 86 passed (87)
+the readout loses its label                                    KILLED   Tests  1 failed | 86 passed (87)
+a refusal is read as a lost connection                         KILLED   Tests  1 failed | 86 passed (87)
+the two refusals are given one wording                         KILLED   Tests  2 failed | 85 passed (87)
+drift is reported as healthy                                   KILLED   Tests  1 failed | 86 passed (87)
+an unreachable database is reported as healthy                 KILLED   Tests  1 failed | 86 passed (87)
+a failed request is reported as connected                      KILLED   Tests  1 failed | 86 passed (87)
+a body missing the keys is read as a verdict                   KILLED   Tests  1 failed | 86 passed (87)
+the strip reports a percentage                                 KILLED   Tests  2 failed | 85 passed (87)
+a collapsed row loses its name                                 KILLED   Tests  1 failed | 86 passed (87)
+the service row is dropped when the rail collapses             KILLED   Tests  1 failed | 86 passed (87)
+the strip polls at the picture's cadence                       KILLED   Tests  1 failed | 86 passed (87)
+
+restored
+
+20 killed of 21 valid mutants
+SURVIVED, and NOT expected to -- each one is a gap in the tests:
+
+================================================================= backend
+backend sentinel killed (2 failed, 96 passed in 15.92s) -- edits reach the tests
+
+the backend stops pinning the keys the strip reads             KILLED   3 failed, 95 passed in 15.96s
+the field comes back                                           KILLED   4 failed, 94 passed in 15.94s
+the field comes back as optional rather than absent            KILLED   4 failed, 94 passed in 15.88s
+the contract keeps the field the payload dropped               KILLED   2 failed, 96 passed in 16.28s
+the receivers lose their own health with it                    KILLED   6 failed, 92 passed in 16.02s
+
+restored
+
+5 killed of 5 valid mutants
+no unexpected survivors
+
+
+================================================================== together
+
+25 killed of 25 valid mutants across both suites
+no unexpected survivors, and no mutant declared equivalent
+
+Four of the frontend tests could not fail before the implementation existed --
+absence assertions pass trivially while the thing they watch is unbuilt -- and
+there is no coverage tooling on that side at all, so this pass is the only
+instrument that can say they hold anything up. `the badge is derived from the
+payload` and `the rail drops its footer` both turn them red; the second takes
+20 tests with it.
