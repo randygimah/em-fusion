@@ -1,0 +1,29 @@
+target: postgis:5432/em_fusion as postgres
+corpus v2 -- one generator, 900 s runs, anom-014 and scn-007 active; base seeds 1412660662, 965530111, 655209063
+380 completed runs to examine, 0 already stamped; baseline over 60 quiet runs of the corpus of record
+baseline measured in 13.7 s
+  25/380 examined, 1.51 s a run, 8.9 min left
+  50/380 examined, 1.24 s a run, 6.8 min left
+  75/380 examined, 1.14 s a run, 5.8 min left
+  100/380 examined, 1.09 s a run, 5.1 min left
+  125/380 examined, 1.06 s a run, 4.5 min left
+  150/380 examined, 1.04 s a run, 4.0 min left
+  175/380 examined, 1.03 s a run, 3.5 min left
+  200/380 examined, 1.02 s a run, 3.0 min left
+  225/380 examined, 1.01 s a run, 2.6 min left
+  250/380 examined, 1.00 s a run, 2.2 min left
+  275/380 examined, 1.00 s a run, 1.7 min left
+  300/380 examined, 0.99 s a run, 1.3 min left
+  325/380 examined, 0.99 s a run, 0.9 min left
+  350/380 examined, 0.99 s a run, 0.5 min left
+  375/380 examined, 0.99 s a run, 0.1 min left
+
+380 examined of 380 completed runs in 6.2 min (0.99 s a run)
+stamped: 0 before, 380 after; 0 completed runs unstamped
+distinct settings recorded across the store: 1
+
+reported claims by type, over every examined run:
+  possible_interference_zone         80
+  possible_sensor_fault              149
+
+EXIT=0

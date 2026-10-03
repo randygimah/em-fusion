@@ -204,6 +204,54 @@ Added 2026-09-19 (`ops-003`). Before it, every figure here was produced by hand-
 invocation — which is exactly where a wrong environment variable gets supplied, and how the corpus
 came to be destroyed. See `ops-004`.
 
+### Examining every stored run (`anom-016`)
+
+**The one script here that writes to the application's database on purpose.** Everything else in
+`corpus/` measures and prints; `rescore_corpus.py` replaces the findings of every completed run and
+stamps each one with when it was examined and under what settings.
+
+It exists because `anom-016` fires the pass when a batch **completes**, which reaches new batches
+only. Every run already in the store was examined by `detection_metrics.py` before anything recorded
+that examinations happen, so each had findings and no stamp -- and `api-012` reads an absent stamp as
+*not known to have been examined*, correctly, which is why the screen showed nothing for them.
+
+Run: `make measure SCRIPT=corpus/rescore_corpus.py CORPUS=v2`
+
+**Result of record, 2026-10-03** (`rescore_corpus.log`): **380 of 380 completed runs examined in 6.2
+minutes at 0.99 s a run**, 13.7 s for the baseline, no refusals and no failures. 380 stamped from 0,
+nothing left unstamped, and **one distinct settings record across the whole store**, which is the
+state in which two runs' findings can be compared at all. It reproduces `eval-002`'s table exactly:
+60 of 60 on all three positive arms, 0 of 60 on both negative arms, and no run claiming the type of
+another.
+
+0.99 s a run against the 1.22 s `anom-015` measured. Same work, and the difference is the reading:
+that figure was taken a run at a time with a cold cache between, and this sweeps 380 in sequence.
+The slower figure is the one to quote for a single run, which is what the trigger does.
+
+Three things it does differently from the application, each on purpose:
+
+| | Here | `app/scenario/batch.py` |
+|---|---|---|
+| Which runs | every completed run in the store | only the batch that just finished |
+| The baseline | corpus v2's **60** quiet runs, via `_corpus.quiet_runs` | every completed quiet run in the store, currently **100** |
+| When | by name, once, by somebody who means it | when a batch completes |
+
+The middle row is the one worth understanding. `app/db/repository.py`'s `quiet_run_ids` returns every
+quiet run there is, which is the right answer for an application: it should use all the quiet hours
+it has. It is the wrong answer *here*, because every figure of record was measured over corpus v2's
+sixty alone, and a re-score under a wider baseline would stamp those runs with provenance no quoted
+figure was taken under. So a batch generated from the screen today is baselined over a hundred quiet
+runs and the corpus is baselined over sixty -- both honest, both recorded on the run, and the stamp
+is what makes them tellable apart. `Normality` carries its run list for exactly this.
+
+**It does not touch `evidence_bundles`.** The pass builds bundles and does not store them, on
+`eval-004`'s argument that its pre-registered sample names twenty of them by id, so re-scoring cannot
+renumber that population. Findings are replaced per run per rule (`db-008`), so the script is
+idempotent and re-running it is the whole of the repair if it dies part way.
+
+**No identifier of any kind reaches the log**, per the two standing constraints below: a finding's
+subject is a sensor id or an aircraft id, so only counts are printed.
+
 ## `mutation/` — are the tests load-bearing?
 
 A passing suite proves the tests run; a mutation pass proves they would notice. Each script edits one
