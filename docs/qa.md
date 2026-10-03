@@ -8900,3 +8900,89 @@ it would be the wrong one for a system that could ingest anything else.
 | **The standing badge** | The unconditional *this system is not live* statement, in the nav rail on all three screens, wired to no input — so nothing can remove it and nothing can make it wrong. Distinct from the per-hour data-mode readout, which says which kinds of data this particular hour holds. See §147. |
 | **Connectivity versus Service** | Two rows of the status strip, and two different links: whether the request reached the backend, and what the backend said about reaching its database. A 503 means the second failed and the first worked. See §147. |
 | **Deleting a producer-less field** | The third way out of a field nothing writes, after producing it and justifying it: when another field already does its job, the field goes. See §147 and §139. |
+
+## 148. The detection summary vocabulary.
+
+**The copy is the easy half. The hard half is that the same problem is in two panels, and the set of
+things needing copy is closed and declared somewhere the screen cannot see.**
+
+### What the panel prints at an analyst
+
+```
+Anomaly Level      High
+Signal Integrity   Medium
+
+possible_interference_zone    1
+possible_sensor_fault         0
+possible_data_source_issue    —
+```
+
+Those bottom three are the system's internal names for its own conclusions. **The payload carries
+them that way on purpose** — the backend's rule is facts and never prose, so that the screen composes
+the wording where the rest of that screen's wording lives, rather than having sentences arrive from a
+detector. The screen simply never composed any, so the raw names went to the surface.
+
+### The finding that changed the shape of the work
+
+**The wrong assumption:** this is a panel's problem, so the copy goes in the panel.
+
+The timeline strip — carried in the payload, rendered nowhere — holds the **same verbatim name**. Run
+207's single event is:
+
+| time | event | source |
+|---|---|---|
+| 2022-06-27T12:45:52Z | `possible_interference_zone` | RF-04 |
+
+So copy written inside the summary panel would need a second copy in the timeline, and the same
+conclusion would then have two sentences on one screen with nothing to notice when they drift apart.
+**The copy is one module both panels read**, and that is why these three items are one piece of work
+rather than three.
+
+### How a missing sentence is made impossible rather than unlikely
+
+A copy map that misses a finding type prints a raw token — which is the defect being fixed, so
+*unlikely* is not good enough.
+
+There are seven producers and three of them are reportable. That set is closed and declared on the
+backend. The project already has machinery for exactly this: a closed set reaches the frontend as a
+union type and is compared against its origin from the backend suite, which is how the five scenario
+types and the two reasons-a-count-is-absent are held. Doing the same here means **a new detection
+rule forces its copy to be written** — a missing sentence becomes a type error instead of a token on
+screen.
+
+Worth noting where that test sits, because it is the lesson from the mutation pass an hour earlier:
+**in the backend suite**, because the TypeScript parser exists once and on that side. Where a file
+lives and which suite guards it are different facts.
+
+### Why a compile-time type is not the guard for the levels
+
+`Anomaly Level`, `Signal Integrity`, and a hypothesis card's `Confidence` and `Severity` each print a
+bare string today, and there is an item requiring one shared primitive for all four.
+
+The contract already declares the three-value union, so TypeScript refuses a number *at the call
+site*. **But the payload is cast from JSON**, so a backend regression delivers `87` at runtime with
+nothing between it and the screen. That gap is the whole reason the primitive exists, and it is why
+typing the field was never sufficient.
+
+One detail had to be decided rather than read off the item, which says the primitive "renders nothing
+and surfaces a development-time error":
+
+| Option | Why not |
+|---|---|
+| Throw during render | Takes down a whole screen over one bad badge — a larger failure than the one being prevented |
+| Render the value as a dash | Collides with the typed absences the panel already renders as dashes, making *no rule exists* and *the backend sent a number* identical |
+| **Render no value, keep the label, log the offending value** *(chosen)* | No number reaches an analyst in any form; the row reads as visibly incomplete; the developer who caused it gets the value |
+
+The audience for that error is a developer and not an analyst, which is the one place in this project
+where an absence deliberately gets **no** composed sentence. An invalid level is not a state the
+system is allowed to be in, so there is nothing honest to say to an analyst about it.
+
+### One thing already right, and not being changed
+
+`possible_sensor_fault: 0` beside `possible_data_source_issue: —`. A built rule that found nothing is
+a real zero; a rule that does not exist gets no number, because a zero there would quote the absence
+of a rule as the accuracy of one.
+
+| **Composing copy** | Turning a finding type the backend sends verbatim into a sentence an analyst reads. Done on the screen by design, so prose never arrives from a detector — and in one module, because two panels carry the same type. See §148. |
+| **A closed set held by parity** | A set declared on the backend and mirrored as a union type on the frontend, compared against its origin by a test. What makes a missing case a type error rather than a token on screen. See §148, §140. |
+| **An absence with no sentence** | The one deliberate exception to composing copy: an invalid level is a developer's defect, not a state to explain to an analyst, so it is logged rather than worded. See §148. |
