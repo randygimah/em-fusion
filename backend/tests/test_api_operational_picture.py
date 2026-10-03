@@ -1336,7 +1336,9 @@ def test_the_reportable_finding_types_match_the_register_on_both_sides() -> None
         if producer.kind is Kind.REPORTABLE
     }
 
-    assert set(union_members(_read(CONTRACT_PATHS), "ReportableFindingType")) == declared
+    declared_in_contract = union_members(_read(CONTRACT_PATHS), "ReportableFindingType")
+
+    assert set(declared_in_contract) == declared
 
 
 def test_the_reportable_set_is_the_three_the_ladder_can_claim() -> None:

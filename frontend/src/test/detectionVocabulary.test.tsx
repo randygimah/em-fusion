@@ -81,7 +81,7 @@ describe("the copy module", () => {
   it("names an unrecognised type rather than printing it or dropping it", () => {
     // A type outside the union means a rule exists that this screen has no copy
     // for. Printing it is the defect; dropping it hides a built detector.
-    const label = findingLabel("possible_new_thing" as ReportableFindingType);
+    const label = findingLabel("possible_new_thing");
 
     expect(label).not.toContain("possible_new_thing");
     expect(label).toMatch(/unrecognised|unknown finding/i);

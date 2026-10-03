@@ -1,7 +1,25 @@
+import { EmLevel } from "../components/em/EmLevel";
+import { findingLabel } from "../lib/detectionVocabulary";
 import type {
   OperationalPicture as OperationalPictureData,
   SelectableHour,
+  TimelineEvent,
 } from "../types/operationalPicture";
+
+// The instant an event happened, in the simulated time it happened at.
+//
+// Sliced from the ISO string rather than formatted through `Date`, deliberately
+// (op-006). These are instants in a replayed 2022 hour and the run was
+// generated in 2026, so a relative time states the wrong thing and a local
+// format shifts the hour by the viewer's offset — anom-009's recorded mistake,
+// and the same one the hour labels above had to avoid.
+const simulatedInstant = (iso: string): string => `${iso.slice(0, 10)} ${iso.slice(11, 16)}`;
+
+// Oldest first, by event time and never by array order (op-006). api-012
+// already serves them in order, so this changes nothing today — it is what
+// stops the strip's order silently following the backend's.
+const oldestFirst = (events: readonly TimelineEvent[]): TimelineEvent[] =>
+  [...events].sort((a, b) => a.time.localeCompare(b.time));
 
 // One hour as the selector names it. spec: op-009.
 //
@@ -181,15 +199,13 @@ const OperationalPictureScreen = ({
               operationalPicture.hypotheses.map((hypothesis) => (
                 <article key={hypothesis.id}>
                   <h3 className="mt-4 text-xl font-semibold">{hypothesis.title}</h3>
+                  {/* Both levels through the one primitive (ui-001), which
+                      names these two among its four call sites. Rendered inline
+                      here until this item, so a hypothesis row carrying 74.2
+                      would have put a decimal on screen (FR-715, AC-11). */}
                   <dl className="mt-4 grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <dt className="font-mono uppercase text-[#8c909f]">Confidence</dt>
-                      <dd>{hypothesis.confidence}</dd>
-                    </div>
-                    <div>
-                      <dt className="font-mono uppercase text-[#8c909f]">Severity</dt>
-                      <dd>{hypothesis.severity}</dd>
-                    </div>
+                    <EmLevel label="Confidence" value={hypothesis.confidence} />
+                    <EmLevel label="Severity" value={hypothesis.severity} />
                     <div className="col-span-2">
                       <dt className="font-mono uppercase text-[#8c909f]">Evidence</dt>
                       <dd>{hypothesis.evidence}</dd>
@@ -200,7 +216,7 @@ const OperationalPictureScreen = ({
             )}
           </section>
 
-          <section className="border border-[#424754] bg-[#1d2027] p-4">
+          <section aria-label="Detection summary" className="border border-[#424754] bg-[#1d2027] p-4">
             <h2 className="font-mono text-sm uppercase tracking-[0.05em] text-[#c2c6d6]">Detection Summary</h2>
             {detectionSummary === null ? (
               <p className="mt-4 text-sm text-[#8c909f]">
@@ -209,22 +225,23 @@ const OperationalPictureScreen = ({
               </p>
             ) : (
               <>
+                {/* Both levels through the one primitive (ui-001). Rendered
+                    inline before this item, which left a backend regression
+                    delivering 87 free to reach the screen: the contract types
+                    these as a three-value union, and the payload is cast from
+                    JSON, so the type never sees it. */}
                 <dl className="mt-4 space-y-3">
-                  <div className="flex justify-between">
-                    <dt>Anomaly Level</dt>
-                    <dd className="font-mono text-[#ffb786]">{detectionSummary.anomalyLevel}</dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt>Signal Integrity</dt>
-                    <dd className="font-mono text-[#4cd7f6]">
-                      {detectionSummary.signalIntegrity}
-                    </dd>
-                  </div>
+                  <EmLevel label="Anomaly Level" value={detectionSummary.anomalyLevel} />
+                  <EmLevel label="Signal Integrity" value={detectionSummary.signalIntegrity} />
                 </dl>
                 <dl className="mt-4 space-y-2 border-t border-[#424754] pt-3 text-sm">
                   {reportable.map((entry) => (
                     <div key={`${entry.ruleId}:${entry.findingType}`} className="flex justify-between gap-4">
-                      <dt className="text-[#8c909f]">{entry.findingType}</dt>
+                      {/* The conclusion in words, from the module the timeline
+                          below reads too (op-003, op-006). The payload carries
+                          the finding type verbatim by design, and this screen
+                          printed it that way until this item. */}
+                      <dt className="text-[#8c909f]">{findingLabel(entry.findingType)}</dt>
                       {/* A rule that does not exist gets no number. A zero
                           there would quote the absence of a rule as the
                           accuracy of one (api-012, anom-008). */}
@@ -233,6 +250,34 @@ const OperationalPictureScreen = ({
                   ))}
                 </dl>
               </>
+            )}
+          </section>
+
+          {/* The timeline strip (op-006). Carried in the payload since api-012
+              and rendered nowhere until this item — and it carries the SAME
+              verbatim finding type the summary above does, which is why the
+              wording for both comes from one module rather than two. */}
+          <section aria-label="Timeline" className="border border-[#424754] bg-[#1d2027] p-4">
+            <h2 className="font-mono text-sm uppercase tracking-[0.05em] text-[#c2c6d6]">Timeline</h2>
+            {operationalPicture.timelineEvents.length === 0 ? (
+              <p className="mt-4 text-sm text-[#8c909f]">
+                No events in this hour. Nothing the detectors reported reached the analyst.
+              </p>
+            ) : (
+              <ol className="mt-4 space-y-2 text-sm">
+                {oldestFirst(operationalPicture.timelineEvents).map((timelineEvent) => (
+                  <li
+                    className="flex flex-wrap items-baseline gap-x-3 border-l-2 border-[#df7412] pl-3"
+                    key={timelineEvent.id}
+                  >
+                    <span className="font-mono text-xs text-[#8c909f]">
+                      {simulatedInstant(timelineEvent.time)}
+                    </span>
+                    <span className="text-[#e1e2ec]">{findingLabel(timelineEvent.event)}</span>
+                    <span className="font-mono text-xs text-[#4cd7f6]">{timelineEvent.source}</span>
+                  </li>
+                ))}
+              </ol>
             )}
           </section>
         </aside>

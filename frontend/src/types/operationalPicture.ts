@@ -47,6 +47,20 @@ export type ProducerKind = "intermediate" | "reportable";
 // built detector as a missing one.
 export type CountUnavailable = "rule-not-built" | "not-persisted";
 
+// The conclusions the precedence ladder can reach, and therefore the only
+// finding types the summary panel and the timeline ever have to word (op-003,
+// op-006). A closed set, compared against the backend's own register by a test
+// in the BACKEND suite — the TypeScript parser exists once and on that side.
+//
+// It is a union rather than a string so that a copy map not covering it is a
+// type error: the payload carries each type verbatim by design, so a type with
+// no sentence written for it would reach an analyst as the raw token, which is
+// the defect this vocabulary exists to remove.
+export type ReportableFindingType =
+  | "possible_interference_zone"
+  | "possible_sensor_fault"
+  | "possible_data_source_issue";
+
 // One detection rule and what it produced on this run. Exactly one of `count`
 // and `unavailable` is set.
 export interface DetectionCount {
@@ -139,6 +153,3 @@ export interface SelectableHour {
   observedTo: string | null;
   examined: boolean;
 }
-
-// STUB — op-003 not implemented.
-export type ReportableFindingType = "possible_interference_zone";

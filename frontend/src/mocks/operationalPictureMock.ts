@@ -69,12 +69,18 @@ const operationalPicture: OperationalPicture = {
       lon: -118.2437,
     },
   ],
+  // Corrected with op-006, which is the first item to render these. Both
+  // fields were unfaithful to the payload api-012 actually produces: `event`
+  // held the prose "Anomaly Detected" where the real field carries a finding
+  // type verbatim, and `source` held a station name where the real field
+  // carries a receiver id. A fixture that does not match its payload is how a
+  // screen gets built against a shape nothing serves.
   timelineEvents: [
     {
-      id: "event-001",
+      id: "FUSION-SPATIAL:sensor-001:2024-06-01T12:00:00Z",
       time: "2024-06-01T12:00:00Z",
-      event: "Anomaly Detected",
-      source: "Station Gamma",
+      event: "possible_interference_zone",
+      source: "sensor-001",
     },
   ],
 };

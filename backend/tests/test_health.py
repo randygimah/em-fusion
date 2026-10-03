@@ -88,4 +88,3 @@ def test_the_two_keys_the_strip_reads_are_never_absent() -> None:
 
     assert body["status"]
     assert body["schema"]
-
