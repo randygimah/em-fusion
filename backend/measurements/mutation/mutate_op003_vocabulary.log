@@ -1,0 +1,93 @@
+Taken in two parts, SIDE=frontend then SIDE=backend, against committed code.
+
+The backend half ran twice. Its first attempt scored one mutant INCONCLUSIVE
+rather than killed:
+
+  the register loses a reportable producer                     INCONCLUSIVE -- 2 errors in 1.07s
+
+Flipping SENSOR-FAULT from REPORTABLE to INTERMEDIATE leaves a `Producer` with
+no measured background, which `Producer.__post_init__` refuses -- so the module
+raised on import, the suite reported collection errors rather than a failing
+test, and the harness correctly declined to read that as a kill. README.md's
+EIGHTH hazard, met a second time.
+
+The two instances break the same invariant class from opposite directions. The
+first, `anom-016`'s sentinel, set a threshold to 99 dB and broke an ORDERING
+constraint. This one broke a MUTUAL-EXCLUSION constraint: a reportable producer
+may carry no band and an intermediate one must. Both looked like ordinary
+one-line edits. The rule the hazard already states -- construct each mutant
+before running the table -- is the one that catches either, and it was not
+followed when this table was written.
+
+Done explicitly on the retry: the replacement carries
+`background=Background(low=0, high=0, runs=60)`, the mutated module was imported
+on its own and its register printed before anything was run against it, which
+showed the reportable set reduced to two members as intended.
+
+================================================================ frontend
+frontend sentinel killed (Tests  3 failed | 85 passed (88)) -- edits reach the tests
+
+the summary prints the raw finding type again                  KILLED   Tests  5 failed | 83 passed (88)
+the timeline prints the raw finding type                       KILLED   Tests  3 failed | 85 passed (88)
+the timeline words a conclusion its own way                    KILLED   Tests  2 failed | 86 passed (88)
+a conclusion loses its wording and keeps its shape             KILLED   Tests  2 failed | 86 passed (88)
+an unmapped type prints itself                                 KILLED   Tests  1 failed | 87 passed (88)
+an unmapped type is dropped rather than named                  KILLED   Tests  1 failed | 87 passed (88)
+any string counts as a level                                   KILLED   Tests  9 failed | 79 passed (88)
+anything at all counts as a level                              KILLED   Tests  19 failed | 69 passed (88)
+a refused value renders anyway                                 KILLED   Tests  9 failed | 79 passed (88)
+a refusal takes the label with it                              KILLED   Tests  10 failed | 78 passed (88)
+a refusal leaves no trace for the developer                    KILLED   Tests  15 failed | 73 passed (88)
+the primitive throws rather than refusing                      KILLED   Tests  36 failed | 52 passed (88)
+the error no longer names the row it came from                 KILLED   Tests  10 failed | 78 passed (88)
+the strip takes its order from the payload                     KILLED   Tests  1 failed | 87 passed (88)
+the strip orders newest first                                  KILLED   Tests  1 failed | 87 passed (88)
+the instant is formatted against the viewer's clock            KILLED   Tests  1 failed | 87 passed (88)
+the instant loses its date and keeps the clock                 KILLED   Tests  1 failed | 87 passed (88)
+an event loses the receiver it was claimed at                  KILLED   Tests  2 failed | 86 passed (88)
+an empty strip says nothing                                    KILLED   Tests  1 failed | 87 passed (88)
+intermediate findings are counted as anomalies                 KILLED   Tests  2 failed | 86 passed (88)
+a rule that does not exist is reported as zero                 KILLED   Tests  3 failed | 85 passed (88)
+
+restored
+
+21 killed of 21 valid mutants
+no unexpected survivors
+================================================================= backend
+backend sentinel killed (1 failed, 108 passed in 15.60s) -- edits reach the tests
+
+the union loses a member the register declares                 KILLED   1 failed, 108 passed in 15.37s
+the register loses a reportable producer                       KILLED   9 failed, 100 passed in 15.47s
+
+restored
+
+2 killed of 2 valid mutants
+no unexpected survivors
+
+
+================================================================== together
+
+23 killed of 23 valid mutants across both suites
+no unexpected survivors, and no mutant declared equivalent
+
+Three results worth reading rather than counting.
+
+`the timeline words a conclusion its own way` is the mutant these three items
+exist as one piece of work for: it gives the strip its own phrasing for a type
+the summary already words, and only a test reading one label from both panels
+can kill it. It did, on 2 tests.
+
+`the primitive throws rather than refusing` took 36 of 88 tests down. That blast
+radius IS the argument recorded on the component: a primitive that raises during
+render takes a whole screen with it, which is a larger failure than the one it
+was written to prevent.
+
+`anything at all counts as a level` killed 19 where `any string counts as a
+level` killed 9, and the gap is the shape of the guard. Widening the domain to
+any string still refuses numbers, so only the non-numeric cases notice; removing
+the check entirely lets 87 reach the DOM and every digit assertion fires.
+
+18 of the 58 frontend tests had passed against a raising stub -- the non-numeric
+refusals have no digit to find, and a stub rendering its label and a valid level
+satisfies those halves by accident. With no coverage tooling on that side, this
+pass is the only instrument that could say whether they hold anything up.

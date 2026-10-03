@@ -2319,6 +2319,79 @@ One distinction carries all the risk, and it is spelled identically to the thing
 renders for each of the layout's seven receivers. A removal that took both would have deleted a
 working signal alongside a broken one, and the mutation pass fires a mutant at exactly that.
 
+### The screen's vocabulary, and why one copy module rather than two panels' worth
+
+The detection summary printed the system's internal names at an analyst —
+`possible_interference_zone`, `possible_sensor_fault`. The payload carries them that way
+**deliberately**: the backend sends facts and never prose, so that the wording is composed on the
+screen, where the rest of the screen's wording lives, rather than arriving from a detector. The
+screen simply never composed any, and the raw names reached the surface.
+
+The design decision is not the wording. It is that **the copy is one module and two panels read it**,
+and that was forced by looking at the timeline strip — carried in the payload since the detection
+output was wired up, rendered nowhere, and holding the *same* verbatim finding type in its `event`
+field. Copy written inside the summary panel would have needed a second copy in the strip, and one
+conclusion would then have had two sentences on one screen with nothing to notice when they drifted.
+That is why three items that look separable were built as one piece of work, and the mutation pass
+tests it directly: a mutant giving the strip its own phrasing for a type the summary already words is
+killable only by a test that reads one label from both panels.
+
+**A missing sentence is made a type error rather than left unlikely.** A copy map that omits a
+finding type prints the token, which is the defect being removed — so the map's keys are a union
+declared in the contract, and that union is compared against the detection register from the backend
+suite. The same mechanism already holds the five scenario types and the two reasons a count can be
+absent. The consequence worth stating is forward-looking: **a new detection rule cannot reach the
+screen without its wording being written**, because the map stops type-checking until it is.
+
+One detail of that is a lesson from an hour earlier rather than a design choice. The parity test
+lives in the **backend** suite although the file it parses is in `frontend/` — the TypeScript parser
+exists once, on the side that has one — and the mutation harness now dispatches on which suite guards
+a file rather than on where the file sits.
+
+### A compile-time type is not a guard when the payload is cast
+
+The three level fields — the anomaly level, signal integrity, and a hypothesis card's confidence and
+severity — were each rendered as a bare inline string, and the project has a standing rule that no
+confidence, severity or score is ever shown as a percentage or a decimal.
+
+The contract already declares these as exactly `Low | Medium | High`, which refuses a number *at the
+call site*. **It cannot see the boundary that matters**: the payload is cast from JSON, so a backend
+regression delivers `87` at runtime with nothing between it and the screen. That gap is the whole
+reason a rendering primitive exists rather than a type alias, and it is worth stating in the
+write-up because it generalises — every guarantee this project enforces at a TypeScript type is
+enforced only above the cast.
+
+What a refusal *does* had to be decided rather than read off the specification, whose words are
+"renders nothing and surfaces a development-time error". Three readings were available and two are
+worse than the defect:
+
+| Reading | Why not |
+|---|---|
+| Throw during render | Takes a whole screen down over one bad badge. The mutation pass measured this: the mutant that throws fails 36 of 88 tests, and that blast radius is the argument |
+| Render the value as a dash | Collides with the typed absences the same panel renders as dashes, making *no rule exists* and *the backend sent a number* identical |
+| **Render no value, keep the label, log the value** *(chosen)* | No number reaches an analyst in any form; the row reads as visibly incomplete, which is what it is; the developer who caused it gets the value |
+
+The audience for that error is a developer and not an analyst, which makes it the one place in this
+project where an absence deliberately gets **no** composed sentence. An invalid level is not a state
+the system is allowed to be in, so there is nothing honest to say to an analyst about it — and that
+is a different kind of absence from the ones the detection summary words so carefully.
+
+### A fixture that had been unfaithful to its payload in both fields
+
+Rendering the timeline exposed something the panel's absence had hidden. The mock the picture falls
+back to before its first response held `event: "Anomaly Detected"` — prose — where the real field
+carries a finding type verbatim, and `source: "Station Gamma"` where the real field carries a
+receiver id. It was written before anything produced either field, and nothing had read them since.
+
+The way it surfaced is worth recording: a pre-existing test broke with *found multiple elements with
+the text: Station Gamma*, because the strip now renders a source and the receiver list renders the
+same string. The collision was an artefact of the fixture, not of the screen.
+
+And the quiet version of the defect is the more interesting one. The prose `event` renders through
+the new copy module as **"Unrecognised finding type"** — so the pre-first-response fallback would have
+shown a fault where the real payload shows a conclusion, on a screen whose entire argument is that it
+does not present invented data as the system's own. The fixture is now the real shape.
+
 ## Implementation
 
 <!-- Notable technical decisions per phase (link to implementation.md phases), challenges and
