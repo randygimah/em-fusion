@@ -2119,6 +2119,37 @@ content is legitimate in the field that is prose and illegitimate in the field t
 and that is not an accident of the design: the field that can be checked is the field that carries a
 claim about what the system observed.
 
+### The map gets two basemaps, and the offline guarantee becomes a claim about the default
+
+The decision was put to the user on 3 October 2026 and taken the same day: **the default basemap is
+the self-hosted archive and needs no network; a satellite basemap is a documented opt-in that
+does.** Two alternatives were offered and lost. Dropping satellite holds the guarantee unqualified
+and loses a view that makes the picture legible to anyone who has not spent weeks looking at it.
+Shipping an offline raster extract of the corpus box holds it too, at tens of megabytes committed to
+the repository and a basemap that is only correct for one bounding box — and the box is fixed today
+by the OpenSky extract, so that cost would be paid again the moment the extract moved.
+
+What the decision actually changes is a sentence written earlier in this chapter. The self-hosting
+argument above concluded that with the basemap local, *the hosted generator is the only thing the
+system reaches for over a network*. That is now a claim about the **default configuration** rather
+than about the system, and NFR-105 and AC-07 have to be read the same way. The distinction is worth
+making precisely because the weaker form is still a strong claim: the opt-in is off unless a tile
+source is configured, nothing falls back to it, and the behaviour with nothing configured is the
+labelled placeholder `map-002` already requires. So the demonstration that answers AC-07 is
+unchanged and the system it demonstrates is the one shipped by default.
+
+There is a second cost, and it is the more interesting one because it contradicts an argument made
+two sections up. Vector tiles were chosen over raster on the explicit grounds that raster arrives
+pre-rendered with somebody else's colour scheme baked in, and that a bright standard basemap
+composited under anomaly overlays competes with the signal the screen exists to foreground.
+**A satellite basemap is exactly that**: raster, bright, visually busy, and unstyleable at render
+time. The honest reading is therefore that the two basemaps are not two options of equal standing.
+The vector default is the working view, subordinated to the overlays on purpose; satellite is a
+credibility and orientation view — it answers *is that really where that receiver is* for a reader
+who does not trust a schematic — and the write-up should present it as such rather than as a
+preference. Recorded now because when the map is built the two will look like a toggle, and a
+toggle implies the two sides are interchangeable.
+
 ## Implementation
 
 <!-- Notable technical decisions per phase (link to implementation.md phases), challenges and
