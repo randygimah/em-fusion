@@ -139,3 +139,6 @@ export interface SelectableHour {
   observedTo: string | null;
   examined: boolean;
 }
+
+// STUB — op-003 not implemented.
+export type ReportableFindingType = "possible_interference_zone";

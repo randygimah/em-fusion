@@ -1313,6 +1313,60 @@ def test_the_two_new_unions_match_their_literals_on_both_sides() -> None:
     }
 
 
+def test_the_reportable_finding_types_match_the_register_on_both_sides() -> None:
+    """Spec: op-003 -- the closed set the screen's copy is held to.
+
+    The screen has to turn each reportable finding type into a sentence, and a
+    copy map that misses one prints the raw token at an analyst -- which is the
+    defect that item exists to fix, so it must be impossible rather than
+    unlikely. The set reaches the frontend as a union type and is compared
+    against `anom-008`'s register here, the same way `api-012`'s two unions and
+    `scn-004`'s five scenario ids are held.
+
+    **This test is in the backend suite although the file it reads is in
+    `frontend/`**, because the TypeScript parser exists once and on this side.
+    Recorded because the mutation pass over `op-001` scored a mutant in that
+    file as surviving vitest, which could not see it: where a file lives and
+    which suite guards it are different facts.
+    """
+    # spec: op-003, op-006, api-012, anom-008
+    declared = {
+        producer.finding_type
+        for producer in REGISTER.values()
+        if producer.kind is Kind.REPORTABLE
+    }
+
+    assert set(union_members(_read(CONTRACT_PATHS), "ReportableFindingType")) == declared
+
+
+def test_the_reportable_set_is_the_three_the_ladder_can_claim() -> None:
+    # spec: op-003, anom-013 -- spelled out as well as derived, so a register
+    # that loses a reportable producer fails here rather than agreeing with a
+    # contract that lost the same one
+    declared = {
+        producer.finding_type
+        for producer in REGISTER.values()
+        if producer.kind is Kind.REPORTABLE
+    }
+
+    assert declared == {INTERFERENCE_TYPE, FAULT_TYPE, "possible_data_source_issue"}
+
+
+def test_the_timeline_carries_only_types_the_contract_can_name() -> None:
+    """Spec: op-006 -- the timeline's `event` is the same vocabulary.
+
+    `api-011` sends the finding type verbatim and the strip composes the copy,
+    so an event carrying a type outside the union would reach the screen with
+    no sentence available for it.
+    """
+    # spec: op-006, op-003, api-011
+    picture = _scored([_fault()])
+    nameable = set(union_members(_read(CONTRACT_PATHS), "ReportableFindingType"))
+
+    assert picture.timelineEvents
+    assert all(event.event in nameable for event in picture.timelineEvents)
+
+
 def test_every_producer_the_endpoint_calls_persisted_is_registered() -> None:
     """Spec: api-012, anom-008.
 
