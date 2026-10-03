@@ -8796,3 +8796,107 @@ blind, and the alternative was measured above rather than assumed.
 | **The index of hours** | The list of stored hours the analyst's screen offers for selection: run number, replayed window, examined or not. Deliberately carries no scenario type and nothing the detectors concluded. Distinct from the harness's run listing, which carries both legitimately. See §146. |
 | **Following versus pinned** | Whether the screen is showing whatever hour is newest or an hour somebody chose. Two states that must look different, because a pinned hour otherwise presents stale data as current. See §146. |
 | **Blind chooser** | A selector that does not rank or label its options by the thing being measured. Here: hours are offered without saying which ones have findings, because on this corpus a finding count is a near-perfect proxy for ground truth. See §146. |
+
+## 147. Let's move onto the header labels.
+
+**Two correct values rendered as bare words — and underneath that, a requirement unmet since the
+shell was built.** The labelling was the visible half. Four things came out of looking at it, and
+one of them was a decision.
+
+### What is actually wrong, in order of size
+
+| | |
+|---|---|
+| The top centre reads `mixed` | Right: the hour holds synthetic radio readings *and* replayed real aircraft tracks. Not a badge, and says nothing about the environment being simulated |
+| The top right reads `unknown` | Right, and **nothing produces it** — hard-coded in the payload builder with a comment saying no health monitoring exists |
+| **No screen carries a data-mode badge at all** | A requirement says one must be visible on *every* screen. Two of the three say nothing whatsoever |
+| The nav-footer status strip's specified input does not exist | It names the field above, which is hard-coded, and which is a property of one run while the strip is on all three screens |
+
+### The badge was one thing doing two jobs
+
+**The wrong assumption:** the badge is a label, so it goes where the label is and reads what the
+payload says.
+
+It is two claims, and only one belongs everywhere:
+
+| The claim | True where | Needs |
+|---|---|---|
+| **This system is not live** | Every screen, always, whatever is loaded | Nothing at all |
+| **This hour is synthetic radio plus replayed tracks** | Only the screen showing that hour, and it changes per hour | The payload |
+
+Separating them is what makes the first one satisfiable. It needs no input, so it can live in the
+navigation rail — the only component on all three screens — without dragging the picture's
+five-second poll onto screens that do not need it, which was deliberately scoped to the picture when
+the routing was built. And it makes "unconditional" mean something stronger than the item asked for:
+a badge with no input has nothing that can be absent, so a failed poll, an empty store and a backend
+that is down all leave it in place.
+
+The wording changes too, and the requirement is why. The item said `SYNTHETIC ENVIRONMENT DATA`; the
+requirement behind it says "synthetic **or** replayed" and the non-functional one says "synthetic
+**and** replayed". The corpus's aircraft tracks are real recorded transponder data — pseudonymised,
+but recorded — so a badge claiming the whole environment is synthetic understates their provenance in
+the *other* direction. The standing badge reads **SYNTHETIC & REPLAYED DATA**, and collapsed to the
+56-pixel rail it reads **NOT LIVE** — the claim rather than an abbreviation of the words, because an
+abbreviation is cryptic and the claim is the thing that must not be lost.
+
+### The status strip wants a value that only started existing two days ago
+
+When the strip was specified, the service's own health check was a liveness stub: it answered 200 and
+said nothing. So the item reached for the only health-shaped value on the contract, which turned out
+to be hard-coded.
+
+The schema-drift work changed that. The health route now reports whether the database is the shape
+the code expects, in three states — and the third is the design: at the expected revision it is
+healthy, drifted it **refuses** with a 503, and unreachable it answers 200 saying it could not tell,
+because an outage is not a misconfiguration. That is a service-level fact, available on every screen
+from one cheap request, and it is exactly what the design asks for: **Connectivity** and **Service**
+rows, neither of them about a run.
+
+The two rows are that same three-state logic one layer further out. Connectivity is whether the
+request reached the backend — the browser-to-service link. Service is what the backend said about
+itself — the service-to-database link. Collapsing them would lose the distinction the schema-drift
+item exists to make, and there is a specific trap in the wiring: **a 503 from the health route must
+not be read as the request having failed**, or a misconfigured deployment reports as a lost
+connection.
+
+Also worth recording because it is concrete: the design reference renders `99.9% UPTIME` in this
+panel, which is *precisely* the failure case the item names. The design is reference material, not
+gospel.
+
+### The decision: a second health field that never works
+
+The detection work added a **signal integrity** level to the payload, described in its own right as
+the state of the receiver layout. That *is* run-level health, and it has a producer. The older
+`health` field on the scenario block is the one printing `unknown`, and the thing it would say is
+already said.
+
+Three options were put, and **removal from the contract** was chosen:
+
+| | |
+|---|---|
+| **Remove it** *(chosen)* | One health fact per layer: service health in the rail, receiver-layout health on the screen |
+| Render it labelled | Honest and permanently useless — `unknown` on every hour forever, which reads as a fault |
+| Leave it unrendered | The producer-less-field trap, which this project has already been caught by once |
+
+This is the **third route** out of that trap, and it is worth naming because the earlier lesson
+listed only two. That one said: produce the field, or record that the reason it is empty is still
+true. Both assume the field is wanted. **A field whose job another field already does is neither
+produced nor justified — it is deleted**, and the deletion has to be visible, because a field nobody
+writes is exactly what hid the detection summary's own gap for a year.
+
+One distinction carries all the risk in that removal: the per-receiver `health` on each of the seven
+receivers **stays**. It has a producer, it carries real per-receiver state, and it is what the screen
+renders for each receiver. A removal that took both would delete a working signal alongside a broken
+one.
+
+### Worth recording as a limitation
+
+The standing badge is a claim the code makes about itself and nothing verifies it. If the system
+were ever pointed at live data, the badge would still read *not live* — it is wired to no input,
+which is what makes it impossible to remove accidentally and also what makes it impossible to
+falsify. That is the right trade for a prototype whose entire corpus is replayed and synthetic, and
+it would be the wrong one for a system that could ingest anything else.
+
+| **The standing badge** | The unconditional *this system is not live* statement, in the nav rail on all three screens, wired to no input — so nothing can remove it and nothing can make it wrong. Distinct from the per-hour data-mode readout, which says which kinds of data this particular hour holds. See §147. |
+| **Connectivity versus Service** | Two rows of the status strip, and two different links: whether the request reached the backend, and what the backend said about reaching its database. A 503 means the second failed and the first worked. See §147. |
+| **Deleting a producer-less field** | The third way out of a field nothing writes, after producing it and justifying it: when another field already does its job, the field goes. See §147 and §139. |
