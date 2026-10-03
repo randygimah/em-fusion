@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../App";
-import { DEFAULT_POLL_INTERVAL_MS, OPERATIONAL_PICTURE_PATH } from "../lib/api";
+import { DEFAULT_POLL_INTERVAL_MS, OPERATIONAL_PICTURE_PATH, SELECTABLE_HOURS_PATH } from "../lib/api";
 import operationalPicture from "../mocks/operationalPictureMock";
 import type { OperationalPicture } from "../types/operationalPicture";
 
@@ -28,6 +28,15 @@ const failure = (status: number) =>
 
 let fetchMock: ReturnType<typeof vi.fn>;
 
+// Only the picture's own calls. spec: op-009 amended this file: the route now
+// also fetches the index of selectable hours, whose path has the picture's as a
+// prefix — so counting every call, which was the same thing while one endpoint
+// existed, stopped measuring what these tests were written to measure.
+const pictureCalls = () =>
+  fetchMock.mock.calls
+    .map((call) => String(call[0]))
+    .filter((url) => url.includes(OPERATIONAL_PICTURE_PATH) && !url.includes(SELECTABLE_HOURS_PATH));
+
 beforeEach(() => {
   fetchMock = vi.fn().mockResolvedValue(ok(served));
   vi.stubGlobal("fetch", fetchMock);
@@ -42,8 +51,8 @@ describe("polling the operational picture", () => {
   it("asks the backend for the picture on the contract's path", async () => {
     render(<App />);
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
-    expect(String(fetchMock.mock.calls[0][0])).toContain(OPERATIONAL_PICTURE_PATH);
+    await waitFor(() => expect(pictureCalls().length).toBeGreaterThan(0));
+    expect(pictureCalls()[0]).toContain(OPERATIONAL_PICTURE_PATH);
   });
 
   it("renders what the backend served rather than the example data", async () => {
@@ -72,10 +81,10 @@ describe("polling the operational picture", () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     render(<App />);
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(pictureCalls().length).toBe(1));
     await vi.advanceTimersByTimeAsync(DEFAULT_POLL_INTERVAL_MS);
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(pictureCalls().length).toBe(2));
   });
 
   it("keeps rendering and reports degraded when the backend returns 500", async () => {

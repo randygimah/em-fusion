@@ -1,4 +1,4 @@
-import type { OperationalPicture } from "../types/operationalPicture";
+import type { OperationalPicture, SelectableHour } from "../types/operationalPicture";
 import type { InFlightBatch, ScenarioConfiguration, ScenarioRunRecord } from "../types/scenarioControl";
 
 /**
@@ -14,7 +14,19 @@ import type { InFlightBatch, ScenarioConfiguration, ScenarioRunRecord } from "..
  */
 export const OPERATIONAL_PICTURE_PATH = "/api/v1/operational-picture";
 
-/** STUB — op-009 / api-013 not implemented. */
+/**
+ * The hours the picture will serve. spec: api-013.
+ *
+ * A separate endpoint from the picture rather than a parameter on it, because
+ * it answers a different question and is read at a different rate — the picture
+ * is polled, and this changes only when a batch completes.
+ *
+ * Deliberately NOT `SCENARIO_RUNS_PATH` below, which serves a near-identical
+ * list and carries each run's scenario type. That is correct there: Scenario
+ * Control is the harness's own face. On the analyst's screen it is the answer
+ * key, and this screen reaching for it is the defect api-012 found in that
+ * screen's heading after a year.
+ */
 export const SELECTABLE_HOURS_PATH = "/api/v1/operational-picture/hours";
 
 /**
@@ -27,9 +39,21 @@ export const SELECTABLE_HOURS_PATH = "/api/v1/operational-picture/hours";
  */
 export const DEFAULT_POLL_INTERVAL_MS = 5000;
 
-/** Fetch the current picture, or throw. */
-export const fetchOperationalPicture = async (baseUrl = "", signal?: AbortSignal): Promise<OperationalPicture> => {
-  const response = await fetch(`${baseUrl}${OPERATIONAL_PICTURE_PATH}`, { signal });
+/**
+ * Fetch one hour's picture, or throw.
+ *
+ * `runId` of null asks for the newest completed hour, which is what the endpoint
+ * does with no parameter — so following the newest and pinning an hour are one
+ * code path with one argument, rather than two call sites that can diverge
+ * (spec: api-013).
+ */
+export const fetchOperationalPicture = async (
+  baseUrl = "",
+  runId: number | null = null,
+  signal?: AbortSignal,
+): Promise<OperationalPicture> => {
+  const query = runId === null ? "" : `?run=${encodeURIComponent(runId)}`;
+  const response = await fetch(`${baseUrl}${OPERATIONAL_PICTURE_PATH}${query}`, { signal });
   if (!response.ok) {
     // Thrown rather than returned as a value: every caller has to handle a
     // network failure anyway, so a second "but did it work" shape would be a
@@ -37,6 +61,25 @@ export const fetchOperationalPicture = async (baseUrl = "", signal?: AbortSignal
     throw new Error(`${OPERATIONAL_PICTURE_PATH} responded ${response.status}`);
   }
   return (await response.json()) as OperationalPicture;
+};
+
+/**
+ * The hours that may be asked for, newest first, or throw. spec: api-013.
+ *
+ * A response that is not a list is treated as a failure rather than rendered.
+ * The only things it can be are another endpoint's answer or an error body, and
+ * mapping over either puts a crash on the screen in place of a selector.
+ */
+export const fetchSelectableHours = async (baseUrl = "", signal?: AbortSignal): Promise<SelectableHour[]> => {
+  const response = await fetch(`${baseUrl}${SELECTABLE_HOURS_PATH}`, { signal });
+  if (!response.ok) {
+    throw new Error(`${SELECTABLE_HOURS_PATH} responded ${response.status}`);
+  }
+  const payload = await response.json();
+  if (!Array.isArray(payload)) {
+    throw new Error(`${SELECTABLE_HOURS_PATH} answered something that is not a list`);
+  }
+  return payload as SelectableHour[];
 };
 
 // ---------------------------------------------------------------- scenario

@@ -1,13 +1,50 @@
-import type { OperationalPicture as OperationalPictureData } from "../types/operationalPicture";
+import type {
+  OperationalPicture as OperationalPictureData,
+  SelectableHour,
+} from "../types/operationalPicture";
+
+// One hour as the selector names it. spec: op-009.
+//
+// The run number and the replayed window, and nothing else — there is no
+// scenario type to render because the payload has no field for one, which is
+// the guarantee being structural rather than a rule about this function.
+//
+// An hour whose record holds no window is labelled by its number alone. The
+// alternative is the named failure case: the run's own timestamps are when the
+// generator ran, which for this corpus is four years after the hour it replays.
+const hourLabel = (hour: SelectableHour): string => {
+  if (hour.observedFrom === null) return `Run ${hour.runId}`;
+  const from = new Date(hour.observedFrom);
+  const to = hour.observedTo === null ? null : new Date(hour.observedTo);
+  const day = from.toISOString().slice(0, 10);
+  const clock = (at: Date) => at.toISOString().slice(11, 16);
+  const span = to === null ? clock(from) : `${clock(from)}–${clock(to)}`;
+  return `Run ${hour.runId} · ${day} ${span}`;
+};
 
 interface Props {
   operationalPicture: OperationalPictureData; //screen accepts data as a prop, which is of type OperationalPictureData
   // spec: api-003 — true while the picture on screen is not live: before the
   // first response, and after any failed poll.
   degraded?: boolean;
+  // spec: op-009 — the hours that may be asked for, and which one is pinned.
+  // All four are optional so the screen still renders as a pure function of a
+  // payload, which is what lets the panel tests drive it without a selector.
+  hours?: SelectableHour[];
+  // null means following the newest hour, which is the default state.
+  pinnedRun?: number | null;
+  onSelectHour?: (runId: number) => void;
+  onFollowNewest?: () => void;
 }
 
-const OperationalPictureScreen = ({ operationalPicture, degraded = false }: Props) => {
+const OperationalPictureScreen = ({
+  operationalPicture,
+  degraded = false,
+  hours = [],
+  pinnedRun = null,
+  onSelectHour,
+  onFollowNewest,
+}: Props) => {
   // A null summary means no detection pass has run on this run, which is not
   // the same as a pass that found nothing (api-012). The panel says so in
   // words rather than showing dashes: a reader cannot tell "—" meaning
@@ -30,6 +67,46 @@ const OperationalPictureScreen = ({ operationalPicture, degraded = false }: Prop
         </div>
         <div className="text-left font-mono text-sm">
           <p className="text-[#4cd7f6]">{scenario?.dataMode ?? "unknown"}</p>
+        </div>
+        {/* The hour selector (op-009). Following the newest and pinned to a
+            chosen hour must be *visibly* different: pin an hour, let a batch
+            land, and the screen goes on showing the pinned hour while looking
+            identical to a live one — stale data in the costume of current data,
+            which is the same class of defect as a health signal reporting
+            healthy through an outage. So the state is stated in words and there
+            is always a way back. */}
+        <div className="font-mono text-sm">
+          <label className="flex items-center gap-2">
+            <span className="text-xs uppercase tracking-[0.05em] text-[#8c909f]">Hour</span>
+            <select
+              aria-label="Hour"
+              className="border border-[#424754] bg-[#0b0e15] px-2 py-1 text-[#e1e2ec]"
+              disabled={hours.length === 0}
+              id="operational-picture-hour"
+              onChange={(event) => onSelectHour?.(Number(event.target.value))}
+              value={pinnedRun === null ? "" : String(pinnedRun)}
+            >
+              <option value="">Newest</option>
+              {hours.map((hour) => (
+                <option key={hour.runId} value={String(hour.runId)}>
+                  {hourLabel(hour)}
+                  {hour.examined ? "" : " · not examined"}
+                </option>
+              ))}
+            </select>
+          </label>
+          {hours.length === 0 ? (
+            <p className="mt-1 text-xs text-[#8c909f]">No completed hour to choose from yet.</p>
+          ) : pinnedRun === null ? (
+            <p className="mt-1 text-xs text-[#8c909f]">Following the newest hour</p>
+          ) : (
+            <p className="mt-1 text-xs text-[#ffb786]">
+              Pinned to run {pinnedRun} — not the newest.{" "}
+              <button className="underline" onClick={() => onFollowNewest?.()} type="button">
+                Follow the newest
+              </button>
+            </p>
+          )}
         </div>
         <div className="text-right font-mono text-sm">
           <p className="text-[#4cd7f6]">{scenario?.health ?? "unknown"}</p>

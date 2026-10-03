@@ -206,12 +206,16 @@ describe("following the newest hour, and pinning one", () => {
     // findings changed in six minutes on 3 October. Polls the PINNED hour,
     // because a poll that kept asking for the newest would revert the screen
     // under the analyst on the next tick.
+    // Fake timers before the render, not after: an interval scheduled on real
+    // timers is not adopted by a clock installed later, which is how the first
+    // version of this test passed the selection half and then compared a count
+    // with itself.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     render(<App />);
     await screen.findByRole("option", { name: /207/ });
     selectHour("207");
     await waitFor(() => expect(pictureCalls().at(-1)).toContain("run=207"));
 
-    vi.useFakeTimers({ shouldAdvanceTime: true });
     const before = pictureCalls().length;
     await vi.advanceTimersByTimeAsync(DEFAULT_POLL_INTERVAL_MS);
 

@@ -102,7 +102,30 @@ export interface OperationalPicture {
   timelineEvents: TimelineEvent[];
 }
 
-// STUB — api-013 not implemented.
+// One hour the Operational Picture will serve (api-013). The list of these is
+// what the hour selector offers, and it is deliberately thin.
+//
+// There is no scenario type, and that absence is the item: the same string is
+// correct on Scenario Control — the harness's own face, which exists to show
+// what was generated — and is the answer key here. A shape that cannot hold it
+// cannot leak it, which is stronger than a rule about not rendering it.
+//
+// There is also nothing the detectors concluded: no finding count, no severity.
+// Not because a conclusion is secret — it is served in full for the hour
+// actually selected — but because on this corpus the detectors are right
+// essentially every time, so ranking hours by what was found would rank them by
+// what was staged, and un-blind any later exercise in which a person reads this
+// screen.
+//
+// `examined` is a different kind of fact and is carried: whether anybody looked,
+// which no count can answer (api-012).
+//
+// The window is the replayed hour in simulated time, and is null for a run whose
+// record holds none — a replay. It is never the wall-clock time the run was
+// generated, which for the corpus is four years later than the hour it replays.
 export interface SelectableHour {
   runId: number;
+  observedFrom: string | null;
+  observedTo: string | null;
+  examined: boolean;
 }

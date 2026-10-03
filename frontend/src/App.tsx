@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { EmNavRail } from "./components/em/EmNavRail";
 import { useCurrentScreen } from "./hooks/useCurrentScreen";
 import { useRailCollapsed } from "./hooks/useRailCollapsed";
 import { useScenarioControl } from "./hooks/useScenarioControl";
 import { useOperationalPicture } from "./hooks/useOperationalPicture";
+import { useSelectableHours } from "./hooks/useSelectableHours";
 import { SCREENS } from "./routes";
 import HypothesesScreen from "./screens/hypotheses";
 import OperationalPictureScreen from "./screens/operationalPicture";
@@ -20,12 +22,23 @@ import ScenarioControlScreen from "./screens/scenarioControl";
 // with the screen that needs it: left above the switch it would poll every
 // five seconds while the analyst is looking at something else (nav-001).
 const OperationalPictureRoute = () => {
-  const { picture, degraded } = useOperationalPicture();
+  // Which hour is pinned, as component state and deliberately not in the URL
+  // hash (spec: op-009). A pinned hour in the hash would survive a reload and
+  // be shareable, which is worth having — but screenFromHash resolves a bare
+  // screen id today, so a parameterised hash is nav-001's machinery and its own
+  // item, with its own failure case for an unrecognised run.
+  const [pinnedRun, setPinnedRun] = useState<number | null>(null);
+  const hours = useSelectableHours();
+  const { picture, degraded } = useOperationalPicture(pinnedRun);
 
   return (
     <OperationalPictureScreen
-      operationalPicture={picture}
       degraded={degraded}
+      hours={hours}
+      onFollowNewest={() => setPinnedRun(null)}
+      onSelectHour={(runId) => setPinnedRun(Number.isNaN(runId) ? null : runId)}
+      operationalPicture={picture}
+      pinnedRun={pinnedRun}
     />
   );
 };

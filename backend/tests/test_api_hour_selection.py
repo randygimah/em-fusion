@@ -54,7 +54,7 @@ from app.api.v1.schemas.scenario import ScenarioRunListing
 from app.db.repository import HOURS_LIMIT, selectable_hours
 from app.main import app
 from app.scenario.incident import ScenarioType
-from tests.conftest import live_database_url, requires_database
+from tests.conftest import requires_database
 from tests.contracts import contract_paths
 from tests.contracts import interfaces as _interfaces
 from tests.contracts import read_contract as _read
@@ -294,7 +294,11 @@ def test_the_index_is_ordered_newest_first(
     _insert_run(hours_database, 2, generated_offset_s=120)
     _insert_run(hours_database, 3, generated_offset_s=60)
 
-    assert [entry["runId"] for entry in _hours(hours_database, monkeypatch)] == [2, 3, 1]
+    assert [entry["runId"] for entry in _hours(hours_database, monkeypatch)] == [
+        2,
+        3,
+        1,
+    ]
 
 
 @pytest.mark.database
@@ -352,7 +356,10 @@ def test_the_index_says_whether_an_hour_was_examined(
     _insert_run(hours_database, 1, examined=False)
     _insert_run(hours_database, 2, examined=True, generated_offset_s=60)
 
-    examined = {entry["runId"]: entry["examined"] for entry in _hours(hours_database, monkeypatch)}
+    examined = {
+        entry["runId"]: entry["examined"]
+        for entry in _hours(hours_database, monkeypatch)
+    }
 
     assert examined == {1: False, 2: True}
 
@@ -392,7 +399,10 @@ def test_no_field_anywhere_in_the_index_carries_the_scenario_type(
     # spec: api-013, api-009
     for index, scenario_type in enumerate(ARMS):
         _insert_run(
-            hours_database, index + 1, scenario_type=scenario_type, generated_offset_s=index
+            hours_database,
+            index + 1,
+            scenario_type=scenario_type,
+            generated_offset_s=index,
         )
 
     assert arm not in json.dumps(_hours(hours_database, monkeypatch))

@@ -49,6 +49,7 @@ from app.dal.models import (
     CanonicalObservation,
     DetectionPass,
     ScenarioRunSummary,
+    SelectableRun,
     TrackPayload,
 )
 from app.detection.control import REGISTER, Key, Kind, Producer
@@ -271,9 +272,42 @@ class TimelineEvent(BaseModel):
 
 
 class SelectableHour(BaseModel):
-    """STUB -- api-013 not implemented. Fields deliberately absent."""
+    """One hour the picture will serve. Spec: `api-013`.
+
+    The camelCase mirror of `SelectableRun`, declared in this module and in
+    `operationalPicture.ts` rather than in a contract of its own, so
+    `api-002`'s parser check -- every interface in that file has a model, field
+    sets compared in both directions -- covers this shape the moment it exists.
+    A second parity suite would be a second thing to keep in step.
+
+    The reasoning for all four fields, and for the ones that are absent, is on
+    `SelectableRun`. What is worth repeating here is only that the absences are
+    the item: the shape cannot express a scenario type and cannot express
+    anything the detectors concluded, which is what makes those guarantees
+    structural rather than a convention a later edit can forget.
+
+    Times are serialised as the ISO strings the contract declares, and both are
+    nullable because a replay run records no simulated window.
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
+
+    runId: int  # noqa: N815 -- mirrors the contract
+    observedFrom: str | None  # noqa: N815 -- mirrors the contract
+    observedTo: str | None  # noqa: N815 -- mirrors the contract
+    examined: bool
+
+    @classmethod
+    def of(cls, run: SelectableRun) -> SelectableHour:
+        """One repository row as the contract's shape."""
+        return cls(
+            runId=run.run_id,
+            observedFrom=(
+                None if run.observed_from is None else run.observed_from.isoformat()
+            ),
+            observedTo=None if run.observed_to is None else run.observed_to.isoformat(),
+            examined=run.examined,
+        )
 
 
 class OperationalPicture(BaseModel):

@@ -25,7 +25,19 @@ export interface PictureFeed {
   degraded: boolean;
 }
 
+/**
+ * **The poll follows the selection.** spec: op-009.
+ *
+ * `runId` of null means follow the newest, which is what the endpoint serves
+ * with no parameter. Two things about pinning an hour were decided here rather
+ * than defaulted: the poll keeps running, because a historical hour's detection
+ * state can still change -- re-examining a run restamps it, and 380 runs'
+ * findings changed in six minutes on 3 October -- and it asks for the *pinned*
+ * hour, because a poll still requesting the newest would revert the screen
+ * under the analyst on the next tick, which is worse than having no control.
+ */
 export const useOperationalPicture = (
+  runId: number | null = null,
   intervalMs: number = DEFAULT_POLL_INTERVAL_MS,
   baseUrl = "",
 ): PictureFeed => {
@@ -39,7 +51,7 @@ export const useOperationalPicture = (
 
     const poll = async () => {
       try {
-        const picture = await fetchOperationalPicture(baseUrl);
+        const picture = await fetchOperationalPicture(baseUrl, runId);
         if (!cancelled) setFeed({ picture, degraded: false });
       } catch {
         // The error itself is not surfaced to the screen. An analyst can do
@@ -56,7 +68,7 @@ export const useOperationalPicture = (
       cancelled = true;
       clearInterval(timer);
     };
-  }, [intervalMs, baseUrl]);
+  }, [runId, intervalMs, baseUrl]);
 
   return feed;
 };

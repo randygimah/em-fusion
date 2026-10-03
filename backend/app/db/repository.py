@@ -43,7 +43,6 @@ from sqlalchemy import MetaData, RowMapping, Table, insert, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.dal.models import (
-    SelectableRun,
     PAYLOAD_TYPES,
     CanonicalObservation,
     DetectionPass,
@@ -52,6 +51,7 @@ from app.dal.models import (
     Provenance,
     ScenarioRunDetail,
     ScenarioRunSummary,
+    SelectableRun,
 )
 from app.dal.repository import QuarantineRecord
 from app.db.migrations import (
@@ -688,13 +688,63 @@ def _observation(row: RowMapping) -> CanonicalObservation:
     )
 
 
-#: STUB -- api-013 not implemented.
-HOURS_LIMIT = 0
+#: How many hours the index will serve at once. Spec: `api-013`.
+#:
+#: A **ceiling rather than a trim**, and the difference decides the value. The
+#: harness listing's own bound is 50, which over a 400-hour store would offer
+#: hours 371-420 and therefore almost none of the 240 that hold a reportable
+#: claim -- the entire thing this item exists to reach. And because the index
+#: carries nothing the detectors concluded, a short list cannot be arranged to
+#: be the interesting part of a long one: there is no ordering available here
+#: that would make 50 enough. So the bound exists only so the payload cannot
+#: grow without limit as the store does, and is set well above the store.
+HOURS_LIMIT = 1000
 
 
 def selectable_hours(
     session_factory: sessionmaker[Session], limit: int = HOURS_LIMIT
 ) -> list[SelectableRun]:
-    """STUB -- api-013 not implemented."""
-    raise NotImplementedError("api-013")
+    """The hours the operational picture will serve. Spec: `api-013`.
 
+    **Completed runs only**, which is `db-007`'s distinction doing work rather
+    than being restated: a run that died holds part of an hour, and the index is
+    the set of whole hours worth offering a person. The `run` parameter still
+    reaches the other one -- diagnosing a batch that half-failed is a legitimate
+    thing to do from the screen -- and that asymmetry is stated in the item
+    rather than left looking like an inconsistency.
+
+    **Ordered by start, newest first**, with the id breaking ties exactly as
+    `list_runs` does. An unordered index takes its order from the heap, which is
+    the defect this repository has had to correct three times.
+
+    **The window is read out of `parameters` and never off the row's own
+    timestamps.** `scn-003` records the simulated start and the run's length
+    there, which is what makes a run regenerable; `started_at` is when the
+    generator ran, four years later than the hour it replayed. A COALESCE onto
+    the latter would produce a plausible-looking value for every row and label
+    every replayed hour with the wall clock, which is `anom-009`'s recorded
+    mistake. A row recording neither gets None, twice.
+
+    **Ground truth is not selected**, as everywhere else `api-009` reaches --
+    and here the shape could not hold it either (`SelectableRun`).
+    """
+    with session_factory.begin() as session:
+        rows = (
+            session.execute(
+                text(
+                    "SELECT id AS run_id, "
+                    "  (parameters->>'start')::timestamptz AS observed_from, "
+                    "  (parameters->>'start')::timestamptz "
+                    "    + make_interval(secs => "
+                    "        (parameters->>'duration_seconds')::double precision"
+                    "      ) AS observed_to, "
+                    "  detection_pass_at IS NOT NULL AS examined "
+                    "FROM scenario_runs WHERE completed_at IS NOT NULL "
+                    "ORDER BY started_at DESC, id DESC LIMIT :limit"
+                ),
+                {"limit": limit},
+            )
+            .mappings()
+            .all()
+        )
+        return [SelectableRun(**row) for row in rows]

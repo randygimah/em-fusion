@@ -254,7 +254,47 @@ class ScenarioRunDetail(ScenarioRunSummary):
 
 
 class SelectableRun(BaseModel):
-    """STUB -- api-013 not implemented."""
+    """One hour the operational picture will serve, as a chooser needs it.
+
+    Spec: `api-013`. Four fields, and the item is mostly about the fields that
+    are **not** here.
+
+    **No scenario type**, following `ScenarioRunSummary`'s own argument one
+    step further: a shape with no field for the answer cannot leak it on any
+    run, which is stronger than remembering to strip it per endpoint
+    (`api-009`). `/api/v1/scenario/runs` serves a very similar list and does
+    carry the type -- legitimately, Scenario Control being the harness's own
+    face -- and this model exists because that same string is disqualifying on
+    the analyst's screen. `api-012` found it in that screen's heading after a
+    year, and it survived because a search of the whole repository for it finds
+    a justified use and stops.
+
+    **Nothing the detectors concluded**: no finding count, no severity, no
+    claim type. Not for `api-009`'s reason -- a detector's conclusion is
+    precisely what an analyst is meant to see, and is served in full for the
+    hour actually selected -- but because on this corpus precision is 1.000 and
+    recall is 60 of 60 on every positive arm, so a count of reportable findings
+    is empirically a near-perfect proxy for whether anything was staged. An
+    hour chooser ranked by it would make any later exercise in which a person
+    reads this screen un-blind, with nothing in the code saying so, and
+    `eval-006` is still outstanding.
+
+    **The window is the replayed hour and may be absent.** It comes from what
+    the run row records of its own simulated start and length, and a replay run
+    records neither -- so an hour that cannot name itself says so. The
+    alternative is the failure case: `started_at` is the wall-clock minute the
+    generator ran, and labelling a replayed 2022 hour with it is `anom-009`'s
+    recorded mistake, wall clock in a simulated-time costume.
+
+    **Examined is carried**, and it is a different kind of fact from what was
+    found: whether anybody looked is answered by the presence of `anom-015`'s
+    run stamp and never by a number in it (`api-012`). Carrying it means
+    selecting an hour nothing has examined is not a surprise after the fact.
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
+    run_id: int
+    observed_from: datetime | None
+    observed_to: datetime | None
+    examined: bool
