@@ -2150,6 +2150,80 @@ who does not trust a schematic — and the write-up should present it as such ra
 preference. Recorded now because when the map is built the two will look like a toggle, and a
 toggle implies the two sides are interchangeable.
 
+### The hour chooser is kept blind, and the reason is not confidentiality
+
+Until `api-013` the operational picture served whichever run was generated most recently and had no
+way to be asked for another. That was the right scope while nothing produced detection output, and
+it became the binding constraint the moment everything did: of 400 stored runs, every one examined,
+**240 hold a reportable claim and the screen could reach exactly one of them** — whichever happened
+to be newest. The entire body of detection evidence the project had produced was unreachable from
+the interface built to present it, and the only way to see a staged hour was to generate a fresh
+batch, which also meant that every screenshot of a detection taken for the write-up came from a
+batch created minutes earlier.
+
+Two design decisions inside a capability that is otherwise a query parameter are worth recording,
+and they pull in opposite directions.
+
+**The chooser needs its own list, because the existing one carries the answer key.** Scenario
+Control already fetches precisely what a selector wants — every run, newest first, with its
+parameters — and that listing carries each run's `scenario_type`. It carries it *legitimately*:
+Scenario Control is the harness's own face and exists to report what was generated, so naming
+`gnss-degradation` there is correct. On the analyst's screen the same string is the answer key, and
+`api-012` had found exactly that string in that screen's heading after a year, where it survived
+because a repository-wide search for it finds a justified use and stops.
+
+What makes this more than a second instance of one defect is the *kind* of guarantee at stake.
+`api-009` has been enforced structurally: the record a run is read back as has no field for ground
+truth at all, on the argument that a shape which cannot hold the answer cannot leak it on any run.
+Reusing the harness listing on the picture would have exchanged that for a convention — the type
+would arrive in the analyst's browser, unrendered, and rendering it as a helpful label would be one
+edit by somebody who did not know the rule. The alternative was rejected on that ground alone, and
+the replacement shape is asserted both by its field set and over its serialised payload across all
+five arms, with an interlock firing the same scan at the harness listing and requiring it to find
+the type there.
+
+**The chooser must say nothing about what was found, and this is the decision that was nearly made
+the other way.** The first design carried each hour's reportable-finding count, on the obvious
+ground that four hundred unlabelled run numbers are not a selector. It was withdrawn, and the reason
+is not that a detector's conclusion is confidential — it is precisely what an analyst is meant to
+see, and it is served in full for the hour actually selected. The reason is specific to this corpus:
+precision is 1.000 and per-run recall is 60 of 60 on every positive arm, so *what the detector
+found* and *what was staged* coincide almost perfectly on these hours. A chooser ranked by findings
+would therefore be a chooser ranked by ground truth in all but name, and **any later exercise in
+which a person reads this screen would be un-blind with nothing in the code recording it**. With
+`eval-006` still waiting on a second rater, that is a live rather than a hypothetical cost.
+
+The distinction this leaves is worth stating because it is easy to collapse: the index carries
+*whether an hour was examined*, which is a different kind of fact from *what was found in it*.
+`api-012` settled that whether anybody looked is answered by the presence of the account and never
+by a number in it, and carrying it here means selecting an hour that nothing has examined is not a
+surprise discovered afterwards.
+
+**The limitation that follows, stated rather than engineered around.** A blind chooser makes finding
+a particular staged hour depend on already knowing its number. For the researcher that is costless —
+the numbers are in the measurement logs — but for a demonstration to somebody else the hour has to
+be chosen in advance. That is the price of the decision above, and it was taken deliberately against
+a measured alternative rather than by default.
+
+**A third state had to be invented.** With one hour there is one state and it needs no name; with
+selection there are two, and the failure case writes itself — an analyst pins an hour, a batch
+lands, and the screen goes on showing the pinned hour while looking identical to a live one. This is
+the same class of defect as a health signal reporting healthy through a broken endpoint and a
+detection summary reading clean when nothing examined the run: **stale data wearing the costume of
+current data**. So following and pinned are visibly different and there is always a way back. The
+poll follows the selection rather than stopping, on two grounds: a historical hour's detection state
+can still change, since re-examining a run restamps it and 380 runs' findings changed in six minutes
+on 3 October 2026; and a poll that kept requesting the newest would revert the screen under the
+analyst on the next tick, which is worse than having no control at all.
+
+A smaller decision, recorded because it repeats a mistake the project has already made once. The
+replayed window that labels an hour is read from what the run row records of its own simulated start
+and length, and is **null for a run that records neither** — a replay. Filling it from the run's own
+`started_at` would have produced a plausible value on every row and labelled a replayed 2022 hour
+with the wall-clock minute the generator ran four years later, which is `anom-009`'s recorded error
+in a different costume. The two clocks are deliberately four years apart in the test fixture so an
+implementation reaching for the nearest timestamp is caught by the year rather than by a subtlety.
+
 ## Implementation
 
 <!-- Notable technical decisions per phase (link to implementation.md phases), challenges and
@@ -6812,6 +6886,50 @@ One correction fell out of doing it. The corpus plan says every measurement must
 regenerated wave lands at 81 onward and that id range never becomes true. The base-seed selector is
 now the only correct one — which is what the batch-provenance item was built for, and the first
 occasion on which a run's recorded provenance has been load-bearing rather than merely available.
+
+### A mutation pass across two languages, and the gap it found at the layer nobody checked
+
+`op-009` is the first frontend item measured with an instrument rather than argued for. The backend
+carries a 90% coverage gate; the frontend has no coverage tooling at all, which this project has
+already paid for once — three behaviours of the scenario screen turned out to have no test
+whatsoever and nothing reported it. So the mutation pass is the only instrument the screen half has,
+and for this item it had to drive **two** suites: a mutant in a TypeScript file is run against
+vitest on the host under the version pinned in `.nvmrc`, and a mutant in a Python file against
+pytest in the container, with the harness dispatching on the file it just edited. Two sentinels
+rather than one, for the same reason there is ever a sentinel: each side has to be shown to be
+reached before anything is read off it.
+
+**Result: 11 of 11 killed on the frontend half with no survivors.** One of those kills is worth
+naming because it came from a suite written for a different item: making the hours fetcher accept a
+response that is not a list produced failures in the data-access tests rather than in the hour
+selector's own, because an object mapped over as an array takes the whole screen down. A mutant
+whose only test lives in the file written for the item is a mutant tested against the author's model
+of where it matters, which is why four suites are in the frontend runner and not one.
+
+**The backend half found a real gap, and it is the more interesting result.** Two mutants added a
+field to `SelectableRun` — the scenario type, and a finding count — and both survived. Every
+assertion in the suite was about the shape that is *served*, and the mapping to that shape names its
+four fields explicitly, so neither mutant reached the wire: they are harmless, and the gap is real.
+The claim the item rests on is that the guarantee is **structural** — a shape with no field for the
+answer cannot leak it — and it turned out to be structural at one boundary and nowhere else. The
+layer below is precisely where somebody would add the field, in the query, to make the chooser more
+useful; one further edit in the mapping and it is on the analyst's screen. One test change, no
+implementation change.
+
+That is the same shape as a survivor recorded a day earlier — a test at each end of a chain is not a
+test of the chain — and it generalises slightly further: **a guarantee asserted at the boundary
+where the value is serialised is not asserted at the boundary where the value is produced**, and
+only the second is where an engineer with a reasonable motive would introduce it.
+
+**One operational finding, because it cost a run.** The first attempt at this pass was stopped
+partway through by the OOM killer and left a mutant in the source — the failure this repository had
+already recorded from the Docker builds that stopped two earlier passes, met again from a different
+direction: twenty-three mutants, most of them starting a container, is enough churn on its own. The
+guard file written before the first mutant is what made it recoverable; the originals were restored
+from it and the tree verified clean before anything else was read. The pass of record was then taken
+in two parts, which halves the peak and lets memory be reclaimed in between. Worth stating as a
+limit of the method rather than a mishap: a mutation pass is a loop that rebuilds the world once per
+mutant, and its cost grows with the number of mutants rather than with the size of the item.
 
 ## Evaluation
 

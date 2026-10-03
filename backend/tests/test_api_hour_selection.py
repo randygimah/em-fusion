@@ -51,6 +51,7 @@ from app.api.v1.schemas.operational_picture import (
     SelectableHour,
 )
 from app.api.v1.schemas.scenario import ScenarioRunListing
+from app.dal.models import SelectableRun
 from app.db.repository import HOURS_LIMIT, selectable_hours
 from app.main import app
 from app.scenario.incident import ScenarioType
@@ -78,6 +79,19 @@ GENERATED_AT = datetime(2026, 10, 3, 11, 18, 0, tzinfo=UTC)
 #: has to be argued for here, which is the point: the shapes this item refuses
 #: are refused by not existing, and a set compared by `<=` would admit them.
 ALLOWED_FIELDS = {"runId", "observedFrom", "observedTo", "examined"}
+
+#: The same four at the repository boundary, in that layer's own vocabulary.
+#: **Asserted here as well, because the mutation pass showed it was not.** Two
+#: mutants adding a field to `SelectableRun` -- the scenario type, and a finding
+#: count -- both survived: every assertion in this file was about the shape that
+#: is *served*, and `SelectableHour.of` names its four fields explicitly, so
+#: neither mutant reached the wire. That makes them harmless and the gap real.
+#: The claim this item rests on is that the guarantee is **structural** -- a
+#: shape with no field for the answer cannot leak it -- and it was structural at
+#: one boundary and nowhere else, while the layer below is exactly where somebody
+#: would add the field, in the query, to make the chooser more useful. One more
+#: edit in `of` and it is on the screen.
+ALLOWED_REPOSITORY_FIELDS = {"run_id", "observed_from", "observed_to", "examined"}
 
 #: Words that would mean a conclusion had reached the chooser. Matched against
 #: field names rather than against values, because the field is what makes the
@@ -185,6 +199,26 @@ def test_the_index_entry_has_no_field_for_the_scenario_type() -> None:
     assert "type" not in declared
     assert "seed" not in declared
     assert "parameter" not in declared
+
+
+def test_the_repository_row_declares_exactly_the_four_fields() -> None:
+    """Spec: api-013 -- the gap the mutation pass found.
+
+    `SelectableRun` is what the query returns and `SelectableHour` is what is
+    served. Both are asserted, because "the shape cannot express it" is only a
+    structural guarantee at the boundaries where something checks the shape.
+    """
+    # spec: api-013, api-009
+    assert _fields(SelectableRun) == ALLOWED_REPOSITORY_FIELDS
+
+
+@pytest.mark.parametrize("word", ("scenario", "type", "seed", *CONCLUSION_WORDS))
+def test_the_repository_row_carries_neither_the_answer_nor_a_conclusion(
+    word: str,
+) -> None:
+    # spec: api-013, api-009 -- the same two absences one layer down, where a
+    # field would be added first because that is where the query is written
+    assert not any(word in field.lower() for field in _fields(SelectableRun))
 
 
 @pytest.mark.parametrize("word", CONCLUSION_WORDS)

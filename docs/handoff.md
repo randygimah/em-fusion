@@ -8,116 +8,84 @@ Abstraction Layer, detects deviations deterministically, and turns evidence bund
 schema-validated, grounding-checked AI hypotheses for analyst review. Decision support, not
 autonomous decision-making.
 
-Two items this session, and between them they close the question that reframed the roadmap two
-sessions ago — *does detector output on injected anomalies show in the app at all?* It does now,
-and a user has seen it.
+Three things this session, in the order the user asked for them.
 
-**`anom-016`, the detection pass fires when a generation batch completes.** `anom-015` built the
-pass and `api-012` built the screen that renders it, and nothing called the pass. Its real cost was
-not the trigger: **the detector settings every figure of record was measured under lived only in a
-measurement script**, plus a copy in the test suite, so a trigger inside the application would have
-had to declare a third set with the same standing as the other two.
-
-**`ops-005`, the health signal refuses when the schema is behind the code**, found while
-re-examining the stored runs. `0009` had been applied to the test database by the fixture that
-brings it to head and never to the application's, so `/api/v1/operational-picture` returned **500
-for a day** while 1,874 tests passed over those columns and the container reported itself healthy.
+1. **The basemap decision was taken** — default basemap offline, satellite a documented opt-in that
+   needs network. This had been blocking `map-001` since the previous session.
+2. **The progress note was brought current** — the re-score, the schema-drift story, and three
+   stale counts.
+3. **`api-013` and `op-009`: the screen can be asked for a particular hour.** The first item of the
+   agreed five-item screen sequence, and the one that gates looking at the other four.
 
 ## Current state
 
-Backlog **74 of 108** (`anom-016` and `ops-005` are new; `api-001` amended and still passing).
+Backlog **76 of 110** (`api-013` and `op-009` are new; `map-001` and `map-002` amended and still
+unbuilt).
 
-- Backend: **1895 passed, 99.92% total coverage, exit 0**, in containers (1830 and 99.83% at the
-  start of the session).
-- At **100%**: `app/detection/settings.py` (15 statements), `app/scenario/batch.py` (68),
-  `app/db/migrations.py` (43), `app/api/v1/health.py` (14).
-- `make lint`, `make format` and mypy clean (79 source files, was 78).
-- Frontend untouched all session: no payload shape changed, only what the payload contains.
-- **Seen on screen.** The user started a 20-run `gnss-degradation` batch from Scenario Control at
-  11:18 on 2026-10-03; it generated in 83 s and the trigger stamped all twenty 30 s later. Run 420
-  now serves anomaly **High**, integrity **Medium**, one `possible_interference_zone`, two of seven
-  receivers **deviating**, one timeline event. Verified in the browser as well as in the payload.
-- Mutation, `anom-016`: **28 of 29 valid killed, no unexpected survivors**, one proven equivalent
-  declared
-  in advance (`measurements/mutation/mutate_anom016_batch_trigger.log`). **0 test changes, 0
-  implementation changes** — the first pass here to need neither, which is attributable to the
-  two corrections the red run had already forced out. Its first attempt aborted on its own
-  sentinel: see Failed attempts.
-- Mutation, `ops-005`: **19 of 19 killed, no survivors**, after a first pass killed 18 and left one
-  real gap (`measurements/mutation/mutate_ops005_schema_drift.log`). 1 test added, 0 implementation
+- Backend: **1945 passed, 99.92% coverage, exit 0**, in containers (1931 mid-session, before the
+  mutation pass forced two tests out; 1895 at the start).
+- Frontend: **107 passed**, Biome lint clean, `tsc -b` clean. No coverage tooling exists on that
+  side, which is why `op-009` has a mutation pass instead.
+- `make lint`, `make format` and mypy clean (79 source files).
+- At **100%**: `app/api/v1/operational_picture.py` (20 statements),
+  `app/api/v1/schemas/operational_picture.py` (164), `app/dal/models.py` (85). The new
+  `selectable_hours` lines in `app/db/repository.py` are covered.
+- Mutation: **23 of 23 killed across both suites, no survivors, none declared equivalent**
+  (`measurements/mutation/mutate_api013_hour_selection.log`). 1 test change, 0 implementation
   changes.
 
-### `ops-005`: what the guard does, and the shape of its constraint
+### What the hour selection is, and the two decisions inside it
 
 | | |
 |---|---|
-| Where | The health route — because that is what the container probe reads, and it said healthy all day |
-| Why not a startup gate | The lifespan opens no connection on purpose, so a database that is down does not stop the service coming up. Determining a revision needs one |
-| At the expected revision | 200, `at-head`, revision named |
-| Drifted (behind, ahead, never migrated, two heads) | **503**, naming the revision found *and* the one expected |
-| Unreachable | **200**, `unknown` — an outage is not a misconfiguration |
-| Caching | Expectation cached for the process's life (cannot change without a restart); the database's revision read **every probe** (a live migration must clear the refusal without one) |
-| Also | `up` and `demo` migrate first, amending `ops-003` — a guard that fires on every first run is one somebody switches off |
+| The capability | `GET /api/v1/operational-picture?run=<id>` serves that hour; `GET /api/v1/operational-picture/hours` lists the hours on offer |
+| Why it was first | 400 stored runs, all examined, **240 holding a reportable claim, and the screen could reach exactly one** — whichever was newest |
+| With no parameter | Unchanged. `api-002`'s guarantee, its parity test and the frontend contract are untouched |
+| An unknown run | **404**, naming it, and never a fall back to the newest — the sharpest failure case, because falling back is indistinguishable from the feature working |
+| A non-integer run | 422, following `api-007`'s rule that an unrecognised parameter never silently defaults |
 
-Proved live against a scratch database rather than the corpus: 503 with
-`"this database has never been migrated"`, then 200 on the next probe after migrating it with the
-container still running. Scratch database dropped, throwaway containers removed, all 400 runs still
-stamped.
+**The chooser gets its own list, because the existing one carries the answer key.** Scenario
+Control already fetches what a selector wants and carries each run's `scenario_type` — correctly,
+that screen being the harness's own face. On the analyst's screen it is the answer key, and that is
+the string `api-012` found in this screen's heading after a year. The guarantee has been
+*structural* (a shape with no field for the answer cannot leak it); reusing the harness listing
+would have downgraded it to a convention somebody has to know.
 
-### The store, after today
+**The chooser says nothing about what was found, and this was nearly built the other way.** A
+finding count per hour was the first design and was withdrawn — not because a conclusion is secret
+(it is served in full for the hour selected) but because precision is 1.000 and per-run recall is
+60 of 60 on every positive arm, so on this corpus ranking hours by findings ranks them by ground
+truth. Any later exercise in which a person reads this screen would be un-blind with nothing in the
+code recording it, and `eval-006` is still outstanding. What it does carry is **examined or not**,
+which is a different kind of fact (`api-012`).
 
-| | |
-|---|---|
-| Completed runs examined | **380 of 380** in 6.2 min at 0.99 s a run, no refusals, no failures |
-| Stamped | 0 before, 380 after, none left |
-| Distinct settings records across the store | **1** |
-| Reproduces `eval-002`? | **Exactly** — 60/60 on all three positive arms, 0/60 on both negative arms, diagonal matrix |
-| `/api/v1/operational-picture` | **200**, serving a scored payload (was 500) |
+**Following and pinned are two states.** Pin an hour, let a batch land, and the screen keeps showing
+the pinned hour while looking identical to a live one — the same class as `ops-005`'s healthy signal
+over a broken endpoint. So the state is in words and there is always a way back. The poll follows
+the selection rather than stopping: a historical hour's detection state can change (the re-score
+restamped 380 runs in six minutes), and a poll still asking for the newest would revert the screen
+under the analyst.
 
-Three batches, which matters because the screen shows the newest: 20 quiet runs from 30 September
-(ids 381–400, what the screen serves), 300 corpus v2 runs (81–380), 60 dev-batch runs (21–80). The
-re-score is baselined over corpus v2's **60** quiet runs via `_corpus.quiet_runs`, not the store's
-100, so the stamps match the provenance every quoted figure was taken under — and that is a
-deliberate difference from what the application itself does, recorded in `measurements/README.md`.
+Smaller, and a repeat: the replayed window is read from what the run row records and is **null for a
+run recording none** (a replay). Filling it from `started_at` would label a 2022 hour with the
+wall-clock minute the generator ran, which is `anom-009`'s recorded mistake. The two clocks are four
+years apart in the fixture so an implementation reaching for the nearest timestamp is caught by the
+year.
 
-0.99 s a run against 1.22 s on record: same code, same hours, warm caches across a 380-run sweep.
-**1.22 s stays the figure to quote for a single run.**
+### The basemap decision
 
-### What the item actually does
+**Default basemap offline; satellite a documented opt-in needing network.** Recorded in `map-001`
+and `map-002` and argued in `thesis_notes.md`. Two consequences that were not obvious going in:
 
-| | |
-|---|---|
-| Where scoring lives | `run_batch_now`, after `run_batch` returns. `app/pipeline.py`'s `main()` calls `run_batch` directly, so `make generate` is unscored **by construction** |
-| Which runs | only this batch's completed runs, from `BatchSummary.runs` — never the store |
-| Baseline | one per batch, over the store's completed `normal-baseline` runs |
-| Settings | `POLICIES_OF_RECORD`, from the new `app/detection/settings.py` |
-| On failure | per-run recorded and skipped; whole-batch refusal reported separately; nothing raises out |
-| Cost | 11.2 s baseline + 1.22 s a run ≈ 35 s on a twenty-run batch |
-
-### The three things worth knowing
-
-**Eleven numbers were homeless, not thirteen.** The explanation given before the item was written
-said "thirteen detector settings". Thirteen is a figure about what the *export* records. Four of the
-six policy objects — the sensor-fault rule, the fusion rule, the precedence ladder and the
-clustering rule — are taken at their defaults, and defaults have always lived in the package. What
-existed nowhere in `app/` is `ThresholdPolicy`'s five required fields, `GapPolicy`'s two, and the
-corpus box's four coordinates. The box was present only as a CLI `metavar`. That makes the finding
-sharper: most of the record *was* in the right place, which is most of why nobody noticed the rest
-was not.
-
-**One definition plus one pin, which are different things.** Moving the values removes the copies
-and leaves a change to them silent. So the eleven are also written out verbatim in a test — not a
-fourth copy: a definition is what something runs under, a pin is an assertion about it. Elsewhere a
-digest does this (`ai-004`'s prompt, `eval-003`'s provenance record); here a digest is unavailable
-because the values themselves are what is pinned. A second test pins the other half — that four of
-the six policies equal their own defaults — so a policy growing a required field makes the eleven
-twelve visibly.
-
-**Two paths that differ, asserted in both directions.** `python -m app.pipeline` built the 300 hours
-behind every figure and must not score them, or the hours and the settings are welded together and
-the same hours can never be re-read under another threshold. The guard walks the import graph —
-and "the corpus command reaches no detector" is satisfied by a project with no detection at all, so
-the positive direction is asserted beside it.
+- **NFR-105 and AC-07 become claims about the default configuration.** The notes had already settled
+  on self-hosting a vector basemap cut from OpenStreetMap, concluding that the hosted generator is
+  then the only thing the system reaches for over a network. That sentence now needs "in its default
+  configuration". The weaker form is still strong: the satellite source is off unless configured and
+  nothing falls back to it.
+- **The two basemaps are not peers.** Vector was chosen over raster precisely because raster arrives
+  pre-rendered and competes with the overlays. Satellite *is* that. So the vector default is the
+  working view and satellite is an orientation view, and `map-001` now says so — because when the
+  map is built the two will look like a toggle, and a toggle implies interchangeable.
 
 ## Files in flight
 
@@ -129,240 +97,148 @@ Commits, oldest first:
 
 | Commit | Message |
 |---|---|
-| `2a39f0e` | `spec: add anom-016` |
-| `d552cf7` | `docs: qa entry 143 — why the batch trigger needs the settings moved first` |
-| `2a0f69c` | `test: add tests for anom-016` |
-| `8c2dd58` | `feat(anom-016): the detection pass fires when a batch completes - tests pass` |
-| `3c8a1ce` | `docs: anom-016 write-up` |
-| `b8d48c9` | `docs: progress note for anom-016` |
-| `74871c2` | `docs: stop tracking a progress-note URL in CLAUDE.md` |
-| `4587f9c` | `measure: examine every stored run with the detection pass` |
-| `8eab340` | `docs: the re-score, and three findings from it` |
+| `ad07b7d` | `spec: amend map-001, map-002 — the basemap decision` |
+| `9dba302` | `docs: progress note — the hours were examined, and the day it said it was fine` |
+| `c134b2a` | `spec: add api-013, op-009` |
+| `5cfa64b` | `test: add tests for api-013, op-009` |
+| `c3fc833` | `feat(api-013, op-009): ask the screen for a particular hour - tests pass` |
 
 **New files**
 
-- `backend/app/detection/settings.py` — the eleven values, with the box here rather than in
-  `app/corpus/` because what reads it is a detector.
-- `backend/tests/test_anom_batch_trigger.py` — 42 cases.
-- `backend/measurements/mutation/mutate_anom016_batch_trigger.py` + `.log`.
+- `backend/tests/test_api_hour_selection.py` — 23 test functions, **48 collected** after
+  parametrisation.
+- `frontend/src/hooks/useSelectableHours.ts`.
+- `frontend/src/test/hourSelection.test.tsx` — **18 cases**, including the structural check that
+  no picture-side module names the harness fetcher, and its interlock.
+- `backend/measurements/mutation/mutate_api013_hour_selection.py` + `.log`.
 
 **Changed, backend**
 
-- `app/detection/chain.py` — `measure_normality`. Takes the metric from the policy the deviation
-  will be read against, and refuses an empty run list with its own message.
-- `app/db/repository.py` — `quiet_run_ids` (completed `normal-baseline` runs, ordered, empty rather
-  than raising) and `run_summary` (one run as its row holds it, None when absent).
-- `app/scenario/batch.py` — `BatchScoring`, `score_batch`, the call in `run_batch_now`, and the
-  request schema moved behind `TYPE_CHECKING`.
-- `measurements/corpus/detection_metrics.py` — imports the record and builds its baseline through
-  `measure_normality`; its own observation reader is now dead and removed.
-- `tests/test_anom_chain.py` — `POLICIES` is the record, and the threshold-moved test uses
-  `dataclasses.replace` rather than restating four of the record's values.
-- `tests/test_api_scenario.py` — the two launcher fakes return an empty `BatchSummary`.
+- `app/dal/models.py` — `SelectableRun`, the repository-level row.
+- `app/db/repository.py` — `selectable_hours` and `HOURS_LIMIT`.
+- `app/api/v1/operational_picture.py` — the `run` parameter, the 404, and the index route.
+- `app/api/v1/schemas/operational_picture.py` — `SelectableHour` and `SelectableHour.of`.
+- `tests/test_api_operational_picture.py` — `SelectableHour` added to the parity map, so the
+  existing parser check covers the new shape rather than a second parity suite.
+
+**Changed, frontend**
+
+- `src/lib/api.ts` — `fetchSelectableHours`, and `fetchOperationalPicture` takes a run.
+- `src/hooks/useOperationalPicture.ts` — the poll follows the selection.
+- `src/screens/operationalPicture.tsx` — the selector, the two states, `hourLabel`.
+- `src/App.tsx` — the pinned-hour state in the picture route.
+- `src/types/operationalPicture.ts` — the `SelectableHour` contract.
+- `src/test/dataAccess.test.tsx` — two assertions amended, see Failed attempts.
+
+**Docs**
+
+- `docs/requirements.md` — FR-719, FR-811, AC-13.
+- `docs/qa.md` — entry 146.
+- `docs/thesis_notes.md` — two entries: the blind chooser, and the two-language mutation pass.
+- `backend/measurements/README.md` — the mutation row, and the third hazard's third recurrence.
+- `docs/progress_note.html` — published this session.
 
 ## Failed attempts
 
-**A refusal whose message was about the wrong thing.** `measure_normality` was written with no
-refusal for an empty run list, on the reasoning that two already exist upstream —
-`compute_rf_baselines` will not take an empty allowlist, `Normality` will not hold an empty
-provenance. The test for the fresh-database case failed, and the reason is the finding: the refusal
-that actually fires first is the baseline's, and it talks about an *allowlist an engine cannot
-widen*, while the fact a caller needs is that **this store holds no quiet runs at all**. Since the
-refusal reaches a log line and nothing else, the wording is the entire diagnostic. Three refusals
-for one condition, each a different statement.
+**A collection error is not a red run, and I had to be told that by the file I wrote.** The first
+run of the new backend suite produced one `ImportError` and nothing else. That satisfies "the tests
+fail" and establishes nothing — every test in the file fails that way regardless of what it
+asserts, which this project already has written down. Against raising stubs: 19 of 34 failed, and
+the 12 that passed were the **absence** assertions over an empty stub model. Proved load-bearing by
+adding `scenarioType` and `findingCount` to the stub and watching five go red, then reverted.
 
-**I claimed thirteen settings were homeless and it is eleven.** Thirteen is `eval-003`'s export
-floor count. Four of the six policy objects were already at their defaults inside `app/`. Corrected
-before the spec item was written, and the spec says eleven.
+**Three tests pass before the implementation and should.** The unchanged-default regression guard;
+the one-shape check (an ignored parameter makes both shapes identical, so it cannot fail until the
+parameter works); and the interlock firing the leak-scan at the harness listing. Named here so the
+next pass does not read them as a gap.
 
-**I asserted a batch takes ~105 s and could not source it.** The only figure on record is
-`api-006`'s "roughly seventy seconds". The spec item now says that and says whose figure it is. The
-105 came from somewhere in a previous session and survives nowhere.
+**A test that compared a count with itself.** The polling test installed fake timers *after*
+`render`, and an interval already scheduled on real timers is not adopted by a clock installed
+later — so no second poll fired and `expect(2).toBeGreaterThan(2)` is what the failure actually
+said. Fake timers now go before the render, as `dataAccess.test.tsx` already did.
 
-**An import cycle that had never fired.** `app/scenario/batch.py` imports a request schema from
-`app.api.v1.schemas.scenario`; importing anything under `app.api.v1` runs that package's
-`__init__`, which imports the route module, which imports `app/scenario/batch.py`. The cycle has
-existed since that module was written and never fired, because every path into it went through the
-API package first. A test that imports the domain module directly is what surfaced it. Fixed by
-moving the import behind `TYPE_CHECKING`, which it qualifies for — it is only ever an annotation.
+**Two existing assertions stopped measuring what they were written to measure.** `dataAccess.test.tsx`
+counted every `fetch` call, which was the same thing as counting the picture's own while one
+endpoint existed. The index path also has the picture's path as a prefix, so one assertion passed
+for the wrong reason and the other broke outright. Both now filter to picture calls. The tempting
+alternative — stubbing the new fetch out of those tests — would have left them green over a route
+whose new half was removed, which is the same mistake `anom-016` recorded with the launcher fakes.
 
-**Two launcher tests broke, and the first instinct was wrong.** Both patched `run_batch` with a fake
-returning `None`, which was faithful while the launcher ignored the return value. The tempting fix
-was to stub `score_batch` out; that would have left those tests passing over a launcher whose new
-half had been removed. The fakes now return what the real function returns — an empty
-`BatchSummary`, which the scoring stage treats as nothing to examine.
+**The mutation pass found a real gap, and it is the useful result.** Two mutants adding a field to
+`SelectableRun` — the scenario type, and a finding count — survived. Every assertion was about the
+shape that is *served*, and `SelectableHour.of` names its four fields explicitly, so neither reached
+the wire: harmless, and a real gap. The item's claim is that the guarantee is **structural**, and it
+was structural at one boundary and nowhere else — while the layer below is exactly where somebody
+would add the field, in the query, to make the chooser more useful. Closed with two field-set
+assertions over the repository row. The shape generalises `ops-005`'s survivor: **a guarantee
+asserted where a value is serialised is not asserted where it is produced.**
 
-**The mutation pass aborted on its own sentinel.** The sentinel set the radio threshold to 99 dB to
-prove that source edits reach the tests. `ThresholdPolicy` refuses bands that do not increase past
-the threshold, so the module raised on import, the suite reported `3 errors in 1.28s`, and the
-harness refused to read that as a kill — correctly: a mutant killed by an import error is the
-runtime twin of one that does not parse and says nothing about the tests. Two value mutants had the
-same defect (swapping the two severity steps breaks the same rule) and were replaced with
-single-step moves. Recorded as the eighth hazard in `measurements/README.md`, with the rule that a
-mutation table over a *configuration* module is also a table of things that must stay
-constructible — check by constructing each one first.
+**The OOM killer stopped the pass and left a mutant in the source — the third time.** Four mutants
+into twenty-three, leaving `if False:` in place of the route's 404 branch, which is the item's own
+sharpest failure case and invisible on screen. The guard file restored it and `git diff` against
+committed code verified the claim rather than trusting it. The new finding is the cause: this pass
+did **no** image builds and is not long by the earlier standard (~45 s a mutant), so twenty-three
+`compose run` invocations is enough churn on its own and "no rebuilds, therefore safe" is not a
+rule. The harness now takes `SIDE=frontend` / `SIDE=backend` so a pass can be taken in parts;
+generalising that to the other harnesses is owed.
 
-**And then I re-ran it from the wrong directory.** `cd backend` from a session already in `backend`,
-so the pass never started and the stale log made it look like the same failure twice.
-
-**A survivor whose shape is worth keeping: a test at each end of a chain is not a test of the
-chain.** `ops-005`'s first mutation pass left one mutant alive. Two heads on disk was asserted on the
-function that *reads* them and refused by the function that *compares* them, and nothing tested the
-function between — so with two heads the expectation silently became whichever head sorted first,
-and an unreachable database would have named a bogus expectation beside its *could not tell*. One
-test closed it; no implementation change.
-
-**My first health route imported a storage engine, and the purity guard refused it.** Only to
-annotate a type — but `db-006` forbids a route module naming one at all, and the alias
-`app.db.session` exports exists for exactly that. More useful is what the same check prevented: the
-obvious implementation imports the Alembic configuration straight into the handler, which it also
-forbids. The comparison went behind the repository port instead, which is where the rule already
-said it belonged, and the `app.db` allowlist never widened.
-
-**A test that passed on the host and failed only in the container.** `ops-005` asserts that the two
-start commands migrate first, by reading the root Makefile — which is not in the backend image,
-Compose mounting only `./backend`. The project had already solved this and I had not read far
-enough: the Makefile is mounted read-only at `/repo/Makefile` for `test-backend`, and
-`test_replay.py` checks both locations and **raises rather than skips** when it finds neither,
-because a structural guard that silently does not run is a worse failure than the one it checks for.
-
-**A migration applied to the test database and never to the application's.** `0009`'s two columns
-were added by `api-012`; the suite's fixture brings the test database to head before every database
-test, so 1,874 tests passed over them while the real database sat at `0008` and the endpoint that
-reads them returned 500. Found today by querying the corpus before re-scoring it. The shape
-generalises: a suite that creates its own schema tests the migration **and** hides whether anybody
-has applied it elsewhere, and those two facts are indistinguishable from inside the suite.
-
-**I measured 0.99 s a run and nearly replaced a figure of record with it.** It is the same work as
-`anom-015`'s 1.22 s, measured differently — a 380-run sweep with warm caches rather than one run at a
-time — so it describes a batch of 380 and not the single run the trigger performs. Both are now on
-record with the conditions that produced them, and 1.22 s remains the per-run figure.
-
-**`make measure` passes `CORPUS=""` when the variable is unset**, and `_corpus.which()` refuses the
-empty string even though its own default is `v2`. The first re-score attempt died on that before
-touching the database. Every measurement has to name its corpus explicitly; the default is
-unreachable through the Makefile.
-
-**`make test-backend` spent ten minutes rebuilding before running anything.** Not a defect, but the
-first run looked hung. `test-backend-nobuild` exists for exactly this and is what the mutation pass
-uses.
+**`sleep` is blocked in this shell**, and chaining short sleeps to poll a background job is blocked
+too. Long-running work goes to `run_in_background` or `Monitor` with an until-loop. Noted because I
+lost two attempts to it.
 
 ## Next step
 
-The next five items are all about the screen, and the order below was agreed with the user on
-2026-10-03. Each one makes the next easier to see. The reasoning for 1–5 is in **What the screen
-still does not do for an analyst**, further down; this is the sequence only.
+Items 2 to 5 of the screen sequence agreed on 2026-10-03, unchanged except that item 1 is now done
+and the basemap decision no longer gates item 5.
 
-1. **`api-002` gains a way to select an hour.** Agreed as next. It serves the latest completed run,
-   which was the right scope when nothing produced detection output. Every run in the store is now
-   examined and the corpus holds 60 interference zones and 120 broken-receiver attributions, and
-   none can be shown, because the newest batch is twenty quiet hours. This gates the four below as a
-   demonstration: none of them can be looked at against a staged hour without generating a fresh
-   batch first. **Not yet specced.**
+1. ~~`api-002` gains a way to select an hour.~~ **Done** — `api-013`, `op-009`.
 2. **The two header labels** (`op-001`, plus the system-status strip in the nav footer). The
-   smallest item on the list: two correct values rendered as bare unlabelled words. Both items are
-   already specced and unbuilt.
+   smallest item left: two correct values rendered as bare unlabelled words. `mixed` is
+   `scenario.dataMode` and is right; `unknown` is `scenario.health` and is right because no health
+   monitoring exists. **The scenario type must never be shown here** — that is `api-009`'s named
+   failure case and it was live until `api-012`. Both items specced and unbuilt.
 3. **The detection summary's vocabulary** (`op-003`, `ui-001`). Frontend only, no backend change:
-   the payload carries finding types verbatim on purpose and the screen never composed any copy.
-   Already specced and unbuilt. `op-006`'s timeline strip belongs here too — it is carried in the
-   payload and not rendered at all.
-4. **Serve an evidence bundle**, so the summary can say *why*. Needs a producer before it needs a
-   panel: the bundles exist and no endpoint serves one. **Not specced.** This is the thesis's own
-   subject — the claim is explainability and the screen shows a conclusion with no route to what it
-   rests on.
-5. **The map** (`map-001`–`map-004`). Largest, and last because the basemap question below wants
-   settling first. Already specced and unbuilt.
+   the payload carries finding types verbatim on purpose (`api-011`) and the screen never composed
+   any copy. `op-006`'s timeline strip belongs here — carried in the payload and not rendered at
+   all. Specced and unbuilt.
+4. **Serve an evidence bundle**, so the summary can say *why* — which receivers deviated together,
+   over what window, how far above normal, whether the aircraft side corroborated. All of it exists
+   in the bundles and **no endpoint serves one**. **Not specced.** This is the thesis's own subject:
+   the claim is explainability and the screen shows a conclusion with no route to what it rests on.
+5. **The map** (`map-001`–`map-004`). Largest, and **no longer blocked** — the basemap decision is
+   taken and recorded in the items. `map-001` now specifies two sources and `map-002` specifies what
+   happens when neither is configured.
 
-Then, unchanged from before:
+Then, unchanged:
 
-6. **Re-run the figures of record.** `detection_metrics.py` now imports the settings and builds its
-   baseline through `measure_normality`. The values are unchanged and the equivalence is asserted at
+6. **Re-run the figures of record.** `detection_metrics.py` imports the settings and builds its
+   baseline through `measure_normality`. The values are unchanged, the equivalence is asserted at
    unit scale, and the re-score reproduced `eval-002`'s table exactly from stored rows — but
-   `anom-015` validated its own refactor by reproducing all forty-three exported lines byte for byte,
-   and that has not been done for this one.
+   `anom-015` validated its own refactor by reproducing all forty-three exported lines byte for
+   byte, and that has not been done for this one.
 7. **`hypotheses`**, the last producer-less field. 155 rows exist. Which arm an analyst sees,
    whether a row whose grounding check FAILED may be shown, and what `NOT_CHECKED` renders as.
 8. **`eval-006`** still waits on a second rater, mid-October.
 
-### Waiting on a decision from the user
-
-**Does the map get a satellite basemap, and does the offline guarantee survive it?** NFR-105 says
-the whole system demonstrates offline — no network, no API key, no third-party account — and
-MapLibre was chosen over Mapbox for exactly that reason. A satellite layer means hosted raster tiles
-from a third party. Three options, with the recommendation:
-
-| Option | Offline guarantee | Cost |
-|---|---|---|
-| **Default basemap offline, satellite a documented opt-in needing network** *(recommended)* | Holds for the default, so AC-07 stays true | Two code paths and one caveat in the write-up |
-| Drop satellite | Holds | The view is lost |
-| Ship an offline raster extract of the corpus box | Holds | Tens of MB committed, and the box is fixed |
-
-`map-002` already requires a labelled placeholder when no tile source is configured, which is the
-behaviour the offline guarantee rests on either way. **Do not start `map-001` before this is
-settled** — it decides whether the adapter has one basemap or two.
-
-## What the screen still does not do for an analyst
-
-Raised 2026-10-03 after looking at the rendered Operational Picture against
-`frontend/src/assets/Design/OperationalPicture_v2/screen.png`. Five findings, none of them specced
-yet, in the order they should probably be taken.
-
-**1. Two bare words in the header, both correct and neither legible.** The top centre reads `mixed`
-and the top right reads `unknown`, with no labels. Both values are right:
-
-| On screen | What it is | Why that value |
-|---|---|---|
-| `mixed` | `scenario.dataMode` | Run 420 holds synthetic RF *and* replayed tracks, so the mix is genuinely mixed. **It is not the scenario type and must never be** — serving the type is `api-009`'s named failure case, and it was live until `api-012` fixed the heading |
-| `unknown` | `scenario.health` | No health monitoring exists. `Healthy` would be a reassurance nothing has checked |
-
-So this is a rendering defect, not a data one. `op-001` already specifies the data-mode badge as an
-unconditional, undismissable **`SYNTHETIC ENVIRONMENT DATA`** pill (NFR-303), and the design puts
-health in a `SYSTEM STATUS` panel in the nav footer with Connectivity and Service rows —
-`CLAUDE.md` says the same. Both are specced and unbuilt. The smallest real item on this list.
-
-**2. The detection summary is unreadable and says nothing about why.** Two separate problems.
-`possible_interference_zone` is rendered raw: the payload carries the finding type **verbatim on
-purpose** (`api-011` — facts and never prose, so the screen composes copy where the rest of that
-screen's copy lives), and the screen simply never composed any. That half is `op-003` and `ui-001`,
-both specced and unbuilt. The second half is new and larger: *why* a zone was claimed — which
-receivers deviated together, over what window, how far above normal, whether the aircraft side
-corroborated. All of it exists in the evidence bundle, and **no endpoint serves a bundle**, so this
-needs a producer before it needs a panel.
-
-**3. The Operational Picture is not a map.** `map-001`–`map-004` are specced and unbuilt, and the
-design makes the map the entire body of the screen: aircraft with callsign and altitude, RF
-receivers as masts, and the anomaly zone as a dashed region with a label at its centre. What is
-rendered today is a list of seven receivers.
-
-**A satellite basemap is a scope decision, not a technical one.** NFR-105 says the whole system
-demonstrates offline — no network, no API key, no third-party account — and MapLibre was chosen over
-Mapbox for exactly that reason. A satellite layer means hosted raster tiles from a third party.
-Three honest options, and the user picks: ship the default basemap offline and make satellite a
-documented opt-in that needs network; drop satellite; or ship a small offline raster extract of the
-corpus box. `map-002` already requires a labelled placeholder when no tile source is configured,
-which is the behaviour the offline guarantee rests on.
-
-**4. There is no way to ask the screen for a particular hour** (carried from above). This gates the
-other three as a demonstration: you cannot show the map, the summary or the labels against a staged
-hour without generating a fresh batch each time.
-
-**5. Nothing on the screen cites a specific hour's evidence.** Follows from 2, recorded separately
-because it is the thesis's own subject: the system's claim is explainability, and the screen
-currently shows a conclusion with no way to reach what it rests on.
-
 Open and unowned:
 
-- ~~The progress note has not been updated for `anom-016`.~~ Updated and published 2026-10-02. Its pipeline spine now has a trigger and
-  its "what it deliberately does not do yet" section should lose the entry saying nothing fires the
-  pass. Offer before the next item.
-- **`docs/thesis_notes.md` is misfiled from about line 6785 onwards.** Everything after `##
-  Evaluation` is appended there regardless of chapter, so implementation findings — the allowlist
-  that named a module, the concurrent suites, and now all seven `anom-016` entries — sit under
-  Evaluation. Not corrected mid-item; worth one pass before write-up.
+- **The hour chooser is blind by design, and that has a cost**: finding a particular staged hour
+  depends on already knowing its number. Fine for the researcher — the numbers are in the
+  measurement logs — and it means a demonstration to somebody else needs the hour chosen in advance.
+  Recorded as a limitation in `qa.md` 146 rather than engineered around.
+- **A pinned hour is not in the URL.** Considered and deferred: it would make an hour shareable and
+  survive a reload, which is worth having for a demonstration, but `screenFromHash` resolves a bare
+  screen id today so a parameterised hash is `nav-001`'s machinery and its own item, with its own
+  failure case for an unrecognised run in a hash.
+- **The index is fetched once per mount, not polled.** A batch completing while the screen is open
+  does not appear in the list until the screen is remounted. Following the newest is unaffected —
+  the endpoint with no parameter always serves the actual newest — so a stale list changes which
+  hours are *offered* and never which hour is *shown*.
+- **`docs/thesis_notes.md` is misfiled from about line 6800 onwards.** Everything after
+  `## Evaluation` is appended there regardless of chapter. Not corrected mid-item; worth one pass
+  before write-up. This session's two entries were placed in the right chapters.
 - A `normal-baseline` batch is scored against a baseline that includes its own runs, because the
-  baseline is a property of the store and not of the batch. Same self-reference `anom-008`'s bands
-  carry. Recorded rather than prevented; excluding the batch would mean a store holding one batch
-  could not be scored at all.
-- Nothing mechanical stops a **third** file declaring its own eleven values. The guard catches the
-  regrowth of the two copies that existed, by parsing them; the pin catches a change to the values.
-  A new file is caught by neither.
+  baseline is a property of the store and not of the batch. Recorded rather than prevented.
+- Nothing mechanical stops a **third** file declaring its own eleven detector settings. The guard
+  catches the regrowth of the two copies that existed; the pin catches a change to the values. A new
+  file is caught by neither.

@@ -1,0 +1,74 @@
+Taken in two parts, SIDE=frontend then SIDE=backend. The first attempt at the
+whole pass in one run was stopped partway through by the OOM killer and left a
+mutant in the source -- the failure recorded in README.md from the Docker builds
+that stopped two earlier passes, reached again from a different direction:
+twenty-three mutants, most of them starting a container, is enough churn on its
+own. The originals were restored from the guard file and the tree verified clean
+before anything below was read.
+
+That aborted run is also what found the one gap in this item's tests. Two
+mutants adding a field to `SelectableRun` -- the scenario type, and a finding
+count -- SURVIVED it:
+
+  the chooser carries the kind of hour                          SURVIVED 118 passed
+  the chooser carries how much was found                        SURVIVED 118 passed
+
+Every assertion in the suite was about the shape that is *served*, and
+`SelectableHour.of` names its four fields explicitly, so neither mutant reached
+the wire. They are harmless and the gap is real: the item's claim is that the
+guarantee is STRUCTURAL -- a shape with no field for the answer cannot leak it --
+and it was structural at one boundary and nowhere else, while the layer below is
+exactly where somebody would add the field, in the query, to make the chooser
+more useful. One further edit in `of` and it is on the analyst's screen.
+
+Closed with two tests over `SelectableRun`'s own field set, mirroring the ones
+over `SelectableHour`'s. 1 test change, 0 implementation changes. Both mutants
+are killed below.
+
+================================================================ frontend
+frontend sentinel killed (Tests  4 failed | 39 passed (43)) -- edits reach the tests
+
+the screen takes its hours from the harness's list             KILLED   Tests  18 failed | 25 passed (43)
+the poll asks for the newest whatever is pinned                KILLED   Tests  2 failed | 41 passed (43)
+the selection is read once and the poll never follows it       KILLED   Tests  2 failed | 41 passed (43)
+the run never reaches the query string                         KILLED   Tests  2 failed | 41 passed (43)
+a pinned hour says it is following the newest                  KILLED   Tests  2 failed | 41 passed (43)
+there is no way back to the newest                             KILLED   Tests  1 failed | 42 passed (43)
+an empty store renders a blank control                         KILLED   Tests  1 failed | 42 passed (43)
+the control has no name a reader could ask for                 KILLED   Tests  4 failed | 39 passed (43)
+an hour nothing examined is not offered                        KILLED   Tests  11 failed | 32 passed (43)
+the label drops the replayed window                            KILLED   Tests  1 failed | 42 passed (43)
+an answer that is not a list is rendered anyway                KILLED   Tests  4 failed | 39 passed (43)
+
+restored
+
+11 killed of 11 valid mutants
+no unexpected survivors
+
+================================================================= backend
+backend sentinel killed (3 failed, 129 passed in 44.72s) -- edits reach the tests
+
+the chooser carries the kind of hour                           KILLED   3 failed, 129 passed in 44.48s
+the served shape carries the kind of hour                      KILLED   6 failed, 126 passed in 44.24s
+the chooser carries how much was found                         KILLED   3 failed, 129 passed in 44.28s
+an unknown hour is served as the newest                        KILLED   1 failed, 131 passed in 44.40s
+the hour asked for is ignored                                  KILLED   3 failed, 129 passed in 44.32s
+anything at all names an hour                                  KILLED   1 failed, 131 passed in 44.83s
+the window falls back to when the generator ran                KILLED   14 failed, 118 passed in 52.02s
+the window has no end                                          KILLED   1 failed, 131 passed in 44.23s
+a run that did not finish is offered as an hour                KILLED   2 failed, 130 passed in 44.20s
+the hours come back oldest first                               KILLED   1 failed, 131 passed in 44.43s
+every hour reads as examined                                   KILLED   1 failed, 131 passed in 44.21s
+the bound is the harness's fifty                               KILLED   1 failed, 131 passed in 44.65s
+
+restored
+
+12 killed of 12 valid mutants
+no unexpected survivors
+EXIT=0
+
+
+================================================================== together
+
+23 killed of 23 valid mutants across both suites
+no unexpected survivors, and no mutant declared equivalent
