@@ -265,6 +265,55 @@ uses.
    whether a row whose grounding check FAILED may be shown, and what `NOT_CHECKED` renders as.
 5. **`eval-006`** still waits on a second rater, mid-October.
 
+## What the screen still does not do for an analyst
+
+Raised 2026-10-03 after looking at the rendered Operational Picture against
+`frontend/src/assets/Design/OperationalPicture_v2/screen.png`. Five findings, none of them specced
+yet, in the order they should probably be taken.
+
+**1. Two bare words in the header, both correct and neither legible.** The top centre reads `mixed`
+and the top right reads `unknown`, with no labels. Both values are right:
+
+| On screen | What it is | Why that value |
+|---|---|---|
+| `mixed` | `scenario.dataMode` | Run 420 holds synthetic RF *and* replayed tracks, so the mix is genuinely mixed. **It is not the scenario type and must never be** — serving the type is `api-009`'s named failure case, and it was live until `api-012` fixed the heading |
+| `unknown` | `scenario.health` | No health monitoring exists. `Healthy` would be a reassurance nothing has checked |
+
+So this is a rendering defect, not a data one. `op-001` already specifies the data-mode badge as an
+unconditional, undismissable **`SYNTHETIC ENVIRONMENT DATA`** pill (NFR-303), and the design puts
+health in a `SYSTEM STATUS` panel in the nav footer with Connectivity and Service rows —
+`CLAUDE.md` says the same. Both are specced and unbuilt. The smallest real item on this list.
+
+**2. The detection summary is unreadable and says nothing about why.** Two separate problems.
+`possible_interference_zone` is rendered raw: the payload carries the finding type **verbatim on
+purpose** (`api-011` — facts and never prose, so the screen composes copy where the rest of that
+screen's copy lives), and the screen simply never composed any. That half is `op-003` and `ui-001`,
+both specced and unbuilt. The second half is new and larger: *why* a zone was claimed — which
+receivers deviated together, over what window, how far above normal, whether the aircraft side
+corroborated. All of it exists in the evidence bundle, and **no endpoint serves a bundle**, so this
+needs a producer before it needs a panel.
+
+**3. The Operational Picture is not a map.** `map-001`–`map-004` are specced and unbuilt, and the
+design makes the map the entire body of the screen: aircraft with callsign and altitude, RF
+receivers as masts, and the anomaly zone as a dashed region with a label at its centre. What is
+rendered today is a list of seven receivers.
+
+**A satellite basemap is a scope decision, not a technical one.** NFR-105 says the whole system
+demonstrates offline — no network, no API key, no third-party account — and MapLibre was chosen over
+Mapbox for exactly that reason. A satellite layer means hosted raster tiles from a third party.
+Three honest options, and the user picks: ship the default basemap offline and make satellite a
+documented opt-in that needs network; drop satellite; or ship a small offline raster extract of the
+corpus box. `map-002` already requires a labelled placeholder when no tile source is configured,
+which is the behaviour the offline guarantee rests on.
+
+**4. There is no way to ask the screen for a particular hour** (carried from above). This gates the
+other three as a demonstration: you cannot show the map, the summary or the labels against a staged
+hour without generating a fresh batch each time.
+
+**5. Nothing on the screen cites a specific hour's evidence.** Follows from 2, recorded separately
+because it is the thesis's own subject: the system's claim is explainability, and the screen
+currently shows a conclusion with no way to reach what it rests on.
+
 Open and unowned:
 
 - ~~The progress note has not been updated for `anom-016`.~~ Updated and published 2026-10-02. Its pipeline spine now has a trigger and
