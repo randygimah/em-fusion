@@ -651,19 +651,29 @@ def test_the_pass_is_idempotent(migrated_database: Engine) -> None:
 
 
 @requires_database
-def test_storing_the_bundles_is_the_callers_call(migrated_database: Engine) -> None:
-    """The other half of the line. Spec: anom-015, evb-002, eval-004.
+def test_the_bundles_resolve_against_the_rows_the_pass_itself_read(
+    migrated_database: Engine,
+) -> None:
+    """Spec: anom-015, evb-002, evb-003.
 
-    A caller with no pre-registered population to protect stores what the pass
-    built, and the bundles resolve against the same rows the pass read -- which is
-    why the pass reads its own run rather than taking observations as values.
+    **Rewritten by `evb-003`, which reversed the decision this test asserted.**
+    It used to be called *storing the bundles is the caller's call* and proved
+    that a caller with no pre-registered population to protect could store what
+    the pass built. The pass now stores them itself: `db-011` makes the
+    protection structural and decided from the store, so the reason to withhold
+    them -- twenty bundles on twenty runs named by id -- no longer argues for
+    withholding them from the other 380.
+
+    What survives is the half that was never about the caller: the bundles
+    resolve against the same rows the pass read, which is why `assess` reads its
+    own run rather than taking observations as values. A write that resolves is
+    the proof, and `evb-002` refuses the whole set if a single citation does not.
     """
-    # spec: anom-015, evb-002
-    from app.db.bundles import save_bundles
-
+    # spec: anom-015, evb-002, evb-003
     factory = sessionmaker(bind=migrated_database, autoflush=False)
     loud = {(SENSORS[0], channel): 20.0 for channel in CHANNELS}
     _store(factory, 2, elevate=loud)
+
     assessment = assess(
         _run(),
         normality=_normality(),
@@ -671,8 +681,6 @@ def test_storing_the_bundles_is_the_callers_call(migrated_database: Engine) -> N
         layout=LAYOUT,
         session_factory=factory,
     )
-
-    save_bundles(factory, scenario_run_id=2, bundles=assessment.bundles)
 
     with factory() as session:
         stored = session.execute(
