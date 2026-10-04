@@ -52,12 +52,22 @@ STORAGE_PACKAGES = ("sqlalchemy", "geoalchemy2", "psycopg", "alembic")
 #: holding the SQL itself, constructing a session, or naming a PostGIS
 #: function, and those are the three rules below; they are unchanged and they
 #: are where this check's teeth are. Widened by the module actually needed
-#: rather than by a prefix, so the list stays a decision: `bundles` and
-#: `hypotheses` are not here, and a route reaching for one has to argue for it.
+#: rather than by a prefix, so the list stays a decision: `hypotheses` is not
+#: here, and a route reaching for it has to argue for it.
+#:
+#: `app.db.bundles` was added 2026-10-04 with `api-015`, and the argument is
+#: the one this comment already makes: `stored_bundles_for_run` is a repository
+#: function, all the SQL for `evidence_bundles` lives in that module, and the
+#: route holds none -- the same shape as `findings_for_run` and the same role.
+#: What it does **not** buy is building a bundle: `api-015` has a separate
+#: structural check that neither the route nor its schemas module reaches
+#: `build_bundles`, because `anom-016` keeps the detection pass out of the
+#: request path and the baseline is the reason.
 ALLOWED_STORAGE_MODULES = {
     "app.db.repository",
     "app.db.session",
     "app.db.findings",
+    "app.db.bundles",
 }
 
 #: Enough of a SQL statement to be a SQL statement. Anchored on a keyword

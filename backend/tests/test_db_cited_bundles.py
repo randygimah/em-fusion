@@ -76,6 +76,7 @@ def fault_here(run_id: int = RUN_ID):
     """A resolvable fault bundle for one run. Cites RF-03 only."""
     return replace(fault_bundle(), scenario_run_id=run_id)
 
+
 @pytest.fixture
 def second_run(migrated_database: Engine) -> int:
     """Another run with its own observations, for the scoping tests."""
@@ -115,7 +116,6 @@ def test_a_run_whose_bundles_nothing_cites_is_written_as_before(
     save_bundles(factory, scenario_run_id=RUN_ID, bundles=[here(), fault_here()])
 
     assert bundle_rows(migrated_database) == 2
-
 
 
 @pytest.mark.database

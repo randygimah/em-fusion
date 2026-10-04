@@ -50,7 +50,6 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, text
-from sqlalchemy.orm import sessionmaker
 
 from app.api.v1.schemas.evidence import (
     NO_CURRENT_CLAIM,
@@ -238,7 +237,10 @@ def test_a_bundle_matching_no_claim_is_carried_as_unclaimed() -> None:
     bundle = fault()
     moved = replace(
         bundle,
-        time_window=(bundle.time_window[0], bundle.time_window[1] + timedelta(seconds=10)),
+        time_window=(
+            bundle.time_window[0],
+            bundle.time_window[1] + timedelta(seconds=10),
+        ),
     )
 
     got = account(findings=[claim_for(bundle)], bundles=[(7, moved)])
@@ -247,12 +249,13 @@ def test_a_bundle_matching_no_claim_is_carried_as_unclaimed() -> None:
     assert [c.reason for c in got.unexplained] == [NOT_BUNDLED]
 
 
-def test_the_match_key_does_not_include_the_subject() -> None:
+def test_the_match_key_uses_the_head_of_the_joined_subject() -> None:
     """A fusion bundle's subject is the receivers that deviated together,
-    joined; its claim's is the one representative. A key including it misses
-    all 41 interference bundles in the store while matching every fault,
-    which is the shape of a defect that looks like a feature on half a
-    corpus."""
+    joined; its claim's is the first of them. A key on the raw subject misses
+    all 41 interference bundles in the store while matching every fault --
+    the shape of a defect that looks like a feature on half a corpus -- and a
+    key with no subject at all cannot attribute a bundle on a run holding two
+    claims in one window."""
     # spec: api-015
     bundle = zone()
     assert ", " in bundle.subject  # the premise, so the test cannot rot quietly
@@ -260,6 +263,53 @@ def test_the_match_key_does_not_include_the_subject() -> None:
     got = account(findings=[claim_for(bundle)], bundles=[(7, bundle)])
 
     assert [c.bundleId for c in got.explained] == [7]
+
+
+def test_the_claim_subject_is_the_head_of_the_bundle_subject_by_construction() -> None:
+    """The key rests on this, so it is asserted against the two constructors
+    and never against stored rows: what makes it safe is that it is *built*
+    that way. `findings.py` files a zone under `sensors[0]` and a fault under
+    its one receiver; `bundle.py` joins the zone's sensors and copies the
+    fault's.
+    """
+    # spec: api-015, anom-015, evb-001
+    from app.detection.findings import from_interference_zone, from_sensor_fault
+    from tests.test_evb_bundle import fault as fault_producer
+    from tests.test_evb_bundle import zone as zone_producer
+
+    one_fault, one_zone = fault_producer(), zone_producer()
+    claims = (
+        from_sensor_fault(one_fault, scenario_run_id=RUN_ID),
+        from_interference_zone(one_zone, scenario_run_id=RUN_ID),
+    )
+    bundles = (fault(), zone())
+
+    for claim, bundle in zip(claims, bundles, strict=True):
+        assert claim.subject == bundle.subject.split(", ")[0]
+
+
+def test_two_bundles_sharing_the_key_are_refused() -> None:
+    """`evb-002`'s exactly-one-row rule one layer up. Attributed to whichever
+    came back first, the panel would show one event's evidence under
+    another's conclusion and nothing anywhere would say so."""
+    # spec: api-015, evb-002
+    bundle = fault()
+
+    with pytest.raises(EvidenceError):
+        account(findings=[claim_for(bundle)], bundles=[(7, bundle), (8, bundle)])
+
+
+def test_two_claims_sharing_the_key_are_refused() -> None:
+    """The same ambiguity from the other side. Two broken receivers are two
+    events and `anom-007` takes each window from the readings, so two faults
+    on one receiver in one window is the shape to refuse rather than to
+    guess at."""
+    # spec: api-015, anom-007, anom-013
+    bundle = fault()
+    claim = claim_for(bundle)
+
+    with pytest.raises(EvidenceError):
+        account(findings=[claim, claim], bundles=[(7, bundle)])
 
 
 def test_an_explained_claim_names_the_receivers_the_bundle_names() -> None:
@@ -581,7 +631,8 @@ def test_observation_ids_do_not_cross() -> None:
         ]
     )
 
-    claim = account(findings=[claim_for(with_ids)], bundles=[(7, with_ids)]).explained[0]
+    got = account(findings=[claim_for(with_ids)], bundles=[(7, with_ids)])
+    claim = got.explained[0]
 
     assert "111222333" not in json.dumps(claim.model_dump())
 
@@ -594,7 +645,10 @@ def test_item_details_do_not_cross() -> None:
     # spec: api-015
     bundle = zone()
     marked = bundle.with_evidence(
-        [replace(i, details={**i.details, "probe": "zzUNIQUEzz"}) for i in bundle.evidence]
+        [
+            replace(i, details={**i.details, "probe": "zzUNIQUEzz"})
+            for i in bundle.evidence
+        ]
     )
 
     claim = account(findings=[claim_for(marked)], bundles=[(7, marked)]).explained[0]
@@ -641,7 +695,11 @@ def test_the_route_builds_no_bundle() -> None:
     """
     # spec: api-015, anom-016, api-012
     reached: set[str] = set()
-    for module in ("app/api/v1/operational_picture.py", "app/api/v1/schemas/evidence.py"):
+    modules = (
+        "app/api/v1/operational_picture.py",
+        "app/api/v1/schemas/evidence.py",
+    )
+    for module in modules:
         tree = ast.parse((BACKEND_ROOT / module).read_text())
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom) and node.module:
@@ -678,7 +736,12 @@ def _insert_run(engine: Engine, run_id: int, *, examined: bool) -> None:
             {
                 "id": run_id,
                 "examined": datetime.now(UTC) if examined else None,
-                "policy": json.dumps({"rf": {"threshold": 6.0}}) if examined else None,
+                # Flat string values, as `eval-003` records them and as
+                # `DetectionPass` declares: a nested dict here parses on the
+                # way in and refuses on the way back out.
+                "policy": json.dumps({"RF-NOISE.threshold_db": "6.0"})
+                if examined
+                else None,
             },
         )
         connection.commit()

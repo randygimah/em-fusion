@@ -41,11 +41,13 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
+from app.api.v1.schemas.evidence import EvidenceAccount, build_evidence_account
 from app.api.v1.schemas.operational_picture import (
     OperationalPicture,
     SelectableHour,
     build_operational_picture,
 )
+from app.db.bundles import stored_bundles_for_run
 from app.db.findings import findings_for_run
 from app.db.repository import (
     detection_pass_for_run,
@@ -118,3 +120,52 @@ def get_selectable_hours(
     this list, is `op-009`.
     """
     return [SelectableHour.of(row) for row in selectable_hours(sessions)]
+
+
+@router.get("/operational-picture/evidence", tags=["operational-picture"])
+def get_evidence(
+    sessions: SessionFactory = Depends(get_sessionmaker),
+    run_id: int | None = Query(default=None, alias="run"),
+) -> EvidenceAccount | None:
+    """Why this hour's conclusions were reached. spec: api-015.
+
+    **Null means no detection pass examined this hour**, which is `api-012`'s
+    distinction at a second endpoint: whether anybody looked is answered by the
+    presence of the account and never by a number in it. An examined hour with
+    nothing to report is three empty lists, and the two must not be one answer.
+    An empty store is null on the same argument -- with no hour at all there is
+    nothing that could have been examined, and `api-002`'s rule is that a screen
+    which cannot render before the first run is a screen nobody can develop
+    against.
+
+    **No bundle is built here.** `anom-016` records that the pass does not fire
+    per request and that the baseline, at 11.2 s, is the reason; and a bundle
+    built under current settings served beside findings stored under the
+    recorded ones would be two sources for one event. An hour whose claim has no
+    stored bundle is reported as unexplained, which is the honest answer and the
+    state of 140 of the 240 claim-bearing hours in the store.
+
+    **Which hour is current is asked the same way the picture asks it** -- the
+    same two calls in the same order -- because two endpoints answering that
+    differently would show a panel belonging to another hour. An unknown run is
+    a 404 and never the newest, `api-013`'s sharpest failure case repeated
+    because it is the same mistake available at a second endpoint.
+
+    **A separate endpoint rather than a field on the picture**: it is read on
+    demand rather than every five seconds, it is an order of magnitude larger,
+    and the picture's shape is a contract two parity tests hold in both
+    directions.
+    """
+    run = latest_run(sessions) if run_id is None else run_summary(sessions, run_id)
+    if run is None and run_id is not None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"no scenario run {run_id} in the store",
+        )
+    if run is None or detection_pass_for_run(sessions, run.id) is None:
+        return None
+    return build_evidence_account(
+        run_id=run.id,
+        findings=findings_for_run(sessions, run.id),
+        bundles=stored_bundles_for_run(sessions, run.id),
+    )

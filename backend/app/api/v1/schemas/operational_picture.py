@@ -52,7 +52,7 @@ from app.dal.models import (
     SelectableRun,
     TrackPayload,
 )
-from app.detection.control import REGISTER, Key, Kind, Producer
+from app.detection.control import REGISTER, Key, Producer, reportable_keys
 from app.detection.findings import DetectionFinding
 from app.detection.fusion import ANOMALY_TYPE as INTERFERENCE_TYPE
 from app.detection.fusion import RULE_ID as FUSION_RULE
@@ -578,9 +578,7 @@ def _timeline(
     by field. The vocabulary is `ai-001`'s, shared with the grounding check and
     the scoring pack.
     """
-    reportable = {
-        key for key, producer in register.items() if producer.kind is Kind.REPORTABLE
-    }
+    reportable = reportable_keys(register)
     claims = [f for f in findings if (f.rule_id, f.finding_type) in reportable]
     # Ordered on the **datetime** and not on the rendered string, then by the
     # two fields that make the order total. The store returns rows in whatever

@@ -211,6 +211,24 @@ def build_register(*producers: Producer) -> Mapping[Key, Producer]:
     return by_key
 
 
+def reportable_keys(register: Mapping[Key, Producer]) -> frozenset[Key]:
+    """The pairs whose findings the ladder reports to a person.
+
+    One declaration, because there are now three consumers and the question
+    is the register's rather than any of theirs: `api-012`'s timeline, which
+    lists conclusions and not the ~138 discontinuities a quiet run holds,
+    and `api-015`, which has to account for every conclusion and therefore
+    has to know which findings are one. Derived here rather than spelled at
+    either, so a rule that becomes reportable reaches both with no edit --
+    and so the two cannot disagree about what a conclusion is, which would
+    put a claim on the timeline that the evidence endpoint never accounts
+    for.
+    """
+    return frozenset(
+        key for key, producer in register.items() if producer.kind is Kind.REPORTABLE
+    )
+
+
 #: Every detector the control knows about. Bands measured over corpus v2's
 #: sixty quiet runs, across all three of its waves -- see
 #: `measurements/corpus/quiet_run_background.log`. Wave 2 widened the two
