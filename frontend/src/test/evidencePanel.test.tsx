@@ -221,17 +221,28 @@ describe("an explained conclusion", () => {
     expect(panel().textContent ?? "").not.toContain("%");
   });
 
-  it("groups nothing itself, so two groups of one pair both render", () => {
-    // spec: op-010, api-015 — the grouping is the endpoint's. A panel that
-    // merged them would be a second implementation of it, free to drift.
+  it("renders one block per group it is given and merges nothing", () => {
+    // spec: op-010, api-015 — the grouping is the endpoint's, and a panel that
+    // re-derived it would be a second implementation free to drift. Asserted
+    // over four groups whose statements are IDENTICAL: merged on content, or
+    // re-grouped on anything but the pair the payload carries, this collapses.
+    //
+    // Two groups of ONE pair is deliberately not the input. api-015 refuses an
+    // ambiguous key and guarantees the pair unique within a bundle, so such a
+    // payload cannot arrive, and a panel keyed on the pair is right to assume
+    // it — testing for an impossible input would force an index key, which is
+    // the thing Biome forbids and the reason to look at this twice.
+    const same = { statements: [statement({ text: "one wording, four groups" })] };
     render(
       <EmEvidencePanel
         account={account({
           explained: [
             explained({
               evidence: [
-                group({ statements: [statement({ text: "first sentence" })] }),
-                group({ statements: [statement({ text: "second sentence" })] }),
+                group({ ...same }),
+                group({ ...same, findingType: "track_continuity_gap" }),
+                group({ ...same, findingType: "neighbour_nominal" }),
+                group({ ...same, findingType: "channel_adjacency" }),
               ],
             }),
           ],
@@ -239,7 +250,7 @@ describe("an explained conclusion", () => {
       />,
     );
 
-    expect(within(panel()).getAllByRole("listitem")).toHaveLength(2);
+    expect(within(panel()).getAllByRole("listitem")).toHaveLength(4);
   });
 
   it("writes a sentence for every finding type the builder can emit", () => {
@@ -268,6 +279,7 @@ describe("the three kinds of not-knowing", () => {
     kind: "not_applicable",
     statement: "the aircraft side was not consulted",
     subject: "track",
+    count: 1,
     ...over,
   });
 
@@ -318,6 +330,26 @@ describe("the three kinds of not-knowing", () => {
     for (const kind of ["not_applicable", "not_measurable", "measured_negative"]) {
       expect(panel()).not.toHaveTextContent(kind);
     }
+  });
+
+  it("shows how many identical absences the server collapsed", () => {
+    // spec: op-010, api-015, eval-007 — the collapsing is the endpoint's and
+    // the count is a fact it computed. Rendered rather than re-derived: a
+    // panel counting duplicates itself would be a second implementation of
+    // the factoring, free to disagree with the one in the payload.
+    render(
+      <EmEvidencePanel
+        account={account({
+          explained: [
+            explained({
+              uncertainties: [absence({ kind: "measured_negative", count: 28 })],
+            }),
+          ],
+        })}
+      />,
+    );
+
+    expect(panel()).toHaveTextContent("28");
   });
 
   it("renders each statement untruncated", () => {

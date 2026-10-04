@@ -1,7 +1,12 @@
 import { render, screen, waitFor, within, fireEvent } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../App";
-import { DEFAULT_POLL_INTERVAL_MS, SYSTEM_HEALTH_INTERVAL_MS, SYSTEM_HEALTH_PATH } from "../lib/api";
+import {
+  DEFAULT_POLL_INTERVAL_MS,
+  OPERATIONAL_PICTURE_PATH,
+  SYSTEM_HEALTH_INTERVAL_MS,
+  SYSTEM_HEALTH_PATH,
+} from "../lib/api";
 import { EmSystemStatus } from "../components/em/EmSystemStatus";
 import type { Service } from "../hooks/useSystemHealth";
 import operationalPictureMock from "../mocks/operationalPictureMock";
@@ -109,11 +114,17 @@ describe("the strip, and where it reads from", () => {
   it("does not read the picture payload", () => {
     // The payload field it was specified against is gone (api-014), and reading
     // the picture here would need its poll on every screen.
+    //
+    // The exact route, not `includes`. This filter was written when the
+    // picture's path belonged to one endpoint, and excluded `/hours` by name
+    // when op-009 added a second; op-010's `/evidence` then made it count two
+    // calls again. Spelling the path as a literal here is also why a search for
+    // the constant missed this site — the fourth of four.
     render(<App />);
 
     const pictureCalls = fetchMock.mock.calls
       .map((c) => String(c[0]))
-      .filter((u) => u.includes("operational-picture") && !u.includes("/hours"));
+      .filter((u) => u.split("?")[0] === OPERATIONAL_PICTURE_PATH);
     expect(pictureCalls.length).toBeLessThanOrEqual(1);
   });
 

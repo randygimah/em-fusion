@@ -5,6 +5,7 @@ import {
   DEFAULT_POLL_INTERVAL_MS,
   EVIDENCE_PATH,
   OPERATIONAL_PICTURE_PATH,
+  SCENARIO_RUNS_PATH,
   SELECTABLE_HOURS_PATH,
 } from "../lib/api";
 import operationalPicture from "../mocks/operationalPictureMock";
@@ -72,6 +73,10 @@ const answer = (url: unknown) => {
   if (path === EVIDENCE_PATH) return ok(served);
   if (path === SELECTABLE_HOURS_PATH) return ok([{ runId: 420, observedFrom: null, observedTo: null, examined: true }]);
   if (path === OPERATIONAL_PICTURE_PATH) return ok(picture);
+  // The other screen's own endpoint, because one of these tests navigates
+  // there. Answered by route rather than by fallthrough — a fallthrough is how
+  // this helper would serve a health body to a screen expecting a run list.
+  if (path === SCENARIO_RUNS_PATH) return ok([]);
   return ok({ status: "ok", schema: "at-head" });
 };
 

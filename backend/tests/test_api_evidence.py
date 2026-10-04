@@ -567,6 +567,47 @@ def test_each_uncertainty_crosses_with_its_kind_and_its_statement_verbatim() -> 
     ]
 
 
+def test_identical_absences_collapse_to_one_carrying_a_count() -> None:
+    """Found by looking at the running screen, not by a test. A bundle holds
+    one uncertainty per suppressed episode, and run 102 rendered the same
+    sentence three times -- the store holds bundles repeating one 28 times.
+    `eval-007`'s factoring, applied to the other half of the bundle."""
+    # spec: api-015, eval-007, evb-001
+    from app.detection.bundle import Uncertainty
+
+    one = Uncertainty(
+        kind=UncertaintyKind.MEASURED_NEGATIVE,
+        statement="a deviation on channel 4 of RF-07 lasted 1 reading(s)",
+        subject="RF-07:4",
+    )
+    bundle = replace(fault(), known_uncertainties=(one, one, one))
+
+    claim = account(findings=[claim_for(bundle)], bundles=[(7, bundle)]).explained[0]
+
+    assert len(claim.uncertainties) == 1
+    assert claim.uncertainties[0].count == 3
+    assert claim.uncertainties[0].statement == one.statement
+
+
+def test_absences_collapse_on_the_whole_triple_and_never_on_the_statement() -> None:
+    """Two kinds of not-knowing worded alike are still two claims: *never
+    consulted* and *consulted and could not tell* are different facts, and
+    merging them on the sentence would state one where there were two."""
+    # spec: api-015, evb-001
+    from app.detection.bundle import Uncertainty
+
+    worded_alike = [
+        Uncertainty(kind=kind, statement="the aircraft side is silent", subject="track")
+        for kind in (UncertaintyKind.NOT_APPLICABLE, UncertaintyKind.NOT_MEASURABLE)
+    ]
+    bundle = replace(fault(), known_uncertainties=tuple(worded_alike))
+
+    claim = account(findings=[claim_for(bundle)], bundles=[(7, bundle)]).explained[0]
+
+    assert [u.kind for u in claim.uncertainties] == ["not_applicable", "not_measurable"]
+    assert [u.count for u in claim.uncertainties] == [1, 1]
+
+
 def test_the_kind_crosses_by_enum_member_name_and_is_never_title_cased() -> None:
     """`ai-002`'s trap: `.title()` launders any word at all into something
     that looks valid and fails a layer later, with the bundle no longer in

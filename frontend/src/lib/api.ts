@@ -138,16 +138,53 @@ export const fetchSelectableHours = async (baseUrl = "", signal?: AbortSignal): 
 // keep it that way. A second caller is how changing an endpoint stops being a
 // one-file change.
 
-// Stub: `op-010` is specified and unbuilt.
+// ---------------------------------------------------------------- evidence
+//
+// Why this hour's conclusions were reached. spec: api-015, op-010.
+
 export const EVIDENCE_PATH = "/api/v1/operational-picture/evidence";
 
+/**
+ * The evidence account for one hour, or throw.
+ *
+ * **`null` is an answer and not a failure.** The endpoint serves it when no
+ * detection pass has examined the hour, which is `api-012`'s distinction: the
+ * presence of the account is what says a detector looked, never a number in
+ * it. So this returns `null` and the caller tells it apart from a thrown
+ * error — the panel says a different sentence for each.
+ *
+ * With no run the endpoint serves the hour the picture serves with no run, so
+ * the two cannot disagree about which hour is current.
+ */
 export const fetchEvidenceAccount = async (
-  _runId: number | null = null,
-  _baseUrl = "",
-  _signal?: AbortSignal,
+  runId: number | null = null,
+  baseUrl = "",
+  signal?: AbortSignal,
 ): Promise<EvidenceAccount | null> => {
-  throw new Error("op-010 is specified and unbuilt");
+  const query = runId === null ? "" : `?run=${encodeURIComponent(runId)}`;
+  const response = await fetch(`${baseUrl}${EVIDENCE_PATH}${query}`, { signal });
+  if (!response.ok) {
+    throw new Error(`${EVIDENCE_PATH} responded ${response.status}`);
+  }
+  const payload = await response.json();
+  // `fetchSelectableHours`'s rule, and it earned itself here: a body that is
+  // neither null nor an account is another endpoint's answer or an error body,
+  // and cast blindly it reaches the panel as an object whose lists are
+  // `undefined` — which crashes the render instead of saying it could not load.
+  // Found by this item's own tests, through four OTHER suites whose fetch mocks
+  // answer every url with a picture payload.
+  if (payload !== null && !isAccount(payload)) {
+    throw new Error(`${EVIDENCE_PATH} answered something that is not an account`);
+  }
+  return payload as EvidenceAccount | null;
 };
+
+const isAccount = (payload: unknown): boolean =>
+  typeof payload === "object" &&
+  payload !== null &&
+  ["explained", "unexplained", "unclaimed"].every((list) =>
+    Array.isArray((payload as Record<string, unknown>)[list]),
+  );
 
 export const SCENARIO_RUNS_PATH = "/api/v1/scenario/runs";
 export const SCENARIO_START_PATH = "/api/v1/scenario/start";

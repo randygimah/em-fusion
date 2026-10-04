@@ -85,6 +85,11 @@ export interface KnownUncertainty {
   kind: AbsenceKind;
   statement: string;
   subject: string;
+  // How many identical absences this entry collapsed. A bundle holds one per
+  // suppressed episode and real ones repeat a single sentence up to 28 times,
+  // so the server factors them the same way it factors the evidence. Found by
+  // looking at the running screen rather than by a test.
+  count: number;
 }
 
 // A competing conclusion the precedence ladder rejected. Shown as rejected,

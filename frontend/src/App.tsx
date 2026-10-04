@@ -5,6 +5,7 @@ import { EmSystemStatus } from "./components/em/EmSystemStatus";
 import { useCurrentScreen } from "./hooks/useCurrentScreen";
 import { useRailCollapsed } from "./hooks/useRailCollapsed";
 import { useScenarioControl } from "./hooks/useScenarioControl";
+import { useEvidenceAccount } from "./hooks/useEvidenceAccount";
 import { useOperationalPicture } from "./hooks/useOperationalPicture";
 import { useSelectableHours } from "./hooks/useSelectableHours";
 import { useSystemHealth } from "./hooks/useSystemHealth";
@@ -33,10 +34,14 @@ const OperationalPictureRoute = () => {
   const [pinnedRun, setPinnedRun] = useState<number | null>(null);
   const hours = useSelectableHours();
   const { picture, degraded } = useOperationalPicture(pinnedRun);
+  // Keyed on the same pinned hour as the picture, so the evidence on screen
+  // always belongs to the conclusion above it (spec: op-010).
+  const evidence = useEvidenceAccount(pinnedRun);
 
   return (
     <OperationalPictureScreen
       degraded={degraded}
+      evidence={evidence}
       hours={hours}
       onFollowNewest={() => setPinnedRun(null)}
       onSelectHour={(runId) => setPinnedRun(Number.isNaN(runId) ? null : runId)}

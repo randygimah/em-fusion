@@ -157,6 +157,13 @@ class KnownUncertainty(BaseModel):
     kind: Literal["not_applicable", "not_measurable", "measured_negative"]
     statement: str
     subject: str
+    #: How many identical absences this entry collapsed. `eval-007`'s factoring
+    #: applied to the other half of the bundle, and found by looking at the
+    #: running screen rather than by a test: a bundle holds one entry per
+    #: suppressed episode, and real ones repeat a single sentence up to 28
+    #: times. Nothing is shortened or rewritten -- a count of the items
+    #: collapsed is the only arithmetic here.
+    count: int
 
 
 class SupersededClaim(BaseModel):
@@ -338,6 +345,36 @@ def _groups(bundle: EvidenceBundle) -> list[EvidenceGroup]:
     return groups
 
 
+def _absences(bundle: EvidenceBundle) -> list[KnownUncertainty]:
+    """The bundle's uncertainties, identical ones collapsed with a count.
+
+    Collapsed on the whole `(kind, statement, subject)` triple and never on
+    the statement alone: the statement is the only part a person can weigh,
+    and two kinds of not-knowing worded alike are still two claims.
+
+    In the order they first appear, which is the builder's -- the kinds are
+    emitted in the order the rules considered them, and sorting would put a
+    design decision after a measurement.
+    """
+    order: list[tuple[str, str, str]] = []
+    counts: dict[tuple[str, str, str], int] = {}
+    for unknown in bundle.known_uncertainties:
+        key = (unknown.kind.value, unknown.statement, unknown.subject)
+        if key not in counts:
+            order.append(key)
+            counts[key] = 0
+        counts[key] += 1
+    return [
+        KnownUncertainty(
+            kind=kind,  # type: ignore[arg-type]
+            statement=statement,
+            subject=subject,
+            count=counts[(kind, statement, subject)],
+        )
+        for kind, statement, subject in order
+    ]
+
+
 def _explained(bundle_id: int, bundle: EvidenceBundle) -> ExplainedClaim:
     return ExplainedClaim(
         bundleId=bundle_id,
@@ -353,14 +390,7 @@ def _explained(bundle_id: int, bundle: EvidenceBundle) -> ExplainedClaim:
         # its order from a set's iteration would differ between processes.
         dataModes=sorted(mode.value for mode in bundle.data_modes),
         evidence=_groups(bundle),
-        uncertainties=[
-            KnownUncertainty(
-                kind=unknown.kind.value,
-                statement=unknown.statement,
-                subject=unknown.subject,
-            )
-            for unknown in bundle.known_uncertainties
-        ],
+        uncertainties=_absences(bundle),
         superseded=[
             SupersededClaim(
                 ruleId=loser.rule_id,
