@@ -41,6 +41,19 @@ from findings which are derived from the seed, so appending would leave a
 superseded bundle beside a current one with nothing on either to say which
 is which. Writing an empty set therefore clears what was there -- the same
 argument at zero, and the case a run re-detected as quiet produces.
+
+**And that replace has one thing it may not touch** (`db-011`). It deletes
+before it inserts, `hypotheses.bundle_id` is declared ON DELETE CASCADE,
+and that column is the only link the `hypotheses` table has to a run --
+there is no `scenario_run_id` on it. So replacing a cited run's bundles
+deletes the hypothesis rows citing them with no error anywhere: the DELETE
+succeeds, the cascade fires, and the damage is visible only as rows that
+are gone. On the store of record that is 155 rows on 20 bundles across runs
+102-175, which is `eval-004`'s pre-registered sample and the one population
+here that cannot be regenerated. `_refuse_if_cited` is checked before
+resolution and decided from the store; deleting a scenario run still
+cascades, which is the point of putting the refusal here rather than at the
+foreign key.
 """
 
 from __future__ import annotations
@@ -87,17 +100,57 @@ class ResolutionError(BundleError):
 
 
 class CitedBundleError(BundleError):
-    """A bundle another row cites, offered to a stage that replaces. db-011.
+    """A stored bundle another row cites, handed to a stage that replaces.
 
-    Stub: `db-011` is specified and unbuilt.
+    A `BundleError` so a caller catching bundle problems catches it, and
+    deliberately **not** a `ResolutionError`: that one means a citation does
+    not identify exactly one observation, which is a defect in the bundle,
+    and `measurements/corpus/bundle_end_to_end.py` catches it by name to
+    report a traceability failure. A protected population reported as a
+    traceability defect sends the reader to the wrong half of the system.
     """
 
 
 def citing_hypotheses(
     session_factory: sessionmaker[Session], run_id: int
 ) -> dict[int, int]:
-    """Stub: `db-011` is specified and unbuilt."""
-    raise NotImplementedError("db-011")
+    """Which of this run's bundles a hypothesis cites, and how many cite each.
+
+    **Counts rather than a boolean**, for two reasons. The refusal has to
+    print the number, because a reader meeting it must tell a protected
+    population from a bug and the two look identical until the numbers are
+    there -- `conftest`'s own argument for the database guard's named
+    counts. And one bundle legitimately carries several hypotheses: a model
+    arm's answer and the template that replaced it after a grounding
+    failure, which is exactly why `db-002` appends rather than replaces.
+
+    A bundle nothing cites is **omitted and never carried as a zero**. The
+    mapping is the set of reasons to refuse, so an entry meaning "no
+    reason" is one an implementation can read as a reason by testing for
+    presence -- and `if cited:` is how the guard below asks.
+
+    Ordered by bundle id. Not because anything downstream needs it, but
+    because this reaches a human in an error message, and an unordered
+    result takes its order from the heap -- which this repository has had
+    to fix three times.
+    """
+    with session_factory.begin() as session:
+        rows = (
+            session.execute(
+                text(
+                    "SELECT h.bundle_id AS bundle_id, count(*) AS citations "
+                    "FROM hypotheses h "
+                    "  JOIN evidence_bundles b ON b.id = h.bundle_id "
+                    "WHERE b.scenario_run_id = :run "
+                    "GROUP BY h.bundle_id "
+                    "ORDER BY h.bundle_id"
+                ),
+                {"run": run_id},
+            )
+            .mappings()
+            .all()
+        )
+    return {int(row["bundle_id"]): int(row["citations"]) for row in rows}
 
 
 def _ewkt(location: Location) -> str:
@@ -299,6 +352,56 @@ def _match_track(
 # ----------------------------------------------------------------- persistence
 
 
+def _refuse_if_cited(
+    session_factory: sessionmaker[Session], scenario_run_id: int
+) -> None:
+    """Refuse to replace a run's bundles while a hypothesis cites one. db-011.
+
+    **Before resolution, not merely before the write.** `evb-002` resolves
+    every citation with a query before it will store anything, which is the
+    whole point of that item -- and a refusal decidable from the store
+    alone must not pay for it first. Asserted by which error comes back
+    when a cited run is handed an unresolvable bundle.
+
+    **Decided from the store and never from an argument.** No `force`, no
+    allowlist, no module-level set of protected run ids: `api-013` rejected
+    exactly that for the hour chooser, on the grounds that it replaces a
+    structural guarantee with a convention somebody has to know. The fact
+    lives in `hypotheses.bundle_id`, so a twenty-first cited bundle
+    protects itself.
+
+    **The unit of refusal is the run**, because the unit of the delete is
+    the run. Writing the uncited bundles and skipping the cited one would
+    delete both and insert one, which is the damage this prevents wearing
+    the appearance of a partial success.
+
+    **Writing an empty set is the same act.** `evb-002` makes a zero-bundle
+    write clear what was there -- the replace rule at zero, and the state a
+    run re-detected as quiet produces -- which on a cited run is the
+    identical cascade with nothing inserted afterwards. A guard asserted
+    only over a non-empty list would leave the worst case open.
+    """
+    cited = citing_hypotheses(session_factory, scenario_run_id)
+    if not cited:
+        return
+    total = sum(cited.values())
+    rows = "is" if total == 1 else "es"
+    names = ", ".join(str(bundle_id) for bundle_id in cited)
+    raise CitedBundleError(
+        f"refusing to replace the evidence bundles of run {scenario_run_id}: "
+        f"{total} hypothes{rows} cite {len(cited)} of them ({names}). The "
+        "write replaces per run (`db-008`), `hypotheses.bundle_id` is "
+        "declared ON DELETE CASCADE, and that column is the only link the "
+        f"`hypotheses` table has to a run -- so this would delete {total} "
+        f"stored hypothes{rows} and raise nothing anywhere. Those rows cannot "
+        "be regenerated: a model call consumed money and produced one "
+        "specific response, which is why `db-002` appends rather than "
+        "replaces. Deleting the scenario run itself still cascades, "
+        "deliberately; what is refused here is replacement by a "
+        "derived-data stage."
+    )
+
+
 def save_bundles(
     session_factory: sessionmaker[Session],
     *,
@@ -322,6 +425,8 @@ def save_bundles(
                 "event under another's id, and the replace below would delete it "
                 "the next time that run was generated."
             )
+
+    _refuse_if_cited(session_factory, scenario_run_id)
 
     resolved = resolve_bundles(session_factory, bundles)
     rows = [_row(bundle) for bundle in resolved]

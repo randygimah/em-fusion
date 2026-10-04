@@ -244,8 +244,8 @@ def test_the_refusal_names_the_run_the_bundles_and_how_many_rows_cite_them(
     `conftest`'s own argument for the database guard's named counts."""
     # spec: db-011
     stored = store_a_bundle(migrated_database, factory)
-    store(factory, bundle_id=stored, result=template_result())
-    store(factory, bundle_id=stored, result=template_result())
+    for _ in range(3):
+        store(factory, bundle_id=stored, result=template_result())
 
     with pytest.raises(CitedBundleError) as refused:
         save_bundles(factory, scenario_run_id=RUN_ID, bundles=[here()])
@@ -253,7 +253,10 @@ def test_the_refusal_names_the_run_the_bundles_and_how_many_rows_cite_them(
     message = str(refused.value)
     assert str(RUN_ID) in message
     assert str(stored) in message
-    assert "2" in message
+    # Three rather than two, and the noun as well as the digit: RUN_ID is
+    # 8812, so `"2" in message` would have passed on the run id alone --
+    # an assertion that looks like it checks the count and does not.
+    assert "3 hypothes" in message
 
 
 @pytest.mark.database
