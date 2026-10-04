@@ -86,6 +86,20 @@ class ResolutionError(BundleError):
     """
 
 
+class CitedBundleError(BundleError):
+    """A bundle another row cites, offered to a stage that replaces. db-011.
+
+    Stub: `db-011` is specified and unbuilt.
+    """
+
+
+def citing_hypotheses(
+    session_factory: sessionmaker[Session], run_id: int
+) -> dict[int, int]:
+    """Stub: `db-011` is specified and unbuilt."""
+    raise NotImplementedError("db-011")
+
+
 def _ewkt(location: Location) -> str:
     """A point as EWKT text, longitude first.
 
