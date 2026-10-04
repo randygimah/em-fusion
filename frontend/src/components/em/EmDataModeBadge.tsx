@@ -1,3 +1,5 @@
+import { cn } from "../../lib/utils";
+
 interface Props {
   /** Layout only. See the note below on why this is not an input. */
   collapsed?: boolean;
@@ -39,15 +41,32 @@ const COLLAPSED_CLAIM = "NOT LIVE";
 export const EmDataModeBadge = ({ collapsed = false }: Props) => (
   <div
     aria-label={STANDING_CLAIM}
-    className="flex items-center gap-2 border border-[#4d8eff]/40 bg-[#00285d]/60 px-2 py-1"
+    className={cn(
+      "flex items-center border border-[#4d8eff]/40 bg-[#00285d]/60 py-1",
+      // The collapsed rail is 56px wide with 12px of padding each side, which
+      // leaves 32px. Found by looking at the running screen: with the dot and
+      // the expanded padding, NOT LIVE wrapped and the E overflowed the rail's
+      // own border. No test could have caught it — the text was in the DOM and
+      // the accessible name was correct, which is the third kind of blind spot
+      // this project has recorded. So the dot goes, the padding tightens, and
+      // the two words centre on two lines.
+      collapsed ? "justify-center px-0.5" : "gap-2 px-2",
+    )}
     role="status"
     title={STANDING_CLAIM}
   >
+    {!collapsed && (
+      <span
+        aria-hidden="true"
+        className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#4cd7f6]"
+      />
+    )}
     <span
-      aria-hidden="true"
-      className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#4cd7f6]"
-    />
-    <span className="font-mono text-[9px] font-bold uppercase leading-tight tracking-[0.05em] text-[#d8e2ff]">
+      className={cn(
+        "font-mono text-[9px] font-bold uppercase leading-tight tracking-[0.05em] text-[#d8e2ff]",
+        collapsed && "text-center",
+      )}
+    >
       {collapsed ? COLLAPSED_CLAIM : STANDING_CLAIM}
     </span>
   </div>
