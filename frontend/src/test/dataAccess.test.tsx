@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../App";
-import { DEFAULT_POLL_INTERVAL_MS, OPERATIONAL_PICTURE_PATH, SELECTABLE_HOURS_PATH } from "../lib/api";
+import { DEFAULT_POLL_INTERVAL_MS, OPERATIONAL_PICTURE_PATH } from "../lib/api";
 import operationalPicture from "../mocks/operationalPictureMock";
 import type { OperationalPicture } from "../types/operationalPicture";
 
@@ -28,14 +28,15 @@ const failure = (status: number) =>
 
 let fetchMock: ReturnType<typeof vi.fn>;
 
-// Only the picture's own calls. spec: op-009 amended this file: the route now
-// also fetches the index of selectable hours, whose path has the picture's as a
-// prefix — so counting every call, which was the same thing while one endpoint
-// existed, stopped measuring what these tests were written to measure.
+// Exact route, not `includes`. The prefix form was equivalent only while one
+// endpoint existed: `op-009` added `/hours` and `op-010` adds `/evidence`, both
+// carrying the picture's own path as a prefix, and both broke these counts in
+// turn. Comparing the route rather than searching the string is what stops a
+// fourth sub-path doing it a third time.
 const pictureCalls = () =>
   fetchMock.mock.calls
     .map((call) => String(call[0]))
-    .filter((url) => url.includes(OPERATIONAL_PICTURE_PATH) && !url.includes(SELECTABLE_HOURS_PATH));
+    .filter((url) => url.split("?")[0] === OPERATIONAL_PICTURE_PATH);
 
 beforeEach(() => {
   fetchMock = vi.fn().mockResolvedValue(ok(served));

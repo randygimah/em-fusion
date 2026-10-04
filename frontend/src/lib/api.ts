@@ -1,3 +1,4 @@
+import type { EvidenceAccount } from "../types/evidence";
 import type { OperationalPicture, SelectableHour } from "../types/operationalPicture";
 import type { InFlightBatch, ScenarioConfiguration, ScenarioRunRecord } from "../types/scenarioControl";
 
@@ -136,6 +137,17 @@ export const fetchSelectableHours = async (baseUrl = "", signal?: AbortSignal): 
 // `src/test/transport.test.ts` scans every other module's scrubbed source to
 // keep it that way. A second caller is how changing an endpoint stops being a
 // one-file change.
+
+// Stub: `op-010` is specified and unbuilt.
+export const EVIDENCE_PATH = "/api/v1/operational-picture/evidence";
+
+export const fetchEvidenceAccount = async (
+  _runId: number | null = null,
+  _baseUrl = "",
+  _signal?: AbortSignal,
+): Promise<EvidenceAccount | null> => {
+  throw new Error("op-010 is specified and unbuilt");
+};
 
 export const SCENARIO_RUNS_PATH = "/api/v1/scenario/runs";
 export const SCENARIO_START_PATH = "/api/v1/scenario/start";

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../App";
 import {
   DEFAULT_POLL_INTERVAL_MS,
+  EVIDENCE_PATH,
   OPERATIONAL_PICTURE_PATH,
   SCENARIO_RUNS_PATH,
   SELECTABLE_HOURS_PATH,
@@ -72,15 +73,23 @@ let fetchMock: ReturnType<typeof vi.fn>;
 
 const route = (input: RequestInfo | URL): Response => {
   const url = String(input);
-  if (url.includes(SELECTABLE_HOURS_PATH)) return ok(HOURS);
+  const path = url.split("?")[0];
+  if (path === SELECTABLE_HOURS_PATH) return ok(HOURS);
+  // `op-010` added a second sub-path under the picture's own, and this helper
+  // served EVERY unrecognised url a picture payload — so the evidence endpoint
+  // was answered with a picture, which its fetcher accepts and renders as an
+  // account with no claims. Answered by route rather than by fallthrough.
+  if (path === EVIDENCE_PATH) return ok(null);
   const match = /[?&]run=(\d+)/.exec(url);
   return ok(picture(match ? Number(match[1]) : 420));
 };
 
+// Exact route, not `includes`: see the note in `dataAccess.test.tsx`. Three
+// endpoints now share this path as a prefix.
 const pictureCalls = () =>
   fetchMock.mock.calls
     .map((call) => String(call[0]))
-    .filter((url) => url.includes(OPERATIONAL_PICTURE_PATH) && !url.includes(SELECTABLE_HOURS_PATH));
+    .filter((url) => url.split("?")[0] === OPERATIONAL_PICTURE_PATH);
 
 // `@testing-library/user-event` is not a dependency here and a select is not
 // worth adding one for: every other suite in this project drives its controls

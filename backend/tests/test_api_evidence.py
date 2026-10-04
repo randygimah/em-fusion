@@ -56,8 +56,15 @@ from app.api.v1.schemas.evidence import (
     NOT_BUNDLED,
     EvidenceAccount,
     EvidenceError,
+    EvidenceGroup,
+    EvidenceStatement,
+    ExplainedClaim,
+    KnownUncertainty,
+    UnclaimedBundle,
+    UnexplainedClaim,
     build_evidence_account,
 )
+from app.api.v1.schemas.evidence import SupersededClaim as SupersededClaimModel
 from app.dal.models import DataMode, Location
 from app.detection.bundle import EvidenceBundle, Grounding, UncertaintyKind
 from app.detection.control import REGISTER, Kind, Producer, build_register
@@ -65,6 +72,7 @@ from app.detection.findings import DetectionFinding
 from app.main import app
 from app.scenario.incident import ScenarioType
 from tests.conftest import requires_database
+from tests.contracts import contract_paths, interfaces, read_contract, union_members
 from tests.test_ai_template import fault_bundle, zone_bundle
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
@@ -854,3 +862,93 @@ def test_an_empty_store_is_null_rather_than_a_refusal(
 
     assert response.status_code == 200
     assert response.json() is None
+
+
+# --------------------------------------------------------------- contract parity
+#
+# `op-010`'s half, living in the backend suite because the TypeScript parser
+# exists once and on this side. Where a file lives and which suite guards it are
+# different facts -- the lesson `measurements/README.md` records as its fifth
+# hazard, met again when a contract mutant was dispatched to vitest, which has
+# no parser.
+
+CONTRACT_PATHS = contract_paths("evidence.ts")
+
+MODELS = {
+    "EvidenceStatement": EvidenceStatement,
+    "EvidenceGroup": EvidenceGroup,
+    "KnownUncertainty": KnownUncertainty,
+    "SupersededClaim": SupersededClaimModel,
+    "ExplainedClaim": ExplainedClaim,
+    "UnexplainedClaim": UnexplainedClaim,
+    "UnclaimedBundle": UnclaimedBundle,
+    "EvidenceAccount": EvidenceAccount,
+}
+
+
+def _model_fields(model: type) -> set[str]:
+    return set(model.model_json_schema(by_alias=True)["properties"])  # type: ignore[attr-defined]
+
+
+def test_the_evidence_contract_is_read_rather_than_skipped() -> None:
+    """A parity assertion over a file that cannot be found is a comparison of
+    two empty sets, which passes. The helper raises; this says so."""
+    # spec: op-010, api-015
+    with pytest.raises(AssertionError, match="not found"):
+        read_contract((Path("/nowhere/evidence.ts"),))
+
+
+def test_the_parser_finds_every_interface_the_contract_declares() -> None:
+    # spec: op-010, api-015
+    declared = interfaces(read_contract(CONTRACT_PATHS))
+
+    assert set(declared) == set(MODELS)
+    assert all(fields for fields in declared.values())
+
+
+@pytest.mark.parametrize("name", sorted(MODELS))
+def test_each_evidence_interface_and_its_model_carry_the_same_fields(name: str) -> None:
+    # spec: op-010, api-015 -- in both directions, which is what makes a
+    # removal as checkable as an addition
+    declared = interfaces(read_contract(CONTRACT_PATHS))
+
+    assert set(declared[name]) == _model_fields(MODELS[name])
+
+
+def test_every_finding_type_the_builder_emits_is_declared_on_the_screen() -> None:
+    """The exhaustiveness guarantee, across the two suites.
+
+    A finding type with no sentence written for it reaches an analyst as the
+    raw token -- `rf_noise_deviation` on screen -- which is the defect
+    `op-003` removed from the summary panel, and the evidence items carry
+    five types that panel never saw. The union in the contract is the shared
+    declaration: this test holds it against what the builder actually emits,
+    and the frontend's copy map is typed on it, so a missing sentence is a
+    type error there rather than a token here.
+
+    Note `eval-009`'s glossary defines the same seven types for the human
+    marker. The wordings are deliberately different -- a glossary entry says
+    what a term *denotes* at length, a panel heading labels a block -- but a
+    type appearing in one and not the other is a gap, which is why they are
+    both derived from the builder rather than from each other.
+    """
+    # spec: op-010, op-003, api-015, eval-009
+    emitted = {
+        item.finding_type
+        for bundle in (fault(), zone())
+        for item in bundle.evidence
+    }
+
+    declared = set(union_members(read_contract(CONTRACT_PATHS), "EvidenceFindingType"))
+
+    assert emitted == declared
+
+
+def test_the_contract_declares_the_two_reasons_as_closed_sets() -> None:
+    """`api-012`'s typed-absence rule at the contract. A reason typed as a
+    bare string lets a second one arrive with no sentence written for it."""
+    # spec: op-010, api-012, api-015
+    source = read_contract(CONTRACT_PATHS)
+
+    assert union_members(source, "UnexplainedReason") == (NOT_BUNDLED,)
+    assert union_members(source, "UnclaimedReason") == (NO_CURRENT_CLAIM,)
