@@ -150,7 +150,7 @@ scoped to the corpus of record would not notice a generator that had stopped rec
 | `mutation/mutate_evb001_bundle.py` | **Are `evb-001`'s tests load-bearing?** 34 mutants over the typed-absence boundary, the per-item data mode, the unit of a bundle, the frequency axis, and the scoping of superseded claims. | **34 of 34 killed** — after a first pass killed only 22. The 10 genuine survivors were **all scoping rules**: evidence from another receiver, another window, another zone. The suite had tested what goes *into* a bundle and barely what must stay *out*, which is the more dangerous half, because a bundle carrying a neighbouring event's evidence is not malformed — it is wrong. 7 tests added, 2 tightened. |
 | `ladder_suppression.py` | **Does `anom-013`'s suppression ever fire?** `ladder_end_to_end.py`'s "conflicting" counter records runs reporting two anomaly *types* and never inspects `Resolution.suppressed`, so its zero says nothing about suppression. | **Never. 188 claims bid, 0 suppressed.** `gnss-degradation` bids 60 over 60 runs; `rf-sensor-fault` and `ambiguous-mixed-evidence` bid **64** each, so four runs of each produce two claims — two claims in a run is not rare, two claims **for one zone** has never happened. Read the ladder's 60/60 as evidence it declines to merge separate events, **not** that it arbitrates competing ones. |
 | `evidence_ref_uniqueness.py` | **Does a finding's `evidence_refs` coordinate identify exactly one observation?** Decides whether `evb-002` resolves by coordinate or the `from_*` functions must record row ids. Also checks the ISO round trip and what one lookup costs. | **Unique, everywhere.** RF by `sensor_id + channel_index + timestamp` and track by `aircraft_id + timestamp` are unique within a run across **both** corpora — 20.7M rows, worst collision 1, **zero** colliding coordinates. ISO round trip exact on 2,000 sampled rows. So `evb-002` resolves by coordinate and no rule adapter changes. **Cost: 64.7 ms per lookup**, index scan on `ix_observations_scenario_run_id` with **38,424 rows removed by filter** — a composite index would be wanted if bundles carry many items. **Superseded on that last point by `bundle_ref_cost.py`:** batching removes the cost the index would have removed, so the index stays a candidate rather than a prerequisite. |
-| `backfill_bundles.py` | **Give the 140 hours that report a conclusion with no evidence their accounts.** `evb-003`'s fill, and **the only script here that writes to the store** -- it runs the shipped pass (`assess`) over every run holding a claim with no bundle, plus four holding a bundle matching no claim, and reimplements nothing. Needs `BACKFILL_CONFIRM=yes`, which the Makefile forwards and which no other script reads. Each run's stored reported claims are read **before** the pass and compared against what it stored; a disagreement **stops the whole fill** rather than skipping the run, so at most one run is ever affected. Run range named in the file, never taken from the store's bounds. | **Blocked at run 71 of 144, and the stop is the result** (`.log`). The rebuilt claim's window begins 20 s -- two sampling intervals -- before the stored one, with identical thresholds. The cause is the **baseline**: `measure_normality` takes every quiet run the store holds, so the normality a run is scored against depends on how large the store was when the pass ran, and by the recorded policy this store holds findings written under **two** -- 378 runs at 60 quiet runs, 22 at 100. `anom-016` named that hazard when it put the quiet runs on the record and `eval-003`'s policy column is what made it visible; neither prevents it, and nothing on the screen or in `eval-002`'s table says which baseline a figure was taken under. It also inverts the reading the item started from: the four bundles matching no claim are **not** stale -- run 71's, written 2026-09-19, agrees with today's rebuild to the second, and it is the stored *finding* that came from the other baseline. The two runs written before the stop were restored from a dump taken beforehand; the store is byte-for-byte as it was. |
+| `backfill_bundles.py` | **Give the 140 hours that report a conclusion with no evidence their accounts.** `evb-003`'s fill, **superseded by `rescore_baseline.py`** (`anom-017`), which stores every bundle as a side effect; kept because its stop is the finding that produced `anom-017`. It wrote to the store -- it runs the shipped pass (`assess`) over every run holding a claim with no bundle, plus four holding a bundle matching no claim, and reimplements nothing. Needs `BACKFILL_CONFIRM=yes`, which the Makefile forwards and which no other script reads. Each run's stored reported claims are read **before** the pass and compared against what it stored; a disagreement **stops the whole fill** rather than skipping the run, so at most one run is ever affected. Run range named in the file, never taken from the store's bounds. | **Blocked at run 71 of 144, and the stop is the result** (`.log`). The rebuilt claim's window begins 20 s -- two sampling intervals -- before the stored one, with identical thresholds. The cause is the **baseline**: `measure_normality` takes every quiet run the store holds, so the normality a run is scored against depends on how large the store was when the pass ran, and by the recorded policy this store holds findings written under **two** -- 378 runs at 60 quiet runs, 22 at 100. `anom-016` named that hazard when it put the quiet runs on the record and `eval-003`'s policy column is what made it visible; neither prevents it, and nothing on the screen or in `eval-002`'s table says which baseline a figure was taken under. It also inverts the reading the item started from: the four bundles matching no claim are **not** stale -- run 71's, written 2026-09-19, agrees with today's rebuild to the second, and it is the stored *finding* that came from the other baseline. The two runs written before the stop were restored from a dump taken beforehand; the store is byte-for-byte as it was. |
 | `bundle_end_to_end.py` | **Do evidence bundles work, on real hours, through the shipped modules?** Detect, resolve the ladder, build, save through `app/db/bundles.py`, read back, compare. Carries a negative control and prints one whole bundle. Knobs: `CORPUS=dev`, `PER_ARM`. **Run against the development batch, not a corpus.** | **Yes, on 60 runs.** 41 bundles, 0 refusals, round trip exact 60 of 60. Both silent arms produced **zero** bundles rather than one empty bundle. 2,049 citations resolved to 2,014 distinct rows; 566 evidence items cite readings and 113 are judgements. Interference bundles span both data modes, fault bundles one. **Negative control: one real citation shifted by one second is refused, and the run's stored bundle is untouched.** |
 | `bundle_ref_cost.py` | **How many observations does a real bundle cite, and what does resolving them cost?** Closes the composite-index question `evb-002` deferred, which could not be answered until the evidence list was composed. Knob: `PER_ARM`. | **Batch, and do not add the index.** 24 bundles over 40 runs cite 1,021 coordinates — median **26** per bundle, max **105**; a zone bundle cites 79 at the median, a fault bundle 23. One query per ref costs **194.5 ms** at the median and 748 ms at the worst; one query per coordinate shape costs **10.5 ms** and 131.5 ms — **18.6x**, because the 38,424-row filter is paid once instead of once per ref. Also found the defect below. |
 | `bundle_ref_cost.py` (the defect it found) | Same run. Every cited coordinate looked up and the misses attributed by finding shape. | **91 of 1,021 citations resolved to zero rows, and every one is the start of a `frozen_position` finding** — a window start reconstructed by subtracting the reported staleness, which is by definition the one instant in the window at which nothing was recorded. Every RF citation and every `not_heard` citation resolved. Fixed on `anom-010` and `db-008`, not on the checker: the finding now carries the reports it read beside the window it concluded. See `docs/qa.md` 83. |
@@ -205,53 +205,39 @@ Added 2026-09-19 (`ops-003`). Before it, every figure here was produced by hand-
 invocation — which is exactly where a wrong environment variable gets supplied, and how the corpus
 came to be destroyed. See `ops-004`.
 
-### Examining every stored run (`anom-016`)
+### Re-scoring every stored run under the pinned baseline (`anom-017`)
 
-**The one script here that writes to the application's database on purpose.** Everything else in
-`corpus/` measures and prints; `rescore_corpus.py` replaces the findings of every completed run and
-stamps each one with when it was examined and under what settings.
+**The one script here that writes to the application's database on purpose.** `rescore_baseline.py`
+runs the shipped pass over every completed run under `BASELINE_QUIET_RUNS`, replacing findings,
+storing bundles and moving each run's examination stamp. It replaced `anom-016`'s
+`rescore_corpus.py` (now in `superseded/` with its log), which baselined over corpus v2's sixty quiet
+runs while the batch trigger used every quiet run in the store -- which is how the store came to hold
+findings under two baselines, 380 runs at sixty and 80 at a hundred, with nothing on the screen able
+to tell them apart. `anom-017` pinned the hundred, each with its seed, and `measure_normality` now
+refuses a store that does not hold them.
 
-It exists because `anom-016` fires the pass when a batch **completes**, which reaches new batches
-only. Every run already in the store was examined by `detection_metrics.py` before anything recorded
-that examinations happen, so each had findings and no stamp -- and `api-012` reads an absent stamp as
-*not known to have been examined*, correctly, which is why the screen showed nothing for them.
+Run, after dumping `detection_findings`, `evidence_bundles`, `scenario_runs` and `hypotheses`:
 
-Run: `make measure SCRIPT=corpus/rescore_corpus.py CORPUS=v2`
+    make measure SCRIPT=corpus/rescore_baseline.py                     # scope only
+    make measure SCRIPT=corpus/rescore_baseline.py RESCORE_CONFIRM=yes  # and write
 
-**Result of record, 2026-10-03** (`rescore_corpus.log`): **380 of 380 completed runs examined in 6.2
-minutes at 0.99 s a run**, 13.7 s for the baseline, no refusals and no failures. 380 stamped from 0,
-nothing left unstamped, and **one distinct settings record across the whole store**, which is the
-state in which two runs' findings can be compared at all. It reproduces `eval-002`'s table exactly:
-60 of 60 on all three positive arms, 0 of 60 on both negative arms, and no run claiming the type of
-another.
+A changed claim is the **expected** outcome and is listed run by run, before and after. The twenty
+runs the scored campaign cites are refused by `db-011` and left on the sixty-run baseline, checked
+afterwards for having moved nothing.
 
-0.99 s a run against the 1.22 s `anom-015` measured. Same work, and the difference is the reading:
-that figure was taken a run at a time with a cold cache between, and this sweeps 380 in sequence.
-The slower figure is the one to quote for a single run, which is what the trigger does.
+**Result of record, 2026-10-06** (`rescore_baseline.log`): **440 of 460 completed runs re-scored in
+11.1 min**, 20 refused as cited, 0 failures. **11 runs' claims moved, all window boundaries by 10-30
+s; no claim appeared or disappeared** (90 interference and 186 fault claims before and after). Stamps
+after: 440 runs at a hundred quiet runs, 20 at sixty. Bundles 151 to 297, no run left with a claim
+and no bundle, 155 hypothesis rows intact.
 
-Three things it does differently from the application, each on purpose:
-
-| | Here | `app/scenario/batch.py` |
-|---|---|---|
-| Which runs | every completed run in the store | only the batch that just finished |
-| The baseline | corpus v2's **60** quiet runs, via `_corpus.quiet_runs` | every completed quiet run in the store, currently **100** |
-| When | by name, once, by somebody who means it | when a batch completes |
-
-The middle row is the one worth understanding. `app/db/repository.py`'s `quiet_run_ids` returns every
-quiet run there is, which is the right answer for an application: it should use all the quiet hours
-it has. It is the wrong answer *here*, because every figure of record was measured over corpus v2's
-sixty alone, and a re-score under a wider baseline would stamp those runs with provenance no quoted
-figure was taken under. So a batch generated from the screen today is baselined over a hundred quiet
-runs and the corpus is baselined over sixty -- both honest, both recorded on the run, and the stamp
-is what makes them tellable apart. `Normality` carries its run list for exactly this.
-
-**It does not touch `evidence_bundles`.** The pass builds bundles and does not store them, on
-`eval-004`'s argument that its pre-registered sample names twenty of them by id, so re-scoring cannot
-renumber that population. Findings are replaced per run per rule (`db-008`), so the script is
-idempotent and re-running it is the whole of the repair if it dies part way.
-
-**No identifier of any kind reaches the log**, per the two standing constraints below: a finding's
-subject is a sensor id or an aircraft id, so only counts are printed.
+**`detection_metrics.py` writes nothing since the same item.** It used to run the storing pass, so it
+replaced findings and re-dated every run it scored, and since `evb-003` it also stored bundles -- the
+re-run after the re-score stopped at run 102 on `db-011`'s refusal. It now uses
+`assess_without_storing`, which rolls every write back. Re-run under the pinned baseline, **every
+figure in the table is byte-identical** to the 60-run figures of record: only the provenance moved
+(`BASELINE.quiet_run_count` 60 to 100, measured-on date, digest `79ef76db46ba` to `d2a2c04ab428`).
+Store checksums before and after the run are identical.
 
 ## `mutation/` — are the tests load-bearing?
 

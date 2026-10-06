@@ -8645,6 +8645,75 @@ detection chart carries the existing caveat that these figures establish correct
 and not detection accuracy (see "a results table of 1.000 and 0.000 measures wiring, not
 accuracy" above).
 
+### The baseline population is declared rather than discovered, and re-scoring under it moved no figure
+
+Normality was measured over every quiet run the store held at the moment a pass ran, so the
+baseline a run was scored against depended on how large the store happened to be. The store grew
+from sixty quiet runs to a hundred between two passes, and on 6 October 2026 it held findings under
+both: 380 runs scored against sixty quiet runs and 80 against a hundred. The same code under the
+same thresholds put one claim's window twenty seconds apart (run 71). Nothing failed and nothing on
+the screen or in the results table could tell the two apart; the provenance stamp `anom-016` had
+added was the only record, which is what made the inconsistency diagnosable but did nothing to
+prevent it. The principle is the one already argued for the detector thresholds: a setting chosen by
+the store is not a setting anybody decided.
+
+The fix (`anom-017`) declares the population as a constant beside the other detector settings: the
+hundred quiet runs, each pinned **with its seed**. All hundred rather than the sixty because the
+sixty are a strict subset of them and every one of the hundred belongs to corpus v2 (five batches of
+twenty, 900 s each), so this is one population measured with more of its members, not a choice
+between two. The seed is pinned beside the id because an id names a row in one database and not a
+content: on another database "run 21" is a different hour, possibly not even a quiet one, and a list
+of ids alone would silently build a different baseline under the same name. A pinned run the store
+does not hold exactly as pinned (absent, unfinished, not quiet, or carrying another seed) refuses the
+baseline before any observation is read. The stated cost is that a freshly generated database cannot
+score batches from the screen until the list is re-derived deliberately for it; the alternative is a
+baseline that varies with whichever store it lands in.
+
+The whole store was then re-scored under the pinned population (`rescore_baseline.log`). Of 460
+completed runs, 440 were re-scored in 11.1 minutes; **11 runs' reported claims changed, every change
+a window boundary moving by 10 to 30 seconds, and no claim appeared or disappeared** (90 interference
+and 186 sensor-fault claims before and after). Twenty runs were refused: they hold the evidence
+bundles the scored hypothesis campaign cites, and replacing a cited bundle would cascade-delete the
+155 hypothesis rows (`db-011`). Those twenty stay on the sixty-run baseline, where their claims,
+bundles, stamp and the hypotheses scored against them are mutually consistent; they are the one
+stated exception, distinguishable by their stamp. Re-scoring their claims while keeping their old
+bundles was rejected, because it recreates exactly the claim/bundle disagreement the item set out to
+remove.
+
+**Re-measured under the pinned baseline, every figure in the detection results table is unchanged**
+— recall, precision, both false-positive rates, the confusion matrix and the latency medians and
+ranges are byte-identical to the sixty-run figures of record; only the provenance record moved
+(baseline size, date and digest, `79ef76db46ba` to `d2a2c04ab428`). Ten of the eleven changed runs are
+inside the 300-run corpus, so this is a result and not an accident of scope: per-run detection and
+type do not depend on a window boundary, and the latency summaries are coarse enough (quantised to
+the 10 s sampling interval, reported as median and range) that the shifts did not reach them. It is
+evidence that the detection figures are robust to the baseline population within this corpus, and
+nothing stronger: the radio incidents sit well above threshold by construction, which is the standing
+caveat on every detection figure here. *(Observation not yet interpreted: in three runs (204, 224,
+264) the moved window now begins 40 s before the staged onset rather than 10 s. Latency is measured
+to evidence maturity rather than to window start, so it is unaffected, but a window opening before
+the incident is worth explaining before the write-up quotes window extents.)*
+
+### A measurement script had been writing to the store it measured
+
+Re-running the results table after the re-score exposed a defect older than this item. The results
+script ran the same detection pass the application runs, and that pass writes as it goes: it has to,
+because two rules read the stored track findings back mid-chain. So every run of the results table
+had replaced findings and re-dated the examination stamp of all 300 hours it scored, and once the
+pass began storing evidence bundles it also tried to replace bundles. On the first cited hour the
+campaign guard refused, and the script stopped. Nothing had checked that a measurement leaves the
+store as it found it, because the script lives outside the test suite.
+
+The fix runs the pass inside a single database transaction that is always rolled back: each write
+the pass makes is visible to the rules that read it back, and none of it reaches the store. Inside
+that transaction, and only there, the bundle write is skipped, because the guard exists to stop a
+replacement and a rolled-back transaction replaces nothing. The skip is deliberately not offered as
+an option on the storing pass, where it would write one hour's conclusions beside another hour's
+evidence. Store checksums taken before and after the re-measurement are identical. The general point
+for the methodology chapter is that an instrument which shares code with the system it measures
+inherits that system's side effects, and that "the measurement does not change the thing measured"
+has to be asserted, not assumed.
+
 ### A flag that is vacuously true over an empty population
 
 The per-arm report carries a boolean saying whether an arm's cost figure is a total
