@@ -2392,6 +2392,68 @@ the new copy module as **"Unrecognised finding type"** — so the pre-first-resp
 shown a fault where the real payload shows a conclusion, on a screen whose entire argument is that it
 does not present invented data as the system's own. The fixture is now the real shape.
 
+
+### Explainability has a storage problem before it has an interface problem
+
+The system's claim is that an analyst can see why a conclusion was reached. The reasoning for every
+reported conclusion was being assembled correctly, and then discarded: the detection pass built an
+evidence bundle for each claim, returned it on an in-memory object, and wrote none of them. Inside
+one process the account was complete, and every test of the pass read that object; from a web request
+it did not exist. The result on the store of record is that **140 of the 240 hours holding a
+conclusion have no record of what it rests on**, and because the hour selector lists newest-first,
+every hour a person would open is one of them.
+
+The reason for discarding them was real and had simply outlived its scope. A pre-registered scoring
+sample names twenty bundles by their row ids; a pass that rebuilt bundles corpus-wide would renumber
+that population and stop the draw reproducing itself. That argument protects twenty bundles on twenty
+runs, and it had been implemented as *store none, on any run, ever* — which is the shape of decision
+worth naming in the write-up, because it is not a mistake and it is not right either. A constraint
+derived for a named population, enforced globally, is indistinguishable from a constraint nobody
+measured.
+
+### A foreign key doing exactly what it was declared to do, at the wrong moment
+
+Making the pass store its bundles walks into an unguarded data-loss path, and finding it was the
+prerequisite rather than a detour. The bundle write replaces per run — delete, then insert — because
+a bundle is derived from findings which are derived from a seed, so appending would leave a
+superseded account beside a current one with nothing to say which was which. Separately,
+`hypotheses.bundle_id` is declared `ON DELETE CASCADE`, and it is the *only* column linking a
+hypothesis to a run: that table carries no `scenario_run_id`.
+
+Composed, those two correct decisions delete the scored campaign. On the store of record, **155
+hypothesis rows hang off 20 bundles across runs 102–175**, and they are the one population in the
+project that cannot be regenerated, since a model call consumed money and produced one specific
+response. The failure is silent in the worst way available: the delete succeeds, the cascade fires,
+nothing raises, and the damage is observable only as rows that are no longer there.
+
+The fix is a refusal in the repository rather than `ON DELETE RESTRICT` at the schema, and the
+reasoning generalises. Deleting an hour **should** take its bundles and their hypotheses with it — a
+hypothesis has no other route back to a run — so a restriction at the key would block a correct
+delete in order to prevent an incorrect one. What must be refused is *replacement by a derived-data
+stage*. **A cascade on a delete is the schema working; a cascade on a regeneration is data loss
+wearing the costume of a refresh.**
+
+### Two records of one event, and no key that could join them
+
+Serving the evidence for an hour means pairing each stored bundle with the conclusion it explains,
+and there is no column that does it. There cannot be: findings are replaced per run per rule, so a
+foreign key from the bundle table would cascade-delete the bundles on every re-score — the same
+composition as above, one table along. The two rows are therefore matched on their fields, and
+settling which fields took two corrections, both found by measurement rather than by reading:
+
+| Candidate key | Outcome |
+|---|---|
+| rule, type, **subject as stored**, window | misses **all 41** interference bundles; matches every fault |
+| rule, type, window | not unique where a run holds two faults in one window |
+| rule, type, **first receiver of the subject**, window | matches 99 of 103; unique on both sides |
+
+A fusion bundle's subject is the receivers that deviated together, joined (`RF-05, RF-06, RF-07`),
+while the claim is filed under the first of them. That relationship holds **by construction** in both
+producers rather than as a property of this corpus, which is what makes it safe to key on — and is a
+useful illustration of the difference between a regularity observed in data and one guaranteed by
+code.
+
+
 ## Implementation
 
 <!-- Notable technical decisions per phase (link to implementation.md phases), challenges and
@@ -7134,6 +7196,40 @@ instrument that can say whether such a test holds anything up — and here two m
 red, one of them taking twenty tests with it. That is the clearest demonstration so far of why the
 frontend items are scored this way rather than by coverage.
 
+
+### Three defects found by looking at the screen, none of which a test could reach
+
+The second occasion on which running the system and reading it surfaced things the suite could not.
+All three were in a panel whose 29 tests were green:
+
+| Defect | Why no test caught it |
+|---|---|
+| The same absence rendered three times, identically | Fixtures carried one. Real bundles repeat a single sentence up to **28** times |
+| The verdict block repeated the conclusion's own heading two centimetres below it | Both strings were correct. The defect was that they were adjacent |
+| *"The store holds no stored evidence"* | Grammar |
+
+The first is the substantive one, and where it was fixed matters more than that it was fixed: in the
+**endpoint**, not the panel. A bundle holds one uncertainty per suppressed episode, and collapsing
+identical ones with a count is the same operation already applied to the evidence items. Doing it on
+the client would have put a second implementation of the grouping somewhere it could drift from the
+first.
+
+A test asserts that a thing is present and correct. It cannot assert that a reader meeting the page
+is not confused by it, and two of these three were exactly that. The procedure — look at the running
+screen before calling a screen item done — has now paid for itself twice and is worth stating as
+method rather than as habit.
+
+### The same proxy assertion broken three times by three different items
+
+Four test files counted every `fetch` call as a proxy for one endpoint's poll, written when the
+picture had one endpoint and `url.includes("operational-picture")` was an identity test. Adding
+`/hours` broke it once; adding `/evidence` would have broken it again. The fix is to compare the
+exact route rather than search the string, and the incident is worth recording for a reason beyond
+the bug: **my own search for the other instances missed one**, because that file spelled the path as
+a string literal instead of importing the shared constant. A repository-wide search for a constant
+finds every use of the constant and none of the copies.
+
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;
@@ -9358,3 +9454,47 @@ The second is a guard added one item earlier, asserting that every module on the
 The item asserts that the two commands which start the stack apply the migrations first, and it does so by reading the root Makefile. It passed on the host and failed in the container, because Compose mounts only the backend directory into the image and the root Makefile is not in it.
 
 The project had already solved this and I had not read far enough: the Makefile is mounted read-only at a known path for the test target, and an existing test module checks both locations — the native checkout and the mount — and **raises rather than skips** when it finds neither. The argument recorded there is the part worth carrying: a structural guard that silently does not run is a worse failure than the one it is checking for, one level up. Skipping would have left the assertion green in the only environment where the suite actually runs everything.
+
+### An experimental variable that was recorded and never pinned
+
+Re-examining stored hours to fill in their missing evidence produced a disagreement at the second
+hour it touched, and the disagreement is a result in its own right. The rebuilt claim's window began
+twenty seconds — two sampling intervals — before the stored one, with every threshold identical.
+
+The cause is the **baseline**. Normality is measured over every quiet run the store holds, so the
+normality a run is scored against depends on how large the store was when the pass ran. By the
+recorded policy this store holds findings written under two of them:
+
+| Baseline population | Runs |
+|---|---|
+| 60 quiet runs | **378** |
+| 100 quiet runs | 22 |
+
+This was anticipated in the design and recorded there in as many words: two baselines under identical
+thresholds give different findings and are otherwise indistinguishable, which is why the quiet-run
+population is written onto every finding as provenance. That provenance is exactly what made the
+disagreement diagnosable. What it does not do is *prevent* the condition, and nothing on the screen
+or in the results table reports which baseline a given figure was taken under.
+
+**Threat to validity, stated plainly.** Detection figures quoted for this corpus were measured over a
+population scored against a single baseline, and the store has since acquired findings under a
+second. Any figure recomputed from the stored findings today would mix them. The export's provenance
+digest distinguishes the two, so the condition is detectable; it is not currently reported.
+
+It also corrected a reading I had made earlier the same day. Four bundles whose windows disagreed
+with their claims had been recorded as *stale* — older code, superseded. That is backwards: the
+bundle written on 19 September agrees with today's rebuild to the second, and it is the stored
+*finding* that came from the other baseline. **A disagreement between two stored records says which
+pair disagrees and nothing about which is right**, and the available intuition — that the older
+artefact is the stale one — is worth distrusting.
+
+### Stopping rather than skipping, where the recorded convention says skip
+
+The project's convention for batch work is that a per-run failure is recorded and stepped over, so
+that a campaign dying on run 14 of 20 does not lose the thirteen it paid for. The fill deliberately
+does the opposite and stops the whole operation at the first disagreement. The distinction is that
+the convention is for a run that **failed**, and this is a run that **came back with a different
+answer**: skipping would have carried on rewriting 139 further hours under settings just shown to
+differ from the ones every quoted figure was measured under. Two hours were written before the stop
+and both were restored from a dump taken beforehand.
+
