@@ -73,10 +73,17 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import timedelta
 
+from sqlalchemy import Engine
+from sqlalchemy.orm import sessionmaker
+
 from app.dal.models import ObservationType, ScenarioRunSummary
 from app.db.bundles import save_bundles
 from app.db.findings import save_findings
-from app.db.repository import observations_for_run, record_detection_pass
+from app.db.repository import (
+    observations_for_run,
+    pinned_run_discrepancies,
+    record_detection_pass,
+)
 from app.detection.baseline import BaselineTable, compute_rf_baselines
 from app.detection.bundle import EvidenceBundle, build_bundles
 from app.detection.clustering import FINDING_TYPE as CLUSTER_TYPE
@@ -316,10 +323,26 @@ class Assessment:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class PinnedRun:
+    """One run of the baseline population, named by id and by content. Spec: anom-017.
+
+    An id names a row in one store and says nothing about what the row holds:
+    another database generates its own run 21, which may be quiet with a
+    different seed or not quiet at all. `scn-001` regenerates a run
+    byte-identically from its type, parameters and seed, so the seed is what
+    says *this* hour -- and a pinned run is accepted only when the store holds
+    it with that seed.
+    """
+
+    run_id: int
+    seed: int
+
+
 def measure_normality(
     session_factory: object,
     *,
-    quiet_run_ids: Sequence[int],
+    quiet_runs: Sequence[PinnedRun],
     policies: DetectorPolicies,
     window: timedelta,
 ) -> Normality:
@@ -332,6 +355,17 @@ def measure_normality(
     the policy. Disagree and every threshold is measured in the wrong units with
     nothing failing, because both halves are individually valid. Taken from
     `policies.rf.metric` here, so they cannot differ.
+
+    **The runs are declared, not discovered** (`anom-017`). They used to be every
+    quiet run the store held, so the normality a run was scored against depended
+    on how large the store was when the pass ran -- and the store of record ended
+    up holding findings under two baselines that nothing on the screen could tell
+    apart. The callers now pass `BASELINE_QUIET_RUNS`, and **a pinned run the store
+    does not hold as pinned is a refusal**: absent, unfinished, not quiet, or
+    carrying another seed. A baseline over 99 of its 100 runs is a different
+    baseline, and the point of pinning is that it cannot vary without somebody
+    saying so. Every failing run is named, so the refusal is repaired once rather
+    than one run at a time, and it is decided before a single observation is read.
 
     **The runs are the caller's choice and arrive as ids.** Which runs count as
     quiet is answered by the scenario type, which is the label for what was
@@ -350,7 +384,7 @@ def measure_normality(
     database as a detector defect. Decided before any read, because there is
     nothing to read.
     """
-    ids = tuple(quiet_run_ids)
+    ids = tuple(run.run_id for run in quiet_runs)
     if not ids:
         raise ChainError(
             "no quiet runs in the store: normality is measured over the quiet "
@@ -359,6 +393,26 @@ def measure_normality(
             "exactly this case, and the alternative -- baselining against the "
             "staged runs -- would measure the injected incident as normal and "
             "report every arm clean."
+        )
+    repeated = sorted({run_id for run_id in ids if ids.count(run_id) > 1})
+    if repeated:
+        raise ChainError(
+            f"the pinned baseline names runs {repeated} more than once: each would "
+            "be read and weighted twice, which is a different baseline under the "
+            "same name"
+        )
+    discrepancies = pinned_run_discrepancies(
+        session_factory,  # type: ignore[arg-type]
+        tuple((run.run_id, run.seed) for run in quiet_runs),
+    )
+    if discrepancies:
+        named = "; ".join(f"run {run_id}: {why}" for run_id, why in discrepancies)
+        raise ChainError(
+            f"the pinned baseline names {len(discrepancies)} of its {len(ids)} runs "
+            f"this store does not hold as pinned ({named}). A baseline over fewer "
+            "or different runs is a different baseline, so nothing is measured. A "
+            "freshly generated store is exactly this case: re-derive "
+            "BASELINE_QUIET_RUNS deliberately for that corpus."
         )
     observations = [
         observation
@@ -420,6 +474,81 @@ def assess(
     session_factory: object,
 ) -> Assessment:
     """Run every rule over one finished run, store what they found, report it.
+
+    The storing pass. Its body is `_assess`, shared with `assess_without_storing`;
+    this caller always stores the bundles, so `db-011`'s refusal reaches it.
+    """
+    return _assess(
+        run,
+        normality=normality,
+        policies=policies,
+        layout=layout,
+        session_factory=session_factory,
+        store_bundles=True,
+    )
+
+
+def assess_without_storing(
+    run: ScenarioRunSummary,
+    *,
+    normality: Normality,
+    policies: DetectorPolicies,
+    layout: RfLayout,
+    engine: Engine,
+) -> Assessment:
+    """The same pass, measured and then undone. Spec: anom-017 (11).
+
+    A measurement writes nothing. The pass writes as it goes -- `anom-004` and
+    `anom-012` read the track findings back from the store, so they have to be
+    written before those rules run -- and so the results table, which runs the
+    pass over three hundred hours, had been rewriting findings and re-dating the
+    stamp on every run it measured, and stopped at the first run the scored
+    campaign cites when `db-011` refused to replace its bundles.
+
+    Here every write goes into one transaction on one connection, and that
+    transaction is **always rolled back**, on success and on failure alike. The
+    sessions the pass opens join it through savepoints, so each sees what the
+    earlier ones wrote and nothing reaches the store. The store afterwards is as
+    it was, findings ids and stamp included.
+
+    **Only here is the bundle write skipped.** The guard exists to stop a
+    replacement, and a transaction that is rolled back replaces nothing, so the
+    refusal would be about an event that never happens. The skip is not a flag on
+    `assess`: there, outside a rollback, it would write this hour's conclusions
+    beside the previous hour's evidence, which is the disagreement `evb-003`'s
+    ordering and `anom-017`'s refusal of the cited runs both exist to prevent.
+    The bundles are still built and returned on the assessment.
+    """
+    with engine.connect() as connection:
+        transaction = connection.begin()
+        try:
+            factory = sessionmaker(
+                bind=connection,
+                autoflush=False,
+                join_transaction_mode="create_savepoint",
+            )
+            return _assess(
+                run,
+                normality=normality,
+                policies=policies,
+                layout=layout,
+                session_factory=factory,
+                store_bundles=False,
+            )
+        finally:
+            transaction.rollback()
+
+
+def _assess(
+    run: ScenarioRunSummary,
+    *,
+    normality: Normality,
+    policies: DetectorPolicies,
+    layout: RfLayout,
+    session_factory: object,
+    store_bundles: bool,
+) -> Assessment:
+    """The pass itself. Reached by `assess` and `assess_without_storing` only.
 
     Takes the run's **summary** rather than its id, because the completion stamp
     is part of the decision: `db-007` records absence of one as *not known to have
@@ -582,7 +711,8 @@ def assess(
     # resolves every citation against **observations**, which are written at
     # generation time, so a bundle written first cites rows that have been
     # there since the run was made.
-    save_bundles(session_factory, scenario_run_id=run.id, bundles=bundles)  # type: ignore[arg-type]
+    if store_bundles:
+        save_bundles(session_factory, scenario_run_id=run.id, bundles=bundles)  # type: ignore[arg-type]
 
     # Written out rather than looped, and the reason is a test: `api-012`
     # declares which producers this pass persists, and the only honest way to

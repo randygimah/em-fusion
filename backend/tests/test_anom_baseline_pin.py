@@ -239,13 +239,12 @@ def test_the_check_is_asked_about_exactly_the_pinned_runs_and_seeds(
     monkeypatch.setattr(chain_module, "pinned_run_discrepancies", _check)
     monkeypatch.setattr(chain_module, "observations_for_run", lambda *_a, **_k: [])
 
-    with pytest.raises(Exception):  # an empty table is refused downstream
-        measure_normality(
-            object(),
-            quiet_runs=(PinnedRun(21, 5), PinnedRun(22, 6)),
-            policies=POLICIES_OF_RECORD,
-            window=BASELINE_WINDOW,
-        )
+    measure_normality(
+        object(),
+        quiet_runs=(PinnedRun(21, 5), PinnedRun(22, 6)),
+        policies=POLICIES_OF_RECORD,
+        window=BASELINE_WINDOW,
+    )
 
     assert asked == [((21, 5), (22, 6))]
 
@@ -340,7 +339,10 @@ def test_the_batch_trigger_no_longer_asks_the_store_which_runs_are_quiet() -> No
 
 @pytest.mark.parametrize(
     "relative",
-    ["measurements/corpus/detection_metrics.py", "measurements/corpus/rescore_baseline.py"],
+    [
+        "measurements/corpus/detection_metrics.py",
+        "measurements/corpus/rescore_baseline.py",
+    ],
 )
 def test_the_scripts_that_build_a_baseline_read_the_pinned_constant(
     relative: str,

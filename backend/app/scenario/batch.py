@@ -42,6 +42,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
@@ -50,14 +51,19 @@ from typing import TYPE_CHECKING
 
 from app.adapters.opensky import available_window
 from app.dal.pseudonymise import Pseudonymiser, load_seed_environment
-from app.db.repository import (
-    PostgisObservationRepository,
-    quiet_run_ids,
-    run_summary,
-)
+from app.db.repository import PostgisObservationRepository, run_summary
 from app.db.session import get_sessionmaker
-from app.detection.chain import DetectorPolicies, assess, measure_normality
-from app.detection.settings import BASELINE_WINDOW, POLICIES_OF_RECORD
+from app.detection.chain import (
+    DetectorPolicies,
+    PinnedRun,
+    assess,
+    measure_normality,
+)
+from app.detection.settings import (
+    BASELINE_QUIET_RUNS,
+    BASELINE_WINDOW,
+    POLICIES_OF_RECORD,
+)
 from app.pipeline import EXCLUSIONS_NAME, BatchSummary, run_batch
 from app.replay import DEFAULT_DATA_DIR, DEFAULT_ENV_FILE, EXTRACT_NAME, MANIFEST_NAME
 from app.scenario.guard import Lease
@@ -123,7 +129,8 @@ class BatchScoring:
 
     A report rather than nothing, because every failure here is **recorded and
     stepped over** and a caller that learns nothing cannot say which. `refused`
-    is the whole-batch case -- no quiet runs to measure normal against -- and is
+    is the whole-batch case -- no baseline to measure normal against, which since
+    `anom-017` includes a store that does not hold the pinned quiet runs -- and is
     separate from a per-run failure for the same reason `anom-006`'s absent rule
     is separate from `anom-004`'s unpersisted one: collapsed together, a store
     problem reads as a detector problem.
@@ -153,6 +160,7 @@ def score_batch(
     layout: RfLayout,
     policies: DetectorPolicies = POLICIES_OF_RECORD,
     window: timedelta = BASELINE_WINDOW,
+    quiet_runs: Sequence[PinnedRun] = BASELINE_QUIET_RUNS,
 ) -> BatchScoring:
     """Run the detection pass over the runs this batch produced. Spec: anom-016.
 
@@ -178,7 +186,8 @@ def score_batch(
     **The settings are the record's** unless a caller is deliberately re-scoring.
     The parameter is what makes the same hours re-readable under another
     threshold; the default is what makes a figure on the screen the same figure as
-    a figure in the thesis.
+    a figure in the thesis. The quiet runs are one of those settings since
+    `anom-017`: pinned by default, and a refusal when the store does not hold them.
     """
     requested = tuple(
         outcome.run_id
@@ -191,7 +200,9 @@ def score_batch(
     try:
         normality = measure_normality(
             session_factory,
-            quiet_run_ids=quiet_run_ids(session_factory),  # type: ignore[arg-type]
+            # `anom-017`: the pinned population, never the store's quiet runs of
+            # the moment -- those made the baseline vary with the store's size.
+            quiet_runs=quiet_runs,
             policies=policies,
             window=window,
         )

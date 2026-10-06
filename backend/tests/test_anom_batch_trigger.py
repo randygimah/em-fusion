@@ -1080,6 +1080,10 @@ def test_every_completed_run_of_the_batch_ends_up_stamped(
         ),
         session_factory=factory,
         layout=LAYOUT,
+        # `anom-017`: a test store does not hold the pinned population, and
+        # refusing it is the point -- so this names its own, as a deliberate
+        # re-score would.
+        quiet_runs=(PinnedRun(QUIET, 1),),
     )
 
     assert report.refused is None

@@ -175,7 +175,8 @@ generate: build-pipeline ## Run a scenario batch in a container, into the runnin
 # script here that WRITES to the store, re-examining up to 144 runs. Each script
 # has its own variable rather than sharing one, so approving the three-bundle
 # pre-flight can never also approve the twenty-bundle campaign, and neither can
-# approve a corpus-wide write. The credential
+# approve a corpus-wide write. RESCORE_CONFIRM is the fourth: corpus/rescore_baseline.py
+# re-scores every completed run under the pinned baseline (anom-017). The credential
 # is deliberately NOT forwarded: the script reads
 # backend/.env through the bind mount, following app/replay.py rather than
 # Compose interpolation, which turns an unset host variable into an empty string
@@ -190,6 +191,7 @@ measure: build-backend ## Run a measurement, e.g. make measure SCRIPT=corpus/bun
 		-e SMOKE_TEST_CONFIRM="$(SMOKE_TEST_CONFIRM)" \
 		-e CAMPAIGN_CONFIRM="$(CAMPAIGN_CONFIRM)" \
 		-e BACKFILL_CONFIRM="$(BACKFILL_CONFIRM)" \
+		-e RESCORE_CONFIRM="$(RESCORE_CONFIRM)" \
 		backend python measurements/$(SCRIPT)
 
 ensure-artifacts: ## Generate the demo dataset only if artefacts are missing

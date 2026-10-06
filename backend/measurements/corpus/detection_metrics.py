@@ -37,7 +37,9 @@ never ran, and it is enforced by the metrics rather than by this script.
 
 Note that the detectors are re-run here rather than read from
 `detection_findings`: the stored findings are whatever the last measurement
-wrote, and a results table must not depend on which script ran last.
+wrote, and a results table must not depend on which script ran last. Since
+`anom-017` they are re-run **without storing** -- every pass is rolled back --
+so this script also leaves the store exactly as it found it.
 
 Run:  make measure SCRIPT=corpus/detection_metrics.py
 """
@@ -68,8 +70,9 @@ from app.detection.track_gap import detect_track_gaps
 from app.evaluation.export import DetectionProvenance, export_metrics
 from app.evaluation.metrics import STAGED_TYPE, RunOutcome, TrackSideRecall, compute
 from app.dal.models import ScenarioRunSummary
-from app.detection.chain import assess, measure_normality
-from app.detection.settings import BASELINE_WINDOW, POLICIES_OF_RECORD
+from app.detection.chain import assess_without_storing, measure_normality
+from app.detection.settings import (BASELINE_QUIET_RUNS, BASELINE_WINDOW,
+                                    POLICIES_OF_RECORD)
 from app.scenario.layout import load_layout
 
 #: `anom-015` then `anom-016`. The eight rules are composed in
@@ -109,9 +112,11 @@ factory = sessionmaker(bind=engine, autoflush=False)
 layout = load_layout()
 
 
-with factory.begin() as _s:
-    quiet = _corpus.quiet_runs(_s)
-print(f"baseline from {len(quiet)} quiet runs of this corpus", flush=True)
+# `anom-017`. The pinned population, and no longer this corpus's own quiet runs:
+# those were sixty, the store's were a hundred, and the store ended up holding
+# findings under both. `measure_normality` refuses if the store does not hold
+# every pinned run with its pinned seed.
+print(f"baseline over the {len(BASELINE_QUIET_RUNS)} pinned quiet runs", flush=True)
 
 # `anom-016`. Built through the application rather than here, for one reason the
 # version this replaces got away with: the metric was named twice -- once when the
@@ -120,7 +125,7 @@ print(f"baseline from {len(quiet)} quiet runs of this corpus", flush=True)
 # last caller of this file's own observation reader, which `anom-015` had already
 # cut back to one use: the reader it replaced invented five fields the row holds,
 # and a right answer from a wrong source is `ai-004`'s defect in the input.
-NORMALITY = measure_normality(factory, quiet_run_ids=tuple(quiet),
+NORMALITY = measure_normality(factory, quiet_runs=BASELINE_QUIET_RUNS,
                               policies=POLICIES, window=BASELINE_WINDOW)
 
 with factory.begin() as s:
@@ -148,12 +153,15 @@ for run in runs:
     # One call (`anom-015`). The ordering, the mid-chain persistence and the
     # receivers behind each claim all live in `app/detection/chain.py` now, where
     # the linter, the type checker and the coverage gate can see them.
-    assessment = assess(
+    # `anom-017` (11): measured and rolled back, so the results table writes
+    # nothing -- not the findings, not the stamps, and not the bundles of the
+    # twenty runs the scored campaign cites, which `db-011` protects.
+    assessment = assess_without_storing(
         ScenarioRunSummary(id=run_id, scenario_type=kind, seed=run["seed"],
                            started_at=run["started_at"],
                            completed_at=run["completed_at"]),
         normality=NORMALITY, policies=POLICIES, layout=layout,
-        session_factory=factory)
+        engine=engine)
     found = assessment.rf
     reported = assessment.reported
     types = sorted({c.anomaly_type for c in reported})
