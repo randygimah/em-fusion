@@ -1,0 +1,62 @@
+rescore_baseline.py -- anom-017
+target: postgis:5432/em_fusion as postgres
+completed runs           : 460 (21-480)
+cited by hypotheses      : 20 [102, 104, 106, 107, 108, 109, 110, 113, 116, 118, 123, 127, 133, 134, 137, 161, 162, 168, 172, 175]
+baselines on the stamps  : 100 quiet runs on 80, 60 quiet runs on 380
+pinned baseline          : 100 quiet runs
+normality over 100 pinned quiet runs in 29.2 s
+  50/460, 1.95 s a run
+  100/460, 1.67 s a run
+  150/460, 1.57 s a run
+  200/460, 1.52 s a run
+  250/460, 1.49 s a run
+  300/460, 1.47 s a run
+  350/460, 1.46 s a run
+  400/460, 1.45 s a run
+  450/460, 1.44 s a run
+re-scored 440 of 460 completed runs in 11.1 min
+  claims unchanged : 429
+  claims moved     : 11
+  protected        : 20 (refused by db-011, left on their baseline)
+  refused          : 0
+  failed           : 0
+baselines on the stamps after: 100 quiet runs on 440, 60 quiet runs on 20
+reported claims by type over the re-scored runs, before -> after:
+  possible_interference_zone       90 ->   90
+  possible_sensor_fault           186 ->  186
+RUNS WHOSE REPORTED CLAIMS MOVED (11):
+  run 71
+    was FUSION-SPATIAL possible_interference_zone RF-01 12:22:33-12:27:53
+    now FUSION-SPATIAL possible_interference_zone RF-01 12:22:13-12:27:53
+  run 135
+    was SENSOR-FAULT possible_sensor_fault RF-05 12:37:17-12:42:07
+    now SENSOR-FAULT possible_sensor_fault RF-05 12:37:07-12:42:07
+  run 204
+    was FUSION-SPATIAL possible_interference_zone RF-01 12:35:05-12:40:25
+    now FUSION-SPATIAL possible_interference_zone RF-01 12:34:35-12:40:25
+  run 224
+    was SENSOR-FAULT possible_sensor_fault RF-03 12:35:05-12:40:25
+    now SENSOR-FAULT possible_sensor_fault RF-03 12:34:35-12:40:25
+  run 264
+    was SENSOR-FAULT possible_sensor_fault RF-03 12:35:05-12:40:25
+    now SENSOR-FAULT possible_sensor_fault RF-03 12:34:35-12:40:25
+  run 310
+    was FUSION-SPATIAL possible_interference_zone RF-04 12:15:44-12:21:44
+    now FUSION-SPATIAL possible_interference_zone RF-04 12:15:44-12:21:24
+  run 319
+    was FUSION-SPATIAL possible_interference_zone RF-04 12:04:33-12:09:33
+    now FUSION-SPATIAL possible_interference_zone RF-04 12:04:33-12:10:03
+  run 330
+    was SENSOR-FAULT possible_sensor_fault RF-05 12:16:14-12:21:44
+    now SENSOR-FAULT possible_sensor_fault RF-05 12:16:14-12:21:24
+  run 339
+    was SENSOR-FAULT possible_sensor_fault RF-05 12:04:33-12:09:23
+    now SENSOR-FAULT possible_sensor_fault RF-05 12:04:33-12:10:03
+  run 370
+    was SENSOR-FAULT possible_sensor_fault RF-05 12:16:14-12:21:44
+    now SENSOR-FAULT possible_sensor_fault RF-05 12:16:14-12:21:24
+  run 379
+    was SENSOR-FAULT possible_sensor_fault RF-05 12:04:33-12:09:23
+    now SENSOR-FAULT possible_sensor_fault RF-05 12:04:33-12:10:03
+protected runs (claims and stamp checked unmoved): [102, 104, 106, 107, 108, 109, 110, 113, 116, 118, 123, 127, 133, 134, 137, 161, 162, 168, 172, 175]
+EXIT=0
