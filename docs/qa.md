@@ -9139,6 +9139,83 @@ rewrites every detection figure of record, or leave two in the store and report 
 
 ---
 
+## 152. Are the detection metrics comparing deterministic anomaly detection against AI detection? If not, what are they for — and can we chart them as a grouped bar or spider chart?
+
+**No. There is no AI detection in this system, so there is nothing for the detector to be compared
+against. The detection metrics score the deterministic detector against the answer key. The AI is
+compared against the template generator, and that comparison is a different measurement over a
+different object.**
+
+### The wrong assumption
+
+The assumption was a pipeline with two detectors side by side, a rule-based one and an AI one, each
+producing precision, recall and F1 over the same runs. The real pipeline is in series:
+
+```
+observations → deterministic rules → reported claim → evidence bundle → AI (or template) → hypothesis
+               └───────── detection metrics score this ─────────┘      └─ hypothesis evaluation scores this ─┘
+```
+
+The AI never sees an observation and never decides whether something is anomalous. It is handed a
+bundle the rules have already built and asked to **explain** it. "Deterministic methods only" in
+`em_fusion_v2.md` §5.3 is the reason, and ML detectors sit in Future Work. A chart titled "AI vs
+Deterministic detection" would show a comparison the project never ran.
+
+One further correction: the metrics are not computed *from* evidence bundles. `detection_metrics.py`
+re-runs the whole detection pass over every run and compares the **reported claims** with
+`scenario_runs.ground_truth`, which the generator wrote when it staged the incident.
+
+### What each measurement compares
+
+| | Detection metrics (`eval-002`) | Hypothesis evaluation (`eval-004`/`eval-005`) |
+|---|---|---|
+| Question | Did the rules flag the right thing, and nothing on quiet runs? | Given the same bundle, does the AI explain it better than a template? |
+| Compared against | Ground truth from the generator | The template generator (the baseline arm) |
+| Unit | One scenario run (300 runs, 60 per type) | One bundle (20 bundles, hosted vs template) |
+| Figures | Recall, precision, F1, two false-positive rates, FNR, latency | Grounding catch rate, retry/fallback rate, agreement over N, cost, blind rubric scores |
+| Research question | Whether the pipeline that feeds the AI can be trusted | RQ3 |
+
+### What the figures are (corpus v2, 300 runs, measured 2026-10-01)
+
+| Scenario type | Recall per run | Recall per staged aircraft | Median latency |
+|---|---|---|---|
+| `gnss-degradation` | 1.000 (60/60) | 0.823 (247/300) | 20 s |
+| `rf-sensor-fault` | 1.000 (60/60) | — (no aircraft staged) | 10 s |
+| `ambiguous-mixed-evidence` | 1.000 (60/60) | 0.587 (176/300) | 10 s |
+| `aircraft-coverage-gap` | unjudged (`anom-006` unbuilt) | 0.587 (176/300) | — |
+| `normal-baseline` | control: 0 of 60 report anything | — | — |
+
+Precision is 1.000 on both built types. Both false-positive rates are 0 of 60: *from nothing*
+(normal-baseline) and *cross-modal* (coverage-gap).
+
+### On the charts
+
+**A grouped bar works, with different groups.** The only variation in these figures is the gap
+between **recall per run** (did the run's verdict come out right) and **recall per staged aircraft**
+(how many staged aircraft the track rule actually caught). Grouped per scenario type, it shows the
+real story: every radio verdict is right, while the track evidence underneath catches 59–82% of
+staged aircraft. Latency suits a separate dot-and-range chart (median, with a 10–90 s range). The
+false-positive rates belong in a sentence, because a bar of height zero cannot be seen.
+
+**A spider chart does not suit these figures.** Its axes would mix a rate where higher is better, a
+rate where lower is better and a latency in seconds. Perfect scores trace a full polygon, so the
+filled area looks like an achievement when it mostly shows how the axes were scaled.
+
+**The grouped bar in the reference image belongs to the other measurement**: hosted vs template, per
+rubric dimension, once the blind scoring has been marked. That is the comparison the thesis actually
+makes. The automated half already measured is also flat (no ungrounded citation caught on either
+arm; 0 retries; agreement across N=3 of 1.0 on grounding, confidence and cited kinds), so the rubric
+means are the figures that can separate the arms.
+
+### Limitation worth stating beside any chart
+
+The 1.000s show that the pipeline is **wired correctly**. They do not show detection accuracy. The
+radio incidents are synthetic and well above threshold by construction, and the corpus has no near
+misses. A chart of a row of full-height bars invites the opposite reading, so its caption has to say
+this.
+
+---
+
 | **Composing copy** | Turning a finding type the backend sends verbatim into a sentence an analyst reads. Done on the screen by design, so prose never arrives from a detector — and in one module, because two panels carry the same type. See §148. |
 | **A closed set held by parity** | A set declared on the backend and mirrored as a union type on the frontend, compared against its origin by a test. What makes a missing case a type error rather than a token on screen. See §148, §140. |
 | **An absence with no sentence** | The one deliberate exception to composing copy: an invalid level is a developer's defect, not a state to explain to an analyst, so it is logged rather than worded. See §148. |
@@ -9146,3 +9223,4 @@ rewrites every detection figure of record, or leave two in the store and report 
 | **A regeneration cascade** | A foreign key doing exactly what it was declared to do, at a moment nobody intended: a derived-data stage replaces a row, and rows that cite it are deleted with it. Distinct from a cascade on a deliberate delete, which is the schema working. See §149. |
 | **Matching without a key** | Attaching two records of one event to each other by comparing fields, because no column joins them and none can. Safe only where the fields are derived from one source by construction. See §149. |
 | **An unpinned experimental variable** | A setting that is recorded but not fixed, so two runs of the same code disagree and the record is the only thing that says why. The baseline's quiet-run population is one. See §151. |
+| **In series, not side by side** | The AI explains what the deterministic rules already detected; it does not detect. So detection metrics score the rules against ground truth, and the AI is scored against the template generator, never against the rules. See §152. |

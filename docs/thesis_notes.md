@@ -8607,6 +8607,44 @@ own fingerprint, which is how the export already modelled provenance — two
 independent records, never flattened into one. Splitting the directories makes the
 separation visible in the artefact rather than only in the object.
 
+### The evaluation compares two pairs in series, never the AI against the rules
+
+The detection results (precision, recall, F1, the two false-positive rates, the
+false-negative rate and latency) are easily read as a contest between deterministic and
+AI detection. They are not one, and the write-up has to forestall that reading
+explicitly, because it is the natural reading and was the author's own on 6 October
+2026 (`docs/qa.md` §152).
+The system has one detector, the deterministic rule set (`em_fusion_v2.md` §5.3, ML
+detectors being future work). The model sits downstream of it, receives an evidence
+bundle the rules have already built, and explains it. It never sees an observation and
+never decides whether anything is anomalous, so there is no AI detection to score.
+
+The evaluation is therefore two comparisons in series, each against its own reference.
+Detection (`eval-002`) grades the rules' reported claims against the generator's answer
+key, per scenario run, over 300 runs of corpus v2. The figures are re-derived from the
+stored observations rather than read from the bundles. Explanation (`eval-004`,
+`eval-005`) grades the hosted model against the template generator on identical
+bundles, over 20 bundles, by blind rubric scoring plus the automated grounding, retry
+and agreement statistics. Detection serves RQ3 indirectly: it establishes that the
+input the model receives is sound, which is a precondition for attributing any
+difference between the arms to the generators rather than to wrong evidence. A
+detection error propagates as a well-grounded explanation of an event that did not
+occur, and the grounding check cannot catch it, because the citation resolves.
+
+The same distinction decided how the results are charted. A grouped bar of two systems
+across several metrics fits the second comparison only, as hosted against template per
+rubric dimension once the scoring is marked. Drawn over the detection figures, it would
+depict a comparison that was never run. For detection, the grouped bars are per-run recall
+beside per-staged-aircraft recall for each scenario type, the only place the figures vary,
+and latency is a median-with-range plot. A radar chart was considered and rejected.
+Its axes would mix rates where higher is better, rates where lower is better and a
+duration in seconds. With most detection figures at 1.000 or 0.000, the filled area would
+encode the axis scaling rather than the result. The false-positive rates (0 of 60 on both
+silent arms) are stated in prose, since a bar of height zero cannot be seen. Every
+detection chart carries the existing caveat that these figures establish correct wiring
+and not detection accuracy (see "a results table of 1.000 and 0.000 measures wiring, not
+accuracy" above).
+
 ### A flag that is vacuously true over an empty population
 
 The per-arm report carries a boolean saying whether an arm's cost figure is a total

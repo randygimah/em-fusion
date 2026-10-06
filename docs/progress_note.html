@@ -320,9 +320,12 @@
     text-transform: uppercase;
     fill: var(--muted);
   }
-  .fig__tick { font-family: var(--mono); font-size: 10.5px; fill: var(--muted); }
+  .fig__tick { font-family: var(--mono); font-size: 10.5px; }
+  .fig__tick:not([fill]) { fill: var(--muted); }
   .fig__place { font-family: var(--display); font-size: 11.5px; font-weight: 500; fill: var(--ink-2); }
-  .fig__val { font-family: var(--mono); font-size: 11.5px; fill: var(--ink); }
+  .fig__val { font-family: var(--mono); font-size: 11.5px; }
+  /* A class rule outranks the SVG fill attribute, so the default applies only where none is set. */
+  .fig__val:not([fill]) { fill: var(--ink); }
 
   /* ---------- record blocks ---------- */
 
@@ -7293,6 +7296,99 @@ second pass   <b>5.060000171975998</b></div>
       </p>
     </div>
 
+    <h3>What these figures grade — and the contest they are not</h3>
+    <p>
+      A table of catch rates and false alarms from a project with an AI model in it invites one
+      reading in particular: <em>the AI against the rules, which detects better?</em> <b>That
+      comparison does not exist here, and it could not.</b> The system has exactly one detector, the
+      written-down rules. The model comes after them. It is handed a package of evidence the rules
+      have already assembled and asked to explain it. It never sees a single reading, and it never
+      decides whether anything is wrong.
+    </p>
+    <div class="fig">
+      <div class="fig__art">
+        <svg width="640" height="262" viewBox="0 0 640 262" role="img"
+             aria-label="The pipeline in five steps: readings, rules, claim, package of evidence, explanation. Report card one covers the rules and the claim, and grades them against the answer key written when the hour was staged, over 300 hours; it is the subject of this section. Report card two covers the package and the explanation, and grades the AI model against the mechanical template on the same package, over 20 packages, with blind marking still to come. The rules and the model are never graded against each other, because the model never sees a reading and never decides whether anything is wrong.">
+          <text class="fig__label" x="2" y="16">one detector, then one explainer — two report cards, in series</text>
+
+          <rect x="2" y="34" width="104" height="48" rx="4" fill="var(--surface-2)" stroke="var(--line)" />
+          <text class="fig__place" x="54" y="55" text-anchor="middle">readings</text>
+          <text class="fig__val" x="54" y="72" text-anchor="middle" style="fill:var(--muted)">aircraft, radio</text>
+
+          <rect x="134" y="34" width="104" height="48" rx="4" fill="var(--signal-soft)" stroke="var(--signal)" />
+          <text class="fig__place" x="186" y="55" text-anchor="middle">rules</text>
+          <text class="fig__val" x="186" y="72" text-anchor="middle" style="fill:var(--muted)">the detector</text>
+
+          <rect x="266" y="34" width="104" height="48" rx="4" fill="var(--signal-soft)" stroke="var(--signal)" />
+          <text class="fig__place" x="318" y="55" text-anchor="middle">claim</text>
+          <text class="fig__val" x="318" y="72" text-anchor="middle" style="fill:var(--muted)">what it found</text>
+
+          <rect x="398" y="34" width="104" height="48" rx="4" fill="var(--accent-soft)" stroke="var(--accent)" />
+          <text class="fig__place" x="450" y="55" text-anchor="middle">package</text>
+          <text class="fig__val" x="450" y="72" text-anchor="middle" style="fill:var(--muted)">of evidence</text>
+
+          <rect x="530" y="34" width="104" height="48" rx="4" fill="var(--accent-soft)" stroke="var(--accent)" />
+          <text class="fig__place" x="582" y="55" text-anchor="middle">explanation</text>
+          <text class="fig__val" x="582" y="72" text-anchor="middle" style="fill:var(--muted)">AI or template</text>
+
+          <g stroke="var(--muted)" stroke-width="1.5" fill="none">
+            <line x1="108" y1="58" x2="128" y2="58" />
+            <line x1="240" y1="58" x2="260" y2="58" />
+            <line x1="372" y1="58" x2="392" y2="58" />
+            <line x1="504" y1="58" x2="524" y2="58" />
+          </g>
+          <g fill="var(--muted)">
+            <path d="M126 54 L132 58 L126 62 Z" />
+            <path d="M258 54 L264 58 L258 62 Z" />
+            <path d="M390 54 L396 58 L390 62 Z" />
+            <path d="M522 54 L528 58 L522 62 Z" />
+          </g>
+
+          <path d="M134 92 V100 H370 V92" fill="none" stroke="var(--signal)" stroke-width="1.5" />
+          <text class="fig__val" x="134" y="120" style="fill:var(--signal)">report card 1 · detection</text>
+          <text class="fig__val" x="134" y="138">graded against the answer key</text>
+          <text class="fig__val" x="134" y="156" style="fill:var(--muted)">300 hours · this section</text>
+
+          <path d="M398 92 V100 H634 V92" fill="none" stroke="var(--accent)" stroke-width="1.5" />
+          <text class="fig__val" x="398" y="120" style="fill:var(--accent)">report card 2 · explanation</text>
+          <text class="fig__val" x="398" y="138">model graded against template</text>
+          <text class="fig__val" x="398" y="156" style="fill:var(--muted)">20 packages · marking to come</text>
+
+          <path d="M186 172 V186 H582 V172" fill="none" stroke="var(--bad)" stroke-width="1.5"
+                stroke-dasharray="4 3" />
+          <g stroke="var(--bad)" stroke-width="2">
+            <line x1="376" y1="178" x2="392" y2="194" />
+            <line x1="392" y1="178" x2="376" y2="194" />
+          </g>
+          <text class="fig__val" x="384" y="216" text-anchor="middle" style="fill:var(--bad)">rules against model — never graded</text>
+          <text class="fig__val" x="384" y="234" text-anchor="middle" style="fill:var(--muted)">the model sees no reading and decides nothing,</text>
+          <text class="fig__val" x="384" y="252" text-anchor="middle" style="fill:var(--muted)">so there is no detection of its own to score</text>
+        </svg>
+      </div>
+    </div>
+    <p class="caption">
+      Two report cards, each comparing a different pair against a different reference. The first,
+      which is everything in this section, grades the rules' conclusions against the record the
+      generator made of what it staged. The second grades the model's explanations against the
+      mechanical template's, written from the same package, by a marker who does not know which is
+      which.
+    </p>
+    <p>
+      Kept apart, each answers its own question. The first asks <b>whether the evidence reaching the
+      model can be trusted</b>. That matters more than it sounds, because a rule's mistake reaches
+      the model as a package, and the model will then write a careful, well-grounded explanation of
+      something that did not happen. The second asks <b>whether the model's explanation is better
+      than the mechanical one</b>, which is the question the project exists to answer. The
+      side-by-side bar chart that compares two systems on several measures belongs to the second
+      report card: model against template, measure by measure, once the blind marking is done. Drawn
+      for this section, its bars would show a contest that was never held.
+    </p>
+    <p>
+      The figures below also do not come from the packages. Every hour was run through the rules
+      again from its stored readings, and what the rules concluded was compared with the answer key
+      the generator wrote when it staged that hour.
+    </p>
+
     <h3>The six figures, defined</h3>
     <div class="tiers">
       <div class="tier">
@@ -7633,7 +7729,7 @@ second pass   <b>5.060000171975998</b></div>
           <rect x="8" y="252" width="11" height="11" rx="2" fill="var(--signal)" opacity="0.85" />
           <text class="fig__val" x="26" y="262">per hour — did it name the right anomaly?</text>
           <rect x="330" y="252" width="11" height="11" rx="2" fill="var(--warn)" opacity="0.85" />
-          <text class="fig__val" x="348" y="262">per disrupted aircraft — did it flag each one?</text>
+          <text class="fig__val" x="348" y="262">per aircraft — did it flag each one?</text>
         </svg>
       </div>
     </div>
