@@ -1,6 +1,6 @@
 source,staged,reported,runs
-79ef76db46ba,aircraft-coverage-gap,(silent),60
-79ef76db46ba,ambiguous-mixed-evidence,possible_sensor_fault,60
-79ef76db46ba,gnss-degradation,possible_interference_zone,60
-79ef76db46ba,normal-baseline,(silent),60
-79ef76db46ba,rf-sensor-fault,possible_sensor_fault,60
+d2a2c04ab428,aircraft-coverage-gap,(silent),60
+d2a2c04ab428,ambiguous-mixed-evidence,possible_sensor_fault,60
+d2a2c04ab428,gnss-degradation,possible_interference_zone,60
+d2a2c04ab428,normal-baseline,(silent),60
+d2a2c04ab428,rf-sensor-fault,possible_sensor_fault,60

@@ -1,5 +1,10 @@
 """Examine every stored run with the detection pass. Spec: anom-016.
 
+**Superseded by `anom-017`'s `corpus/rescore_baseline.py`.** This baselines over
+`_corpus.quiet_runs` -- sixty runs -- and rewrites every stamp, which is how the
+store came to hold findings under two baselines. Kept with its log as the record of
+the 3 October re-score; moved here so nothing runs it by accident.
+
 **This writes to the application's database**, which makes it the odd one out in
 this directory. Everything else here measures and prints; this one replaces the
 findings of every completed run and stamps each one with when it was examined and

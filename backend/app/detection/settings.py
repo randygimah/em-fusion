@@ -35,6 +35,13 @@ The settings themselves are each measured and argued for in their own item --
 `anom-001` for the threshold and its severity steps, `anom-014` for the minimum
 episode, `anom-010` for the two staleness clocks, `anom-004` and `anom-012` for the
 radii. Nothing is chosen here; this is the one place they are written down.
+
+**A twelfth setting joined them with `anom-017`: the quiet runs normal is measured
+over.** It had been the store's to decide -- every quiet run present when the pass
+ran -- so two passes under identical thresholds could disagree, and the store of
+record ended up holding findings under two baselines. It is the same argument as the
+other eleven, one step along: a setting chosen by the store is not a setting anybody
+decided.
 """
 
 from __future__ import annotations
@@ -42,7 +49,7 @@ from __future__ import annotations
 from datetime import timedelta
 
 from app.detection.baseline import RfMetric
-from app.detection.chain import DetectorPolicies
+from app.detection.chain import DetectorPolicies, PinnedRun
 from app.detection.clustering import ClusterPolicy
 from app.detection.fusion import FusionPolicy
 from app.detection.precedence import PrecedencePolicy
@@ -93,4 +100,128 @@ POLICIES_OF_RECORD = DetectorPolicies(
     cluster=ClusterPolicy(),
     fusion=FusionPolicy(),
     ladder=PrecedencePolicy(),
+)
+
+#: `anom-017`. The quiet runs `anom-002` measures normal over, **declared rather
+#: than discovered**, each with the seed that says which hour it is.
+#:
+#: Derived on 2026-10-06 from the store of record by
+#: `quiet_run_ids` -- every completed `normal-baseline` run, which was exactly
+#: these hundred -- and kept as a list because the rule was what moved: run it
+#: against a larger store and it returns a different baseline under the same name.
+#: All hundred and not the sixty the figures were first measured over, because the
+#: sixty are a strict subset and every one of the hundred is corpus v2 by
+#: `scn-008`'s base-seed discriminator, 900 s long: one population measured twice,
+#: once with forty fewer runs. Five batches of twenty -- the corpus of record's
+#: three base seeds and two further ones.
+#:
+#: To re-derive for another corpus: read the completed quiet runs with their seeds
+#: in id order, replace this list, and expect `measure_normality` to refuse until
+#: it matches the store it is used against. That refusal is the point.
+BASELINE_QUIET_RUNS: tuple[PinnedRun, ...] = (
+    # base seed 695081452, runs 21-40
+    PinnedRun(21, 166805981),
+    PinnedRun(22, 1345373764),
+    PinnedRun(23, 1281506699),
+    PinnedRun(24, 1046111149),
+    PinnedRun(25, 1671112081),
+    PinnedRun(26, 1620174491),
+    PinnedRun(27, 1297954491),
+    PinnedRun(28, 577652087),
+    PinnedRun(29, 1274480208),
+    PinnedRun(30, 862309905),
+    PinnedRun(31, 1434856080),
+    PinnedRun(32, 117514344),
+    PinnedRun(33, 1787241730),
+    PinnedRun(34, 502180977),
+    PinnedRun(35, 1430524761),
+    PinnedRun(36, 1851510869),
+    PinnedRun(37, 1485630712),
+    PinnedRun(38, 1374292650),
+    PinnedRun(39, 2002992378),
+    PinnedRun(40, 293439854),
+    # base seed 1412660662, runs 81-100
+    PinnedRun(81, 174340479),
+    PinnedRun(82, 1875240485),
+    PinnedRun(83, 1292162837),
+    PinnedRun(84, 1692984457),
+    PinnedRun(85, 1948285684),
+    PinnedRun(86, 1552594531),
+    PinnedRun(87, 1920184254),
+    PinnedRun(88, 2108456615),
+    PinnedRun(89, 1114381627),
+    PinnedRun(90, 1153438802),
+    PinnedRun(91, 1680066816),
+    PinnedRun(92, 924593934),
+    PinnedRun(93, 289235765),
+    PinnedRun(94, 748118651),
+    PinnedRun(95, 446522131),
+    PinnedRun(96, 448328270),
+    PinnedRun(97, 1850443630),
+    PinnedRun(98, 1861112498),
+    PinnedRun(99, 1795779061),
+    PinnedRun(100, 540269088),
+    # base seed 965530111, runs 181-200
+    PinnedRun(181, 1529594995),
+    PinnedRun(182, 589895375),
+    PinnedRun(183, 272295924),
+    PinnedRun(184, 2658869),
+    PinnedRun(185, 591477938),
+    PinnedRun(186, 2110292449),
+    PinnedRun(187, 1717690154),
+    PinnedRun(188, 1199985583),
+    PinnedRun(189, 563542159),
+    PinnedRun(190, 1041545269),
+    PinnedRun(191, 678896385),
+    PinnedRun(192, 2102849373),
+    PinnedRun(193, 1983112751),
+    PinnedRun(194, 1040223433),
+    PinnedRun(195, 447232922),
+    PinnedRun(196, 1453129079),
+    PinnedRun(197, 1942973658),
+    PinnedRun(198, 1223991610),
+    PinnedRun(199, 567595529),
+    PinnedRun(200, 1213409055),
+    # base seed 655209063, runs 281-300
+    PinnedRun(281, 1567394621),
+    PinnedRun(282, 103250356),
+    PinnedRun(283, 1827244454),
+    PinnedRun(284, 394022487),
+    PinnedRun(285, 1528599928),
+    PinnedRun(286, 461642107),
+    PinnedRun(287, 2094756535),
+    PinnedRun(288, 1760430909),
+    PinnedRun(289, 2034016067),
+    PinnedRun(290, 77255740),
+    PinnedRun(291, 359231189),
+    PinnedRun(292, 1066724417),
+    PinnedRun(293, 1117457343),
+    PinnedRun(294, 1166592875),
+    PinnedRun(295, 1912519329),
+    PinnedRun(296, 315208407),
+    PinnedRun(297, 495053092),
+    PinnedRun(298, 1080982705),
+    PinnedRun(299, 1993993051),
+    PinnedRun(300, 1352730131),
+    # base seed 1284648146, runs 381-400
+    PinnedRun(381, 1709575584),
+    PinnedRun(382, 155278384),
+    PinnedRun(383, 739054506),
+    PinnedRun(384, 2137466079),
+    PinnedRun(385, 495206081),
+    PinnedRun(386, 989043092),
+    PinnedRun(387, 350486865),
+    PinnedRun(388, 1450184414),
+    PinnedRun(389, 1721199379),
+    PinnedRun(390, 115533277),
+    PinnedRun(391, 676988414),
+    PinnedRun(392, 1986404828),
+    PinnedRun(393, 1587447171),
+    PinnedRun(394, 337385148),
+    PinnedRun(395, 290262251),
+    PinnedRun(396, 538031510),
+    PinnedRun(397, 1082328929),
+    PinnedRun(398, 1986626487),
+    PinnedRun(399, 745703529),
+    PinnedRun(400, 1305389196),
 )

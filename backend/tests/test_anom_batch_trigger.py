@@ -62,7 +62,12 @@ from app.db.repository import (
     run_summary,
 )
 from app.detection.baseline import RfMetric, compute_rf_baselines
-from app.detection.chain import ChainError, DetectorPolicies, measure_normality
+from app.detection.chain import (
+    ChainError,
+    DetectorPolicies,
+    PinnedRun,
+    measure_normality,
+)
 from app.detection.rf_noise import Direction
 from app.detection.settings import (
     BASELINE_WINDOW,
@@ -244,18 +249,22 @@ def _wire(
     monkeypatch: pytest.MonkeyPatch,
     recorder: _Recorder,
     *,
-    quiet: tuple[int, ...] = (QUIET,),
+    refuse: str | None = None,
 ) -> _Wiring:
-    """Everything `score_batch` composes, replaced by something cheap."""
+    """Everything `score_batch` composes, replaced by something cheap.
+
+    `refuse` stands in for `measure_normality` declining the pinned baseline
+    (`anom-017`): the trigger no longer asks the store which runs are quiet, so a
+    store that cannot supply them is now a refusal from the baseline itself.
+    """
     wiring = _Wiring(baseline=object())
 
     def _measure(session_factory: object, **kwargs: Any) -> object:
         wiring.baselines_measured += 1
-        if not kwargs["quiet_run_ids"]:
-            raise ChainError("a baseline measured over no quiet runs")
+        if refuse is not None:
+            raise ChainError(refuse)
         return wiring.baseline
 
-    monkeypatch.setattr(batch_module, "quiet_run_ids", lambda _factory: quiet)
     monkeypatch.setattr(batch_module, "measure_normality", _measure)
     monkeypatch.setattr(
         batch_module, "run_summary", lambda _factory, run_id: _run(run_id)
@@ -420,8 +429,14 @@ def test_the_baseline_is_measured_on_the_metric_it_will_be_thresholded_against(
         ladder=POLICIES_OF_RECORD.ladder,
     )
 
+    monkeypatch.setattr(
+        chain_module, "pinned_run_discrepancies", lambda _factory, _pinned: ()
+    )
     normality = measure_normality(
-        object(), quiet_run_ids=(QUIET,), policies=policies, window=BASELINE_WINDOW
+        object(),
+        quiet_runs=(PinnedRun(QUIET, 1),),
+        policies=policies,
+        window=BASELINE_WINDOW,
     )
 
     assert normality.table.metric is RfMetric.SNR_DB
@@ -442,9 +457,12 @@ def test_the_baseline_carries_the_runs_and_the_window_it_came_from(
         lambda _f, run_id, *_a, **_k: list(_rf(run_id)),
     )
 
+    monkeypatch.setattr(
+        chain_module, "pinned_run_discrepancies", lambda _factory, _pinned: ()
+    )
     normality = measure_normality(
         object(),
-        quiet_run_ids=(QUIET, QUIET + 1),
+        quiet_runs=(PinnedRun(QUIET, 1), PinnedRun(QUIET + 1, 2)),
         policies=POLICIES_OF_RECORD,
         window=BASELINE_WINDOW,
     )
@@ -463,7 +481,7 @@ def test_a_store_with_no_quiet_runs_is_refused_before_the_database_is_touched() 
     with pytest.raises(ChainError, match="no quiet runs"):
         measure_normality(
             _ExplodingFactory(),
-            quiet_run_ids=(),
+            quiet_runs=(),
             policies=POLICIES_OF_RECORD,
             window=BASELINE_WINDOW,
         )
@@ -604,7 +622,7 @@ def test_a_store_with_no_quiet_runs_refuses_the_pass_and_the_batch_still_stands(
     # reported rather than raised: the runs then report themselves unexamined,
     # which `api-012` serves as a null summary and the screen says in words.
     recorder = _Recorder()
-    _wire(monkeypatch, recorder, quiet=())
+    _wire(monkeypatch, recorder, refuse="no quiet runs in the store")
 
     report = score_batch(
         _summary(_outcome(0, run_id=STAGED[0], completed=True)),
@@ -629,10 +647,10 @@ def test_nothing_about_scoring_escapes_into_the_batch(
     recorder = _Recorder()
     _wire(monkeypatch, recorder)
 
-    def _gone(_factory: object) -> tuple[int, ...]:
+    def _gone(_factory: object, **_kwargs: Any) -> object:
         raise RuntimeError("the store is gone")
 
-    monkeypatch.setattr(batch_module, "quiet_run_ids", _gone)
+    monkeypatch.setattr(batch_module, "measure_normality", _gone)
 
     report = score_batch(
         _summary(_outcome(0, run_id=STAGED[0], completed=True)),
@@ -723,7 +741,7 @@ def test_the_report_tells_a_refusal_apart_from_an_examination_that_found_nothing
     # that ran and failed on every run. Collapsed into one sentence, a fresh
     # database reads as a broken detector.
     recorder = _Recorder()
-    _wire(monkeypatch, recorder, quiet=())
+    _wire(monkeypatch, recorder, refuse="no quiet runs in the store")
     refused = score_batch(
         _summary(_outcome(0, run_id=STAGED[0], completed=True)),
         session_factory=object(),
@@ -1033,7 +1051,7 @@ def test_the_baseline_is_the_same_one_the_measurement_script_built_by_hand(
     )
     through_the_app = measure_normality(
         factory,
-        quiet_run_ids=(QUIET,),
+        quiet_runs=(PinnedRun(QUIET, 1),),
         policies=POLICIES_OF_RECORD,
         window=BASELINE_WINDOW,
     )
@@ -1062,6 +1080,10 @@ def test_every_completed_run_of_the_batch_ends_up_stamped(
         ),
         session_factory=factory,
         layout=LAYOUT,
+        # `anom-017`: a test store does not hold the pinned population, and
+        # refusing it is the point -- so this names its own, as a deliberate
+        # re-score would.
+        quiet_runs=(PinnedRun(QUIET, 1),),
     )
 
     assert report.refused is None

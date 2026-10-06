@@ -510,6 +510,47 @@ def quiet_run_ids(session_factory: sessionmaker[Session]) -> tuple[int, ...]:
         return tuple(int(row[0]) for row in rows)
 
 
+def pinned_run_discrepancies(
+    session_factory: sessionmaker[Session], pinned: Sequence[tuple[int, int]]
+) -> tuple[tuple[int, str], ...]:
+    """Every pinned baseline run the store does not hold as pinned. Spec: anom-017.
+
+    Four conditions, one reason each, checked in this order: the row exists, it
+    is a `normal-baseline` run, it has finished, and it carries the pinned seed.
+    The seed is the one that matters most and is easiest to forget: an id names a
+    row in *this* store, so on another database the same id can be a quiet,
+    finished run that is simply a different hour.
+
+    Returned in id order and **empty when every run is held** -- the refusal is
+    `measure_normality`'s, which is the one place a caller can be told what the
+    discrepancy means. Here, as `quiet_run_ids` beside it, the label is read out
+    in the open so that what crosses into the detection layer stays ids.
+    """
+    wanted = dict(pinned)
+    with session_factory.begin() as session:
+        rows = session.execute(
+            text(
+                "SELECT id, scenario_type, seed, completed_at IS NOT NULL "
+                "FROM scenario_runs WHERE id = ANY(:ids)"
+            ),
+            {"ids": list(wanted)},
+        ).all()
+    held = {int(row[0]): (str(row[1]), int(row[2]), bool(row[3])) for row in rows}
+    found: list[tuple[int, str]] = []
+    for run_id in sorted(wanted):
+        if run_id not in held:
+            found.append((run_id, "absent"))
+            continue
+        scenario_type, seed, completed = held[run_id]
+        if scenario_type != ScenarioType.NORMAL_BASELINE.value:
+            found.append((run_id, f"not normal-baseline ({scenario_type})"))
+        elif not completed:
+            found.append((run_id, "not completed"))
+        elif seed != wanted[run_id]:
+            found.append((run_id, f"seed {seed}, pinned {wanted[run_id]}"))
+    return tuple(found)
+
+
 def run_summary(
     session_factory: sessionmaker[Session], run_id: int
 ) -> ScenarioRunSummary | None:
