@@ -604,15 +604,20 @@ def test_a_raised_receiver_reaches_a_reported_claim_and_a_stored_bundle(
     assert assessment.reported, "the ladder reported nothing"
     assert len(assessment.bundles) == len(assessment.reported)
 
-    # Built and **not** stored. The line is between what is regenerable and id-free
-    # and what carries identity something else cites: `eval-004`'s pre-registered
-    # sample names its twenty bundles by id, so a pass that rebuilt them corpus-wide
-    # would renumber that population and stop the draw reproducing itself.
+    # Built and **stored**, since `evb-003`. This block used to assert the
+    # opposite, and the line it drew is the one that moved: between what is
+    # regenerable and id-free and what carries identity something else cites.
+    # `eval-004`'s pre-registered sample names its twenty bundles by id, so a
+    # pass that rebuilt them corpus-wide would renumber that population and stop
+    # the draw reproducing itself -- which is a reason to protect twenty bundles
+    # on twenty runs, and was implemented as storing none on any. `db-011` makes
+    # that protection structural and decided from the store, so the pass stores
+    # what it builds and refuses on exactly the runs something cites.
     with factory() as session:
         stored = session.execute(
             text("SELECT count(*) FROM evidence_bundles WHERE scenario_run_id = 2")
         ).scalar_one()
-    assert stored == 0, "the pass stored bundles a caller did not ask it to store"
+    assert stored == len(assessment.bundles), "the pass did not store what it built"
 
 
 @requires_database

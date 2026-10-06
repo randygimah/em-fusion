@@ -125,7 +125,10 @@ def test_what_is_stored_is_what_the_assessment_reports(
 
     assessment = _pass(factory)
 
-    stored = {(b.rule_id, b.subject, b.time_window) for _, b in stored_bundles_for_run(factory, RUN_ID)}
+    stored = {
+        (b.rule_id, b.subject, b.time_window)
+        for _, b in stored_bundles_for_run(factory, RUN_ID)
+    }
     built = {(b.rule_id, b.subject, b.time_window) for b in assessment.bundles}  # type: ignore[attr-defined]
     assert stored == built
 
@@ -176,7 +179,6 @@ def cited(migrated_database: Engine) -> sessionmaker:
     bundle the shipped writer produced.
     """
     from app.db.hypotheses import save_hypothesis
-
     from tests.test_db_hypotheses import template_result
 
     factory = sessionmaker(bind=migrated_database, autoflush=False)
@@ -253,7 +255,6 @@ def test_a_run_refused_before_it_was_ever_examined_stays_unexamined(
     # spec: evb-003, anom-015, db-011
     from app.db.bundles import save_bundles
     from app.db.hypotheses import save_hypothesis
-
     from tests.test_db_hypotheses import template_result
 
     factory = sessionmaker(bind=migrated_database, autoflush=False)
@@ -304,8 +305,7 @@ def test_the_identity_is_derived_in_one_place() -> None:
     imported = {
         alias.name
         for node in ast.walk(ast.parse(source))
-        if isinstance(node, ast.ImportFrom)
-        and node.module == "app.detection.findings"
+        if isinstance(node, ast.ImportFrom) and node.module == "app.detection.findings"
         for alias in node.names
     }
 

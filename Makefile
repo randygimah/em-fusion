@@ -170,9 +170,12 @@ generate: build-pipeline ## Run a scenario batch in a container, into the runnin
 # right target for a measurement and the wrong one for anything that drops.
 # SMOKE_TEST_CONFIRM and CAMPAIGN_CONFIRM are forwarded for the two scripts
 # here that make real, billed provider calls -- corpus/hosted_smoke_test.py and
-# corpus/scored_campaign.py; every other script ignores them. Each script has
-# its own variable rather than sharing one, so approving the three-bundle
-# pre-flight can never also approve the twenty-bundle campaign. The credential
+# corpus/scored_campaign.py; every other script ignores them. BACKFILL_CONFIRM
+# is the third and is not about money: corpus/backfill_bundles.py is the only
+# script here that WRITES to the store, re-examining up to 144 runs. Each script
+# has its own variable rather than sharing one, so approving the three-bundle
+# pre-flight can never also approve the twenty-bundle campaign, and neither can
+# approve a corpus-wide write. The credential
 # is deliberately NOT forwarded: the script reads
 # backend/.env through the bind mount, following app/replay.py rather than
 # Compose interpolation, which turns an unset host variable into an empty string
@@ -186,6 +189,7 @@ measure: build-backend ## Run a measurement, e.g. make measure SCRIPT=corpus/bun
 		-e PYTHONPATH=/app -e CORPUS="$(CORPUS)" \
 		-e SMOKE_TEST_CONFIRM="$(SMOKE_TEST_CONFIRM)" \
 		-e CAMPAIGN_CONFIRM="$(CAMPAIGN_CONFIRM)" \
+		-e BACKFILL_CONFIRM="$(BACKFILL_CONFIRM)" \
 		backend python measurements/$(SCRIPT)
 
 ensure-artifacts: ## Generate the demo dataset only if artefacts are missing

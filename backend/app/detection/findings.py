@@ -57,6 +57,40 @@ class DetectionFinding:
     details: dict[str, Any] = field(default_factory=dict)
 
 
+#: What makes two records of one reported claim the same claim.
+#:
+#: Rule, finding type, subject and window -- and **nothing derived**. Details
+#: are rule-specific and a location is computed from them, so a claim whose
+#: confidence moved under new settings would read as a different claim and the
+#: comparison would report a disagreement that is not one.
+ClaimIdentity = tuple[str, str, str, datetime, datetime]
+
+
+def claim_identity(finding: DetectionFinding) -> ClaimIdentity:
+    """One reported claim's identity, for comparing two records of it.
+
+    **One derivation and never two.** `api-015` matches a stored bundle
+    against the claim it explains, and `evb-003`'s fill compares a rebuilt
+    claim against the stored one; those are the same question asked from two
+    directions, and two spellings of it can disagree about which account
+    belongs to which conclusion -- which is the ambiguity `api-015` refuses
+    rather than resolves.
+
+    It lives here and not in either caller because it is a property of
+    `db-008`'s canonical finding. There is no key joining a bundle to its
+    conclusion and there cannot be: findings are replaced per run per rule, so
+    a foreign key would cascade-delete the bundles on every re-score, which is
+    `db-011`'s argument one table along.
+    """
+    return (
+        finding.rule_id,
+        finding.finding_type,
+        finding.subject,
+        finding.started_at,
+        finding.ended_at,
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class FindingCluster:
     """A group of findings that lie near one another. Spec: db-009.

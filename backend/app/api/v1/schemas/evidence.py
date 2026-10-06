@@ -52,14 +52,13 @@ make this module know what each rule's keys mean.
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
 from app.detection.bundle import EvidenceBundle, EvidenceItem
 from app.detection.control import REGISTER, Key, Producer, reportable_keys
-from app.detection.findings import DetectionFinding
+from app.detection.findings import ClaimIdentity, DetectionFinding, claim_identity
 
 UnexplainedReason = Literal["not-bundled"]
 UnclaimedReason = Literal["no-current-claim"]
@@ -82,7 +81,12 @@ NO_CURRENT_CLAIM: UnclaimedReason = "no-current-claim"
 SUBJECT_SEPARATOR = ", "
 
 #: (rule id, finding type, first receiver, window start, window end).
-MatchKey = tuple[str, str, str, datetime, datetime]
+#:
+#: `anom-015`'s own `ClaimIdentity`, aliased rather than redeclared: the
+#: findings side of the match IS that identity, and `evb-003`'s fill asks the
+#: same question of two findings. Two spellings of "the same claim" are two
+#: things that can disagree about which account belongs to which conclusion.
+MatchKey = ClaimIdentity
 
 
 class EvidenceError(ValueError):
@@ -465,13 +469,7 @@ def build_evidence_account(
     for finding in findings:
         if (finding.rule_id, finding.finding_type) not in reportable:
             continue
-        key: MatchKey = (
-            finding.rule_id,
-            finding.finding_type,
-            finding.subject,
-            finding.started_at,
-            finding.ended_at,
-        )
+        key: MatchKey = claim_identity(finding)
         if key in seen:
             raise EvidenceError(
                 f"this hour holds two reported claims with the same identity: "

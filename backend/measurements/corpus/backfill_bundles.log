@@ -1,0 +1,49 @@
+backfill_bundles.py -- evb-003
+run range named here: 1-420
+
+a claim with no bundle : 140 runs
+a bundle with no claim : 4 runs [54, 71, 76, 105]
+in scope               : 144 runs
+
+building normality over 100 quiet runs ...
+  29.1 s
+
+run 54: 1 bundle(s), claims agree
+
+run 71: the rebuilt claims DISAGREE with the stored ones.
+  was : [('FUSION-SPATIAL', 'possible_interference_zone', 'RF-01', datetime.datetime(2022, 6, 27, 12, 22, 33, tzinfo=datetime.timezone.utc), datetime.datetime(2022, 6, 27, 12, 27, 53, tzinfo=datetime.timezone.utc))]
+  now : [('FUSION-SPATIAL', 'possible_interference_zone', 'RF-01', datetime.datetime(2022, 6, 27, 12, 22, 13, tzinfo=datetime.timezone.utc), datetime.datetime(2022, 6, 27, 12, 27, 53, tzinfo=datetime.timezone.utc))]
+STOPPING. The detectors no longer reproduce the figures of record, so every further run would be rewritten under settings that have just been shown to differ.
+
+make: *** [measure] Error 3
+
+-------------------------------------------------------------------------------
+What this means, recorded 2026-10-06.
+
+The cause is the BASELINE, not the detectors and not the thresholds, which are
+identical on both sides. `measure_normality` takes `quiet_run_ids` -- every
+quiet run the store holds -- so the normality a run is scored against depends
+on how large the store was when the pass ran. By the recorded policy the store
+holds findings written under two of them:
+
+    BASELINE.quiet_run_count = 60   on 378 runs
+    BASELINE.quiet_run_count = 100  on  22 runs
+
+`anom-016` named this hazard when it put the quiet runs on the record -- two
+baselines under identical thresholds give different findings and are otherwise
+indistinguishable -- and `eval-003`'s policy column is what made it visible
+here. Neither prevents it, and nothing on the screen or in `eval-002`'s table
+reports which baseline a figure was taken under.
+
+It also inverts this item's earlier reading. The four bundles matching no claim
+are NOT stale: run 71's bundle, written 2026-09-19, agrees with today's rebuild
+to the second, and it is the stored FINDING that was produced under the other
+baseline.
+
+The two runs written before the stop (54 and 71) were restored from a dump
+taken beforehand. The store is byte-for-byte as it was: 103 bundles, 8306
+findings, 155 hypotheses, 20 runs at the 100-run baseline.
+
+The fill is blocked on a decision that is not a code decision: re-score the
+corpus under one baseline, which rewrites every detection figure of record, or
+leave two in the store and report which is which.

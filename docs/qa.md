@@ -8983,6 +8983,166 @@ system is allowed to be in, so there is nothing honest to say to an analyst abou
 a real zero; a rule that does not exist gets no number, because a zero there would quote the absence
 of a rule as the accuracy of one.
 
+## 149. Let's move on to the next implementation — serve an evidence bundle so the screen can say why.
+
+**Yes, and the endpoint turned out to be the smaller half of it.** The bundles exist and no endpoint
+served one, which is what the handoff said. What the handoff did not say — because nobody had
+looked — is that they exist for **100 of the 400 hours**, none of them recent, and that the write
+which replaces them sits in front of an unguarded cascade.
+
+### What a bundle is, in one paragraph
+
+When a rule reports something, the system assembles a record of that single event: the individual
+deviations behind it, each tied to the exact readings that produced it; the judgements the rules made
+over those readings, marked as judgements rather than measurements; which half of the picture is
+invented and which is replayed; and every absence stated as a *particular kind* of absence. That
+record is the only thing the AI layer ever receives, which is what makes checking its citations
+possible at all.
+
+### Three states the screen has to keep apart, and all three are live
+
+| | runs |
+|---|---|
+| a reported conclusion **and** its evidence | 100 |
+| a reported conclusion with **no** evidence | **140** |
+| quiet — no conclusion, no evidence, correctly | 160 |
+| evidence with no conclusion | 4 |
+
+The hour selector lists newest-first, so every hour anybody opens is in the second row. Served as a
+bare list of bundles, the first three states are all the empty list — the same defect §148 removed
+from the summary panel, where a dash meaning *nothing to report* could not be told from a dash
+meaning *nobody looked*.
+
+### The defect found on the way: a cascade nobody had seen
+
+The bundle write replaces per run — `DELETE` then `INSERT`. `hypotheses.bundle_id` is declared
+`ON DELETE CASCADE` and is **the only column linking a hypothesis to a run**; there is no
+`scenario_run_id` on that table at all. So replacing a cited run's bundles deletes the hypothesis
+rows citing them, silently: the delete succeeds, the cascade fires, nothing raises, and the damage is
+visible only as rows that are no longer there.
+
+**155 hypothesis rows — the whole scored campaign — hang off 20 bundles on runs 102 to 175.** They
+cannot be regenerated: a model call consumed money and produced one specific response, which is why
+hypotheses are appended and never replaced.
+
+Nothing in the application called that write, so the path was unguarded rather than live. It becomes
+live the moment the detection pass stores what it builds, which is the obvious implementation of this
+very item.
+
+**Why the refusal is in the repository and not at the foreign key.** Deleting an hour *should* take
+its bundles and their hypotheses with it. A `RESTRICT` there would block a correct delete in order to
+prevent an incorrect one. The distinction worth encoding is that **a cascade on a delete is the
+schema working, and a cascade on a *regeneration* is data loss wearing the costume of a refresh.**
+
+### There is no key joining a bundle to its conclusion
+
+And there cannot be. Findings are replaced per run per rule, so a foreign key from `evidence_bundles`
+would cascade-delete the bundles on every re-score — the same argument one table along. So the two
+rows are matched on fields, and which fields took two corrections:
+
+| Key | Result |
+|---|---|
+| including the subject as stored | misses **all 41** interference bundles, matches every fault |
+| dropping the subject entirely | cannot attribute a bundle on a run holding two claims in one window |
+| **the subject's first receiver** *(chosen)* | matches 99 of 103, unique on both sides |
+
+A fusion bundle's subject is the receivers that deviated together, joined — `RF-05, RF-06, RF-07` —
+while the claim is filed under `RF-05`. That is true **by construction** in both rules, not as a
+property of this corpus, which is what makes the head safe to key on.
+
+### Why an endpoint that computes nothing still has to say how many
+
+The panel groups evidence by rule and finding type, and a count of the items in a group is the only
+arithmetic the endpoint performs. Everything else — a group's span, its sources, each sentence —
+appears **verbatim** on one of the items. That rule exists because the scoring pack learned it the
+hard way: its first version said *grouping must never summarise*, which is backwards, and what
+survives is the mechanical form.
+
+---
+
+## 150. Why did looking at the running screen change the design twice?
+
+**Because two of the three defects it found are invisible to any test that could have been written,
+and the third was in data no fixture contained.**
+
+This is the project's recorded *third kind of blind spot*, met for the second time. The first was a
+badge clipped at the collapsed nav rail: text in the DOM, accessible name correct, every test green.
+
+| Found by looking | Why no test caught it |
+|---|---|
+| The same absence rendered **three times**, identically | The fixtures carried one. Real bundles carry up to **28** |
+| The verdict block repeated the conclusion's own heading two centimetres below it | Both strings were correct; the defect was that they were adjacent |
+| *"The store holds no stored evidence"* | Grammar |
+
+The first is the one that mattered, and the fix went in the **endpoint**, not the panel: a bundle
+holds one uncertainty per suppressed episode, and collapsing identical ones with a count is the same
+operation already applied to the evidence. Doing it on the client would have put a second
+implementation of the grouping where it could drift.
+
+**The general point worth keeping.** A test asserts that a thing is present and correct. It cannot
+assert that a reader meeting the page is not confused by it, and three of these were exactly that.
+The procedure this suggests — *look at the running screen before calling a screen item done* — has now
+paid for itself twice.
+
+---
+
+## 151. Why did the backfill stop, and what does that say about the corpus?
+
+**It stopped because the detectors no longer reproduce two of the stored findings — and the cause is
+not the detectors.**
+
+The fill re-examines each hour and compares the claims the pass produces against the ones already
+stored. At run 71 of 144 they differed:
+
+```
+was : window starts 2022-06-27 12:22:33
+now : window starts 2022-06-27 12:22:13
+```
+
+Twenty seconds, which is two sampling intervals. Thresholds identical on both sides.
+
+### The baseline is an experimental variable nobody pinned
+
+Normality is measured over **every quiet run the store holds**. So the baseline a run is scored
+against depends on how large the store was when the pass ran — and by the recorded policy this store
+holds findings written under two of them:
+
+| Baseline | Runs |
+|---|---|
+| 60 quiet runs | **378** |
+| 100 quiet runs | 22 |
+
+This was *anticipated*. The item that put the quiet runs on the record said in as many words that two
+baselines under identical thresholds give different findings and are otherwise indistinguishable, and
+the policy column is precisely what made it visible here. What neither does is **prevent** it, and
+nothing on the screen or in the results table reports which baseline a figure was taken under.
+
+### It also inverted what I thought I had found
+
+Earlier in the same session I read four bundles as *stale* — written in September under an older
+window rule, with the findings beside them current. That is backwards. Run 71's bundle, written
+2026-09-19, agrees with **today's** rebuild to the second. It is the stored *finding* that came from
+the other baseline.
+
+Worth recording as a limitation: a disagreement between two stored records says which pair disagrees
+and says nothing about which is right, and the temptation is to assume the older one is the stale one.
+
+### What stopping bought
+
+The fill stops at the first disagreement rather than skipping the run and carrying on. A skip would
+have rewritten 139 further hours under settings just shown to differ from the ones every quoted
+figure was measured under. Two runs were written before the stop and both were restored from a dump
+taken beforehand; the store is byte-for-byte as it was.
+
+The decision it waits on is not a code decision: re-score the whole corpus under one baseline, which
+rewrites every detection figure of record, or leave two in the store and report which is which.
+
+---
+
 | **Composing copy** | Turning a finding type the backend sends verbatim into a sentence an analyst reads. Done on the screen by design, so prose never arrives from a detector — and in one module, because two panels carry the same type. See §148. |
 | **A closed set held by parity** | A set declared on the backend and mirrored as a union type on the frontend, compared against its origin by a test. What makes a missing case a type error rather than a token on screen. See §148, §140. |
 | **An absence with no sentence** | The one deliberate exception to composing copy: an invalid level is a developer's defect, not a state to explain to an analyst, so it is logged rather than worded. See §148. |
+| **Two-sided completeness** | A payload that accounts for every row on both sides of a join: every conclusion is either explained or named as unexplained, and every stored bundle is either attached to a conclusion or named as unclaimed. What makes a dropped row break a count rather than vanish. See §149. |
+| **A regeneration cascade** | A foreign key doing exactly what it was declared to do, at a moment nobody intended: a derived-data stage replaces a row, and rows that cite it are deleted with it. Distinct from a cascade on a deliberate delete, which is the schema working. See §149. |
+| **Matching without a key** | Attaching two records of one event to each other by comparing fields, because no column joins them and none can. Safe only where the fields are derived from one source by construction. See §149. |
+| **An unpinned experimental variable** | A setting that is recorded but not fixed, so two runs of the same code disagree and the record is the only thing that says why. The baseline's quiet-run population is one. See §151. |

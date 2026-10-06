@@ -74,6 +74,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 
 from app.dal.models import ObservationType, ScenarioRunSummary
+from app.db.bundles import save_bundles
 from app.db.findings import save_findings
 from app.db.repository import observations_for_run, record_detection_pass
 from app.detection.baseline import BaselineTable, compute_rf_baselines
@@ -546,6 +547,43 @@ def assess(
             ),
         ),
     )
+    # **Built and now stored** (`evb-003`). The module docstring recorded the
+    # opposite, and the reason it gave was sound and narrower than the
+    # behaviour it bought: `eval-004`'s pre-registered sample names twenty
+    # bundles by id, so a pass rebuilding them corpus-wide renumbers that
+    # population -- which protects twenty bundles on twenty runs and was
+    # implemented as *store none, ever*. `db-011` makes that protection
+    # structural and decided from the store, after which storing is safe for
+    # every run nothing cites: 380 of 400.
+    bundles = build_bundles(
+        resolution,
+        scenario_run_id=run.id,
+        faults=faults.faults,
+        zones=interference.zones,
+        rf=episodes,
+        track_findings=gaps,
+    )
+
+    # **First of the three writes**, and the order is the decision (`evb-003`).
+    # This is the only one that can REFUSE -- `db-011` protects a bundle a
+    # hypothesis cites, because the write replaces per run and the citation is
+    # declared ON DELETE CASCADE -- so a protected run leaves the store as it
+    # was. Written last, a refusal would end the pass with this hour's
+    # conclusions standing beside the previous hour's evidence, and no property
+    # of either row could detect the disagreement.
+    #
+    # Not total, and the limit is worth stating: the track findings above were
+    # written before the rules that read them back ran, so a refusal still
+    # leaves those replaced. Harmlessly -- that write is idempotent and happens
+    # on every pass -- but it is a partial write and saying otherwise would be
+    # the overclaim.
+    #
+    # There is no ordering dependency on the findings write at all. `evb-002`
+    # resolves every citation against **observations**, which are written at
+    # generation time, so a bundle written first cites rows that have been
+    # there since the run was made.
+    save_bundles(session_factory, scenario_run_id=run.id, bundles=bundles)  # type: ignore[arg-type]
+
     # Written out rather than looped, and the reason is a test: `api-012`
     # declares which producers this pass persists, and the only honest way to
     # hold that declaration to the pass is to read the rule ids off these calls.
@@ -563,17 +601,6 @@ def assess(
         rule_id=FUSION_RULE,
         findings=[f for f in conclusions if f.rule_id == FUSION_RULE],
         policy=policy,
-    )
-
-    # Built, not stored -- see the module docstring. A caller with no
-    # pre-registered population to protect stores them with `db/bundles.save_bundles`.
-    bundles = build_bundles(
-        resolution,
-        scenario_run_id=run.id,
-        faults=faults.faults,
-        zones=interference.zones,
-        rf=episodes,
-        track_findings=gaps,
     )
 
     # **Last**, after every write. A pass that dies midway then leaves a run

@@ -788,9 +788,9 @@ def _insert_run(engine: Engine, run_id: int, *, examined: bool) -> None:
                 # Flat string values, as `eval-003` records them and as
                 # `DetectionPass` declares: a nested dict here parses on the
                 # way in and refuses on the way back out.
-                "policy": json.dumps({"RF-NOISE.threshold_db": "6.0"})
-                if examined
-                else None,
+                "policy": (
+                    json.dumps({"RF-NOISE.threshold_db": "6.0"}) if examined else None
+                ),
             },
         )
         connection.commit()
@@ -975,9 +975,7 @@ def test_every_finding_type_the_builder_emits_is_declared_on_the_screen() -> Non
     """
     # spec: op-010, op-003, api-015, eval-009
     emitted = {
-        item.finding_type
-        for bundle in (fault(), zone())
-        for item in bundle.evidence
+        item.finding_type for bundle in (fault(), zone()) for item in bundle.evidence
     }
 
     declared = set(union_members(read_contract(CONTRACT_PATHS), "EvidenceFindingType"))
