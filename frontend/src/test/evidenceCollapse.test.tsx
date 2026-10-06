@@ -2,12 +2,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EmEvidencePanel } from "../components/em/EmEvidencePanel";
 import { EVIDENCE_COLLAPSED_KEY } from "../hooks/useEvidenceCollapsed";
-import type {
-  EvidenceAccount,
-  ExplainedClaim,
-  UnclaimedBundle,
-  UnexplainedClaim,
-} from "../types/evidence";
+import type { EvidenceAccount, ExplainedClaim, UnclaimedBundle, UnexplainedClaim } from "../types/evidence";
 
 // spec: op-010 (amended 2026-10-06) — the panel is collapsible, and collapsed
 // its header still states what is inside: how many conclusions this hour holds
@@ -113,11 +108,7 @@ describe("collapsing the evidence panel", () => {
 describe("what a collapsed header still says", () => {
   it("counts the conclusions and those with no stored evidence", () => {
     // spec: op-010 — the one constraint that is the whole of the amendment.
-    render(
-      <EmEvidencePanel
-        account={account({ explained: [explained(1), explained(2)], unexplained: [unexplained] })}
-      />,
-    );
+    render(<EmEvidencePanel account={account({ explained: [explained(1), explained(2)], unexplained: [unexplained] })} />);
 
     fireEvent.click(toggle());
 
@@ -141,9 +132,7 @@ describe("what a collapsed header still says", () => {
     // spec: op-010 failure case — "a collapsed header that says only
     // Evidence, so an hour with an unexplained conclusion is indistinguishable
     // from a quiet one".
-    const { unmount } = render(
-      <EmEvidencePanel account={account({ unexplained: [unexplained] })} />,
-    );
+    const { unmount } = render(<EmEvidencePanel account={account({ unexplained: [unexplained] })} />);
     fireEvent.click(toggle());
     const gap = header().textContent;
     unmount();
@@ -175,9 +164,7 @@ describe("what a collapsed header still says", () => {
     // spec: op-010 failure case — "a collapse that also hides the
     // unclaimed-evidence note, which is a fact about the hour whatever the
     // conclusions look like".
-    render(
-      <EmEvidencePanel account={account({ explained: [explained(1)], unclaimed: [unclaimed] })} />,
-    );
+    render(<EmEvidencePanel account={account({ explained: [explained(1)], unclaimed: [unclaimed] })} />);
 
     fireEvent.click(toggle());
 
