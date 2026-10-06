@@ -469,19 +469,29 @@ describe("what the panel says when there is nothing to show", () => {
   });
 
   it("says so when the evidence could not be loaded, and does not call it unexamined", () => {
-    // spec: op-010 — the amendment. No answer is the client having none; null
-    // is the server saying no pass examined this hour. Reported as the second,
-    // a transport failure becomes a fact about the store.
-    render(<EmEvidencePanel account={undefined} />);
+    // spec: op-010 — a transport failure reported as "this hour has not been
+    // examined" states a fact about the store that nothing established.
+    render(<EmEvidencePanel account="failed" />);
 
     expect(panel()).toHaveTextContent(/could not (be )?load/i);
+    expect(panel()).not.toHaveTextContent(/not been examined/i);
+  });
+
+  it("does not call a request in flight a failure", () => {
+    // spec: op-010 — the mutation pass's finding. `loading` and `failed` were
+    // one state, so the panel said the evidence could not be loaded for as
+    // long as a fetch was in flight, and three mutants survived on the merge.
+    render(<EmEvidencePanel account="loading" />);
+
+    expect(panel()).toHaveTextContent(/reading the evidence/i);
+    expect(panel()).not.toHaveTextContent(/could not/i);
     expect(panel()).not.toHaveTextContent(/not been examined/i);
   });
 
   it("keeps the section present in every one of those states", () => {
     // spec: op-010 — never silence. A panel that disappears is a panel an
     // analyst cannot tell from one that has nothing to say.
-    for (const state of [undefined, null, account()]) {
+    for (const state of ["loading" as const, "failed" as const, null, account()]) {
       const { unmount } = render(<EmEvidencePanel account={state} />);
       expect(screen.getByRole("region", { name: "Evidence" })).toBeInTheDocument();
       unmount();

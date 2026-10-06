@@ -9498,3 +9498,42 @@ answer**: skipping would have carried on rewriting 139 further hours under setti
 differ from the ones every quoted figure was measured under. Two hours were written before the stop
 and both were restored from a dump taken beforehand.
 
+### Two states that produce one outcome are invisible to a test of the outcome
+
+The evidence panel's 29 tests were green and a mutation pass killed only 9 of 12 mutants against it.
+All three survivors were the same defect, and it was one no test of that suite could have found.
+
+The panel had four states where it needed five: a request in flight and a request that failed were
+both represented by *the absence of an answer*, so the panel said *the evidence could not be loaded*
+for as long as a fetch was in flight — a sentence that is false at the moment it is shown. With the
+two merged, the hook had two mechanisms keeping the panel honest (clear the answer when the hour
+changes; record a failure when one occurs) and **each satisfied every test on its own**. A mutant
+removing either one survived, which is the diagnostic: when two mechanisms are individually
+sufficient for every assertion you have, at most one of them is doing work you can demonstrate.
+
+The remedy was to name the states rather than to add a test. `loading`, `failed`, `null` (the server
+saying no pass examined this hour) and an account whose lists may be empty are four different facts,
+and once they are four values rather than three values and an absence, each mechanism has an
+assertion only it can satisfy.
+
+A fourth mutant survived even then: removing the clear-on-hour-change. The loading test only
+*mounted* the component, and the hook's initial state is already `loading`, so the clear could not be
+distinguished from the initial value. Killed by a test that changes the hour while a request is in
+flight. The rule generalises, and the project has now recorded it twice in different clothes: **a
+guard against stale state is killed only by a test that supplies stale state on purpose** — the same
+shape as the ordering guard that is killed only by input supplied out of order, which is how the
+fifth survivor fell.
+
+### An equivalent mutant reads as a gap, and the harness cannot tell
+
+One apparent survivor was not a survivor. Replacing `unclaimed = [` with `unclaimed = [] or [` is
+behaviourally identical in Python, since `[] or [x]` evaluates to `[x]`. The mutation harness checks
+that a mutant parses, that its anchor is unique, and that the text actually changed — and all three
+hold here, so the mutant was scored as a surviving one and read as a hole in the suite.
+
+The honest statement is that **a mutation score is a measurement of the tests against the mutants
+somebody thought of, and the mutants are written by the same person who wrote the tests**. An
+equivalent mutant inflates the apparent gap; a mutant nobody wrote hides a real one. The project's
+existing position — that only measurements over the corpus can say a rule is *right* — extends to
+this: the score says the tests notice the changes in the table, and no more.
+

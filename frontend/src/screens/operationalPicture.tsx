@@ -1,7 +1,7 @@
 import { EmEvidencePanel } from "../components/em/EmEvidencePanel";
 import { EmLevel } from "../components/em/EmLevel";
 import { findingLabel } from "../lib/detectionVocabulary";
-import type { EvidenceAccount } from "../types/evidence";
+import type { EvidenceView } from "../types/evidence";
 import type {
   OperationalPicture as OperationalPictureData,
   SelectableHour,
@@ -79,12 +79,12 @@ interface Props {
   pinnedRun?: number | null;
   onSelectHour?: (runId: number) => void;
   onFollowNewest?: () => void;
-  // spec: op-010 — the evidence behind this hour's conclusions. Three states,
-  // not two: `undefined` is no answer yet or a failed fetch, `null` is the
-  // server saying no pass examined this hour, and an account is an answer.
-  // Optional like the four above, so the screen stays a pure function of a
-  // payload and the panel tests can drive it without a fetch.
-  evidence?: EvidenceAccount | null;
+  // spec: op-010 — the evidence behind this hour's conclusions, as five named
+  // states: a request in flight, one that did not arrive, the server saying no
+  // pass examined this hour, a quiet hour and an explained one. Optional like
+  // the four above, so the screen stays a pure function of a payload and the
+  // panel tests can drive it without a fetch.
+  evidence?: EvidenceView;
 }
 
 const OperationalPictureScreen = ({
@@ -94,7 +94,7 @@ const OperationalPictureScreen = ({
   pinnedRun = null,
   onSelectHour,
   onFollowNewest,
-  evidence,
+  evidence = "loading",
 }: Props) => {
   // A null summary means no detection pass has run on this run, which is not
   // the same as a pass that found nothing (api-012). The panel says so in

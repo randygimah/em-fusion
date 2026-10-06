@@ -29,13 +29,13 @@ a decision that is not a code decision (see *The baseline*, below).
 | `op-010` | The panel. **Green.** |
 | `evb-003` | The pass stores what it builds — **green**. The corpus-wide fill — **blocked**. |
 
-- Backend: **2039 passed, 99.93% coverage, exit 0**, in containers (1957 at the start).
-- Frontend: **232 passed** (203 at the start), Biome clean, `tsc -b` clean. Still no coverage
-  tooling on that side.
+- Backend: **2040 passed, 99.93% coverage, exit 0**, in containers (1957 at the start).
+- Frontend: **236 passed** (203 at the start), Biome clean, `tsc -b` clean. Still no coverage
+  tooling on that side, which is what the mutation pass is for.
 - `make lint`, `make format`, mypy clean (80 source files).
-- **No mutation pass was run this session.** Three were run last session; this one spent its time on
-  four items and a corpus investigation instead. `op-010` is a frontend item and therefore has no
-  coverage figure behind it — a pass over it is the first thing owed.
+- Mutation, one pass over all four items, **32 of 32 killed, no survivors, none equivalent**:
+  `mutate_api015_evidence.log` (19 backend, 13 frontend). The first run left **five gaps and all five
+  were real** — see Failed attempts.
 - The store is **byte-for-byte as it was at the start**: 400 runs, 103 bundles, 8306 findings, 155
   hypotheses, 20 runs at the 100-run baseline. Verified after a partial fill was restored from a dump.
 - **A Vite dev server is running on `localhost:1234`** (IPv6 only — use `localhost`). Kill it with
@@ -167,6 +167,25 @@ rendered three times identically (real bundles repeat one up to 28 times), the v
 repeating the conclusion's own heading two centimetres below it, and *"holds no stored evidence"*.
 The first was fixed in the **endpoint**, not the panel.
 
+
+**The mutation pass found five gaps and every one was real.** Four items landed on a suite I had
+thought complete.
+
+| Survivor | What it was |
+|---|---|
+| three on the frontend fetch | **`loading` and `failed` were the same state.** The panel said *the evidence could not be loaded* while a fetch was in flight — false at the moment it is shown — and with the two merged, each of the hook's two mechanisms satisfied the test alone, so neither could be shown load-bearing. The five states are now named and `undefined` is gone from the contract. |
+| one more, after that fix | Removing the clear-on-hour-change. My loading test only **mounted**, and the hook's initial state is already loading, so the clear could not be told from the initial value. |
+| a group's span | `min(started_at)` → `members[0]` survived, because the builder emits a group's items in time order so *first* **is** *earliest* on every fixture. |
+
+And one apparent survivor that was **not** one: `unclaimed = [` → `unclaimed = [] or [` is equivalent,
+since `[] or [x]` is `[x]`. The harness's own validity check cannot catch that — the file parses and
+the text differs — so an equivalent mutant reads as a gap. Replaced with one on the comprehension's
+filter, which is killed.
+
+The two orderings lesson generalises and is now recorded twice: **a guard against stale state is
+killed only by a test that supplies stale state on purpose**, which is `anom-015`'s ordering rule in
+another costume.
+
 **Two existing tests asserted the contract `evb-003` reverses.** Rewritten with their reason rather
 than deleted — `test_storing_the_bundles_is_the_callers_call` and the *built and not stored* block.
 
@@ -178,16 +197,13 @@ run 8812. Strengthened to `"3 hypothes"`, which pins the number and the noun.
 
 ## Next step
 
-1. **A mutation pass.** Four items landed with none, and `op-010` is a frontend item with no
-   coverage figure behind it. One harness over `db-011` + `api-015` (backend) and one over `op-010`
-   (frontend); the harness dispatches on which suite guards a file, not where the file lives.
-2. **The baseline decision**, above. It gates finishing `evb-003`'s fill, and the fill is what gives
+1. **The baseline decision**, above. It gates finishing `evb-003`'s fill, and the fill is what gives
    140 hours their evidence — without it the panel is correct and empty on every hour anybody opens.
-3. **The map** (`map-001`–`map-004`). Largest, specced, unblocked.
-4. **Re-run the figures of record.** Now more pressing: `detection_metrics.py` re-runs the detectors,
+2. **The map** (`map-001`–`map-004`). Largest, specced, unblocked.
+3. **Re-run the figures of record.** Now more pressing: `detection_metrics.py` re-runs the detectors,
    so whatever baseline the store holds when it runs is the one its figures are taken under.
-5. **`hypotheses`**, the last producer-less field. 155 rows exist.
-6. **`eval-006`** still waits on a second rater.
+4. **`hypotheses`**, the last producer-less field. 155 rows exist.
+5. **`eval-006`** still waits on a second rater.
 
 Open and unowned:
 

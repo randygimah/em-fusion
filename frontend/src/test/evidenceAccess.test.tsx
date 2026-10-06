@@ -178,6 +178,65 @@ describe("fetching the evidence account", () => {
     );
   });
 
+  it("shows a request in flight as loading and never as a failure", async () => {
+    // spec: op-010 — the two states were one until a mutation pass showed what
+    // that cost, and the clear-on-hour-change is what this proves is doing
+    // something: without it the previous hour's evidence stays on screen.
+    let release: (value: Response) => void = () => undefined;
+    fetchMock.mockImplementation((url: unknown) =>
+      route(url) === EVIDENCE_PATH
+        ? new Promise<Response>((resolve) => {
+            release = resolve;
+          })
+        : Promise.resolve(answer(url)),
+    );
+    render(<App />);
+
+    await waitFor(() => expect(panel()).toHaveTextContent(/reading the evidence/i));
+    expect(panel()).not.toHaveTextContent(/could not/i);
+
+    release(ok(served));
+    await waitFor(() =>
+      expect(panel()).toHaveTextContent(/Possible interference across several receivers/),
+    );
+  });
+
+  it("does not leave the previous hour's evidence up while the next is in flight", async () => {
+    // spec: op-010 — the mutation pass's second finding. Asserted on an HOUR
+    // CHANGE and not on first mount: the hook's initial state is already
+    // loading, so a test that only mounts cannot tell the clear-on-change from
+    // the initial value, and a mutant removing it survives.
+    render(<App />);
+    await waitFor(() =>
+      expect(panel()).toHaveTextContent(/Possible interference across several receivers/),
+    );
+
+    fetchMock.mockImplementation((url: unknown) =>
+      route(url) === EVIDENCE_PATH
+        ? new Promise<Response>(() => undefined)
+        : Promise.resolve(answer(url)),
+    );
+    selectHour("420");
+
+    await waitFor(() => expect(panel()).toHaveTextContent(/reading the evidence/i));
+    expect(panel()).not.toHaveTextContent(/Possible interference across several receivers/);
+  });
+
+  it("refuses a body that is not an account rather than rendering it", async () => {
+    // spec: op-010, api-015 — the hour index's fetcher already carries this
+    // rule: a body that is neither null nor an account is another endpoint's
+    // answer or an error body, and cast blindly it reaches the panel as an
+    // object whose lists are undefined, which crashes the render. Found when
+    // four other suites went red, because their mocks answer every url with a
+    // picture payload.
+    fetchMock.mockImplementation((url: unknown) =>
+      Promise.resolve(route(url) === EVIDENCE_PATH ? ok(picture) : answer(url)),
+    );
+    render(<App />);
+
+    await waitFor(() => expect(panel()).toHaveTextContent(/could not (be )?load/i));
+  });
+
   it("renders the panel on the picture screen and nowhere else", async () => {
     // spec: op-010, nav-001 — the evidence belongs to the picture's hour, and
     // the other two screens have no hour

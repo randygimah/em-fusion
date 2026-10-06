@@ -160,3 +160,18 @@ export interface EvidenceAccount {
   unexplained: UnexplainedClaim[];
   unclaimed: UnclaimedBundle[];
 }
+
+// What the screen has in hand, as five named states rather than four plus the
+// absence of a value.
+//
+// `"loading"` and `"failed"` were one state — `undefined` — until a mutation
+// pass showed the cost: the panel said *the evidence could not be loaded* for
+// as long as a fetch was in flight, which is false at the moment it is shown.
+// Three mutants survived on that merge, because with the two collapsed either
+// of the hook's two mechanisms alone satisfied the test and neither could be
+// shown load-bearing.
+//
+// `null` is the server's own answer: no detection pass examined this hour. An
+// account with three empty lists is a quiet hour, which is a different fact
+// again.
+export type EvidenceView = "loading" | "failed" | EvidenceAccount | null;

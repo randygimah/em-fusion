@@ -6,9 +6,9 @@ import {
   groundingLabel,
 } from "../../lib/detectionVocabulary";
 import type {
-  EvidenceAccount,
   EvidenceGroup,
   ExplainedClaim,
+  EvidenceView,
   UnclaimedBundle,
   UnexplainedClaim,
 } from "../../types/evidence";
@@ -24,12 +24,16 @@ import type {
  * on the server inside the coverage gate. A second implementation here is the
  * duplication this repository has recorded over distance already.
  *
- * **Four states, four sentences.** No answer at all is the client having none;
- * `null` is the server saying no pass examined this hour; three empty lists is
- * a quiet hour, which is a correct non-detection and 160 of the 400 hours in
- * the store; and a claim with no bundle is a gap in the pipeline, which is 140
- * of the 240 claim-bearing hours and every hour the selector offers first. The
- * four are different facts and the panel never falls silent: a panel that
+ * **Five states, five sentences.** A request in flight; one that did not
+ * arrive; `null`, the server saying no pass examined this hour; three empty
+ * lists, a quiet hour and a correct non-detection on 160 of the 400 hours in
+ * the store; and a claim with no bundle, a gap in the pipeline on 140 of the
+ * 240 claim-bearing hours and every hour the selector offers first.
+ *
+ * They were four until a mutation pass showed that *loading* and *failed* had
+ * been merged — so the panel said the evidence could not be loaded for as long
+ * as a fetch was in flight, and three mutants survived on the merge. The five
+ * are different facts and the panel never falls silent: a panel that
  * disappears cannot be told from one with nothing to say.
  */
 
@@ -180,18 +184,16 @@ const Unclaimed = ({ bundle }: { bundle: UnclaimedBundle }) => (
   </p>
 );
 
-export const EmEvidencePanel = ({
-  account,
-}: {
-  account: EvidenceAccount | null | undefined;
-}) => (
+export const EmEvidencePanel = ({ account }: { account: EvidenceView }) => (
   <section
     aria-label="Evidence"
     className="border border-[#424754] bg-[#1d2027] p-4"
   >
     <h2 className="font-mono text-sm uppercase tracking-[0.05em] text-[#c2c6d6]">Evidence</h2>
 
-    {account === undefined ? (
+    {account === "loading" ? (
+      <p className="mt-4 text-sm text-[#8c909f]">Reading the evidence for this hour…</p>
+    ) : account === "failed" ? (
       <p className="mt-4 text-sm text-[#8c909f]">
         The evidence for this hour could not be loaded. This says nothing about the hour — only
         that the request for it did not arrive.
@@ -222,8 +224,8 @@ export const EmEvidencePanel = ({
     {/* Outside the branch above: a stale bundle is a fact about the hour
         whatever its conclusions look like, and dropped silently the hour reads
         as fully explained while some of its evidence was discarded. */}
-    {account?.unclaimed.map((bundle) => (
-      <Unclaimed bundle={bundle} key={bundle.bundleId} />
-    ))}
+    {typeof account === "object" &&
+      account !== null &&
+      account.unclaimed.map((bundle) => <Unclaimed bundle={bundle} key={bundle.bundleId} />)}
   </section>
 );

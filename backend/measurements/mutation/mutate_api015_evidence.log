@@ -1,0 +1,84 @@
+Mutation pass over db-011, api-015, op-010 and evb-003.
+Run 2026-10-06. 32 of 32 valid mutants killed, no survivors.
+
+--- frontend (SIDE=frontend) ---
+frontend sentinel killed (Tests  24 failed | 5 passed (29)) -- edits reach the tests
+
+a failed fetch is reported as an unexamined hour               KILLED   Tests  2 failed | 27 passed (29)
+(superseded by the re-run below -- 3 survivors, all real, all closed)
+
+frontend sentinel killed (Tests  28 failed | 5 passed (33)) -- edits reach the tests
+
+a failed fetch is reported as an unexamined hour               KILLED   Tests  3 failed | 30 passed (33)
+a quiet hour says nothing at all                               KILLED   Tests  1 failed | 32 passed (33)
+a conclusion with no evidence renders an empty block           KILLED   Tests  5 failed | 28 passed (33)
+a judgement renders like a measurement                         KILLED   Tests  1 failed | 32 passed (33)
+the three kinds of not-knowing become one                      KILLED   Tests  1 failed | 32 passed (33)
+an absence statement is cut short                              KILLED   Tests  1 failed | 32 passed (33)
+the collapsed count is dropped                                 KILLED   Tests  1 failed | 32 passed (33)
+a rejected conclusion is not shown as rejected                 KILLED   Tests  1 failed | 32 passed (33)
+an evidence type reaches the screen as its raw token           KILLED   Tests  1 failed | 32 passed (33)
+a failed fetch is not reported as one                          KILLED   Tests  2 failed | 31 passed (33)
+the previous hour's evidence stays up while the next is in flight KILLED   Tests  1 failed | 32 passed (33)
+a request in flight is reported as a failure                   KILLED   Tests  3 failed | 30 passed (33)
+the fetcher renders whatever it is given                       KILLED   Tests  1 failed | 32 passed (33)
+
+13 of 13 valid mutants killed (13 attempted)
+backend sentinel killed (3 failed, 113 passed in 105.64s (0:01:45)) -- edits reach the tests
+
+a cited run's bundles are replaced after all                   KILLED   11 failed, 105 passed in 107.72s (0:01:47)
+clearing a cited run is allowed                                KILLED   1 failed, 115 passed in 104.61s (0:01:44)
+the guard asks whether anything cites anything                 KILLED   1 failed, 115 passed in 104.57s (0:01:44)
+the refusal happens after every citation is resolved           KILLED   1 failed, 115 passed in 105.86s (0:01:45)
+the refusal no longer prints what it is protecting             KILLED   1 failed, 115 passed in 105.81s (0:01:45)
+the key uses the subject as the bundle stores it               KILLED   15 failed, 101 passed in 105.66s (0:01:45)
+an ambiguous key is resolved by taking the first               KILLED   1 failed, 115 passed in 105.54s (0:01:45)
+two claims of one identity are both served                     KILLED   1 failed, 115 passed in 105.47s (0:01:45)
+stored evidence matching no claim is dropped                   KILLED   1 failed, 115 passed in 105.26s (0:01:45)
+intermediate findings are accounted as conclusions             KILLED   1 failed, 115 passed in 105.42s (0:01:45)
+evidence is grouped on the rule alone                          KILLED   17 failed, 99 passed in 105.75s (0:01:45)
+a group spanning two groundings is served anyway               KILLED   2 failed, 114 passed in 105.38s (0:01:45)
+a group's span starts where its first item does                KILLED   1 failed, 115 passed in 104.98s (0:01:44)
+a group counts one whatever it holds                           KILLED   1 failed, 115 passed in 104.98s (0:01:44)
+identical absences are served one per episode                  KILLED   1 failed, 115 passed in 105.23s (0:01:45)
+the pass goes back to throwing its accounts away               KILLED   6 failed, 107 passed, 3 errors in 98.90s (0:01:38)
+the pass swallows the refusal and stamps the run               KILLED   4 failed, 112 passed in 107.41s (0:01:47)
+the contract loses a finding type the builder emits            KILLED   1 failed, 115 passed in 107.24s (0:01:47)
+a reason becomes a bare string                                 KILLED   1 failed, 115 passed in 105.81s (0:01:45)
+
+19 of 19 valid mutants killed (19 attempted)
+
+-------------------------------------------------------------------------------
+The first run found five gaps. All five were real and all five are closed.
+
+FRONTEND, first run: 9 of 12. Three survivors, and all three were ONE defect.
+`loading` and `failed` were the same state -- the absence of a value -- so the
+panel said *the evidence could not be loaded* for as long as a fetch was in
+flight, which is false at the moment it is shown. With the two merged, the
+hook's two mechanisms (clear on the way in, set on failure) each satisfied the
+test alone, so neither could be shown load-bearing and a mutant removing either
+survived. The states are now NAMED -- `loading`, `failed`, `null`, an account --
+and `undefined` no longer appears in the contract.
+
+  Of the three, one was a user-visible defect found by nothing else. A test
+  asserts an outcome; it cannot assert that two states which produce the same
+  outcome on the fixture are different states.
+
+FRONTEND, second run: 12 of 13. One survivor left: removing the clear on the
+way in. The loading test only MOUNTED, and the hook's initial state is already
+loading, so the clear could not be told from the initial value. Killed by a test
+that changes the hour mid-flight -- `anom-015`'s rule for an ordering guard, in
+another costume: a guard against stale state is killed only by a test that
+supplies stale state on purpose.
+
+BACKEND, first run: 17 of 19, and one of the two "survivors" was not one.
+`unclaimed = [` -> `unclaimed = [] or [` is EQUIVALENT: `[] or [x]` is `[x]` in
+Python. The mutation table's own validity check does not catch that, because the
+file parses and the text differs. Replaced with a mutant on the comprehension's
+filter.
+
+The other was real: `min(m.started_at for m in members)` -> `members[0]`
+survived because the builder emits a group's items in time order, so first IS
+earliest on every fixture. Killed by a test that reverses two items on purpose.
+
+BACKEND, second run: 19 of 19.

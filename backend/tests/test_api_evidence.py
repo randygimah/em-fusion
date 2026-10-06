@@ -438,6 +438,29 @@ def test_a_group_spans_the_earliest_start_and_the_latest_end_of_its_items() -> N
     assert group.observedTo == max(i.ended_at for i in items).isoformat()
 
 
+def test_a_group_span_is_earliest_to_latest_and_not_first_to_last() -> None:
+    """Supplied out of order **on purpose**, which is the only way this can
+    fail. The builder emits a group's items in time order, so a span taken from
+    the first and last items is right on every fixture and wrong the moment the
+    order is not the order -- `anom-015`'s rule for an ordering guard, and a
+    mutant taking `members[0]` survived the suite without this.
+    """
+    # spec: api-015, eval-007, anom-015
+    bundle = zone()
+    gaps = [i for i in bundle.evidence if i.finding_type == "track_continuity_gap"]
+    others = [i for i in bundle.evidence if i.finding_type != "track_continuity_gap"]
+    assert len(gaps) == 2 and gaps[0].started_at < gaps[1].started_at
+    backwards = bundle.with_evidence([*others, *reversed(gaps)])
+
+    claim = account(
+        findings=[claim_for(backwards)], bundles=[(7, backwards)]
+    ).explained[0]
+
+    group = group_for(claim, ("TRACK-GAP", "track_continuity_gap"))
+    assert group.observedFrom == gaps[0].started_at.isoformat()
+    assert group.observedTo == max(g.ended_at for g in gaps).isoformat()
+
+
 def test_a_group_lists_its_distinct_sources_in_the_order_they_appear() -> None:
     # spec: api-015
     bundle = zone()
