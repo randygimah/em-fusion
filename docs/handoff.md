@@ -17,17 +17,26 @@ subject. The account already existed one layer down, with every absence typed an
 resolved. What did not exist was an endpoint, a panel, and — found while specifying — a guard
 without which the obvious implementation deletes the scored campaign.
 
+It closed with **six decisions taken and specced, none of them built**. Those are the next session's
+work and they are set out under *Next step*. Nothing is in flight; read that section first.
+
 ## Current state
 
-Backlog **85 of 115**. Three items landed; `evb-003` is half built and its other half is blocked on
-a decision that is not a code decision (see *The baseline*, below).
+Backlog **83 of 117**. Three items landed and the code for a fourth; two items were then added and
+four amended, which is why the passing count moved less than the work did.
 
 | | |
 |---|---|
 | `db-011` | A bundle a hypothesis cites may not be replaced. **Green.** |
 | `api-015` | `GET /api/v1/operational-picture/evidence?run=N`. **Green.** |
-| `op-010` | The panel. **Green.** |
-| `evb-003` | The pass stores what it builds — **green**. The corpus-wide fill — **blocked**. |
+| `op-010` | The panel. Built and green — then **amended to be collapsible**, so it is back to `passes: false` with only that one constraint outstanding. |
+| `evb-003` | The pass stores what it builds — **green**. The corpus-wide fill — **superseded**, see below. |
+| `anom-017`, `api-016` | New, specced, unbuilt. |
+| `op-004`, `op-006`, `api-007` | Specced before, **amended this session**, unbuilt. `op-006` was passing and is now `false`: its strip moves into a tab. |
+
+**Two items are marked `passes: false` with working code behind them** (`op-006`, `op-010`), because
+an amendment added a constraint neither satisfies yet. That is deliberate — the flag tracks the spec
+as written, not the code as it stood when it was written.
 
 - Backend: **2040 passed, 99.93% coverage, exit 0**, in containers (1957 at the start).
 - Frontend: **236 passed** (203 at the start), Biome clean, `tsc -b` clean. Still no coverage
@@ -77,13 +86,42 @@ deliberate — a skip would have rewritten 139 further hours under settings just
 claims were recorded as *stale*. They are not: run 71's bundle, written 19 September, agrees with
 today's rebuild to the second, and it is the stored **finding** that came from the other baseline.
 
-**The decision this waits on is the user's**, and it is one of:
+### Decided, 6 October: pin it, then re-score
 
-1. Re-score the corpus under one baseline — uniform store, but every detection figure of record is
-   rewritten and `detection_metrics.py` must be re-run and its log re-committed.
-2. Leave two baselines and **report** which is which, wherever a figure is quoted.
-3. Pin the baseline population explicitly rather than taking it from the store, so the variable
-   stops moving — which is a new spec item and does not fix the 400 runs already scored.
+`anom-017` carries both. The population is **all 100**, and that choice is measured rather than
+preferred — checked before specifying:
+
+- the 60-run set is a **strict subset** of the 100 (set difference empty);
+- **every one of the 100 is corpus v2** by `scn-008`'s base-seed discriminator, and all are 900 s.
+
+So this is one homogeneous population measured twice, once with 40 fewer runs — not two populations
+to choose between. More of the same data is a better estimate of normal and nothing measured argues
+the other way.
+
+Four things `anom-017` requires, and the order is part of it:
+
+1. **Pin** the ids as a constant in `app/detection/settings.py` beside the other eleven settings. A
+   run named in the constant but absent from the store is a **refusal**, not a quietly smaller
+   baseline.
+2. **Re-score** every completed run under it — its own script, its own confirm variable. Unlike
+   `evb-003`'s fill, which refuses on disagreement, a changed claim is the **expected** outcome here
+   and is **recorded**: the log must name *which* runs moved, before and after, because that count is
+   the result.
+3. **Re-run `detection_metrics.py`** and re-commit its log. It re-runs the detectors rather than
+   reading `detection_findings`, so the re-score does not invalidate its figures — it leaves them
+   taken under a baseline the store no longer has, which is worse.
+4. **Report the delta.** Do not let it quietly supersede the old log.
+
+**Which figures are at risk, concretely.** Detection figures are quoted **15 times** in
+`thesis_notes.md` and the progress note carries **21 instances of `1.000`**. Recall (60 of 60) and
+precision (1.000) should hold — the injected incident sits well above threshold by construction, so a
+20-second shift in a window boundary does not change whether a run is caught. **Latency is the figure
+that moves**, because it is onset-to-detection and the boundary that shifted is the term it measures.
+Current medians: 10 s on both fault arms, 20 s on interference.
+
+`evb-003`'s fill is **superseded** by the re-score, which stores every bundle on every run as a side
+effect of re-scoring. `backfill_bundles.py` stays committed with its log, since the stop is the
+finding that produced `anom-017`.
 
 ## Files in flight
 
@@ -103,6 +141,9 @@ None. The tree is clean.
 | `86cad93` | `feat(op-010): the conclusion says why - tests pass` |
 | `c9394da` | `test: add tests for evb-003` |
 | `7cbfd2a` | `feat(evb-003): the pass stores the account it builds - tests pass` |
+| `5a2e86b` | `docs: the evidence panel — notes, Q&A, repo map and handoff` |
+| `918431e` | `measure: mutation pass over db-011, api-015, op-010, evb-003 — 32 of 32` |
+| `a54bc83` | `spec: add anom-017, api-016; amend op-004, op-006, api-007, op-010` |
 
 **New, backend** — `app/api/v1/schemas/evidence.py`, `tests/test_db_cited_bundles.py` (17),
 `tests/test_api_evidence.py` (44), `tests/test_evb_persisted.py` (12),
@@ -121,7 +162,10 @@ None. The tree is clean.
 assertions rewritten), `tests/test_api_hour_selection.py`, `src/test/dataAccess.test.tsx`,
 `src/test/hourSelection.test.tsx`, `src/test/systemStatus.test.tsx`.
 
-**Requirements** — FR-720, FR-812, FR-907, AC-14. **Q&A** — 149, 150, 151.
+**New, measurements** — `measurements/mutation/mutate_api015_evidence.py` + `.log`.
+
+**Requirements** — FR-720, FR-812, FR-907, AC-14, and from the spec work NFR-605, FR-721, FR-813,
+AC-15. **Q&A** — 149, 150, 151.
 
 ## Failed attempts
 
@@ -197,13 +241,66 @@ run 8812. Strengthened to `"3 hypothes"`, which pins the number and the noun.
 
 ## Next step
 
-1. **The baseline decision**, above. It gates finishing `evb-003`'s fill, and the fill is what gives
-   140 hours their evidence — without it the panel is correct and empty on every hour anybody opens.
-2. **The map** (`map-001`–`map-004`). Largest, specced, unblocked.
-3. **Re-run the figures of record.** Now more pressing: `detection_metrics.py` re-runs the detectors,
-   so whatever baseline the store holds when it runs is the one its figures are taken under.
-4. **`hypotheses`**, the last producer-less field. 155 rows exist.
-5. **`eval-006`** still waits on a second rater.
+**Everything below was agreed on 6 October and none of it is built.** Six pieces, in this order.
+Three of them are a chain where nothing is visible until the last lands.
+
+| | | gated by |
+|---|---|---|
+| 1 | **`anom-017`** — pin the baseline, re-score the corpus, re-measure, report the delta | — |
+| 2 | **`api-016`** — each aircraft track carries the state this run's findings put it in | — |
+| 3 | **`api-007`** — server-side view filter with suppressed counts | `api-016` |
+| 4 | **`op-007`** — the Anomalous / Nominal / All control | `api-007` |
+| 5 | **`op-004`** — the tabbed exception panel, absorbing `op-006`'s timeline | `op-007` |
+| 6 | **`op-010`** — the evidence panel becomes collapsible | — (small, independent) |
+
+Start with `anom-017`: it makes the store consistent before anything else reads it, and it is the
+only piece that writes to all 400 runs.
+
+### The three findings that shaped the panel specs
+
+**The Tracks tab had no producer at all** — not a thin one, none. `AircraftTrack` carries `id`,
+`name`, `altitudeFt`, `lat`, `lon`. *Tracks (3 degraded)* would have put an invented number in a tab
+label, which is `api-002`'s producer-less field reaching an analyst rather than sitting empty.
+`api-016` gives it one, with **three states and not two**: a track on an hour nobody examined is
+`unknown`, never nominal — `api-012`'s distinction again. The state is **`interrupted`**, not
+`degraded`: the finding is that an aircraft's reporting broke, and *degraded* is a judgement about
+the aircraft that nothing makes. `op-004`'s tab label was amended to match — **the label follows the
+producer, rather than the producer being renamed to fit the label.**
+
+**An empty tab says what it found.** The default filter is *Anomalous only*, so on a quiet hour all
+three tabs are empty — and a table with no rows above a footer reading *+7 nominal sensors hidden*
+states the hidden count twice and the finding not at all. Each tab renders a sentence instead. That
+is `op-003`'s dash-versus-sentence correction at its **third** site.
+
+**The Events tab absorbs the Timeline** rather than sitting beside it. One list rendered twice is the
+drift the single copy module exists to prevent, one layer up. The rail drops to hypothesis cards and
+the detection summary, which is what FR-707 actually asks for.
+
+**The reading order this produces**, worth keeping as the screen grows: **where** (map) → **what is
+exceptional** (the tabs) → **what it means** (the rail) → **why** (the evidence panel).
+
+### Three things I asked and did not get an answer to
+
+Carried forward rather than assumed:
+
+1. **Scope.** Six items is larger than the four just done, and items 3–5 are a chain where nothing is
+   visible until the last one lands. The alternative offered was to stop after `anom-017` + `op-010`
+   — the store made consistent and the evidence panel finished — and take the panel chain as its own
+   session.
+2. **Running the re-score**, as against only building its script. It writes to all 400 runs. The plan
+   is to dump the three tables first, as this session did, and to log the before/after of every claim
+   that moves.
+3. **`op-005`'s drill-down tables** — the *View all* link's destination — are **not** in the six. The
+   plan is to render the link disabled with a reason, as `RESET` and `REPLAY` are on Scenario
+   Control, unless it should come too.
+
+### Then, unchanged
+
+7. **The map** (`map-001`–`map-004`). Largest, specced, unblocked — and `op-007`'s filter is
+   specified to drive the map and the panel *together*, so building the panel first leaves that half
+   of its failure case vacuous until the map exists.
+8. **`hypotheses`**, the last producer-less field. 155 rows exist.
+9. **`eval-006`** still waits on a second rater.
 
 Open and unowned:
 
@@ -212,9 +309,10 @@ Open and unowned:
   **15.5M**. It sits inside the grounding-check tractability argument, so it wants correcting
   deliberately rather than by search-and-replace.
 - **The progress note has not been updated for this session.** The evidence panel is a new stage of
-  the pipeline spine and the first thing on the screen that answers *why*.
-- **Four bundles' windows disagree with their claims** (ids 220, 237, 242, 251 on runs 54, 71, 76,
-  105). Cause understood — the baseline — remedy pending the decision above.
+  the pipeline spine and the first thing on the screen that answers *why*. Worth doing **after**
+  `anom-017`, not before: the re-score may move the latency figures it quotes.
+- ~~Four bundles' windows disagree with their claims.~~ Cause understood and remedy decided:
+  `anom-017`'s re-score rewrites every run under the pinned baseline, which takes these with it.
 - **`api-015` refuses an hour whose store disagrees with itself** in two ways: two bundles or two
   claims sharing a match key. Neither occurs on this corpus, so both paths are unexercised outside
   the suite.
@@ -226,4 +324,9 @@ Open and unowned:
   open does not appear until the hour changes.
 - **`docs/thesis_notes.md` is misfiled from about line 6900 onwards.** This session's entries were
   placed in the right chapters.
-- Nothing mechanical stops a **third** file declaring its own eleven detector settings.
+- Nothing mechanical stops a **third** file declaring its own eleven detector settings. `anom-017`
+  adds a twelfth to the module, so the test pinning the count needs updating with it.
+- **`_corpus.py`'s id ranges are stale.** Its docstring says runs 1–240 are corpus v1, and the
+  base-seed discriminator says every quiet run from 21 to 400 is v2 — the corpus was regenerated
+  after the loss and the ids were reused. The discriminator is right and the prose is not; nothing
+  depends on the prose, which is why it has survived.
