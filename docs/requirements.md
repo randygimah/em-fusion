@@ -192,6 +192,7 @@ the database, in API responses, and on every screen.
 | FR-718 | Playback shall run on polled data with client-side interpolation between buffered frames. No push transport, and the request rate shall not be coupled to the frame rate. |
 | FR-719 | The Operational Picture shall let an analyst select which stored hour it displays, defaulting to the most recent, and shall state visibly when it is pinned to a selected hour rather than following the most recent. The selector shall not name the scenario type of any hour. |
 | FR-720 | The Operational Picture shall show, for each reported conclusion, the evidence that conclusion rests on: the receivers that deviated together and by how much, the window, whether the aircraft side corroborated, the judgements the rules made marked as judgements rather than measurements, and every absence stated as its own kind of absence. A conclusion with no stored evidence shall say so rather than render an empty panel. |
+| FR-721 | The evidence panel shall be collapsible, and when collapsed its header shall still state how many conclusions the hour holds and how many of them have no stored evidence. |
 
 ### FR-8xx — API
 
@@ -209,6 +210,7 @@ the database, in API responses, and on every screen.
 | FR-810 | A time-windowed track query shall return aircraft positions across a span of simulated time, so the frontend can buffer ahead of the playback cursor rather than issue one request per frame. |
 | FR-811 | `GET /operational-picture` shall accept a `run` parameter naming one scenario run and serve that run's picture, refusing an unknown run rather than falling back to the most recent, and a companion endpoint shall list the hours available to select. Neither the parameter nor the index shall expose the scenario type or anything from which the injected event can be inferred, and the index shall carry nothing derived from what the detectors concluded. |
 | FR-812 | `GET /operational-picture/evidence` shall serve the evidence behind one hour's reported conclusions, accounting for every reported conclusion the store holds for that hour — each either with its evidence or with a typed reason why it has none — and shall return null when no detection pass has examined the hour. It shall build no evidence on demand. |
+| FR-813 | `GET /operational-picture` shall carry, for each aircraft track, the state this run's track findings put it in, so a view filter and a tab count have a property to filter and count on. |
 
 ### FR-9xx — Persistence
 
@@ -300,6 +302,7 @@ the database, in API responses, and on every screen.
 | NFR-602 | Hosted-arm results shall remain defensible after model retirement through persisted `model_id`, `generation_params`, and `raw_response`. |
 | NFR-603 | The local arm shall remain fully regenerable indefinitely. |
 | NFR-604 | No detector, API response, or analyst-visible surface shall have access to a run's injected ground truth while that run is scorable. A detector able to see the answer invalidates every metric computed from the run. |
+| NFR-605 | The population a detection baseline is measured over shall be a declared constant, not whatever the store happens to hold. A baseline that moves with the corpus means two runs of the same code over the same hour disagree, with nothing but the recorded policy to say why. *(Added 2026-10-06; see `measurements/corpus/backfill_bundles.log`.)* |
 
 ---
 
@@ -347,6 +350,7 @@ The v1 build is accepted when this flow demonstrably works end to end, unassiste
 | AC-12 | The whole system runs via Docker Compose from `make demo` on a clean machine, and CI runs tests and lint on both halves. | FR-1101–FR-1104 |
 | AC-13 | An analyst selects a stored hour on the Operational Picture, is shown that hour's detection output, and can tell from the screen that it is pinned rather than following the newest; no element of that screen names the selected hour's scenario type. | FR-719, FR-811, FR-207 |
 | AC-14 | An analyst reads a conclusion on the Operational Picture, opens the evidence behind it, and sees which receivers deviated together, over what window, how far above their own normal, whether the aircraft side corroborated, and what the system looked at and could not judge. A conclusion the store holds no evidence for is named as such rather than omitted. | FR-720, FR-812, FR-907, FR-401–FR-404, FR-711 |
+| AC-15 | An analyst on the Operational Picture sees only the exceptional rows by default, switches the view to All to compare them against nominal traffic, reads the conclusions in the Events tab, and opens the evidence behind one of them. No tab shows an empty table where it could state what it found instead. | FR-708, FR-709, FR-716, FR-721, FR-809, FR-813 |
 
 AC-04 and AC-10 are what turn a demo into a thesis. Neither is optional.
 
