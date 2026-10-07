@@ -30,6 +30,7 @@ data absent, so absence is a state the contract is expected to carry.
 
 from __future__ import annotations
 
+import ast
 import json
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
@@ -45,6 +46,7 @@ from sqlalchemy.pool import NullPool
 
 from alembic import command
 from app.api.v1.operational_picture import FINAL_WINDOW_SECONDS
+from app.api.v1.schemas import operational_picture as picture_module
 from app.api.v1.schemas.operational_picture import (
     PERSISTED_PRODUCERS,
     AircraftTrack,
@@ -1477,3 +1479,206 @@ def test_a_layout_whose_channels_span_two_bands_is_refused() -> None:
         build_operational_picture(
             layout=split, run=_run(), observations=[_observation()]
         )
+
+
+# ------------------------------------------------------- the state of a track
+#
+# Spec: api-016. A receiver has carried the state the pass found it in since
+# `api-012`; an aircraft carried a position and nothing else, so `op-004`'s
+# *Tracks (n interrupted)* tab and `api-007`'s anomalous filter had no property
+# to read. Three states, following `_receiver_health`: `interrupted` is a track
+# `anom-010` raised a continuity gap for, `nominal` is one this run's findings
+# say nothing about, and `unknown` is every track on a run no pass examined.
+
+AIRCRAFT = "AC-48089ab4e5a9"
+OTHER_AIRCRAFT = "AC-3c6444b1e2f0"
+TRACK_STATES = {"nominal", "interrupted", "unknown"}
+
+
+def _states(picture: OperationalPicture) -> dict[str, str]:
+    return {track.name: track.state for track in picture.aircraftTracks}
+
+
+def _two_aircraft() -> list[CanonicalObservation]:
+    return [
+        _observation(aircraft_id=AIRCRAFT),
+        _observation(aircraft_id=OTHER_AIRCRAFT, lat=LAT + 0.5),
+    ]
+
+
+def test_the_track_state_is_one_closed_set_on_both_sides() -> None:
+    """Spec: api-016.
+
+    Three words and not a boolean. A `degraded` flag collapses *examined and
+    clean* into *not examined*, which is the distinction `detectionSummary`'s
+    nullability exists to carry -- so the set is compared against its
+    declaration on both sides, as the other unions are.
+    """
+    # spec: api-016, api-002
+    declared = set(union_members(_read(CONTRACT_PATHS), "TrackState"))
+    field = AircraftTrack.model_json_schema()["properties"]["state"]
+
+    assert declared == TRACK_STATES
+    assert set(field.get("enum", ())) == TRACK_STATES
+    assert _interfaces(_read(CONTRACT_PATHS))["AircraftTrack"]["state"] == "TrackState"
+
+
+def test_every_track_on_an_unexamined_run_is_unknown() -> None:
+    """Spec: api-016 -- the named failure case.
+
+    A run no pass has examined must not report its aircraft nominal: that is a
+    claim nothing established, the same one `_receiver_health` refuses for a
+    receiver. A stored gap does not change it, because without a pass stamp
+    the store cannot say the findings it holds are this run's whole account.
+    """
+    # spec: api-016, api-012
+    picture = build_operational_picture(
+        layout=LAYOUT,
+        run=_run(),
+        observations=_two_aircraft(),
+        findings=[_gap(AIRCRAFT)],
+    )
+
+    assert _states(picture) == {AIRCRAFT: "unknown", OTHER_AIRCRAFT: "unknown"}
+
+
+def test_every_track_on_a_quiet_examined_run_is_nominal() -> None:
+    # spec: api-016, anom-008 -- examined and clean is a reading, not a default.
+    picture = _scored([], observations=_two_aircraft())
+
+    assert _states(picture) == {AIRCRAFT: "nominal", OTHER_AIRCRAFT: "nominal"}
+
+
+def test_a_track_with_a_continuity_gap_is_interrupted() -> None:
+    # spec: api-016, anom-010
+    picture = _scored([_gap(AIRCRAFT)], observations=_two_aircraft())
+
+    assert _states(picture) == {AIRCRAFT: "interrupted", OTHER_AIRCRAFT: "nominal"}
+
+
+def test_a_track_with_several_gaps_is_interrupted_once() -> None:
+    """Spec: api-016 -- the state is a state and not a count.
+
+    Run 420 holds 17 gaps; an aircraft broken three times is one interrupted
+    track, served once, and not three rows or a number.
+    """
+    # spec: api-016
+    picture = _scored(
+        [_gap(AIRCRAFT), _gap(AIRCRAFT), _gap(AIRCRAFT)], observations=_two_aircraft()
+    )
+
+    assert [t.name for t in picture.aircraftTracks].count(AIRCRAFT) == 1
+    assert _states(picture)[AIRCRAFT] == "interrupted"
+
+
+def test_an_interrupted_track_is_not_promoted_to_a_reported_anomaly() -> None:
+    """Spec: api-016 -- a continuity gap stays intermediate.
+
+    A quiet hour holds about 138 of them. The state says *this aircraft's
+    reporting broke*, which is a fact about a track, and never *an anomaly was
+    reported*, which is the ladder's to say: the summary's levels, its
+    reportable counts and the timeline are what they were without the gap.
+    """
+    # spec: api-016, api-012, anom-010
+    clean = _scored([], observations=_two_aircraft())
+    gapped = _scored([_gap(AIRCRAFT)], observations=_two_aircraft())
+    assert clean.detectionSummary is not None
+    assert gapped.detectionSummary is not None
+
+    assert _states(gapped)[AIRCRAFT] == "interrupted"
+    assert gapped.detectionSummary.anomalyLevel == clean.detectionSummary.anomalyLevel
+    assert (
+        gapped.detectionSummary.signalIntegrity
+        == clean.detectionSummary.signalIntegrity
+    )
+    assert gapped.timelineEvents == clean.timelineEvents == []
+    assert _count_for(gapped, (GAP_RULE, GAP_TYPE)).kind == "intermediate"
+
+
+def test_the_state_is_read_from_stored_findings_and_not_re_detected() -> None:
+    """Spec: api-016 -- a join, not a detector (`anom-016`).
+
+    The served observation looks exactly like a frozen position: its last fresh
+    fix is two minutes old while the aircraft is still heard. A request that
+    re-ran `anom-010` would call it interrupted; with no stored finding it is
+    nominal, because the pass does not fire per request. The schema module
+    takes the gap rule's two names and nothing else from it.
+    """
+    # spec: api-016, anom-016, anom-010
+    frozen = _observation(aircraft_id=AIRCRAFT)
+    assert isinstance(frozen.payload, TrackPayload)
+    frozen = frozen.model_copy(
+        update={
+            "payload": frozen.payload.model_copy(
+                update={"position_staleness_s": 120.0, "contact_staleness_s": 0.0}
+            )
+        }
+    )
+
+    assert _states(_scored([], observations=[frozen])) == {AIRCRAFT: "nominal"}
+
+    taken = {
+        alias.name
+        for node in ast.walk(ast.parse(Path(picture_module.__file__).read_text()))
+        if isinstance(node, ast.ImportFrom) and node.module == "app.detection.track_gap"
+        for alias in node.names
+    }
+    assert taken == {"RULE_ID", "FINDING_TYPE"}
+
+
+def test_the_join_is_on_the_pseudonym_as_stored() -> None:
+    """Spec: api-016, NFR-405.
+
+    `anom-010` keys a gap on the substituted identifier the observation
+    carries, so the match needs no lookup and nothing reverses it. A finding
+    keyed on anything else -- a resolved transponder address, or the track's
+    own composite id -- names no served aircraft and marks none.
+    """
+    # spec: api-016, NFR-405, dal-004
+    picture = _scored(
+        [_gap("48089a"), _gap(f"opensky-replay:{AIRCRAFT}")],
+        observations=_two_aircraft(),
+    )
+
+    assert _states(picture) == {AIRCRAFT: "nominal", OTHER_AIRCRAFT: "nominal"}
+
+    assert "pseudonymise" not in Path(picture_module.__file__).read_text()
+
+
+def test_a_gap_for_an_aircraft_not_on_screen_is_not_refused() -> None:
+    """Spec: api-016.
+
+    Unlike a receiver outside the layout, this is ordinary: a gap can fall
+    anywhere in the hour, and the picture serves only the final window's
+    positions. The aircraft has left; the served ones keep their own state.
+    """
+    # spec: api-016, api-002
+    picture = _scored([_gap("AC-000000000000")], observations=_two_aircraft())
+
+    assert _states(picture) == {AIRCRAFT: "nominal", OTHER_AIRCRAFT: "nominal"}
+
+
+@pytest.mark.database
+@requires_database
+def test_the_endpoint_serves_each_track_with_its_state(
+    picture_database: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # spec: api-016 -- on the wire, from the stored gap and the run's stamp.
+    _insert_run(picture_database, RUN_ID, completed=True)
+    _save(picture_database, _two_aircraft())
+    factory = sessionmaker(bind=picture_database, autoflush=False)
+    save_findings(
+        factory,
+        scenario_run_id=RUN_ID,
+        rule_id=GAP_RULE,
+        findings=[_gap(AIRCRAFT)],
+        policy={"TRACK-GAP.threshold_s": "60"},
+    )
+    record_detection_pass(factory, RUN_ID, policy={"TRACK-GAP.threshold_s": "60"})
+
+    tracks = _get(picture_database, monkeypatch)["aircraftTracks"]
+
+    assert {t["name"]: t["state"] for t in tracks} == {
+        AIRCRAFT: "interrupted",
+        OTHER_AIRCRAFT: "nominal",
+    }
