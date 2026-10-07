@@ -2453,6 +2453,44 @@ producers rather than as a property of this corpus, which is what makes it safe 
 useful illustration of the difference between a regularity observed in data and one guaranteed by
 code.
 
+### An aircraft's state is a lookup into stored findings, with three values and a deliberately mild word
+
+Until 7 October an aircraft on the operational picture carried a position and an altitude and nothing
+else, while every receiver carried the state the detection pass had found it in. The exceptions panel
+and the view filter both need to know which aircraft are worth an analyst's attention, so each track
+now carries one of three states: `interrupted` when a stored continuity-gap finding names it,
+`nominal` when the run was examined and nothing names it, and `unknown` on a run no pass has examined.
+
+Three decisions sit inside that, and each had a cheaper alternative that was rejected.
+
+**A lookup and not a detector.** The continuity-gap rule could have been run over the served
+positions on every request; it is pure and fast enough. That was rejected because the screen would
+then report something the stored record does not, and because the batch-scoring decision already
+settled that the pass runs once, on completion, and never per request. The state is a join from the
+stored findings to the served tracks on the pseudonym both carry, which needs no lookup table and
+reverses nothing.
+
+**Three values and not a boolean.** A `degraded` flag was the obvious shape, and it collapses *examined
+and found clean* into *never examined* — the same distinction the detection summary's nullability
+carries and the receivers' `unknown` state carries. A run nobody looked at reporting 432 nominal
+aircraft is a claim nothing established.
+
+**`interrupted` and not `degraded`.** The finding is that an aircraft's reporting broke. *Degraded* is a
+judgement about the aircraft that no rule in the system makes, so the planned tab label was changed to
+match the producer rather than the producer being renamed to match the label.
+
+**Measured on the store** (7 October, 460 completed runs, all examined): the final five-minute window
+of run 21, a quiet run, serves 423 aircraft of which **13 are interrupted**; run 102, 14 of 428; run 204,
+16 of 446; run 420, 10 of 432 although the run holds 17 gaps; run 480, 17 of 420. The gap between 17 and
+10 is expected: a gap can fall anywhere in the hour, the screen serves only the aircraft present at its
+end, and an aircraft with several gaps is one interrupted track.
+
+**A threat to how the screen is read.** A quiet hour shows about a dozen interrupted aircraft, because
+continuity gaps are routine working material — a quiet hour holds about 138 of them — and are never
+promoted to a reported anomaly. A tab reading *Tracks (13 interrupted)* on an hour where nothing was
+reported is correct and is also exactly the number an analyst could read as alarm. *(Record how the
+exceptions panel words this once it is built, and whether a reader in the evaluation misread it.)*
+
 
 ## Implementation
 

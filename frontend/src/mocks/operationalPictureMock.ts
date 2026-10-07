@@ -67,6 +67,7 @@ const operationalPicture: OperationalPicture = {
       altitudeFt: 30000,
       lat: 34.0522,
       lon: -118.2437,
+      state: "nominal",
     },
   ],
   // Corrected with op-006, which is the first item to render these. Both

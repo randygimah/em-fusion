@@ -41,7 +41,7 @@ the account, and never by a number in it.
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Literal
+from typing import Final, Literal
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
@@ -76,7 +76,7 @@ METRES_PER_FOOT = 0.3048
 
 #: Reported when nothing has been served to say otherwise. A guess would be
 #: indistinguishable from a fact on screen.
-UNKNOWN = "unknown"
+UNKNOWN: Final = "unknown"
 
 #: The detection layer spells a level `low`; the contract demands `Low`. Joined
 #: by **enum member name** following `ai-002`, which found the trap: `.title()`
@@ -96,7 +96,16 @@ _LEVELS: Mapping[str, Level] = {"LOW": "Low", "MEDIUM": "Medium", "HIGH": "High"
 #: and clean.
 FAULT = "fault"
 DEVIATING = "deviating"
-NOMINAL = "nominal"
+NOMINAL: Final = "nominal"
+
+#: What an aircraft track was found to be (`api-016`). Three words and not a
+#: boolean: a `degraded` flag would collapse *examined and clean* into *not
+#: examined*, which is the distinction `detectionSummary`'s nullability carries.
+#: `interrupted` and not `degraded` -- the finding is that the aircraft's
+#: reporting broke, and *degraded* is a judgement about the aircraft that
+#: nothing here makes.
+INTERRUPTED: Final = "interrupted"
+TrackState = Literal["nominal", "interrupted", "unknown"]
 
 #: Which rule's finding puts a receiver in which state, worst first. **Declared
 #: rather than derived**: `anom-008`'s register says *that* a rule produces
@@ -278,6 +287,8 @@ class AircraftTrack(BaseModel):
     altitudeFt: int | None  # noqa: N815 -- mirrors the TypeScript contract
     lat: float
     lon: float
+    #: What this run's stored findings say about the aircraft (`api-016`).
+    state: TrackState
 
 
 class TimelineEvent(BaseModel):
@@ -353,23 +364,51 @@ def _feet(metres: float | None) -> int | None:
     return None if metres is None else round(metres / METRES_PER_FOOT)
 
 
-def _track(observation: CanonicalObservation) -> AircraftTrack:
+def _track(
+    observation: CanonicalObservation, *, interrupted: frozenset[str] | None
+) -> AircraftTrack:
     """One observation as a track.
 
     The name is whatever the payload holds, which `dal-004` guarantees is a
     pseudonym: the substitution happens at ingest, so nothing here has to
     remember to do it and nothing here could undo it.
+
+    `interrupted` is `None` on a run no pass has examined, and every track on
+    it is then `unknown` (`api-016`).
     """
     payload = observation.payload
     altitude = payload.altitude_m if isinstance(payload, TrackPayload) else None
     identifier = payload.aircraft_id if isinstance(payload, TrackPayload) else ""
+    state: TrackState = (
+        UNKNOWN
+        if interrupted is None
+        else INTERRUPTED if identifier in interrupted else NOMINAL
+    )
     return AircraftTrack(
         id=f"{observation.source_id}:{identifier}",
         name=identifier,
         altitudeFt=_feet(altitude),
         lat=observation.location.lat,
         lon=observation.location.lon,
+        state=state,
     )
+
+
+def _interrupted(findings: Sequence[DetectionFinding]) -> frozenset[str]:
+    """The aircraft this run's stored continuity gaps name. Spec: api-016.
+
+    **A join and not a detector**: the gaps were found by the pass and stored
+    (`anom-015`), and re-running `anom-010` inside a request is what `anom-016`
+    forbids. The subject is the pseudonym the observation carries, so the
+    match needs no lookup and nothing reverses it (`NFR-405`).
+
+    A gap stays intermediate. This says *the aircraft's reporting broke*, a
+    fact about a track; the summary goes on counting the gap as working
+    material and the ladder alone says what was reported. A gap for an
+    aircraft not in the final window is ordinary -- it can fall anywhere in the
+    hour -- and simply names no served track.
+    """
+    return frozenset(f.subject for f in _of(findings, (GAP_RULE, GAP_TYPE)))
 
 
 def _data_mode(observations: Sequence[CanonicalObservation]) -> str:
@@ -640,6 +679,7 @@ def build_operational_picture(
     scored = detection_pass is not None
     band = _band(layout)
     health = _receiver_health(layout, findings, scored=scored)
+    interrupted = _interrupted(findings) if scored else None
     return OperationalPicture(
         scenario=scenario,
         hypotheses=[],
@@ -661,6 +701,8 @@ def build_operational_picture(
             )
             for site in layout.sensors
         ],
-        aircraftTracks=[_track(observation) for observation in observations],
+        aircraftTracks=[
+            _track(observation, interrupted=interrupted) for observation in observations
+        ],
         timelineEvents=_timeline(findings, register),
     )

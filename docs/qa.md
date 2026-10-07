@@ -9214,6 +9214,33 @@ radio incidents are synthetic and well above threshold by construction, and the 
 misses. A chart of a row of full-height bars invites the opposite reading, so its caption has to say
 this.
 
+## 153. I can't see these tabs in the frontend — and shouldn't the Vite dev server mount the working tree?
+
+**No tab exists yet, and nothing on `:8080` could have shown one anyway — two separate reasons.**
+
+| What was expected | What is actually true |
+|---|---|
+| The aircraft state shows up on screen | It is a field in the API response. Nothing renders it until the tabbed exceptions panel, the fourth of four steps |
+| A frontend edit appears on `:8080` | `:8080` is nginx serving a production build baked into the image when it was last built. It shows nothing newer until the image is rebuilt |
+
+The panel chain is ordered by what each step needs: the aircraft state (data), then a server-side
+filter that can select on it, then the Anomalous / Nominal / All control that drives the filter, then
+the tabbed panel that shows the counts. The first three change what the server sends and what can be
+asked for; only the fourth draws anything. A review of the first step is therefore a review of the
+response — `GET /api/v1/operational-picture?run=21` returns 410 nominal and 13 interrupted aircraft.
+
+**The backend already reloads; the frontend container never did.** The backend service mounts the
+working tree and runs with `--reload`, so a saved Python edit is live within seconds. The frontend
+service is a static build. Two ways to get a reloading frontend:
+
+- run `pnpm dev` on the host, which serves the working tree on `:1234` and forwards `/api` to the
+  backend container on `localhost:8000` — this worked all along;
+- a dev-server container that mounts the working tree, agreed on 7 October as its own item.
+
+**The trap the second one has to avoid.** Inside a container, `localhost` is the container. A dev server
+forwarding `/api` to `localhost:8000` there reaches nothing — and because the operational picture
+falls back to its mock on first paint, the screen would look healthy while showing invented data.
+
 ---
 
 | **Composing copy** | Turning a finding type the backend sends verbatim into a sentence an analyst reads. Done on the screen by design, so prose never arrives from a detector — and in one module, because two panels carry the same type. See §148. |
@@ -9224,3 +9251,4 @@ this.
 | **Matching without a key** | Attaching two records of one event to each other by comparing fields, because no column joins them and none can. Safe only where the fields are derived from one source by construction. See §149. |
 | **An unpinned experimental variable** | A setting that is recorded but not fixed, so two runs of the same code disagree and the record is the only thing that says why. The baseline's quiet-run population is one. See §151. |
 | **In series, not side by side** | The AI explains what the deterministic rules already detected; it does not detect. So detection metrics score the rules against ground truth, and the AI is scored against the template generator, never against the rules. See §152. |
+| **A static build versus a dev server** | `:8080` serves a production build frozen when the image was built; a dev server serves the working tree and reloads on save. A screen that does not change after an edit is usually the first, not a bug. See §153. |

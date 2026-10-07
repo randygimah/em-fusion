@@ -50,7 +50,7 @@ A contents page for the repo. Use it to find the right file before searching; it
 | `frontend/src/lib/detectionVocabulary.ts` | Every finding type's wording in one module (`op-003`, `op-006`, `op-010`), plus grounding words and absence sentences. Panels must not carry their own vocabulary. |
 | `frontend/src/lib/scenarioLibrary.ts` | The five scenario types and descriptions (`api-010`). Not a mock — parity-checked against the backend enum. |
 | `frontend/src/lib/utils.ts` | The `cn` helper (`clsx` + `tailwind-merge`). |
-| `frontend/src/types/operationalPicture.ts` | The `OperationalPicture` contract, mirroring `/api/v1/operational-picture`; parity-checked from the backend suite. `detectionSummary` is nullable (null = no pass has run); `counts` carries typed absences. |
+| `frontend/src/types/operationalPicture.ts` | The `OperationalPicture` contract, mirroring `/api/v1/operational-picture`; parity-checked from the backend suite. `detectionSummary` is nullable (null = no pass has run); `counts` carries typed absences. Each track's `state` (`api-016`) is `nominal` / `interrupted` / `unknown`, joined from stored gap findings — never re-detected, never a reportable claim. |
 | `frontend/src/types/scenarioControl.ts` | The Scenario Control contract (`scn-004`), parity-checked against the generator. |
 | `frontend/src/types/evidence.ts` | The evidence contract (`api-015`, `op-010`), mirroring `backend/app/api/v1/schemas/evidence.py`. |
 | `frontend/src/mocks/operationalPictureMock.ts` | Mock satisfying the picture contract; the first-paint fallback in `useOperationalPicture`. |

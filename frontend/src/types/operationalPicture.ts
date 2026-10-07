@@ -99,12 +99,20 @@ export interface RFSensor {
   lon: number;
 }
 
+// What this run's stored findings say about an aircraft (api-016). Three words
+// and not a boolean: `unknown` on a run no pass has examined, `nominal` when the
+// findings say nothing about it, `interrupted` when its reporting broke. A
+// continuity gap stays intermediate — this is a fact about a track, never a
+// reported anomaly — and the set is compared with the backend's by a test there.
+export type TrackState = "nominal" | "interrupted" | "unknown";
+
 export interface AircraftTrack {
   id: string;
   name: string;
   altitudeFt: number | null;
   lat: number;
   lon: number;
+  state: TrackState;
 }
 
 export interface TimelineEvent {
