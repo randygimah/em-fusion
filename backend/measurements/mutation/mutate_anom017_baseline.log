@@ -1,0 +1,35 @@
+sentinel killed (1 failed, 9 passed in 1.28s) -- edits reach the tests
+
+a pinned run is dropped                          KILLED   1 failed in 0.91s
+a pinned seed is changed                         KILLED   1 failed, 2 passed in 0.94s
+a repeated run is not refused                    KILLED   1 failed, 6 passed in 0.89s
+a run the store does not hold is not refused     KILLED   1 failed, 7 passed in 0.90s
+only the first failing run is named              KILLED   1 failed, 8 passed in 0.90s
+the seed never reaches the check                 KILLED   1 failed, 9 passed in 0.93s
+an absent run is not reported                    KILLED   1 failed, 16 passed in 2.20s
+a run that is not quiet passes                   KILLED   1 failed, 17 passed in 2.83s
+an unfinished run passes                         KILLED   1 failed, 17 passed in 3.13s
+a run with another seed passes                   KILLED   1 failed, 17 passed in 2.87s
+discrepancies come back in arrival order         KILLED   1 failed, 17 passed in 2.84s
+the trigger is handed no population              KILLED   1 failed, 11 passed in 0.90s
+the trigger's default is not the pin             KILLED   1 failed, 11 passed in 1.00s
+the measurement is committed, not rolled back    KILLED   1 failed, 19 passed in 4.92s
+the measurement stores bundles                   KILLED   1 failed, 22 passed in 10.59s
+the storing pass skips bundles                   KILLED   1 failed, 21 passed in 9.25s
+the bundle write is never skipped                KILLED   1 failed, 22 passed in 10.57s
+measured sessions join without a savepoint       SURVIVED 83 passed in 36.23s
+
+17 of 18 valid mutants killed
+survivors: measured sessions join without a savepoint
+
+-------------------------------------------------------------------------------
+Recorded 2026-10-07. The survivor is EQUIVALENT, not a gap. Without
+join_transaction_mode="create_savepoint", SQLAlchemy 2.0's default
+("conservative_savepoint") joins the outer transaction in rollback-only mode:
+a session's commit is not propagated, so nothing reaches the store and every
+later session sees the earlier writes. The two modes differ only when a session
+inside the pass rolls back and the pass then continues -- under the default that
+rollback would undo the whole outer transaction mid-pass. The pass never does
+that: every failure propagates and the transaction is rolled back at the end.
+Result: 17 of 17 non-equivalent mutants killed. The setting is kept as the
+statement of intent and the guard for that future case.
