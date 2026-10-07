@@ -1682,3 +1682,261 @@ def test_the_endpoint_serves_each_track_with_its_state(
         AIRCRAFT: "interrupted",
         OTHER_AIRCRAFT: "nominal",
     }
+
+
+# ------------------------------------------------------------- the view filter
+#
+# Spec: api-007. The screen asks for a view -- anomalous, nominal or all -- and
+# the server sends only the rows that view admits, with the count it withheld
+# per collection and whether the hour was examined at all. Filtered where the
+# payload is assembled, over the same state each row is served with: a second
+# definition of *interrupted* in SQL is a definition that can drift.
+
+VIEWS = ("anomalous", "nominal", "all")
+COLLECTIONS = ("rfSensors", "aircraftTracks", "timelineEvents")
+
+
+def _viewed(
+    view: str | None,
+    findings: Sequence[DetectionFinding] = (),
+    *,
+    scored: bool = True,
+) -> OperationalPicture:
+    """A picture of two aircraft and the shipped layout, under one view."""
+    kwargs: dict[str, Any] = {
+        "layout": LAYOUT,
+        "run": _run(),
+        "observations": _two_aircraft(),
+        "findings": findings,
+    }
+    if scored:
+        kwargs["detection_pass"] = _detection_pass()
+    if view is not None:
+        kwargs["view"] = view
+    return build_operational_picture(**kwargs)
+
+
+def _mixed() -> list[DetectionFinding]:
+    """One faulted receiver (a reportable claim, so one event) and one gap."""
+    return [_fault(RECEIVER), _gap(AIRCRAFT)]
+
+
+def _suppressed(picture: OperationalPicture) -> dict[str, int]:
+    return picture.model_dump()["view"]["suppressed"]
+
+
+def test_the_view_metadata_is_one_shape_on_both_sides() -> None:
+    """Spec: api-007 -- declared in both halves of the contract.
+
+    The two new interfaces are checked field for field in both directions, as
+    every other interface is, and the selection is one closed set.
+    """
+    # spec: api-007, api-002
+    source = _read(CONTRACT_PATHS)
+    declared = _interfaces(source)
+    view_model = getattr(picture_module, "PictureView", None)
+    counts_model = getattr(picture_module, "SuppressedCounts", None)
+    assert view_model is not None and counts_model is not None
+
+    assert declared["OperationalPicture"]["view"] == "PictureView"
+    assert set(declared["PictureView"]) == _model_fields(view_model)
+    assert set(declared["SuppressedCounts"]) == _model_fields(counts_model)
+    assert set(declared["SuppressedCounts"]) == set(COLLECTIONS)
+    assert set(union_members(source, "ViewSelection")) == set(VIEWS)
+    selected = view_model.model_json_schema()["properties"]["selected"]
+    assert set(selected.get("enum", ())) == set(VIEWS)
+
+
+def test_anomalous_admits_only_the_rows_a_finding_put_out_of_nominal() -> None:
+    # spec: api-007, api-016, api-012
+    picture = _viewed("anomalous", _mixed())
+
+    assert [s.id for s in picture.rfSensors] == [RECEIVER]
+    assert _states(picture) == {AIRCRAFT: "interrupted"}
+    assert len(picture.timelineEvents) == 1
+    assert _suppressed(picture) == {
+        "rfSensors": len(LAYOUT.sensors) - 1,
+        "aircraftTracks": 1,
+        "timelineEvents": 0,
+    }
+
+
+def test_nominal_admits_only_nominal_rows_and_no_event() -> None:
+    # spec: api-007 -- a timeline event is a reportable claim by construction.
+    picture = _viewed("nominal", _mixed())
+
+    assert {s.health for s in picture.rfSensors} == {"nominal"}
+    assert len(picture.rfSensors) == len(LAYOUT.sensors) - 1
+    assert _states(picture) == {OTHER_AIRCRAFT: "nominal"}
+    assert picture.timelineEvents == []
+    assert _suppressed(picture) == {
+        "rfSensors": 1,
+        "aircraftTracks": 1,
+        "timelineEvents": 1,
+    }
+
+
+def test_all_admits_everything_and_withholds_nothing() -> None:
+    # spec: api-007
+    picture = _viewed("all", _mixed())
+
+    assert len(picture.rfSensors) == len(LAYOUT.sensors)
+    assert len(picture.aircraftTracks) == 2
+    assert len(picture.timelineEvents) == 1
+    assert _suppressed(picture) == dict.fromkeys(COLLECTIONS, 0)
+    assert picture.model_dump()["view"]["selected"] == "all"
+
+
+def test_an_absent_view_is_all_and_not_anomalous() -> None:
+    """Spec: api-007 -- the named failure case of the amendment.
+
+    Every request today carries no view. Filtering it as *anomalous* would empty
+    the receiver strip on every quiet hour before any control exists to say
+    why; the *Anomalous only* default belongs to the control that sends it.
+    """
+    # spec: api-007, op-007
+    absent = _viewed(None, _mixed())
+
+    assert absent == _viewed("all", _mixed())
+    assert absent.model_dump()["view"]["selected"] == "all"
+
+
+@pytest.mark.parametrize("view", VIEWS)
+def test_shown_and_withheld_rows_account_for_the_whole_hour(view: str) -> None:
+    """Spec: api-007, op-004 -- the footer's number is the rows that did not arrive.
+
+    Per collection, what is served plus what was withheld is what `all` serves:
+    a count that drifted from that would make *+n nominal hidden* untrue.
+    """
+    # spec: api-007, op-004
+    everything = _viewed("all", _mixed()).model_dump()
+    picture = _viewed(view, _mixed())
+    served = picture.model_dump()
+
+    for collection in COLLECTIONS:
+        assert len(served[collection]) + _suppressed(picture)[collection] == len(
+            everything[collection]
+        ), collection
+
+
+@pytest.mark.parametrize("view", ("anomalous", "nominal"))
+def test_an_unexamined_hour_admits_nothing_but_all(view: str) -> None:
+    """Spec: api-007, api-016 -- an `unknown` row is neither anomalous nor nominal.
+
+    On a run no pass has examined every receiver and every track is `unknown`,
+    so both narrow views are empty -- and the metadata says the hour was not
+    examined, so 7 and 2 withheld cannot be read as an hour found clean.
+    """
+    # spec: api-007, api-016, api-012
+    picture = _viewed(view, [_gap(AIRCRAFT)], scored=False)
+    meta = picture.model_dump()["view"]
+
+    assert picture.rfSensors == [] and picture.aircraftTracks == []
+    assert meta["examined"] is False
+    assert meta["suppressed"]["rfSensors"] == len(LAYOUT.sensors)
+    assert meta["suppressed"]["aircraftTracks"] == 2
+
+
+def test_an_unexamined_hour_under_all_serves_every_unknown_row() -> None:
+    # spec: api-007, api-016
+    picture = _viewed("all", scored=False)
+
+    assert {s.health for s in picture.rfSensors} == {"unknown"}
+    assert set(_states(picture).values()) == {"unknown"}
+    assert _suppressed(picture) == dict.fromkeys(COLLECTIONS, 0)
+
+
+@pytest.mark.parametrize("scored", (True, False))
+def test_examined_is_exactly_whether_a_summary_is_served(scored: bool) -> None:
+    # spec: api-007, api-012 -- one fact, carried twice, must never disagree.
+    picture = _viewed("anomalous", _mixed(), scored=scored)
+
+    assert picture.model_dump()["view"]["examined"] is (
+        picture.detectionSummary is not None
+    )
+    assert picture.model_dump()["view"]["examined"] is scored
+
+
+def test_the_detection_summary_is_the_whole_hour_whatever_the_view() -> None:
+    # spec: api-007 -- a summary whose counts shrink with the view is a failure.
+    summaries = {view: _viewed(view, _mixed()).detectionSummary for view in VIEWS}
+
+    assert summaries["anomalous"] == summaries["nominal"] == summaries["all"]
+    assert summaries["all"] is not None
+
+
+def test_the_filter_is_not_written_a_second_time_in_sql() -> None:
+    """Spec: api-007 -- the state has one definition, where the payload is built.
+
+    The persistence layer may not name a track state or a receiver state: a
+    predicate there would be a second definition of what the builder decides.
+    """
+    # spec: api-007, api-016
+    db_sources = Path(picture_module.__file__).resolve().parents[3] / "db"
+    named = {
+        path.name
+        for path in db_sources.glob("*.py")
+        for word in ('"interrupted"', '"deviating"', '"anomalous"')
+        if word in path.read_text()
+    }
+
+    assert named == set()
+    assert "view" in build_operational_picture.__code__.co_varnames
+
+
+def _get_with(
+    engine: Engine, monkeypatch: pytest.MonkeyPatch, **params: str
+) -> tuple[int, dict[str, Any]]:
+    monkeypatch.setenv("DATABASE_URL", engine.url.render_as_string(hide_password=False))
+    with TestClient(app) as client:
+        response = client.get("/api/v1/operational-picture", params=params)
+    return response.status_code, dict(response.json())
+
+
+@pytest.mark.database
+@requires_database
+@pytest.mark.parametrize("value", ("everything", "Anomalous", ""))
+def test_an_unrecognised_view_is_refused_rather_than_read_as_all(
+    picture_database: Engine, monkeypatch: pytest.MonkeyPatch, value: str
+) -> None:
+    # spec: api-007 -- the original failure case; case is not forgiven either.
+    status, _ = _get_with(picture_database, monkeypatch, view=value)
+
+    assert status == 422
+
+
+@pytest.mark.database
+@requires_database
+def test_the_endpoint_serves_the_selected_view_with_its_metadata(
+    picture_database: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # spec: api-007, api-016 -- on the wire, from the stored gap and the stamp.
+    _insert_run(picture_database, RUN_ID, completed=True)
+    _save(picture_database, _two_aircraft())
+    factory = sessionmaker(bind=picture_database, autoflush=False)
+    save_findings(
+        factory,
+        scenario_run_id=RUN_ID,
+        rule_id=GAP_RULE,
+        findings=[_gap(AIRCRAFT)],
+        policy={"TRACK-GAP.threshold_s": "60"},
+    )
+    record_detection_pass(factory, RUN_ID, policy={"TRACK-GAP.threshold_s": "60"})
+
+    status, anomalous = _get_with(picture_database, monkeypatch, view="anomalous")
+    _, absent = _get_with(picture_database, monkeypatch)
+
+    assert status == 200
+    assert [t["name"] for t in anomalous["aircraftTracks"]] == [AIRCRAFT]
+    assert anomalous["rfSensors"] == []
+    assert anomalous["view"] == {
+        "selected": "anomalous",
+        "examined": True,
+        "suppressed": {
+            "rfSensors": len(LAYOUT.sensors),
+            "aircraftTracks": 1,
+            "timelineEvents": 0,
+        },
+    }
+    assert absent["view"]["selected"] == "all"
+    assert len(absent["aircraftTracks"]) == 2
