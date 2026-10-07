@@ -9,10 +9,12 @@ import { useEvidenceAccount } from "./hooks/useEvidenceAccount";
 import { useOperationalPicture } from "./hooks/useOperationalPicture";
 import { useSelectableHours } from "./hooks/useSelectableHours";
 import { useSystemHealth } from "./hooks/useSystemHealth";
+import { DEFAULT_VIEW } from "./lib/viewVocabulary";
 import { SCREENS } from "./routes";
 import HypothesesScreen from "./screens/hypotheses";
 import OperationalPictureScreen from "./screens/operationalPicture";
 import ScenarioControlScreen from "./screens/scenarioControl";
+import type { ViewSelection } from "./types/operationalPicture";
 
 // The seam, and the only place that knows where a screen's data comes from
 // (spec: api-003). Both screens fetch; no screen imports a mock itself.
@@ -32,8 +34,12 @@ const OperationalPictureRoute = () => {
   // screen id today, so a parameterised hash is nav-001's machinery and its own
   // item, with its own failure case for an unrecognised run.
   const [pinnedRun, setPinnedRun] = useState<number | null>(null);
+  // The view, as component state for the same reason (spec: op-007): it lasts
+  // as long as the screen, across polls and hours, and every visit starts at
+  // Anomalous only (US-A1) rather than on a view somebody left.
+  const [view, setView] = useState<ViewSelection>(DEFAULT_VIEW);
   const hours = useSelectableHours();
-  const { picture, degraded } = useOperationalPicture(pinnedRun);
+  const { picture, degraded } = useOperationalPicture(pinnedRun, view);
   // Keyed on the same pinned hour as the picture, so the evidence on screen
   // always belongs to the conclusion above it (spec: op-010).
   const evidence = useEvidenceAccount(pinnedRun);
@@ -45,8 +51,10 @@ const OperationalPictureRoute = () => {
       hours={hours}
       onFollowNewest={() => setPinnedRun(null)}
       onSelectHour={(runId) => setPinnedRun(Number.isNaN(runId) ? null : runId)}
+      onSelectView={setView}
       operationalPicture={picture}
       pinnedRun={pinnedRun}
+      selectedView={view}
     />
   );
 };

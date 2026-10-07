@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { DEFAULT_POLL_INTERVAL_MS, fetchOperationalPicture } from "../lib/api";
 import operationalPictureMock from "../mocks/operationalPictureMock";
-import type { OperationalPicture } from "../types/operationalPicture";
+import { DEFAULT_VIEW } from "../lib/viewVocabulary";
+import type { OperationalPicture, ViewSelection } from "../types/operationalPicture";
 
 /**
  * The picture the screen should currently show, and whether to trust it.
@@ -35,9 +36,15 @@ export interface PictureFeed {
  * findings changed in six minutes on 3 October -- and it asks for the *pinned*
  * hour, because a poll still requesting the newest would revert the screen
  * under the analyst on the next tick, which is worse than having no control.
+ *
+ * **The poll follows the view too** (op-007), for the same reason, and a new
+ * view is fetched at once rather than on the next tick. Until it arrives the
+ * feed still holds the previous view's payload, which names the view it was
+ * served under — so the screen can say it is switching rather than mislabel it.
  */
 export const useOperationalPicture = (
   runId: number | null = null,
+  view: ViewSelection = DEFAULT_VIEW,
   intervalMs: number = DEFAULT_POLL_INTERVAL_MS,
   baseUrl = "",
 ): PictureFeed => {
@@ -51,7 +58,7 @@ export const useOperationalPicture = (
 
     const poll = async () => {
       try {
-        const picture = await fetchOperationalPicture(baseUrl, runId);
+        const picture = await fetchOperationalPicture(baseUrl, runId, view);
         if (!cancelled) setFeed({ picture, degraded: false });
       } catch {
         // The error itself is not surfaced to the screen. An analyst can do
@@ -68,7 +75,7 @@ export const useOperationalPicture = (
       cancelled = true;
       clearInterval(timer);
     };
-  }, [runId, intervalMs, baseUrl]);
+  }, [runId, view, intervalMs, baseUrl]);
 
   return feed;
 };

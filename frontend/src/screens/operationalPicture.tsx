@@ -1,11 +1,20 @@
 import { EmEvidencePanel } from "../components/em/EmEvidencePanel";
 import { EmLevel } from "../components/em/EmLevel";
 import { findingLabel } from "../lib/detectionVocabulary";
+import {
+  eventsHiddenSentence,
+  NOT_EXAMINED,
+  noReceiverSentence,
+  receiversHiddenSentence,
+  showingSentence,
+  VIEW_OPTIONS,
+} from "../lib/viewVocabulary";
 import type { EvidenceView } from "../types/evidence";
 import type {
   OperationalPicture as OperationalPictureData,
   SelectableHour,
   TimelineEvent,
+  ViewSelection,
 } from "../types/operationalPicture";
 
 // The instant an event happened, in the simulated time it happened at.
@@ -85,6 +94,11 @@ interface Props {
   // the four above, so the screen stays a pure function of a payload and the
   // panel tests can drive it without a fetch.
   evidence?: EvidenceView;
+  // spec: op-007 — the view the control is set to, and how to change it.
+  // Optional, defaulting to the view the payload was served under, so the
+  // screen still renders as a pure function of a payload.
+  selectedView?: ViewSelection;
+  onSelectView?: (view: ViewSelection) => void;
 }
 
 const OperationalPictureScreen = ({
@@ -95,6 +109,8 @@ const OperationalPictureScreen = ({
   onSelectHour,
   onFollowNewest,
   evidence = "loading",
+  selectedView,
+  onSelectView,
 }: Props) => {
   // A null summary means no detection pass has run on this run, which is not
   // the same as a pass that found nothing (api-012). The panel says so in
@@ -102,7 +118,12 @@ const OperationalPictureScreen = ({
   // *nothing to report* from "—" meaning *nobody looked*, and the second is a
   // broken pipeline. Inside a summary that is present, every value is a
   // reading — a level, never a percentage and never a decimal (FR-715, AC-11).
-  const { scenario, detectionSummary } = operationalPicture;
+  const { scenario, detectionSummary, view: served } = operationalPicture;
+  // What the control says, and what the rows on screen were served under. They
+  // differ between a click and its answer, and the rows are named by the second
+  // (op-007).
+  const selected = selectedView ?? served.selected;
+  const receiversHidden = receiversHiddenSentence(served.selected, served.suppressed.rfSensors, served.examined);
   // Only the conclusions. A quiet run genuinely holds about 138 track
   // discontinuities, and an analyst shown that as an anomaly count reads a
   // correct non-detection as a storm (api-012).
@@ -162,6 +183,35 @@ const OperationalPictureScreen = ({
             </p>
           )}
         </div>
+        {/* The view filter (op-007). The server filters, so this decides what
+            arrives at all; the line beneath it names what is ON SCREEN from
+            the payload's own `view.selected`, because for a moment after a
+            click the rows still belong to the previous view. A role="radio"
+            button rather than an input: the option's text is its label. */}
+        <div className="font-mono text-sm">
+          <div aria-label="View" className="flex border border-[#424754]" role="radiogroup">
+            {VIEW_OPTIONS.map((option) => (
+              // biome-ignore lint/a11y/useSemanticElements: a segmented control; an <input type="radio"> carries no text of its own
+              <button
+                aria-checked={option.value === selected}
+                className={
+                  option.value === selected
+                    ? "bg-[#adc6ff] px-2 py-1 text-xs uppercase tracking-[0.05em] text-[#0b0e15]"
+                    : "px-2 py-1 text-xs uppercase tracking-[0.05em] text-[#c2c6d6] hover:text-[#e1e2ec]"
+                }
+                key={option.value}
+                onClick={() => onSelectView?.(option.value)}
+                role="radio"
+                type="button"
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <p className={`mt-1 text-xs ${selected === served.selected ? "text-[#8c909f]" : "text-[#ffb786]"}`}>
+            {showingSentence(served.selected, selected)}
+          </p>
+        </div>
         {/* `scenario.health` used to sit here as a second bare word reading
             `unknown` forever. api-014 removed the field: nothing produced it,
             and the run-level health signal it would have carried is
@@ -186,17 +236,28 @@ const OperationalPictureScreen = ({
               previously labelled each one "Signal Noise", which with a single
               mock receiver was invisible and with seven claims noise on all
               of them. */}
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            {operationalPicture.rfSensors.map((sensor) => (
-              <div key={sensor.id} className="border border-[#424754] p-3">
-                <p className="font-mono text-xs uppercase tracking-[0.05em] text-[#8c909f]">
-                  {sensor.id} · {sensor.signalId}
-                </p>
-                <p className="mt-1 text-[#4cd7f6]">{sensor.stationName}</p>
-                <p className="mt-1 font-mono text-sm text-[#ffb786]">{sensor.health}</p>
-              </div>
-            ))}
-          </div>
+          {/* Under a narrow view this grid can be empty, and an empty grid says
+              nothing. So it says what the view withheld, from the server's
+              count — the rows never arrived to be counted — and an unexamined
+              hour says so rather than reading as clean (op-007). */}
+          <section aria-label="Receivers">
+            {!served.examined && <p className="mt-4 text-sm text-[#ffb786]">{NOT_EXAMINED}</p>}
+            {served.examined && operationalPicture.rfSensors.length === 0 && (
+              <p className="mt-4 text-sm text-[#c2c6d6]">{noReceiverSentence(served.selected)}</p>
+            )}
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {operationalPicture.rfSensors.map((sensor) => (
+                <div key={sensor.id} className="border border-[#424754] p-3">
+                  <p className="font-mono text-xs uppercase tracking-[0.05em] text-[#8c909f]">
+                    {sensor.id} · {sensor.signalId}
+                  </p>
+                  <p className="mt-1 text-[#4cd7f6]">{sensor.stationName}</p>
+                  <p className="mt-1 font-mono text-sm text-[#ffb786]">{sensor.health}</p>
+                </div>
+              ))}
+            </div>
+            {receiversHidden && <p className="mt-2 font-mono text-xs text-[#8c909f]">{receiversHidden}</p>}
+          </section>
         </div>
 
         <aside className="space-y-4">
@@ -268,7 +329,14 @@ const OperationalPictureScreen = ({
               wording for both comes from one module rather than two. */}
           <section aria-label="Timeline" className="border border-[#424754] bg-[#1d2027] p-4">
             <h2 className="font-mono text-sm uppercase tracking-[0.05em] text-[#c2c6d6]">Timeline</h2>
-            {operationalPicture.timelineEvents.length === 0 ? (
+            {/* Three different empties (op-007): an hour nobody examined, a view
+                that withheld the hour's conclusions, and a quiet hour. Only the
+                last may say there are no events. */}
+            {!served.examined ? (
+              <p className="mt-4 text-sm text-[#ffb786]">{NOT_EXAMINED}</p>
+            ) : operationalPicture.timelineEvents.length === 0 && served.suppressed.timelineEvents > 0 ? (
+              <p className="mt-4 text-sm text-[#8c909f]">{eventsHiddenSentence(served.suppressed.timelineEvents)}</p>
+            ) : operationalPicture.timelineEvents.length === 0 ? (
               <p className="mt-4 text-sm text-[#8c909f]">
                 No events in this hour. Nothing the detectors reported reached the analyst.
               </p>

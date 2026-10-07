@@ -2521,6 +2521,19 @@ events under *anomalous*, withholding 7, 410 and 0; under *all* it serves 7, 423
 serves 2, 10 and 1 under *anomalous*. The response shrinks from 65,140 bytes to 3,145 for run 21
 (**95% smaller**) and from 66,629 to 3,051 for run 420 — almost all of it aircraft positions.
 
+### The screen names what it shows from the answer, not from the question
+
+Once the server filters, a click on the view control and the rows that answer it are a round trip
+apart, and for that moment the screen shows one view's rows under a control set to another. The
+obvious label — the control's own state — would name those rows wrongly, which is a small instance of
+the failure this project keeps returning to: data presented as something it is not. Each response
+therefore carries the view it was served under, the screen labels its rows from that, and while the
+two disagree it says it is switching. The same reasoning governs the empties: because withheld rows
+never arrive, an emptied receiver grid or timeline cannot count them, so each states what the view
+withheld from the server's counts, and an unexamined hour says it was not examined rather than reading
+as clean under a narrow view. A mutation pass (18 of 18 killed) checked that each of these sentences,
+and the selection's lifetime across polls and hours, is held by a test.
+
 
 ## Implementation
 

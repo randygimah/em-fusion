@@ -1,0 +1,22 @@
+sentinel killed (Tests  1 failed | 52 passed (53)) -- edits reach the tests
+
+the default view is all                              KILLED   Tests  2 failed | 51 passed (53)
+the view is never sent                               KILLED   Tests  6 failed | 47 passed (53)
+the poll ignores the view                            KILLED   Tests  4 failed | 49 passed (53)
+a new view waits for the next tick                   KILLED   Tests  4 failed | 49 passed (53)
+choosing a view drops the pinned hour                KILLED   Tests  1 failed | 52 passed (53)
+pinning an hour resets the view                      KILLED   Tests  1 failed | 52 passed (53)
+rows are labelled by the control                     KILLED   Tests  1 failed | 52 passed (53)
+the control marks the served view                    KILLED   Tests  1 failed | 52 passed (53)
+no option is marked                                  KILLED   Tests  2 failed | 51 passed (53)
+a choice is never reported                           KILLED   Tests  5 failed | 48 passed (53)
+an empty grid says nothing                           KILLED   Tests  2 failed | 51 passed (53)
+the hidden count is counted from the rows            KILLED   Tests  4 failed | 49 passed (53)
+every hidden receiver is called nominal              KILLED   Tests  1 failed | 52 passed (53)
+an unexamined hour's hidden rows are called nominal  KILLED   Tests  1 failed | 52 passed (53)
+the grid drops the not-examined sentence             KILLED   Tests  1 failed | 52 passed (53)
+no events while the view withholds one               KILLED   Tests  2 failed | 51 passed (53)
+an unexamined timeline reads as quiet                KILLED   Tests  1 failed | 52 passed (53)
+one conclusion is pluralised                         KILLED   Tests  1 failed | 52 passed (53)
+
+18 of 18 valid mutants killed

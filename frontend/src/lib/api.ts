@@ -1,5 +1,5 @@
 import type { EvidenceAccount } from "../types/evidence";
-import type { OperationalPicture, SelectableHour } from "../types/operationalPicture";
+import type { OperationalPicture, SelectableHour, ViewSelection } from "../types/operationalPicture";
 import type { InFlightBatch, ScenarioConfiguration, ScenarioRunRecord } from "../types/scenarioControl";
 
 /**
@@ -91,15 +91,21 @@ export const fetchSystemHealth = async (
  * `runId` of null asks for the newest completed hour, which is what the endpoint
  * does with no parameter — so following the newest and pinning an hour are one
  * code path with one argument, rather than two call sites that can diverge
- * (spec: api-013).
+ * (spec: api-013). `view` is the filter the server applies (api-007, op-007).
  */
 export const fetchOperationalPicture = async (
   baseUrl = "",
   runId: number | null = null,
+  view: ViewSelection = "all",
   signal?: AbortSignal,
 ): Promise<OperationalPicture> => {
-  const query = runId === null ? "" : `?run=${encodeURIComponent(runId)}`;
-  const response = await fetch(`${baseUrl}${OPERATIONAL_PICTURE_PATH}${query}`, { signal });
+  // The view is always sent, never left to the server's default (op-007): the
+  // screen asks for what its control says, and a request that omitted it would
+  // be served `all` under a control reading Anomalous only.
+  const params = new URLSearchParams();
+  if (runId !== null) params.set("run", String(runId));
+  params.set("view", view);
+  const response = await fetch(`${baseUrl}${OPERATIONAL_PICTURE_PATH}?${params}`, { signal });
   if (!response.ok) {
     // Thrown rather than returned as a value: every caller has to handle a
     // network failure anyway, so a second "but did it work" shape would be a
