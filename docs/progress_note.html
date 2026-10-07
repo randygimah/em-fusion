@@ -8558,18 +8558,135 @@ second pass   <b>5.060000171975998</b></div>
       configures it.
     </p>
     <p>
-      <b>And the screen still says what, not why.</b> It states that interference is suspected across
-      several receivers. It cannot yet say which receivers deviated together, over what window, how
-      far above normal, or whether the aircraft side agreed — all of which the system has already
-      worked out and stored. That is the next thing, and it is the project's own subject: the claim
-      is explainability, and a conclusion with no route to what it rests on is the thinnest possible
-      version of that.
+      <b>And the screen said what, not why.</b> It stated that interference was suspected across
+      several receivers and could not say what that rested on. That was the next thing, and the
+      section below is what came of it.
     </p>
     <p>
       <b>The explanations are still not served.</b> A hundred and fifty-five of them are stored, and
       the panel that would show them is still deliberately empty — the last field on that screen that
       everything reads and nothing writes. It is named here rather than left silent, because that is
       precisely the lesson of the expired note at the top of this section.
+    </p>
+  </section>
+
+  <section>
+    <h2>The screen says why</h2>
+    <p class="lede">
+      A conclusion on the screen now comes with its reasons. Under the picture sits an
+      <b>evidence panel</b>: for every conclusion the hour holds, which receivers went wrong, over what
+      window, how far above their own normal, whether the aircraft side agreed, and what the system
+      does not know. It is the project's own subject made visible — the claim is that an analyst can
+      follow a conclusion back to what produced it, and until now the screen was the one place where
+      that chain stopped.
+    </p>
+    <p>
+      Three things it is careful about, and all three are about telling kinds of nothing apart.
+      <b>A measurement and a judgement look different</b>: "this receiver's power rose 15 dB above its
+      normal" is something read off the data, while "its neighbour stayed nominal" is a conclusion
+      the rules drew — and rendered alike, the second reads as a second deviation, which inverts the
+      verdict it supports. <b>The three kinds of not-knowing stay three sentences</b>: not consulted by
+      design, not measurable, and measured but below the bar. And <b>the panel never falls
+      silent</b>: still loading, failed to load, never examined, examined and quiet, and concluded but
+      with no stored account each say a different sentence, because a panel that disappears cannot
+      be told from one with nothing to say.
+    </p>
+    <p>
+      Building it found that the account it needed had mostly been thrown away. The system built
+      its evidence packages every time it examined an hour and kept them for only a handful, so
+      <b>140 of the 240 hours with a conclusion had no stored account</b> — the panel was correct and
+      empty exactly where anybody would look first. The system now keeps every package it builds,
+      except where keeping a new one would delete an explanation that has already been marked or
+      paid for; that protection is decided by the store, not by a list somebody maintains. After the
+      re-examination described below, <b>no hour with a conclusion is left without its account</b>.
+    </p>
+    <p>
+      The panel also folds away, because it is now the longest thing on the screen — but folded, its
+      heading still reads <em>"3 conclusions · 1 with no stored evidence"</em>, or <em>"no
+      conclusions"</em>, or <em>"not examined"</em>. Folding hides the account and never the fact the
+      panel exists to show. It opens unfolded, and remembers the choice per browser, the same way the
+      side rail does.
+    </p>
+
+    <h3>One definition of normal, written down</h3>
+    <p>
+      Filling in those accounts stopped on the seventy-first hour, because rebuilding its conclusion
+      gave a window twenty seconds different from the stored one — same rules, same thresholds, same
+      hour. The cause was <b>what "normal" had been measured over</b>. Normal was worked out from
+      whichever quiet hours the store happened to hold when the rules ran, and the store had grown
+      from sixty quiet hours to a hundred in between. So most hours had been judged against one
+      version of normal and the newest against another, and nothing on the screen or in the results
+      could tell them apart.
+    </p>
+    <p>
+      The fix is to write the population down instead of letting the store choose it: <b>the hundred
+      quiet hours, named one by one</b>, each with the number it was generated from, so that the same
+      name cannot quietly refer to a different hour on another machine. If the store does not hold
+      every one of them exactly, normal is not measured at all — refusing is better than a baseline
+      that varies with whichever store it lands in. The cost is stated rather than discovered: a
+      freshly generated store cannot score new hours from the screen until the list is deliberately
+      written again for it.
+    </p>
+    <div class="fig">
+      <div class="fig__art">
+        <svg width="640" height="196" viewBox="0 0 640 196" role="img"
+             aria-label="Before: of 460 hours, 380 were judged against sixty quiet hours and 80 against a hundred. After: 440 against the hundred, and 20 left on sixty on purpose, because explanations that have already been marked depend on them.">
+          <text class="fig__label" x="8" y="16">which version of normal each hour was judged against</text>
+
+          <text class="fig__val" x="8" y="56">before</text>
+          <rect x="150" y="42" width="330" height="22" fill="var(--warn)" opacity="0.85" />
+          <rect x="480" y="42" width="70" height="22" fill="var(--signal)" opacity="0.85" />
+          <text class="fig__val" x="315" y="57" text-anchor="middle" fill="var(--surface)">380 hours</text>
+          <text class="fig__val" x="515" y="57" text-anchor="middle" fill="var(--surface)">80</text>
+
+          <text class="fig__val" x="8" y="104">after</text>
+          <rect x="150" y="90" width="17" height="22" fill="var(--warn)" opacity="0.85" />
+          <rect x="167" y="90" width="383" height="22" fill="var(--signal)" opacity="0.85" />
+          <text class="fig__val" x="358" y="105" text-anchor="middle" fill="var(--surface)">440 hours</text>
+          <text class="fig__val" x="158" y="132" text-anchor="middle" fill="var(--warn)">20</text>
+
+          <rect x="8" y="158" width="11" height="11" rx="2" fill="var(--warn)" opacity="0.85" />
+          <text class="fig__val" x="26" y="168">sixty quiet hours</text>
+          <rect x="200" y="158" width="11" height="11" rx="2" fill="var(--signal)" opacity="0.85" />
+          <text class="fig__val" x="218" y="168">the hundred, written down</text>
+          <text class="fig__val" x="8" y="188" fill="var(--muted)">the 20 hold explanations already marked, so they keep the version those were made from</text>
+        </svg>
+      </div>
+    </div>
+    <p class="caption">
+      Every other hour was then examined again under the hundred. The twenty were not, on purpose: they hold
+      the evidence the marked explanations were written from, and replacing it would delete those
+      explanations. On those twenty, conclusions, evidence and explanations still agree with each
+      other, and the record says which version of normal they used.
+    </p>
+    <p>
+      <b>What moved.</b> Of the 440 hours examined again, <b>11 changed</b>, and every change was a
+      window edge shifting by ten to thirty seconds. No conclusion appeared, none disappeared, and none
+      changed kind. Then the results table was measured again under the written-down hundred, and
+      <b>every figure in it came out identical</b> — catch rates, false alarms, the grid of what was
+      called what, and the delays. Ten of the eleven changed hours are inside the three hundred the
+      table is measured over, so this is a real result rather than an accident of which hours were
+      counted: within this body of hours the figures do not depend on which quiet hours normal was
+      measured over. That is reassurance about robustness and nothing stronger, for the reason given with the results table — the staged
+      incidents sit well above the threshold by construction.
+    </p>
+
+    <h3>A measurement that leaves no trace</h3>
+    <p>
+      Measuring the table again turned up something older. The program that produces every detection
+      figure works by running the same examination the system runs — and that examination writes
+      as it goes, because two of its rules read back what earlier ones stored. So <b>every time the
+      results were measured, the measurement had been rewriting the thing it measured</b>: replacing
+      findings and re-dating every hour's examination record. Nobody had noticed because the
+      measurement programs sit outside the project's automatic checks. It surfaced only because the
+      new protection for marked explanations refused the rewrite and stopped the run.
+    </p>
+    <p>
+      Measurements now run the examination inside a change that is always undone afterwards: each
+      rule still sees what the earlier ones wrote, and nothing reaches the store. A fingerprint of the
+      store taken before and after the measurement is identical. The general point is worth keeping:
+      an instrument that shares code with the system it measures inherits that system's side effects,
+      and "measuring it did not change it" has to be checked rather than assumed.
     </p>
   </section>
 
@@ -8712,17 +8829,17 @@ second pass   <b>5.060000171975998</b></div>
         <tbody>
           <tr><td class="key">Data Abstraction Layer</td><td class="n">4</td><td class="n">4</td><td class="why">Complete</td></tr>
           <tr><td class="key">Sources and adapters</td><td class="n">7</td><td class="n">8</td><td class="why">Real air traffic in and replayable on command; the tracks unsafe to stage an incident on are listed; invented radio readings now reach the store through the same front door; the third source to come</td></tr>
-          <tr><td class="key">Database</td><td class="n">10</td><td class="n">10</td><td class="why">Connected, shaped, written to, read back, and fenced off from everything but the one component allowed to touch it — and it now answers the two geographic questions it was chosen for, which is the first work that could not have been done with ordinary storage. It had also never been told to organise itself around which run a record belongs to, so every measurement was reading all twenty million records from the beginning; that is now fixed. <b>Complete.</b> The table an explanation lives in was built before anybody knew what an explanation contained, and has now been brought up to it — three fields renamed rather than translated, two that did not exist added, and the record of whether a claim was checked given a third state so that <em>failed</em> and <em>nobody looked yet</em> stop being the same value — which then turned out to have no writer at all for two of its three values, found by building the first thing that would have needed them. A row now also records which producer was <em>asked</em>, not only which one answered, without which a stand-in and the baseline are the same row twice</td></tr>
+          <tr><td class="key">Database</td><td class="n">11</td><td class="n">11</td><td class="why">Connected, shaped, written to, read back, and fenced off from everything but the one component allowed to touch it — and it now answers the two geographic questions it was chosen for, which is the first work that could not have been done with ordinary storage. It had also never been told to organise itself around which run a record belongs to, so every measurement was reading all twenty million records from the beginning; that is now fixed. <b>Complete.</b> The table an explanation lives in was built before anybody knew what an explanation contained, and has now been brought up to it — three fields renamed rather than translated, two that did not exist added, and the record of whether a claim was checked given a third state so that <em>failed</em> and <em>nobody looked yet</em> stop being the same value — which then turned out to have no writer at all for two of its three values, found by building the first thing that would have needed them. A row now also records which producer was <em>asked</em>, not only which one answered, without which a stand-in and the baseline are the same row twice. And it now refuses to let a re-examination delete an explanation that has already been marked or paid for — decided from the store itself rather than from a list</td></tr>
           <tr><td class="key">Running and tooling</td><td class="n">3</td><td class="n">5</td><td class="why">Containers and commands done, and every measurement now runs through a named command rather than a hand-written one — which is how the hours came to be destroyed. The store is now fenced against the test suite by construction rather than by everyone remembering. And the health signal the container reads now reports whether the store is the shape the code expects, after it answered healthy for a day while the analyst's screen was returning an error. No continuous integration</td></tr>
-          <tr><td class="key">API</td><td class="n">9</td><td class="n">14</td><td class="why">A health check, the picture and the dashboard reading it, plus the two scenario endpoints and the screen reading those — a batch now starts from a button, and only one batch at a time, after several starts in quick succession were found to leave the back end serving nothing at all. And the picture now carries what was <em>found</em>: the receivers with the state each was judged to be in, a count for every rule including the ones that found nothing, and the conclusions oldest first. Three panels had been fed empty answers under a note explaining that no detector existed — true when written, and by then false eight rules over. The hard part was not filling them but making an hour nobody examined look different from a clean one, since both store nothing; and the same work retired a live breach of the project's own rule that the answer key never leaves the evaluation machinery, the screen's heading having been the kind of hour being staged. The picture can now be asked for a particular hour, with a list of what is on offer that carries neither the kind of each hour nor anything the detectors concluded — an unknown hour is refused rather than quietly answered with the newest, which is the failure that would be indistinguishable from the feature working. And one field left the answer entirely: a second health value nothing produced, whose job another field already does</td></tr>
-          <tr><td class="key">Screens and map</td><td class="n">8</td><td class="n">17</td><td class="why">Three ways in, two of which lead to a screen; both read the real store, and the rail collapses to give the workspace its width back. The picture now states its own terms: any stored hour can be put on it, it says which one and whether that is the newest, it names what the hour is made of, it renders the system's conclusions as sentences rather than as internal names, and it draws the moments those conclusions were reached in the replayed time they happened at. Every band on it passes through one component that refuses anything outside Low, Medium and High — the types already said so, and a type stops applying at the moment an answer arrives over the network. The badge saying the environment is synthetic and replayed is wired to nothing at all, which is what makes it impossible to remove by accident. Still a list of receivers where the design has a map</td></tr>
+          <tr><td class="key">API</td><td class="n">10</td><td class="n">16</td><td class="why">A health check, the picture and the dashboard reading it, plus the two scenario endpoints and the screen reading those — a batch now starts from a button, and only one batch at a time, after several starts in quick succession were found to leave the back end serving nothing at all. And the picture now carries what was <em>found</em>: the receivers with the state each was judged to be in, a count for every rule including the ones that found nothing, and the conclusions oldest first. Three panels had been fed empty answers under a note explaining that no detector existed — true when written, and by then false eight rules over. The hard part was not filling them but making an hour nobody examined look different from a clean one, since both store nothing; and the same work retired a live breach of the project's own rule that the answer key never leaves the evaluation machinery, the screen's heading having been the kind of hour being staged. The picture can now be asked for a particular hour, with a list of what is on offer that carries neither the kind of each hour nor anything the detectors concluded — an unknown hour is refused rather than quietly answered with the newest, which is the failure that would be indistinguishable from the feature working. And one field left the answer entirely: a second health value nothing produced, whose job another field already does. The screen can now also ask <em>why</em>: an account of every conclusion an hour holds, and of every stored package of evidence, with nothing dropped on either side</td></tr>
+          <tr><td class="key">Screens and map</td><td class="n">8</td><td class="n">18</td><td class="why">Three ways in, two of which lead to a screen; both read the real store, and the rail collapses to give the workspace its width back. The picture now states its own terms: any stored hour can be put on it, it says which one and whether that is the newest, it names what the hour is made of, it renders the system's conclusions as sentences rather than as internal names, and it draws the moments those conclusions were reached in the replayed time they happened at. Every band on it passes through one component that refuses anything outside Low, Medium and High — the types already said so, and a type stops applying at the moment an answer arrives over the network. The badge saying the environment is synthetic and replayed is wired to nothing at all, which is what makes it impossible to remove by accident. Beneath it sits the evidence panel, which says why each conclusion was reached and folds away without hiding whether any lacks its account. Still a list of receivers where the design has a map</td></tr>
           <tr><td class="key">Scenario generator</td><td class="n">8</td><td class="n">8</td><td class="why">Complete. Receiver positions fixed, an invented hour reproducible from one number, all five kinds of run staging what they should, twenty produced unattended from a single number by one command, the screen that will drive it, disruptions staged only on aircraft that are actually flying, a floor of five affected aircraft per hour so that no hour is unscoreable, and every hour now recording the number it was generated from so a batch can be reproduced rather than remembered</td></tr>
-          <tr><td class="key">Anomaly detection</td><td class="n">14</td><td class="n">16</td><td class="why">What normal looks like, and a rule for each side of the picture — the radio and the aircraft. Findings are kept and grouped, and the evidence the final rules read has been settled: grouping alone could not separate a staged hour from a quiet one, so it was replaced by a local rate comparison — measured first, and chosen over turning up the scenario settings. The three answers the system may give are one decision asked in a fixed order; the order itself is now built and enforced, and two of the three tests with it. Marked against the answer key over three hundred regenerated hours in three independently seeded waves: every one of the five kinds of hour decided correctly sixty times out of sixty, no event anywhere given two answers, and — since a blip lasting one reading stopped counting as an event — no false report anywhere at all. The third test, ruled out last time, is worth attempting again. Two things have since been settled that the chapter cannot be written without: how long an incident must run before a rule has the evidence it demands — a property of the rule rather than a measure of how fast the software is, since nothing here notices anything while it is happening — and the other half of the testing, the hours with nothing staged in them, where <b>none of the sixty produces anything an analyst would be shown</b>. That second check turned out to need real care: an empty result is also what a machine that never ran produces, so it is given an account of every detector by name and refuses to grade an hour where one is missing. And how much of what is staged the aircraft side actually sees is now measured on two independently seeded waves rather than on one: 82 per cent of disrupted aircraft found on the navigation arm, 59 on the two suppression arms, with every missing aircraft accounted for and two of the four suspected causes accounting for none of them at all. Three waves rather than one is what makes that reportable: the navigation arm gives 83, 81 and 83 per cent and the suppression arms give 64, 59 and 53, so one is a property of the mechanism and the other varies with which aircraft a wave happened to disrupt — and a single batch would have stated both with the same confidence. And now the results table itself: sixty of sixty on all three kinds of hour that stage something, no false alarm on either kind of silence, nothing anywhere called by the wrong name, and the first delay figures the project has produced — ten seconds on the broken-receiver rules and twenty on interference, which is one sampling interval slower because its claim is that a <em>second</em> receiver went wrong too. And the eight rules are now <b>composed inside the system</b> rather than only inside a measurement script — which is where the order had lived, outside every check the project runs, while each rule individually sat at full coverage. Proved to have changed nothing by re-running the figures of record through it: forty-three lines, one of them different, and that one the stamp recording which settings produced them, which moved because the record gained the quiet hours that "normal" was measured over. Building the screen's half then found that the pass had been storing its <em>evidence</em> and not its <em>conclusions</em>: the two rules at the end of the order handed their answers back and wrote nowhere, which inside one program is invisible and from a screen means they do not exist. And the pass now <b>starts itself</b> when a batch of hours finishes being made — which turned up something sharper than the trigger: the settings every figure above was measured under existed only in a measurement script and a copy in the tests, eleven numbers the system itself did not hold, so anything inside it that ran a detector would have had to invent a third set. Every hour in the store has now been examined by the system itself — three hundred and eighty of them, in six minutes — and the results table came back identical to the one a measurement script had produced in memory, which is two independent routes to the same figures rather than the same figure measured twice</td></tr>
-          <tr><td class="key">Evidence bundles</td><td class="n">2</td><td class="n">2</td><td class="why">Complete. One event becomes one package, with the frequency dimension joined up here because nothing upstream joins it, and with every absence labelled by which of the three kinds it is rather than left as silence. Every statement's citations are then resolved against the store before the package is allowed to exist — which found that one citation in eleven had been pointing at a reconstructed instant rather than a stored reading, in a field that had been written and never read since the findings were first kept</td></tr>
+          <tr><td class="key">Anomaly detection</td><td class="n">15</td><td class="n">17</td><td class="why">What normal looks like, and a rule for each side of the picture — the radio and the aircraft. Findings are kept and grouped, and the evidence the final rules read has been settled: grouping alone could not separate a staged hour from a quiet one, so it was replaced by a local rate comparison — measured first, and chosen over turning up the scenario settings. The three answers the system may give are one decision asked in a fixed order; the order itself is now built and enforced, and two of the three tests with it. Marked against the answer key over three hundred regenerated hours in three independently seeded waves: every one of the five kinds of hour decided correctly sixty times out of sixty, no event anywhere given two answers, and — since a blip lasting one reading stopped counting as an event — no false report anywhere at all. The third test, ruled out last time, is worth attempting again. Two things have since been settled that the chapter cannot be written without: how long an incident must run before a rule has the evidence it demands — a property of the rule rather than a measure of how fast the software is, since nothing here notices anything while it is happening — and the other half of the testing, the hours with nothing staged in them, where <b>none of the sixty produces anything an analyst would be shown</b>. That second check turned out to need real care: an empty result is also what a machine that never ran produces, so it is given an account of every detector by name and refuses to grade an hour where one is missing. And how much of what is staged the aircraft side actually sees is now measured on two independently seeded waves rather than on one: 82 per cent of disrupted aircraft found on the navigation arm, 59 on the two suppression arms, with every missing aircraft accounted for and two of the four suspected causes accounting for none of them at all. Three waves rather than one is what makes that reportable: the navigation arm gives 83, 81 and 83 per cent and the suppression arms give 64, 59 and 53, so one is a property of the mechanism and the other varies with which aircraft a wave happened to disrupt — and a single batch would have stated both with the same confidence. And now the results table itself: sixty of sixty on all three kinds of hour that stage something, no false alarm on either kind of silence, nothing anywhere called by the wrong name, and the first delay figures the project has produced — ten seconds on the broken-receiver rules and twenty on interference, which is one sampling interval slower because its claim is that a <em>second</em> receiver went wrong too. And the eight rules are now <b>composed inside the system</b> rather than only inside a measurement script — which is where the order had lived, outside every check the project runs, while each rule individually sat at full coverage. Proved to have changed nothing by re-running the figures of record through it: forty-three lines, one of them different, and that one the stamp recording which settings produced them, which moved because the record gained the quiet hours that "normal" was measured over. Building the screen's half then found that the pass had been storing its <em>evidence</em> and not its <em>conclusions</em>: the two rules at the end of the order handed their answers back and wrote nowhere, which inside one program is invisible and from a screen means they do not exist. And the pass now <b>starts itself</b> when a batch of hours finishes being made — which turned up something sharper than the trigger: the settings every figure above was measured under existed only in a measurement script and a copy in the tests, eleven numbers the system itself did not hold, so anything inside it that ran a detector would have had to invent a third set. Every hour in the store has now been examined by the system itself — three hundred and eighty of them, in six minutes — and the results table came back identical to the one a measurement script had produced in memory, which is two independent routes to the same figures rather than the same figure measured twice. And "normal" is now one written-down list of a hundred quiet hours rather than whatever the store held at the time — every hour re-examined under it, eleven windows moved by seconds, and every figure in the results table unchanged</td></tr>
+          <tr><td class="key">Evidence bundles</td><td class="n">2</td><td class="n">3</td><td class="why">One event becomes one package, with the frequency dimension joined up here because nothing upstream joins it, and with every absence labelled by which of the three kinds it is rather than left as silence. Every statement's citations are then resolved against the store before the package is allowed to exist — which found that one citation in eleven had been pointing at a reconstructed instant rather than a stored reading, in a field that had been written and never read since the findings were first kept. Every package built is now kept, and no hour with a conclusion is left without one; the item stays open only on how the old gap was to be filled, which the re-examination has since done another way</td></tr>
           <tr><td class="key">AI hypothesis layer</td><td class="n">9</td><td class="n">12</td><td class="why">The shape every explanation must take, and the first thing that produces one. The shape is a constraint on what a model is allowed to emit rather than a description of what it did, so each guarantee is checked on the translated version a model is actually handed as well as on the original. The producer built first has no model in it: it is both the fallback for when a model's answer cannot be trusted and the yardstick the models are measured against. Run over all forty-one real packages it produced forty-one explanations, refused none, and every one of its one hundred and sixty-four citations was found in the package it came from. Since then, the seam a model plugs into — defined before either model exists, so neither one's peculiarities leak into it — and the decision about what a person sees when a model's answer cannot be used: ask again a fixed number of times, then fall back to the mechanical account, and keep a record of why, plus the guard that counts what a run spends and stops it rather than letting it quietly continue. Then the producer the whole project is about: a model, handed the package and constrained so it cannot emit the wrong shape at all. And now the safeguard that constraint cannot be — every claim an explanation rests on is resolved against the package it came from, with citing an explanation the system itself rejected treated as its own kind of failure rather than lumped in with inventing one. Over the forty-one real packages it flagged none of one hundred and sixty-four honest citations, and caught all one hundred and sixty-four deliberate corruptions. And now the first real requests: eight explanations over three packages, read by hand. Every claim in every one of them traced back to its package; reading them found an instruction that had never been written, without which the blind marking would have been decided by citation count alone; and running the trial twice showed the answers do not reproduce word for word, which narrows a claim this project had been making about reproducibility and settles a question about whether asking a model again after a bad answer is a real mechanism. And now the job that asks twenty questions rather than one: it keeps the answers that were thrown away, because those are the only evidence the safeguard ever did anything, and it takes care that a rejected answer is counted once rather than twice and that a mechanical stand-in is never counted as the model's — a mistake that would make the model look better the more often it failed. What remains is choosing the twenty packages, the marking pack itself, and the marking</td></tr>
           <tr><td class="key">Hypothesis screen and feedback</td><td class="n">0</td><td class="n">6</td><td class="why">Specified, unbuilt</td></tr>
           <tr><td class="key">Evaluation</td><td class="n">8</td><td class="n">9</td><td class="why">Scoring instrument written and locked, and amended twice in the open since — once because the sample it described could not exist on the built system, once because asking the model a single time rested on an assumption the first real requests disproved. The twenty packages are chosen from one number and written down; the run has happened and cost eighty-five pence; the per-producer figures are computed for each writer separately and never pooled, because the difference between them <em>is</em> the result — and they have now been produced, which needed the run's own record rebuilt because it stored the spending as one total while the report is per writer; asked three times, the model agreed with itself perfectly on all three things that can be compared mechanically, which corrects a prediction made from three cases, and the writer that was never asked reports blank rather than zero. The pack the marker reads is built, and then rebuilt: correct by every automated check and unusable by a person, missing the one thing — which receiver each finding came from — that the first scored dimension depends on. The marker's pack now also carries a glossary, and the workbook a matching tab, under one rule: an entry may say what a word refers to and never what seeing it would mean, the second being the marker's own job. What is left is the marking itself and the arithmetic over the returned sheets, and that waits on a person rather than on code — and the table of detection figures is now built and measured over all three hundred hours — every rate defined by the population it is counted over, the two recalls kept apart, the two kinds of false alarm never pooled, and a refusal to report either unless the quiet hours passed their own check</td></tr>
-          <tr class="total"><td class="key">Total</td><td class="n">82</td><td class="n">111</td><td class="why">&nbsp;</td></tr>
+          <tr class="total"><td class="key">Total</td><td class="n">85</td><td class="n">117</td><td class="why">&nbsp;</td></tr>
         </tbody>
       </table>
     </div>
@@ -8877,23 +8994,24 @@ second pass   <b>5.060000171975998</b></div>
       <div class="tier">
         <div class="tier__name">Next</div>
         <div class="tier__what">
-          <b>Making the screen say <em>why</em>.</b> It states a conclusion — interference suspected
-          across several receivers — and cannot say what that rests on: which receivers deviated
-          together, over what window, how far above normal, whether the aircraft side agreed. The
-          system has worked all of that out and stored it; nothing serves it to the screen.
+          <b>Showing what is exceptional, and hiding what is not.</b> The screen says what and why;
+          it does not yet separate the unusual from the ordinary. Next is the panel the design
+          calls for under the picture: three tabs — radio, tracks, events — showing only what is
+          anomalous by default, with one control that switches the whole screen between
+          <em>anomalous only</em>, <em>nominal only</em> and <em>all</em>.
           <br><br>
-          This is the project's own subject rather than another panel, which is why it comes before
-          the map despite being smaller. The whole argument is that an analyst should be able to
-          follow a claim back to what produced it, and at the moment the screen is the one place in
-          the system where that chain stops.
+          It is four pieces in a chain and nothing is visible until the last. The tracks tab had
+          nothing to count: an aircraft on the screen carried a position and nothing about whether
+          its reporting broke, so <em>"Tracks (3 degraded)"</em> would have put an invented number
+          in a tab label. Each track will first carry the state this hour's findings put it in —
+          interrupted, nominal, or <em>unknown</em> for an hour nobody examined, never nominal by
+          default. The filtering then happens on the server, so a hidden row is counted rather than
+          silently dropped, and the timeline moves into the events tab rather than being drawn
+          twice. The <em>view all</em> link will be shown disabled, with the reason, until the full
+          tables it leads to exist.
           <br><br>
-          Then the map, which is now unblocked — the question of whether it may use satellite
-          imagery, and what that costs the promise that the system runs with no network at all, was
-          settled rather than left to be discovered halfway through. Alongside it, re-running the
-          figures of record: the script that produces them now reads its settings from the system
-          rather than holding its own copy, and the values are identical with that equivalence
-          checked directly — but the previous change of this kind was proved by reproducing all
-          forty-three lines byte for byte, and this one has not had that treatment.
+          Then the map, which is unblocked, and is what that filter was always meant to drive
+          together with the panel.
         </div>
       </div>
       <div class="tier">

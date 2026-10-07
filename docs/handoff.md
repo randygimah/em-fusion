@@ -21,8 +21,9 @@ Backlog **85 of 117** (83 at the start). `anom-017` and `op-010` are `passes: tr
 
 - Backend: **2067 passed, 99% coverage** (5541 statements, 4 missed), ruff, Black and mypy clean.
 - Frontend: **250 passed** (236 at the start), Biome and `tsc -b` clean.
-- Mutation: `mutate_op010_collapse.log`, **14 of 14 killed**. No mutation pass was run over
-  `anom-017` — see Next step.
+- Mutation: `mutate_op010_collapse.log` **14 of 14 killed**; `mutate_anom017_baseline.log`
+  **17 of 17 killed plus one equivalent** (removing the explicit savepoint join mode — SQLAlchemy's
+  default never commits the outer transaction either, and the pass never continues after a rollback).
 
 ### The store, after `anom-017`
 
@@ -101,7 +102,9 @@ None. The tree is clean.
 **New, frontend** — `src/hooks/useEvidenceCollapsed.ts`, `src/test/evidenceCollapse.test.tsx` (14).
 **Changed** — `src/components/em/EmEvidencePanel.tsx`.
 
-**Docs** — `CLAUDE.md` (trimmed; repo map; Git section now *work on `main`*), `qa.md` §152,
+**Docs** — `CLAUDE.md` (trimmed; repo map; Git section now *work on `main`*),
+`progress_note.html` (7 October: new section *The screen says why* with a baseline figure, progress
+table to 85 of 117, *What happens next* rewritten), `qa.md` §152,
 `thesis_notes.md` (three subsections: the in-series evaluation, the pinned baseline, the measurement
 that wrote to the store), `progress_note.html` (report-card figure; figure-text colour fix; legend
 fix), `measurements/README.md` (re-score section rewritten). The progress note was published once
@@ -166,11 +169,9 @@ Then, unchanged: the map (`map-001`–`map-004`), `hypotheses`, `eval-006` (wait
 
 Open and unowned:
 
-- **No mutation pass over `anom-017`.** The structural tests are AST checks and the refusal is
-  database-tier; worth a pass before the write-up quotes it.
-- **The progress note does not yet tell this session's story** — the evidence panel ("the screen
-  says why"), the gap closing from 140 hours to 0, and "a measurement writes nothing". Its detection
-  figures are still correct; only the story is behind.
+- **`evb-003` is still `passes: false`** although its remaining constraint — no hour with a claim and
+  no bundle — is now met by `anom-017`'s re-score (0 such runs), not by its own fill. Amend and close
+  it, or leave it open, deliberately.
 - **Three windows now open 40 s before the staged onset** (runs 204, 224, 264; 10 s before, under the
   old baseline). Latency is unaffected; unexplained, and flagged in the thesis notes.
 - **The panel's sentence for an unexplained conclusion is stale** — it says the account "was built

@@ -8714,6 +8714,14 @@ for the methodology chapter is that an instrument which shares code with the sys
 inherits that system's side effects, and that "the measurement does not change the thing measured"
 has to be asserted, not assumed.
 
+A mutation pass over the whole item killed 17 of 17 non-equivalent mutants and found one
+equivalent: removing the explicit savepoint join mode from the rolled-back measurement. SQLAlchemy's
+default never commits an externally begun transaction either, so the store is untouched in both
+cases; they differ only if a session inside the pass rolls back and the pass then continues, which
+the pass never does. The setting was kept as a statement of intent and recorded as equivalent rather
+than counted as a kill, and the limitation it guards against is stated here: the "writes nothing"
+guarantee rests on the pass not recovering from a failure mid-way.
+
 ### A flag that is vacuously true over an empty population
 
 The per-arm report carries a boolean saying whether an arm's cost figure is a total
