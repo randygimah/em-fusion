@@ -8,181 +8,140 @@ Abstraction Layer, detects deviations deterministically, and turns evidence bund
 schema-validated, grounding-checked AI hypotheses for analyst review. Decision support, not
 autonomous decision-making.
 
-This session ran 6–7 October 2026. It took the scope agreed at the start — **`anom-017` and the
-`op-010` collapse amendment, leaving the panel chain for its own session** — and both landed. It
-also trimmed `CLAUDE.md` below the 150k-character limit, corrected a misreading of what the
-detection metrics measure (and put the correction in the progress note), and dropped the
-branch/worktree workflow: **work is now committed directly on `main`**.
+This session (7 October 2026, continuing 6–7 October) took **the panel chain** agreed last session —
+`api-016` → `api-007` → `op-007` → `op-004` — and landed all four, so the Operational Picture now shows
+its exceptions. Along the way the user asked for a **hot-reloading frontend in Compose**, specified and
+built as `ops-006`. Every item followed spec → amendment where reading the code found a gap → failing
+tests → code → user review in the browser or API → `passes: true`. Work is committed directly on
+`main` (no branches).
 
 ## Current state
 
-Backlog **86 of 117** (83 at the start). `anom-017` and `op-010` are `passes: true`, and `evb-003`
-was closed on 7 October by amendment: its fill is superseded by `anom-017`'s re-score, and the store
-was measured consistent in both directions (0 claims without a matching bundle, 0 bundles without a
-matching claim). Tree clean,
-`main` in sync with `origin/main` at `3e96140` plus this handoff's commit.
+Backlog **91 of 118** (86 of 117 at the start; `ops-006` was added). Tree clean apart from this
+handoff and the progress note being committed; `main` in sync with `origin/main`.
 
-- Backend: **2067 passed, 99% coverage** (5541 statements, 4 missed), ruff, Black and mypy clean.
-- Frontend: **250 passed** (236 at the start), Biome and `tsc -b` clean.
-- Mutation: `mutate_op010_collapse.log` **14 of 14 killed**; `mutate_anom017_baseline.log`
-  **17 of 17 killed plus one equivalent** (removing the explicit savepoint join mode — SQLAlchemy's
-  default never commits the outer transaction either, and the pass never continues after a rollback).
+- Backend: **2107 passed, 99.93% coverage** (5571 statements, 4 missed), ruff, Black and mypy clean.
+- Frontend: **298 passed** (250 at the start), Biome lint and `tsc -b` clean.
+- Mutation: `mutate_op007_view.log` **18 of 18**; `mutate_op004_panel.log` **21 of 21** after one
+  survivor (every tab marked selected) was fixed by tightening a test. `mutate_op007_view.py` was
+  measured at `f404b62`; `op-004` moved its screen targets, so its screen mutants no longer apply as
+  written (README says so) — the same properties are mutated in the panel pass.
 
-### The store, after `anom-017`
+### What the screen does now
 
-| | Before | After |
-|---|---|---|
-| Completed runs | 460 (21–480) | 460 |
-| Stamped at the 100-quiet-run baseline | 80 | **440** |
-| Stamped at the 60-quiet-run baseline | 380 | **20** — the cited runs, by design |
-| Evidence bundles | 151 | **297** |
-| Runs with a claim and no bundle | 140 | **0** |
-| Hypotheses | 155 | 155 |
-| Detection findings | 9454 | 9460 |
+- **Aircraft state** (`api-016`): every track is `interrupted` (a stored `TRACK-GAP` names its
+  pseudonym), `nominal` (examined, nothing named), or `unknown` (no pass stamp). A join, never a
+  re-detection; a gap stays intermediate.
+- **View filter** (`api-007`): `?view=anomalous|nominal|all`; absent is `all`, unrecognised is 422.
+  Filtered in the payload builder over each row's served state (never SQL — a test forbids `app/db/`
+  naming a row state). `view: {selected, examined, suppressed: {rfSensors, aircraftTracks,
+  timelineEvents}}`. `unknown` rows are admitted by `all` only. The detection summary is never filtered.
+- **The switch** (`op-007`): *Anomalous only* default every visit; survives polls and hour changes;
+  refetches at once; the "Showing … / Switching to …" line names rows by `view.selected` from the
+  payload, never the control.
+- **The exception panel** (`op-004`): RF / Tracks / Events tabs, docked along the bottom of a
+  one-screen-high layout (`lg:h-dvh`) under the map placeholder; the rail keeps hypotheses and the
+  summary; evidence is one scroll down. Tab label = rows shown + a word for what they are (none under
+  All or on an unexamined hour); footer names withheld rows by what they are, from `view.suppressed`;
+  *View all* disabled with its reason. Columns are payload fields only. The receiver grid and the
+  rail timeline are gone — each list is rendered once.
+- **`make dev`** (`ops-006`): `frontend-dev` service (profile `dev`, `deps` stage, `./frontend`
+  mounted, anonymous `/app/node_modules` renewed each start, `API_PROXY_TARGET=http://backend:8000`,
+  `BROWSER=none`) on :1234 with hot reload; nginx on :8080 is still the demo path.
 
-Runs 421–480 were **generated from Scenario Control on 6 October**, not by any script; the handoff
-before this one described a 400-run store. The pre-re-score dump is
-`pre_anom017.dump` in this session's scratchpad (sha256 `556aa4e0…`, four tables) — scratchpad is
-session-local, so treat it as gone.
+### Measured this session
 
-### What `anom-017` measured
-
-- **Re-score** (`rescore_baseline.log`): 440 of 460 re-scored in 11.1 min, 20 refused by `db-011`
-  and checked unmoved, 0 failures. **11 runs' claims moved, all window boundaries by 10–30 s; no
-  claim appeared or disappeared** (90 interference, 186 fault, before and after). Moved: 71, 135,
-  204, 224, 264, 310, 319, 330, 339, 370, 379 — ten of them inside the 300-run corpus.
-- **Results table** (`detection_metrics.log`): **every figure byte-identical** to the 60-run figures
-  of record. Only the provenance moved: `BASELINE.quiet_run_count` 60→100, date, digest
-  `79ef76db46ba` → `d2a2c04ab428`. Store checksums before and after the run identical. The
-  handoff's prediction that latency would move was **wrong**: medians 10/20/10 s, range 10–90 s,
-  unchanged.
-
-### What changed in behaviour
-
-- `BASELINE_QUIET_RUNS` in `app/detection/settings.py`: 100 `PinnedRun(run_id, seed)`, five batches of
-  twenty. `measure_normality` refuses — naming every run — if any is absent, unfinished, not
-  `normal-baseline`, or carries another seed. **Consequence: on a freshly generated database, batches
-  started from the screen are not scored** until the constant is re-derived for that corpus.
-- `score_batch` takes `quiet_runs` (default the constant) and no longer calls `quiet_run_ids`.
-- `assess_without_storing`: the pass inside an always-rolled-back transaction; the only path that
-  skips the bundle write. `detection_metrics.py` uses it and **no longer writes to the store**.
-- The evidence panel collapses; its header always carries the hour's summary
-  (*"3 conclusions · 1 with no stored evidence"*, *no conclusions*, *loading*, *could not be loaded*,
-  *not examined*). Preference in `localStorage` key `em-fusion:evidence-collapsed`.
+| Measurement | Result |
+|---|---|
+| Interrupted aircraft in the final window | run 21 (quiet) 13 of 423; 102: 14/428; 204: 16/446; 420: 10/432 (17 gaps in the run); 480: 17/420 |
+| Payload size, anomalous vs all | run 21: 3,145 vs 65,140 bytes (95% smaller); run 420: 3,051 vs 66,629 |
+| Run 21 under each view (rf · tracks · events shown / withheld) | anomalous 0·13·0 / 7·410·0; nominal 7·410·0 / 0·13·0; all 7·423·0 |
+| Dev-server edit propagation (macOS bind mount) | edit served within 2 s, HMR logged; no polling needed |
 
 ## Files in flight
 
-None. The tree is clean.
+None once this handoff and the progress note are committed.
 
 ## Changed
 
 | Commit | Message |
 |---|---|
-| `469c4d7` | `docs: trim CLAUDE.md repo map to pointers` (154k → 37k chars) |
-| `13aeff4` | `docs: detection metrics grade the rules, not AI vs rules` |
-| `ee835e2` | `spec: amend anom-017 -- cited runs refused, seeds pinned, refusal in measure_normality` |
-| `856a41c` | `test: add tests for anom-017` |
-| `a45c128` | `spec: amend anom-017 -- a measurement writes nothing` |
-| `28e624c` | `test: add tests for anom-017 -- a measurement writes nothing` |
-| `afd3f8f` | `feat(anom-017): pin the baseline's quiet runs with their seeds - tests pass` |
-| `8b9ab8c` | `measure: re-score under the pinned baseline, re-run the results table` |
-| `2ef3f2c` | `docs: anom-017 -- measurements README, repo map, thesis notes` |
-| `8c974de` | `merge: anom-017 …` |
-| `3e6bb3e` | `test: add tests for op-010 -- the panel collapses and its header still counts` |
-| `21bc041` | `feat(op-010): the evidence panel collapses and its header still counts - tests pass` |
-| `a7c40fd` | `measure: mutation pass over op-010's collapse -- 14 of 14` |
-| `1f8c1e7` | `docs: op-010 -- repo map` |
-| `3e96140` | `merge: op-010 …` |
+| `30a832d` | `test: add tests for api-016` |
+| `a961c6c` | `feat(api-016): each aircraft track carries the state its run's findings put it in - tests pass` |
+| `ed95284` | `spec: add ops-006` |
+| `ac367c1` | `spec: amend ops-006 -- a deps stage, an unpublished proxy variable, renewed node_modules` |
+| `3160ad3` | `test: add tests for ops-006` |
+| `6fbc7e6` | `feat(ops-006): make dev serves the working tree through Vite with hot reload - tests pass` |
+| `dd220f2` | `spec: amend api-007 -- filter in the builder, what each view admits, absent means all, view metadata` |
+| `b347bb9` | `test: add tests for api-007` |
+| `2eef767` | `feat(api-007): the picture filters by view server-side and says what it withheld - tests pass` |
+| `de46c1f` | `spec: amend op-007 -- what it drives today, rows labelled by served view, selection lifetime` |
+| `ac5c6b3` | `test: add tests for op-007` |
+| `f404b62` | `feat(op-007): the view control asks the server and the screen says what it hid - tests pass` |
+| `0c13db3` | `spec: amend op-004 -- labels and footer follow the view, grid becomes the RF tab, payload columns only` |
+| `7544654` | `test: add tests for op-004; re-point op-006 and op-007 tests at the tabs` |
+| `8761719` | `feat(op-004): the tabbed exception panel, docked under the map - tests pass` |
 
-**New, backend** — `tests/test_anom_baseline_pin.py` (19), `tests/test_anom_measure_without_storing.py`
-(8), `measurements/corpus/rescore_baseline.py` + `.log`, `measurements/mutation/mutate_op010_collapse.py`
-+ `.log`. **Moved** — `rescore_corpus.py`/`.log` to `measurements/superseded/`.
-**Changed** — `app/detection/{chain,settings}.py`, `app/db/repository.py`
-(`pinned_run_discrepancies`), `app/scenario/batch.py`, `measurements/corpus/detection_metrics.py`,
-`tests/test_anom_batch_trigger.py` (anom-016's tests moved to the new signature), root `Makefile`
-(`RESCORE_CONFIRM`), `measurements/exports/detection/*`.
-
-**New, frontend** — `src/hooks/useEvidenceCollapsed.ts`, `src/test/evidenceCollapse.test.tsx` (14).
-**Changed** — `src/components/em/EmEvidencePanel.tsx`.
-
-**Docs** — `CLAUDE.md` (trimmed; repo map; Git section now *work on `main`*),
-`progress_note.html` (7 October: new section *The screen says why* with a baseline figure, progress
-table to 85 of 117, *What happens next* rewritten), `qa.md` §152,
-`thesis_notes.md` (three subsections: the in-series evaluation, the pinned baseline, the measurement
-that wrote to the store), `progress_note.html` (report-card figure; figure-text colour fix; legend
-fix), `measurements/README.md` (re-score section rewritten). The progress note was published once
-this session, on 6 October.
+**New** — `frontend/devProxy.ts`, `frontend/src/lib/viewVocabulary.ts`,
+`frontend/src/components/em/EmExceptionPanel.tsx`, tests `devProxy.test.ts`, `viewFilter.test.tsx`,
+`exceptionPanel.test.tsx`, mutation scripts and logs `mutate_op007_view.*`, `mutate_op004_panel.*`.
+**Changed** — `app/api/v1/schemas/operational_picture.py` (track state, view models, `_admit`),
+`app/api/v1/operational_picture.py` (`view` param), `tests/test_api_operational_picture.py`
+(+29 tests, parity map), `tests/test_ops_command_surface.py` (+8), `compose.yaml`, `Makefile`
+(`dev`, Dockerfile mount for tests), `frontend/Dockerfile` (`deps` stage), `vite.config.ts`,
+`tsconfig.node.json`, the frontend contract, mock, API module, polling hook, `App.tsx`, the
+Operational Picture screen; `detectionVocabulary.test.tsx` and `viewFilter.test.tsx` re-pointed at
+the tabs. **Docs** — `CLAUDE.md` repo map, `README.md` (`make dev`), `docs/qa.md` §153,
+`docs/thesis_notes.md` (five subsections: aircraft state, view filter in the builder, dev loop,
+labelling by served view, the exception panel), `measurements/README.md`, `progress_note.html`.
 
 ## Failed attempts
 
-**The user's reading of the detection metrics was wrong and the docs allowed it.** They took
-precision/recall/F1/latency to compare deterministic detection with AI detection. There is no AI
-detector; the two comparisons are in series. Corrected in `qa.md` §152, the thesis notes and the
-progress note — the fact that it was a natural reading is the reason it needed a figure.
+**I asked the user to review `api-016` without saying nothing would be visible.** They looked for the
+tabs on screen. The handoff had said the chain shows nothing until its last step; I should have
+repeated it. Recorded in `qa.md` §153 with the second cause — `:8080` is a static build, which is
+what led to `ops-006`.
 
-**The handoff's prediction that latency would move under the new baseline was wrong.** It did not;
-nothing in the table moved.
+**I wrote `nominal` as the track state in an unexamined test fixture** (`dataAccess.test.tsx`, during
+`api-016`); corrected to `unknown` during `api-007`.
 
-**The spec missed the twenty cited runs.** `anom-017` said "re-score every completed run" while
-`db-011` forbids that on 20 of them. Found by querying the store before writing tests; the user
-chose to refuse and record them.
+**`api-007`'s full run failed one existing test** — the contract parity map did not list the two new
+interfaces. The parity check was doing its job; the map was updated after implementation, a deviation
+recorded in the feat commit.
 
-**The spec also missed that an id is not a content.** A pinned list of ids would silently build a
-different baseline on another database. Seeds pinned beside ids, agreed before tests.
+**I ran `biome check --write src` twice** (during `op-007` and `op-004`). It reformatted 26 and then
+several files outside the item, because much of the frontend is not in Biome's format and `pnpm lint`
+never checks formatting. Both times the unrelated files were restored and only the item's edits
+re-applied; use `biome lint` / format only new files.
 
-**`detection_metrics.py` had been writing to the store it measures** — findings and stamps since
-`anom-015`, bundles since `evb-003`. Found only when the post-re-score run stopped at run 102 on
-`db-011`. Its partial run re-stamped the corpus runs before 102 under the same pinned baseline
-(harmless, stamps re-dated). Fixed by `assess_without_storing`, agreed as a spec amendment.
+**One `op-007` test passed before implementation** ("keeps its sentence for a quiet hour") and was
+tightened before the test commit. **One `op-004` mutant survived** (every tab `aria-selected`) and the
+test was tightened after implementation; re-run 21 of 21.
 
-**I ran the results table without `CORPUS=v2`** and it exited immediately; the old log was saved
-first, so nothing was lost.
-
-**Tests that passed against stubs.** Three `anom-017` tests were vacuous on an empty constant or an
-empty answer, and two of the measure-without-storing tests passed against a naive stub; all
-tightened before implementation. One test wrongly assumed an empty observation list is refused
-downstream — it is not; the test was wrong, not the code.
-
-**A commit split went wrong.** A `git add` with a path already moved aborted the whole add, so the
-spec flag and scripts landed in a docs commit; the three commits were redone on the branch. The
-`git mv` of `rescore_corpus.py` had already gone into the test commit, which was left there since that
-test asserts the move.
-
-**One mutant was invalid as written** (removing `try` left a dangling `catch`); rewritten, killed.
-
-**`anom-016`'s end-to-end batch test failed on the pin** — a test database does not hold the pinned
-runs, which is the stated consequence. `score_batch` gained a `quiet_runs` parameter and the test
-names its own run, as a deliberate re-score would.
+**The spec contradicted itself twice and was amended before tests each time**: `api-007`'s
+2026-10-06 amendment let `unknown` tracks into *anomalous*; `op-004`'s labels and footer were true
+under one view only. **The first `op-004` layout put the panel under a fixed-height map box**; the
+user asked for it lower, and it was docked at the bottom of a one-screen layout before `passes: true`.
 
 ## Next step
 
-The panel chain, as its own session, in this order — nothing on it is visible until the last lands:
-
-| | | gated by |
-|---|---|---|
-| 1 | **`api-016`** — each aircraft track carries the state this run's findings put it in | — |
-| 2 | **`api-007`** — server-side view filter with suppressed counts | `api-016` |
-| 3 | **`op-007`** — the Anomalous / Nominal / All control | `api-007` |
-| 4 | **`op-004`** — the tabbed exception panel, absorbing `op-006`'s timeline | `op-007` |
-
-**Decided this session:** `op-005`'s *View all* link renders **disabled, with a reason**, as
-`RESET`/`REPLAY` do — `op-005` stays a later item.
-
-Then, unchanged: the map (`map-001`–`map-004`), `hypotheses`, `eval-006` (waits on a second rater).
+1. **The map** (`map-001`–`map-004`): unblocked. Receivers and tracks already carry positions and
+   states; `map-003` must read the same filtered payload as the panel so the two cannot disagree.
+2. **`op-005`** — the drill-down tables, unfiltered by definition; the panel's *View all* is waiting
+   on it (disabled with its reason).
+3. Then, unchanged: `hypotheses` (`hyp-*`), `eval-006` (waits on the second rater, mid-October).
 
 Open and unowned:
 
-- **Three windows now open 40 s before the staged onset** (runs 204, 224, 264; 10 s before, under the
-  old baseline). Latency is unaffected; unexplained, and flagged in the thesis notes.
-- **The panel's sentence for an unexplained conclusion is stale** — it says the account "was built
-  and not kept", which stopped being the reason at `evb-003`. No hour shows it after the re-score.
-  One-line copy fix.
-- **`detection_metrics.py` still imports `save_findings`**, now unused.
-- **A figure quoted 7 times across the docs is stale** ("20.7M observations"; the store holds
-  15.5M), inside the grounding-check tractability argument — correct deliberately.
-- **`_corpus.py`'s id ranges are stale** in its docstring; nothing depends on the prose.
-- **`docs/thesis_notes.md` is misfiled from about line 6900 onwards.**
-- **The hour chooser is blind by design**, a pinned hour is not in the URL, and the evidence account
-  is fetched per hour rather than polled — all carried from the previous session.
-- **0 of 297 stored bundles carry a superseded claim**, so the panel's ruled-out block is unexercised
-  on real data.
+- **The frontend is not in Biome's format** and nothing checks it (`pnpm lint` is lint only). A
+  one-off `biome format --write` commit plus a format check in `lint` would close it.
+- **Three windows open 40 s before the staged onset** (runs 204, 224, 264), unexplained; latency
+  unaffected.
+- **"Tracks (13 interrupted)" on a quiet hour** is correct and may read as an alarm — flagged for the
+  evaluation in the thesis notes.
+- **The evidence panel's sentence for an unexplained conclusion is stale** ("built and not kept").
+- **`detection_metrics.py` still imports `save_findings`**, unused.
+- **"20.7M observations" is stale** in seven places (the store holds 15.5M).
+- **`_corpus.py`'s id ranges are stale**; **`thesis_notes.md` is misfiled from about line 6900**.
+- **A fresh database cannot score batches from the screen** until `BASELINE_QUIET_RUNS` is re-derived
+  for it (`anom-017`'s stated consequence).
