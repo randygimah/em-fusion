@@ -18,8 +18,10 @@ same failure mode the tests exist to catch, one level up.
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlparse
 
 import pytest
@@ -61,6 +63,9 @@ REQUIRED_TARGETS = {
     # so a frontend edit was invisible until an image rebuild while the backend
     # reloaded on save (docs/qa.md 153).
     "dev",
+    # spec: map-001 -- added 2026-10-07. The default basemap is downloaded once
+    # against a pinned checksum rather than committed (86 MB at zoom 10).
+    "basemap",
 }
 
 #: Tools that would mean the root Makefile needs a host toolchain beyond
@@ -423,3 +428,85 @@ def test_make_dev_starts_the_dev_profile_with_a_fresh_node_modules() -> None:
     assert "--profile dev" in recipe
     assert "frontend-dev" in recipe
     assert "--renew-anon-volumes" in recipe
+
+
+# ------------------------------------------------------- the basemap, map-001
+#
+# The default basemap is a Protomaps cut of the corpus box, downloaded once and
+# checked against SHA-256 values in a committed manifest. The archive and its
+# glyphs and sprites are gitignored; the manifest is not. Each assertion is a
+# way the offline guarantee or the licence could be lost without a red test.
+
+BASEMAP_MANIFEST_PATHS = (
+    Path(__file__).resolve().parents[2]
+    / "frontend"
+    / "public"
+    / "basemap"
+    / "manifest.json",
+    Path("/repo/frontend/public/basemap/manifest.json"),
+)
+GITIGNORE_PATHS = (
+    Path(__file__).resolve().parents[2] / ".gitignore",
+    Path("/repo/.gitignore"),
+)
+
+#: The corpus box (implementation.md, fixed 2026-08-19) and the zoom the user
+#: chose on 2026-10-07.
+BASEMAP_BBOX = [3, 49, 11, 54]
+BASEMAP_MAXZOOM = 10
+
+
+def _basemap_manifest() -> dict[str, Any]:
+    return dict(json.loads(_read_first(BASEMAP_MANIFEST_PATHS)))
+
+
+def test_the_basemap_manifest_records_what_was_cut_and_from_where() -> None:
+    """Licence terms and provenance cannot be reconstructed later."""
+    # spec: map-001 (1), (2), (7)
+    manifest = _basemap_manifest()
+
+    assert manifest["source"].startswith("https://build.protomaps.com/")
+    assert re.fullmatch(r"\d{8}", str(manifest["build"]))
+    assert manifest["bbox"] == BASEMAP_BBOX
+    assert manifest["maxzoom"] == BASEMAP_MAXZOOM
+    assert "ODbL" in manifest["licence"]
+    assert "OpenStreetMap" in manifest["attribution"]
+
+
+def test_every_basemap_file_is_pinned_by_checksum() -> None:
+    """The archive, and the glyphs and sprites a default style fetches from a CDN."""
+    # spec: map-001 (2), (3)
+    files = _basemap_manifest()["files"]
+    paths = {entry["path"] for entry in files}
+
+    assert all(re.fullmatch(r"[0-9a-f]{64}", entry["sha256"]) for entry in files)
+    assert any(path.endswith(".pmtiles") for path in paths)
+    assert any(path.startswith("fonts/") for path in paths)
+    assert any(path.startswith("sprites/") for path in paths)
+    assert all(
+        not path.startswith(("/", "http")) and ".." not in path for path in paths
+    )
+
+
+def test_the_basemap_files_are_ignored_and_the_manifest_is_not() -> None:
+    # spec: map-001 (2) -- downloaded, not committed.
+    ignore = _read_first(GITIGNORE_PATHS)
+
+    assert "frontend/public/basemap/*" in ignore
+    assert "!frontend/public/basemap/manifest.json" in ignore
+
+
+def test_make_basemap_runs_its_tools_in_containers_and_checks_what_it_fetched() -> None:
+    """No host toolchain beyond Docker (ops-003), and nothing kept unverified."""
+    # spec: map-001 (2), ops-003
+    recipe = _recipes()["basemap"]
+    joined = " ".join(recipe)
+
+    for line in recipe:
+        for tool in ("pmtiles", "curl ", "wget ", "sha256sum"):
+            if tool in line:
+                assert (
+                    "docker run" in line
+                ), f"{tool.strip()} outside a container: {line}"
+    assert "sha256sum" in joined
+    assert "manifest.json" in joined
