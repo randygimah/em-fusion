@@ -2534,6 +2534,31 @@ withheld from the server's counts, and an unexamined hour says it was not examin
 as clean under a narrow view. A mutation pass (18 of 18 killed) checked that each of these sentences,
 and the selection's lifetime across polls and hours, is held by a test.
 
+### The exception panel: a label's word follows what the rows are, and nothing has a column it cannot fill
+
+The tabbed exception panel was specified before the view filter existed, with tabs labelled *RF (n
+anomalous)* and *Tracks (n degraded)* and a footer reading *+n nominal hidden*. Each of those phrases is
+true under exactly one view. Under *All* the RF tab lists seven receivers and would have called them
+seven anomalous; under *Nominal only* the footer would have called the withheld anomalous receivers
+nominal; on an hour no pass examined, every row is `unknown`, and either word is a claim nothing made.
+The amendment made the number the rows the tab shows and the word a name for what those rows are,
+dropped the word where no single one is true, and named the footer's withheld rows by the view that
+withheld them. *Degraded* had already become *interrupted* when the aircraft state was built, because
+the finding is that reporting broke, not a judgement about the aircraft.
+
+Two choices were about not inventing. The design reference gives each receiver a noise floor, a
+last-signal time and a severity, and nothing in the system produces any of them, so the columns are the
+payload's fields only. And the receiver grid that filled the placeholder map was folded into the RF
+tab, on the item's own argument for absorbing the timeline: one list rendered twice is two lists that
+can drift.
+
+**Measured.** A mutation pass over the panel killed 20 of 21 mutants on its first run. The survivor
+marked every tab as selected — invisible on screen, and announced by a screen reader as three open tabs
+— because the tests checked only that the open tab was selected. The test was tightened after
+implementation, which is a deviation from the order this project works in, and the re-run killed 21 of
+21. *(Record whether the evaluation's readers used the tabs, and whether any read "Tracks (13
+interrupted)" on a quiet hour as an alarm — see the aircraft-state subsection above.)*
+
 
 ## Implementation
 

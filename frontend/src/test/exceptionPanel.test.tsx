@@ -299,6 +299,10 @@ describe("the open tab", () => {
 
     expect(screen.getByRole("tab", { name: /^RF/ })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("tabpanel", { name: /^RF/ })).toBeInTheDocument();
+    // Added after the mutation pass, where marking every tab selected survived:
+    // a screen reader would announce all three as the open one.
+    expect(screen.getByRole("tab", { name: /^Tracks/ })).toHaveAttribute("aria-selected", "false");
+    expect(screen.getByRole("tab", { name: /^Events/ })).toHaveAttribute("aria-selected", "false");
   });
 
   it("stays open when the next poll, hour or view arrives", () => {

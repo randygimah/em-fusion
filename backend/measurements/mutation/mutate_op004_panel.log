@@ -1,0 +1,25 @@
+sentinel killed (Tests  2 failed | 65 passed (67)) -- edits reach the tests
+
+the label word ignores the view                      KILLED   Tests  1 failed | 66 passed (67)
+an unexamined hour's tabs carry a state              KILLED   Tests  1 failed | 66 passed (67)
+All's tabs carry a state                             KILLED   Tests  1 failed | 66 passed (67)
+interrupted aircraft are called anomalous            KILLED   Tests  2 failed | 65 passed (67)
+a tab counts rows it does not show                   KILLED   Tests  6 failed | 61 passed (67)
+an unexamined hour's withheld rows are called nominal KILLED   Tests  2 failed | 65 passed (67)
+what Nominal only withheld is called nominal         KILLED   Tests  2 failed | 65 passed (67)
+nothing withheld reads +0                            KILLED   Tests  2 failed | 65 passed (67)
+one conclusion is pluralised                         KILLED   Tests  2 failed | 65 passed (67)
+withheld rows are counted from the rows that arrived KILLED   Tests  8 failed | 59 passed (67)
+View all is enabled                                  KILLED   Tests  1 failed | 66 passed (67)
+an empty tab renders an empty table                  KILLED   Tests  7 failed | 60 passed (67)
+an empty tab drops the not-examined sentence         KILLED   Tests  3 failed | 64 passed (67)
+a withheld conclusion reads as a quiet hour          KILLED   Tests  1 failed | 66 passed (67)
+an empty Tracks tab blurs what it found              KILLED   Tests  1 failed | 66 passed (67)
+a missing altitude is a dash                         KILLED   Tests  1 failed | 66 passed (67)
+events follow array order                            KILLED   Tests  1 failed | 66 passed (67)
+an invented Severity column                          KILLED   Tests  1 failed | 66 passed (67)
+it opens on Tracks                                   KILLED   Tests  10 failed | 57 passed (67)
+every tab is marked selected                         KILLED   Tests  1 failed | 66 passed (67)
+a new hour resets the open tab                       KILLED   Tests  1 failed | 66 passed (67)
+
+21 of 21 valid mutants killed
