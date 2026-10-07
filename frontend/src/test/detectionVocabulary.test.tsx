@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { REPORTABLE_COPY, findingLabel } from "../lib/detectionVocabulary";
 import OperationalPictureScreen from "../screens/operationalPicture";
@@ -61,7 +61,12 @@ const picture = (over: Partial<OperationalPicture> = {}): OperationalPicture => 
 });
 
 const summary = () => within(screen.getByRole("region", { name: /detection summary/i }));
-const timeline = () => within(screen.getByRole("region", { name: /timeline/i }));
+// op-004 absorbed the timeline into the exception panel's Events tab.
+// Re-pointed there, assertions kept: open the tab, read its panel.
+const timeline = () => {
+  fireEvent.click(screen.getByRole("tab", { name: /^Events/ }));
+  return within(screen.getByRole("tabpanel", { name: /^Events/ }));
+};
 
 describe("the copy module", () => {
   it("covers every type the contract can name", () => {

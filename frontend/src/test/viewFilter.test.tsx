@@ -51,8 +51,15 @@ const renderScreen = (picture: OperationalPicture, selectedView: ViewSelection =
   return onSelectView;
 };
 
-const receiverGrid = () => screen.getByRole("region", { name: /receivers/i });
-const timeline = () => screen.getByRole("region", { name: /timeline/i });
+// op-004 moved the receiver grid and the timeline into the exception panel's
+// RF and Events tabs. Re-pointed there, assertions kept: each helper opens its
+// tab and answers the tab's panel.
+const openTab = (name: RegExp) => {
+  fireEvent.click(screen.getByRole("tab", { name }));
+  return screen.getByRole("tabpanel", { name });
+};
+const receiverGrid = () => openTab(/^RF/);
+const timeline = () => openTab(/^Events/);
 
 describe("the control", () => {
   it("offers the three views and marks the selected one", () => {
@@ -114,7 +121,9 @@ describe("what the receiver grid says when the view empties it", () => {
     renderScreen(served(viewOf("nominal", { suppressed: { rfSensors: 2, aircraftTracks: 0, timelineEvents: 0 } })));
 
     expect(within(receiverGrid()).getByText(/no receiver is nominal/i)).toBeInTheDocument();
-    expect(within(receiverGrid()).getByText(/2 out of nominal hidden by this view/i)).toBeInTheDocument();
+    // Worded "2 out of nominal" until op-004's amendment (2), which names the
+    // withheld rows by what they are: under Nominal only, anomalous.
+    expect(within(receiverGrid()).getByText(/2 anomalous hidden by this view/i)).toBeInTheDocument();
   });
 
   it("states what the view hides beside the rows it served", () => {
