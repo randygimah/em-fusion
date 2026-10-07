@@ -57,6 +57,10 @@ REQUIRED_TARGETS = {
     # hand-writing a compose invocation, which is precisely where the wrong
     # environment variable gets supplied; see ops-004 and docs/qa.md 84.
     "measure",
+    # spec: ops-006 -- added 2026-10-07. The frontend service is a static build,
+    # so a frontend edit was invisible until an image rebuild while the backend
+    # reloaded on save (docs/qa.md 153).
+    "dev",
 }
 
 #: Tools that would mean the root Makefile needs a host toolchain beyond
@@ -304,3 +308,118 @@ def test_measure_does_not_start_the_database() -> None:
     bring dependencies up would start an empty database and measure it."""
     # spec: ops-003
     assert "--no-deps" in " ".join(_recipes()["measure"])
+
+
+# ------------------------------------------------ the frontend dev server, ops-006
+#
+# The `frontend` service is nginx over a production build frozen when the image
+# was built, so an edit is invisible on :8080 until a rebuild. `frontend-dev`
+# serves the working tree through Vite. Each assertion below is one of the
+# item's failure cases, and every one of them is silent when it happens.
+
+DOCKERFILE_PATHS = (
+    Path(__file__).resolve().parents[2] / "frontend" / "Dockerfile",
+    Path("/repo/frontend/Dockerfile"),
+)
+
+
+def _service(name: str) -> str:
+    """One service's block of compose.yaml, up to the next top-level key."""
+    compose = _read_first(COMPOSE_PATHS)
+    start = compose.find(f"\n  {name}:\n")
+    assert start >= 0, f"compose.yaml declares no {name!r} service"
+    block = compose[start + 1 :]
+    following = re.search(r"\n  [A-Za-z0-9_-]+:\n|\n[A-Za-z]", block[1:])
+    return block if following is None else block[: following.start() + 1]
+
+
+def _uncommented(block: str) -> str:
+    return "\n".join(
+        line for line in block.splitlines() if not line.strip().startswith("#")
+    )
+
+
+def test_the_dev_server_is_profiled_out_of_the_ordinary_stack() -> None:
+    """`docker compose up`, `make up` and `make demo` stay the nginx path."""
+    # spec: ops-006, ops-001, AC-12
+    service = _uncommented(_service("frontend-dev"))
+    recipes = _recipes()
+
+    assert re.search(r"profiles:\s*\[\s*[\"']dev[\"']\s*\]", service)
+    for target in ("up", "demo"):
+        assert not any("--profile dev" in line for line in recipes[target])
+
+
+def test_the_dev_server_serves_the_working_tree_on_1234() -> None:
+    # spec: ops-006
+    service = _uncommented(_service("frontend-dev"))
+
+    assert re.search(r"[\"']1234:1234[\"']", service)
+    assert re.search(r"-\s*\./frontend:/app\s*$", service, re.M)
+    assert "pnpm" in service and "dev" in service
+    assert "0.0.0.0" in service, "Vite binds localhost only unless told otherwise"
+
+
+def test_the_containers_node_modules_is_not_the_hosts() -> None:
+    """The host's install holds macOS binaries; the mount must not shadow Linux's."""
+    # spec: ops-006
+    service = _uncommented(_service("frontend-dev"))
+
+    assert re.search(r"-\s*/app/node_modules\s*$", service, re.M)
+
+
+def test_the_dev_server_forwards_api_to_the_backend_service() -> None:
+    """The sharpest failure case: inside the container, localhost is itself.
+
+    Every call would fail, and the picture's first-paint mock would make the
+    screen look healthy while showing invented data.
+    """
+    # spec: ops-006, api-003
+    service = _uncommented(_service("frontend-dev"))
+    match = re.search(r"API_PROXY_TARGET:\s*[\"']?(\S+?)[\"']?\s*$", service, re.M)
+
+    assert match is not None, "frontend-dev sets no API_PROXY_TARGET"
+    assert urlparse(match.group(1)).hostname == "backend"
+    assert "VITE_" not in service, "a VITE_ variable is published to the browser"
+
+
+def test_the_dev_server_does_not_try_to_open_a_browser() -> None:
+    # spec: ops-006 -- there is no browser in the container.
+    service = _uncommented(_service("frontend-dev"))
+
+    assert re.search(r"BROWSER:\s*[\"']?none[\"']?\s*$", service, re.M)
+
+
+def test_the_dev_server_starts_from_an_install_that_does_not_type_check() -> None:
+    """A tree mid-edit routinely fails `tsc -b`; the dev server must still start.
+
+    So it targets a `deps` stage that installs and builds nothing, and the
+    production `build` stage starts from that stage rather than repeating it.
+    """
+    # spec: ops-006
+    service = _uncommented(_service("frontend-dev"))
+    dockerfile = _read_first(DOCKERFILE_PATHS)
+    stages = dict(
+        (alias, base)
+        for base, alias in re.findall(r"^FROM\s+(\S+)\s+AS\s+(\S+)", dockerfile, re.M)
+    )
+
+    assert re.search(r"target:\s*deps\s*$", service, re.M)
+    assert "deps" in stages and stages.get("build") == "deps"
+    deps = dockerfile[dockerfile.index("AS deps") : dockerfile.index("AS build")]
+    assert "pnpm install --frozen-lockfile" in deps
+    assert "pnpm run build" not in deps
+
+
+def test_make_dev_starts_the_dev_profile_with_a_fresh_node_modules() -> None:
+    """An anonymous volume outlives its container.
+
+    After a lockfile change it would go on serving the previous install while
+    the image held the new one, so the target renews it every time.
+    """
+    # spec: ops-006, ops-003
+    recipe = " ".join(_recipes()["dev"])
+
+    assert "--profile dev" in recipe
+    assert "frontend-dev" in recipe
+    assert "--renew-anon-volumes" in recipe
