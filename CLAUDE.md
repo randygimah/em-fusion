@@ -44,6 +44,7 @@ A contents page for the repo. Use it to find the right file before searching; it
 | `frontend/src/hooks/useRailCollapsed.ts` | Rail collapsed state (`nav-003`) in guarded `localStorage`, not the hash. Every storage access is wrapped; anything unexpected resolves to expanded. |
 | `frontend/src/hooks/useOperationalPicture.ts` | The polling feed (`api-003`): picture plus `degraded`. A failed poll keeps what is on screen. |
 | `frontend/src/hooks/useScenarioControl.ts` | Scenario Control feed (`api-010`): runs, `degraded`, accepted batch, `start`. **No fixture fallback**. |
+| `frontend/src/hooks/useEvidenceCollapsed.ts` | Evidence panel collapsed state (`op-010`), same guarded-`localStorage` pattern as the rail; anything unexpected resolves to **expanded**. |
 | `frontend/src/hooks/useEvidenceAccount.ts` | Evidence account for the hour on screen (`op-010`). Fetched per hour, never polled; a failed fetch does **not** keep the previous hour's answer. |
 | `frontend/src/lib/api.ts` | **The only module that reaches the network** (`api-003`, `api-010`): endpoint paths, 5 s poll interval, fetch functions. `transport.test.ts` enforces this. |
 | `frontend/src/lib/detectionVocabulary.ts` | Every finding type's wording in one module (`op-003`, `op-006`, `op-010`), plus grounding words and absence sentences. Panels must not carry their own vocabulary. |
@@ -57,7 +58,7 @@ A contents page for the repo. Use it to find the right file before searching; it
 | `frontend/src/screens/operationalPicture.tsx` | The main screen; takes `operationalPicture` as a prop. Detection Summary: a null summary renders a **sentence**, never a dash; only **reportable** counts are listed; a `null` count renders as a dash, never zero. |
 | `frontend/src/screens/scenarioControl.tsx` | Scenario Control (`scn-004`): library, config form, run controls, status, recent runs. Controls disabled with a reason until a handler is supplied; `RESET`/`REPLAY` stay disabled (no endpoint). |
 | `frontend/src/screens/hypotheses.tsx` | Placeholder destination naming what is missing until `hyp-*`. Replace it wholesale when `hyp-*` starts. |
-| `frontend/src/components/em/` | Shared `Em*` primitives built with `cva` + `cn` (`EmButton`, `EmNavRail`, `EmEvidencePanel`, `EmLevel`, `EmDataModeBadge`, `EmSystemStatus`). `EmNavRail` renders entries as anchors with a collapse **button** (`nav-003`). `EmEvidencePanel` (`op-010`) has four states with four sentences and never falls silent. |
+| `frontend/src/components/em/` | Shared `Em*` primitives built with `cva` + `cn` (`EmButton`, `EmNavRail`, `EmEvidencePanel`, `EmLevel`, `EmDataModeBadge`, `EmSystemStatus`). `EmNavRail` renders entries as anchors with a collapse **button** (`nav-003`). `EmEvidencePanel` (`op-010`) has five states with five sentences and never falls silent; it collapses, and collapsed its header still counts the hour's conclusions and those with no stored evidence. |
 | `frontend/src/main.tsx`, `frontend/src/index.css` | React entry; Tailwind v4 entry plus design tokens (no `tailwind.config.js`). |
 | `frontend/src/test/` | All Vitest tests. **No coverage tooling** — frontend items are proved load-bearing by a mutation pass. |
 | `frontend/src/App.test.tsx` | Legacy colocated test — the one exception to `src/test/`. Don't add more. |
