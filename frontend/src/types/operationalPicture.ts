@@ -132,6 +132,31 @@ export interface OperationalPicture {
   rfSensors: RFSensor[];
   aircraftTracks: AircraftTrack[];
   timelineEvents: TimelineEvent[];
+  // The view served and what it withheld (api-007). detectionSummary above is
+  // never filtered: it is the account of the whole run whatever the view.
+  view: PictureView;
+}
+
+// What the screen may ask to see (api-007, FR-809). The server filters, so the
+// withheld rows never arrive — an absent `view` parameter is "all".
+export type ViewSelection = "anomalous" | "nominal" | "all";
+
+// How many rows of each collection the selected view withheld. The screen
+// cannot count rows it never received, so op-004's "+n nominal hidden" footer
+// reads this and never the payload.
+export interface SuppressedCounts {
+  rfSensors: number;
+  aircraftTracks: number;
+  timelineEvents: number;
+}
+
+// `examined` is false exactly when detectionSummary is null. On an unexamined
+// hour nothing is anomalous and nothing is nominal, so withheld rows there are
+// not an hour found clean — this is what lets a reader of the counts tell.
+export interface PictureView {
+  selected: ViewSelection;
+  examined: boolean;
+  suppressed: SuppressedCounts;
 }
 
 // One hour the Operational Picture will serve (api-013). The list of these is

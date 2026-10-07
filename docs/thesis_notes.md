@@ -2492,6 +2492,36 @@ reported is correct and is also exactly the number an analyst could read as alar
 exceptions panel words this once it is built, and whether a reader in the evaluation misread it.)*
 
 
+### The view filter runs where the payload is built, not in the query that reads it
+
+The requirement says the operational picture shall filter *server-side*, so that the excluded rows
+never travel, and the spec item first wrote that more narrowly: "filtering happens in the query".
+Read against the code on 7 October, that sentence fitted one of the three collections. The receivers
+are configuration loaded from the layout file, with no query to filter in; an aircraft's state is a
+join done in Python over the stored findings; only the positions come from SQL. Filtering tracks in
+SQL would have meant writing *interrupted* a second time as a predicate — two definitions of one state
+that agree today and are free to drift. The filter was therefore placed in the payload builder, over
+the same state each row is served with, and a test forbids the persistence layer from naming a row
+state at all. What the requirement rules out — the client receiving everything and discarding most
+of it — is still ruled out.
+
+Reading the item closely also found it contradicting itself. One amendment said the anomalous view
+admits a track whose state is *not nominal*, which admits `unknown`; the same amendment said a run
+nobody examined admits nothing under that view. The resolution is that `unknown` is admitted only by
+*all*: on an unexamined hour nothing is anomalous and nothing is nominal. Because both narrow views
+are then empty, the withheld counts travel with an `examined` flag, so a reader of "+430 hidden"
+cannot take an unexamined hour for a clean one.
+
+A request with no view is served *all*, not *anomalous*, although *anomalous* is the screen's default.
+The default belongs to the control that sends the selection; making it the server's would have
+emptied the receiver strip on every quiet hour before any control existed to explain why.
+
+**Measured** (7 October, real store): run 21, a quiet hour, serves 0 receivers, 13 aircraft and 0
+events under *anomalous*, withholding 7, 410 and 0; under *all* it serves 7, 423 and 0. Run 420
+serves 2, 10 and 1 under *anomalous*. The response shrinks from 65,140 bytes to 3,145 for run 21
+(**95% smaller**) and from 66,629 to 3,051 for run 420 — almost all of it aircraft positions.
+
+
 ## Implementation
 
 <!-- Notable technical decisions per phase (link to implementation.md phases), challenges and

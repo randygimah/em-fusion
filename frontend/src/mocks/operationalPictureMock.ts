@@ -84,5 +84,12 @@ const operationalPicture: OperationalPicture = {
       source: "sensor-001",
     },
   ],
+  // What the server sends when no view is asked for (api-007): everything,
+  // nothing withheld. Examined, because the summary above is a reading.
+  view: {
+    selected: "all",
+    examined: true,
+    suppressed: { rfSensors: 0, aircraftTracks: 0, timelineEvents: 0 },
+  },
 };
 export default operationalPicture;

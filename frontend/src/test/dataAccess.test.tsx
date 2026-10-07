@@ -16,8 +16,9 @@ const served: OperationalPicture = {
   timelineEvents: [],
   detectionSummary: null,
   aircraftTracks: [
-    { id: "opensky-replay:AC-served", name: "AC-served", altitudeFt: 29800, lat: 51.79, lon: 10.36, state: "nominal" },
+    { id: "opensky-replay:AC-served", name: "AC-served", altitudeFt: 29800, lat: 51.79, lon: 10.36, state: "unknown" },
   ],
+  view: { ...operationalPicture.view, examined: false },
 };
 
 const ok = (payload: OperationalPicture) =>

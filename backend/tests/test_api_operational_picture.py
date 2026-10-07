@@ -55,9 +55,11 @@ from app.api.v1.schemas.operational_picture import (
     Hypothesis,
     OperationalPicture,
     PictureError,
+    PictureView,
     RFSensor,
     Scenario,
     SelectableHour,
+    SuppressedCounts,
     TimelineEvent,
     build_operational_picture,
 )
@@ -116,6 +118,10 @@ MODELS = {
     # directions -- covers the new shape the moment it exists, instead of a
     # second parity suite that can drift from this one.
     "SelectableHour": SelectableHour,
+    # `api-007`. The view metadata, so the withheld counts are held to the
+    # contract by the same check as every other shape.
+    "PictureView": PictureView,
+    "SuppressedCounts": SuppressedCounts,
 }
 
 #: The two fields that carried `74.2` and `0.92` before this item, rendered as

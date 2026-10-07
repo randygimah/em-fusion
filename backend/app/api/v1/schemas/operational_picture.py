@@ -40,8 +40,8 @@ the account, and never by a number in it.
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
-from typing import Final, Literal
+from collections.abc import Callable, Mapping, Sequence
+from typing import Final, Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
@@ -106,6 +106,25 @@ NOMINAL: Final = "nominal"
 #: nothing here makes.
 INTERRUPTED: Final = "interrupted"
 TrackState = Literal["nominal", "interrupted", "unknown"]
+
+#: What the screen may ask to see (`api-007`, `FR-809`). An absent parameter is
+#: `all`, which is what every request received before the filter existed.
+ViewSelection = Literal["anomalous", "nominal", "all"]
+
+_Row = TypeVar("_Row")
+
+#: The state a timeline event is in, for admission only: every event is a
+#: reportable claim by construction (`api-012`), so it is anomalous.
+_EVENT = "event"
+
+#: Which row states each narrow view admits (`api-007`). **One definition**,
+#: read over the same state each row is served with -- a SQL predicate would be
+#: a second one. `unknown` is in neither set: on a run nobody examined, nothing
+#: is anomalous and nothing is nominal, and only `all` serves those rows.
+_ADMITTED: Mapping[str, frozenset[str]] = {
+    "anomalous": frozenset({FAULT, DEVIATING, INTERRUPTED, _EVENT}),
+    "nominal": frozenset({NOMINAL}),
+}
 
 #: Which rule's finding puts a receiver in which state, worst first. **Declared
 #: rather than derived**: `anom-008`'s register says *that* a rule produces
@@ -339,6 +358,35 @@ class SelectableHour(BaseModel):
         )
 
 
+class SuppressedCounts(BaseModel):
+    """How many rows of each collection the selected view withheld (`api-007`).
+
+    The rows never arrive, so the screen cannot count them; this is what keeps
+    `op-004`'s *+n nominal hidden* footer true.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    rfSensors: int  # noqa: N815 -- mirrors the contract
+    aircraftTracks: int  # noqa: N815 -- mirrors the contract
+    timelineEvents: int  # noqa: N815 -- mirrors the contract
+
+
+class PictureView(BaseModel):
+    """Which view was served, and what it withheld. Spec: api-007.
+
+    `examined` is false exactly when `detectionSummary` is null. It travels with
+    the counts so that a reader of the counts alone cannot take an unexamined
+    hour -- where nothing is anomalous and nothing is nominal -- for a clean one.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    selected: ViewSelection
+    examined: bool
+    suppressed: SuppressedCounts
+
+
 class OperationalPicture(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -358,6 +406,9 @@ class OperationalPicture(BaseModel):
     rfSensors: list[RFSensor]  # noqa: N815 -- mirrors the contract
     aircraftTracks: list[AircraftTrack]  # noqa: N815 -- mirrors the contract
     timelineEvents: list[TimelineEvent]  # noqa: N815 -- mirrors the contract
+    #: The view served and what it withheld (`api-007`). The summary above is
+    #: never filtered: it is the account of the whole run whatever the view.
+    view: PictureView
 
 
 def _feet(metres: float | None) -> int | None:
@@ -645,6 +696,7 @@ def build_operational_picture(
     findings: Sequence[DetectionFinding] = (),
     detection_pass: DetectionPass | None = None,
     register: Mapping[Key, Producer] = REGISTER,
+    view: ViewSelection = "all",
 ) -> OperationalPicture:
     """Assemble the payload from a run and what has been read for it.
 
@@ -659,6 +711,11 @@ def build_operational_picture(
     `register` is injected, following `anom-008`'s own suite: a test asserting
     that an unbuilt rule reports no count must keep asserting the rule rather
     than the current state of `anom-006`.
+
+    `view` filters the three collections here, where each row's state is
+    decided, and counts what it withheld (`api-007`). Filtering is server-side
+    and after the rows are built, so the payload shrinks with the selection
+    while the state keeps one definition.
     """
     scenario = (
         None
@@ -680,13 +737,9 @@ def build_operational_picture(
     band = _band(layout)
     health = _receiver_health(layout, findings, scored=scored)
     interrupted = _interrupted(findings) if scored else None
-    return OperationalPicture(
-        scenario=scenario,
-        hypotheses=[],
-        detectionSummary=(
-            _detection_summary(findings, health, register) if scored else None
-        ),
-        rfSensors=[
+    sensors, sensors_withheld = _admit(
+        view,
+        [
             RFSensor(
                 id=site.sensor_id,
                 stationName=site.station_name,
@@ -701,8 +754,42 @@ def build_operational_picture(
             )
             for site in layout.sensors
         ],
-        aircraftTracks=[
-            _track(observation, interrupted=interrupted) for observation in observations
-        ],
-        timelineEvents=_timeline(findings, register),
+        lambda sensor: sensor.health,
     )
+    tracks, tracks_withheld = _admit(
+        view,
+        [_track(observation, interrupted=interrupted) for observation in observations],
+        lambda track: track.state,
+    )
+    events, events_withheld = _admit(
+        view, _timeline(findings, register), lambda _event: _EVENT
+    )
+    return OperationalPicture(
+        scenario=scenario,
+        hypotheses=[],
+        detectionSummary=(
+            _detection_summary(findings, health, register) if scored else None
+        ),
+        rfSensors=sensors,
+        aircraftTracks=tracks,
+        timelineEvents=events,
+        view=PictureView(
+            selected=view,
+            examined=scored,
+            suppressed=SuppressedCounts(
+                rfSensors=sensors_withheld,
+                aircraftTracks=tracks_withheld,
+                timelineEvents=events_withheld,
+            ),
+        ),
+    )
+
+
+def _admit(
+    view: ViewSelection, rows: list[_Row], state: Callable[[_Row], str]
+) -> tuple[list[_Row], int]:
+    """The rows `view` admits, and how many it withheld. Spec: api-007."""
+    if view == "all":
+        return rows, 0
+    admitted = [row for row in rows if state(row) in _ADMITTED[view]]
+    return admitted, len(rows) - len(admitted)

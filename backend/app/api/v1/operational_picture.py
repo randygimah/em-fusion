@@ -45,6 +45,7 @@ from app.api.v1.schemas.evidence import EvidenceAccount, build_evidence_account
 from app.api.v1.schemas.operational_picture import (
     OperationalPicture,
     SelectableHour,
+    ViewSelection,
     build_operational_picture,
 )
 from app.db.bundles import stored_bundles_for_run
@@ -71,6 +72,7 @@ FINAL_WINDOW_SECONDS = 300
 def get_operational_picture(
     sessions: SessionFactory = Depends(get_sessionmaker),
     run_id: int | None = Query(default=None, alias="run"),
+    view: ViewSelection = Query(default="all"),
 ) -> OperationalPicture:
     """The picture for one hour. spec: api-002, api-013.
 
@@ -85,6 +87,10 @@ def get_operational_picture(
     different hour is the failure `api-013` is built around. An absent store
     and an absent request are the honest empties; an absent *answer* to a
     present request is not.
+
+    `view` (`api-007`) is the same distinction once more: absent is `all`, which
+    every request received before the filter existed, and an unrecognised value
+    is a 422 from the type rather than a quiet `all`.
     """
     run = latest_run(sessions) if run_id is None else run_summary(sessions, run_id)
     if run is None and run_id is not None:
@@ -94,7 +100,7 @@ def get_operational_picture(
         )
     if run is None:
         return build_operational_picture(
-            run=None, observations=[], layout=load_layout()
+            run=None, observations=[], layout=load_layout(), view=view
         )
     return build_operational_picture(
         run=run,
@@ -102,6 +108,7 @@ def get_operational_picture(
         layout=load_layout(),
         findings=findings_for_run(sessions, run.id),
         detection_pass=detection_pass_for_run(sessions, run.id),
+        view=view,
     )
 
 
