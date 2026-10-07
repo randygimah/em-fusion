@@ -16,7 +16,10 @@ branch/worktree workflow: **work is now committed directly on `main`**.
 
 ## Current state
 
-Backlog **85 of 117** (83 at the start). `anom-017` and `op-010` are `passes: true`. Tree clean,
+Backlog **86 of 117** (83 at the start). `anom-017` and `op-010` are `passes: true`, and `evb-003`
+was closed on 7 October by amendment: its fill is superseded by `anom-017`'s re-score, and the store
+was measured consistent in both directions (0 claims without a matching bundle, 0 bundles without a
+matching claim). Tree clean,
 `main` in sync with `origin/main` at `3e96140` plus this handoff's commit.
 
 - Backend: **2067 passed, 99% coverage** (5541 statements, 4 missed), ruff, Black and mypy clean.
@@ -169,9 +172,6 @@ Then, unchanged: the map (`map-001`–`map-004`), `hypotheses`, `eval-006` (wait
 
 Open and unowned:
 
-- **`evb-003` is still `passes: false`** although its remaining constraint — no hour with a claim and
-  no bundle — is now met by `anom-017`'s re-score (0 such runs), not by its own fill. Amend and close
-  it, or leave it open, deliberately.
 - **Three windows now open 40 s before the staged onset** (runs 204, 224, 264; 10 s before, under the
   old baseline). Latency is unaffected; unexplained, and flagged in the thesis notes.
 - **The panel's sentence for an unexplained conclusion is stale** — it says the account "was built
