@@ -169,7 +169,7 @@ Run them. **Every new test must fail.** A test that passes before the implementa
 
 ### 4. Code
 
-Implement the capability. Read relevant source files on demand rather than up front. **Ask the user for review after implementing each feature.** Do not set `passes: true` yet. Independent spec items may be worked in parallel — see Parallelism under Git below.
+Implement the capability. Read relevant source files on demand rather than up front. **Ask the user for review after implementing each feature.** Do not set `passes: true` yet.
 
 ### 5. Prove the tests pass
 
@@ -346,39 +346,8 @@ Rules:
 - Do not add a `Co-Authored-By:` trailer to commit messages.
 - Commit message conventions per workflow stage are in the Spec-Driven Development section above: `spec: add <id>`, `test: add tests for <id>`, `feat(<id>): <description> - tests pass`.
 
-### Branches and worktrees
+### Working on `main`
 
-Agent work happens on branches, isolated using git worktrees.
-
-Start a branch:
-
-```bash
-git worktree add .worktrees/<id> -b <id>
-```
-
-Finish a branch:
-
-```bash
-# 1. Inspect the diff before merging
-git fetch origin main
-git diff main...<id> -- <changed-files>
-
-# 2. Deconflict any overlap, amend the branch commit if needed
-
-# 3. Merge, push, clean up
-git checkout main
-git merge --no-ff <id> -m "merge: <id> — <short description>"
-git push origin main
-git worktree remove .worktrees/<id>
-git branch -d <id>
-```
-
-Local and remote `main` must be in sync after every merge.
-
-### Parallelism
-
-Spec items with no shared file or data dependencies may be coded in parallel.
-
-- **Present the parallelism plan to the user first** — which items, and why they are independent — and get agreement before spawning sub-agents.
-- Each parallel item gets its own worktree and branch.
-- Deconfliction happens at merge, per the sequence above.
+This repo does not use feature branches or worktrees: work is committed directly on `main`, in the
+spec → test → feat commit sequence above, and pushed so local and remote `main` stay in sync.
+Independent spec items are still worked one at a time unless the user agrees otherwise.
