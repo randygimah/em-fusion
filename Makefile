@@ -3,7 +3,7 @@
 # backend/Makefile; everything here goes through Docker.
 
 .DEFAULT_GOAL := help
-.PHONY: help build build-backend build-frontend-test up demo down restart \
+.PHONY: help build build-backend build-frontend-test up demo dev down restart \
         logs ps shell db-shell db-reset migrate db-test-create \
         generate measure build-pipeline ensure-artifacts replay \
         test test-backend test-frontend lint format type-check check smoke clean
@@ -79,6 +79,14 @@ up: migrate ## Apply migrations, then start backend + frontend in the background
 
 demo: ensure-artifacts migrate ## Apply migrations, then run the full stack in the foreground
 	$(COMPOSE) up --build
+
+dev: migrate ## Backend plus Vite's dev server over the working tree, with hot reload, on :1234
+	@# ops-006. The backend already reloads on save; this adds the frontend half.
+	@# --renew-anon-volumes: the container's node_modules is an anonymous volume,
+	@# which would otherwise keep serving the previous install after a lockfile
+	@# change while the image held the new one.
+	$(COMPOSE) --profile dev up --build -d --renew-anon-volumes frontend-dev
+	@echo "Dev server: http://localhost:1234 (logs: $(COMPOSE) logs -f frontend-dev)"
 
 down: ## Stop everything and remove orphaned containers
 	$(COMPOSE) down --remove-orphans

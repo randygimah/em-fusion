@@ -90,7 +90,7 @@ A contents page for the repo. Use it to find the right file before searching; it
 
 **`docs/`** — all project documentation. See the Documents table below.
 
-**Root tooling** — `compose.yaml` (five services: `postgis`, `backend`, `frontend`, plus profiled `pipeline` and `frontend-test`), the root `Makefile` (the single command surface over Compose — run `make` for the target list), and `scripts/smoke-test.sh` (post-start check that the services can reach each other and that PostGIS initialised).
+**Root tooling** — `compose.yaml` (six services: `postgis`, `backend`, `frontend`, plus profiled `pipeline`, `frontend-test` and `frontend-dev` — Vite over the mounted working tree for `make dev`, `ops-006`), the root `Makefile` (the single command surface over Compose — run `make` for the target list), and `scripts/smoke-test.sh` (post-start check that the services can reach each other and that PostGIS initialised).
 
 **Empty placeholders** — `infrastructure/` (CI, deploy config) and `scenarios/` (scenario fixtures). The hypothesis and evaluation code live in `backend/app/`, not a root `ai/` folder, so they stay under the test suite, coverage gate, ruff and mypy.
 
@@ -121,7 +121,7 @@ A contents page for the repo. Use it to find the right file before searching; it
 | `README.md` | Setup and run instructions. Update whenever setup, scripts, scope, or behavior changes. |
 | `frontend/package.json`, `pnpm-lock.yaml`, `.nvmrc` | Scripts, dependencies, lockfile, pinned Node. |
 | `frontend/biome.json`, `tsconfig*.json` | Biome lint/format; TypeScript project references. |
-| `frontend/vite.config.ts` | Dev port 1234, `/api` proxy to `:8000` with no path rewrite, Tailwind plugin, Vitest setup. |
+| `frontend/vite.config.ts`, `devProxy.ts` | Dev port 1234, `/api` proxy with no path rewrite, Tailwind plugin, Vitest setup. The proxy target comes from `API_PROXY_TARGET` via `devProxy.ts` (`ops-006`) — default `localhost:8000`, `backend:8000` in the container; never `VITE_`-prefixed. |
 | `frontend/index.html`, `nginx.conf`, `Dockerfile` | Frontend build and container config. |
 | `backend/Makefile` | Backend command surface (`format`, `lint`, `type-check`, `test`, `check`). |
 | `backend/measurements/README.md` | **Read before quoting, re-running, or invalidating any figure.** Never print an aircraft identifier into a committed log; `PSEUDONYM_SEED` never appears. |

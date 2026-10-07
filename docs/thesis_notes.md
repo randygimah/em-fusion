@@ -7268,6 +7268,30 @@ a string literal instead of importing the shared constant. A repository-wide sea
 finds every use of the constant and none of the copies.
 
 
+### A development loop that differed between the two halves of the stack
+
+On 7 October the user reviewed a backend change by looking at the frontend on port 8080 and saw
+nothing new, for a reason unrelated to the change: that port is nginx serving a production build
+frozen when its image was built, while the backend container mounts the working tree and reloads on
+save. The two halves of one stack had different development loops, and the slower one was the one a
+reviewer looks at. A Vite dev server was added as a profiled Compose service over the mounted
+working tree, leaving the nginx service as the demonstration path.
+
+Three details decided its shape, each of them a silent failure if missed. Inside a container
+`localhost` is the container, so a dev server forwarding `/api` there would fail every call — and the
+operational picture falls back to its mock on first paint, so the screen would look healthy while
+showing invented data; the address is therefore read from the environment. The host's `node_modules`
+holds macOS binaries, so the container keeps its own install in a volume that the mount cannot
+shadow, renewed on every start so a lockfile change is not masked. And the production build stage
+type-checks first, so a dev server built from it could not start while the tree was mid-edit; a
+dependencies-only stage now sits under both. Vite publishes `VITE_`-prefixed variables to the
+browser, so the proxy variable deliberately is not one.
+
+**Measured** (macOS, Docker Desktop, Vite 8.1.2): file-change events cross the bind mount without
+polling. An edit to a source module was served by the running container within two seconds and the
+revert likewise, with the container logging hot-module updates, and `/api` forwarded through the
+dev server reached the backend service.
+
 ## Evaluation
 
 <!-- Anomaly detection metrics per scenario type (precision/recall/F1/FPR/FNR/latency) at full N;

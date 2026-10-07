@@ -113,6 +113,32 @@ services:
       timeout: 10s
       retries: 5
 
+  # Vite's dev server over the working tree (ops-006), for `make dev`. Profiled
+  # so `up` and `demo` stay the nginx path. The `frontend` service above is a
+  # production build frozen when its image was built; this one reloads on save.
+  frontend-dev:
+    profiles: ["dev"]
+    build:
+      context: ./frontend
+      target: deps
+    command: ["pnpm", "dev", "--host", "0.0.0.0"]
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "1234:1234"
+    environment:
+      # Inside this container localhost is the container. Forwarding /api there
+      # fails every call while the picture's first-paint mock looks healthy.
+      API_PROXY_TARGET: http://backend:8000
+      # No browser in a container; Vite's own switch for `server.open`.
+      BROWSER: none
+    volumes:
+      - ./frontend:/app
+      # The host's node_modules holds macOS binaries; keep the image's Linux
+      # install here instead. `make dev` renews it so a lockfile change lands.
+      - /app/node_modules
+
   # Vitest against the frontend build stage, which already has node_modules.
   # src/ is bind-mounted so a test run reflects the working tree, not the image.
   frontend-test:

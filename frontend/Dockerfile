@@ -2,7 +2,10 @@
 #  Build the React app     
 # ======================= 
 
-FROM node:24-alpine AS build
+# Dependencies only. The `frontend-dev` service (ops-006) starts from here and
+# mounts the working tree over /app, so it must not depend on that tree
+# type-checking -- a tree mid-edit often does not, and `build` runs `tsc -b`.
+FROM node:24-alpine AS deps
 
 # Enable corepack so the pnpm version pinned in package.json is used
 RUN corepack enable
@@ -15,6 +18,8 @@ COPY package.json pnpm-lock.yaml ./
 
 # Install project dependencies
 RUN pnpm install --frozen-lockfile
+
+FROM deps AS build
 
 # Copy the rest of the application source code
 COPY . .

@@ -11,18 +11,22 @@ Everything runs through Docker Compose, driven by the root `Makefile`:
 ```bash
 make          # list every target
 make up       # build and start backend + frontend in the background
+make dev      # backend + Vite dev server over the working tree, hot reload on :1234
 make smoke    # check both services, and that the frontend can reach the backend
 make down     # stop everything
 ```
 
 | URL | What |
 |---|---|
-| http://localhost:8080 | Frontend (nginx, serving the built React app) |
+| http://localhost:8080 | Frontend (nginx, serving the built React app — shows an edit only after a rebuild) |
+| http://localhost:1234 | Frontend dev server, after `make dev` — serves the working tree and reloads on save |
 | http://localhost:8000/api/v1/health | Backend health endpoint |
 | http://localhost:8000/docs | Generated OpenAPI documentation |
 | localhost:5432 | PostgreSQL 15 + PostGIS 3.5 (`make db-shell`) |
 
-The frontend proxies `/api/` to the backend, so a browser only ever needs port 8080.
+The frontend proxies `/api/` to the backend, so a browser only ever needs port 8080 (or 1234 under
+`make dev`). The backend container already reloads on save. Stop any host `pnpm dev` before `make dev`:
+both want port 1234, and `localhost` may reach the host one.
 
 ### Common targets
 
@@ -44,7 +48,7 @@ The frontend proxies `/api/` to the backend, so a browser only ever needs port 8
 Both halves run natively if you prefer. Node >= 22.13 (`frontend/.nvmrc` pins it) and Python >= 3.11.
 
 ```bash
-# frontend — Vite dev server on :1234, proxying /api to :8000
+# frontend — Vite dev server on :1234, proxying /api to :8000 (API_PROXY_TARGET overrides)
 cd frontend && pnpm install && pnpm dev
 
 # backend — uvicorn on :8000
