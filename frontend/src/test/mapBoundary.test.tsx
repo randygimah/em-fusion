@@ -31,7 +31,9 @@ describe("the boundary", () => {
   it("lets exactly one module import a map library", () => {
     // spec: map-001, FR-705 — the named failure case: a second importer.
     const importers = Object.entries(sources)
-      .filter(([path]) => !path.includes("/test/"))
+      // Test files are excluded: they mock or import the libraries on purpose. Files
+      // in this folder are listed as "./x.test.tsx", not by a path through /test/.
+      .filter(([path]) => !path.includes("/test/") && !path.startsWith("./"))
       .filter(([, source]) => importsOf(source).some((name) => MAP_LIBRARIES.includes(name)))
       .map(([path]) => path);
 

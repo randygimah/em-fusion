@@ -616,6 +616,19 @@ describe("the pop-up", () => {
     expect(await within(screen.getByRole("dialog")).findByText("31,000 ft")).toBeInTheDocument();
   });
 
+  it("does not reopen when an entity that left comes back", async () => {
+    // spec: map-005 — added after the mutation pass: closed means closed, not hidden.
+    const { rerenderWith } = renderMap();
+    await openFor("Aircraft AC-1, interrupted");
+    rerenderWith({ tracks: [tracks[1]] });
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+
+    rerenderWith({ tracks });
+
+    await markersReady();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
   it("closes when the entity leaves the payload", async () => {
     // spec: map-005 — the named failure case: a pop-up for a row no longer carried.
     const { rerenderWith } = renderMap();
@@ -655,7 +668,9 @@ describe("the labels", () => {
     // anomalous receiver's label survives.
     lib.project = () => ({ x: 100, y: 100 });
     lib.zoom = 9;
-    renderMap();
+    // Tightened after the mutation pass: the fault receiver arrives last, so
+    // arrival order cannot be what keeps its label.
+    renderMap({ sensors: [...sensors].reverse() });
     await markersReady();
     act(() => lib.instances[0].emit("moveend"));
 
@@ -673,6 +688,18 @@ describe("placing labels", () => {
     // spec: map-005 (2) — the named failure case: a nominal label hiding an anomalous one.
     expect(placeLabels([label("nominal", 3, 0), label("anomalous", 2, 0)])).toEqual(new Set(["anomalous"]));
     expect(placeLabels([label("anomalous", 2, 0), label("nominal", 3, 0)])).toEqual(new Set(["anomalous"]));
+  });
+
+  it("gives way to a more important entity's icon, and not to a less important one", () => {
+    // spec: map-005 (2) — added after implementation: in the browser, a cluster's
+    // aircraft labels ran across the icons around them. Ranks: receivers 0–1, aircraft 2–3.
+    const aircraftLabel = { id: "AC-1", rank: 2, x: 0, y: 0, text: "AC-1 · 30,000 ft" };
+    const receiverLabel = { id: "RF-01", rank: 0, x: 0, y: 0, text: "Schiphol" };
+    const iconUnderLabels = (rank: number) => ({ id: "other", rank, x: 0, y: 22 });
+
+    expect(placeLabels([aircraftLabel], [iconUnderLabels(1)])).toEqual(new Set());
+    expect(placeLabels([aircraftLabel], [iconUnderLabels(3)])).toEqual(new Set(["AC-1"]));
+    expect(placeLabels([receiverLabel], [iconUnderLabels(2)])).toEqual(new Set(["RF-01"]));
   });
 
   it("keeps both when they are apart", () => {

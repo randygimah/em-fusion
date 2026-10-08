@@ -12,6 +12,7 @@ Everything runs through Docker Compose, driven by the root `Makefile`:
 make          # list every target
 make up       # build and start backend + frontend in the background
 make dev      # backend + Vite dev server over the working tree, hot reload on :1234
+make basemap  # once: download the offline map (92 MB) and check it against its pinned checksums
 make smoke    # check both services, and that the frontend can reach the backend
 make down     # stop everything
 ```
@@ -35,6 +36,7 @@ both want port 1234, and `localhost` may reach the host one.
 | `make demo` | Build and run the stack in the foreground |
 | `make test` | Backend pytest and frontend Vitest, both in containers. Starts PostGIS and provisions the test database first, so the database-backed tests actually run |
 | `make migrate` | Apply the Alembic revisions to the running database |
+| `make basemap` | Download the offline basemap — a Protomaps cut of the corpus box to zoom 10, a Europe overview to zoom 6, and their fonts and icons (92 MB) — into `frontend/public/basemap/` and check every file against `manifest.json`. Nothing is installed unless all 775 checksums match. Without it the map says the basemap could not be read and names this target |
 | `make db-test-create` | Create the disposable `test_em_fusion` database with PostGIS. Idempotent; `make test` depends on it |
 | `make lint` / `make type-check` / `make format` | ruff + Biome / mypy / black + ruff |
 | `make check` | All of the above, in the order `backend/Makefile` uses |

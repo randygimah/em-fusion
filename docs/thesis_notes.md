@@ -2902,8 +2902,147 @@ The point worth making in the write-up is architectural rather than about the li
 a single-file change because the `MapView` adapter boundary was specified before any map code was
 written, and no other component imports a map library directly. This is a small, concrete instance
 of the same substitutability argument made at the storage layer — a boundary drawn in advance turned
-a potentially invasive dependency change into a contained one. *(Record the actual diff size here
-once the swap lands; it is a cheap second data point alongside the third-adapter RQ1 measurement.)*
+a potentially invasive dependency change into a contained one. The swap itself has no
+diff to measure, because it happened before any map code existed; the measurable quantity turned out
+to be the integration instead. When `map-001` landed on 8 October 2026, everything the map needed
+from the rest of the application was **a five-line change to the Operational Picture screen** (five
+lines added and five removed, an import and a two-line comment among them), plus a test-harness stand-in. Every map library import, the style, the worker wiring and
+the three non-map states sit in one 330-line module, and a test fails if a second module imports
+`maplibre-gl`, `pmtiles` or `@protomaps/basemaps`.
+
+### The default basemap is downloaded against a pinned checksum, and three faults only a browser could see
+
+The 3 October decision fixed *what* the default basemap is for; `map-001`'s amendment on 7 October
+fixed what it is. It is a Protomaps vector cut of the corpus box (3–11°E, 49–54°N) to zoom 10, from
+the daily build of 6 October 2026. Zoom was chosen by dry-run extracts of that build, measured
+rather than estimated: zoom 9 is 27 MB, 10 is 86 MB, 11 is 219 MB and 12 is 529 MB. Zoom 10 shows
+towns, main roads and coastlines across the box, which is what an analyst needs to place a receiver
+or an aircraft. Past it the map still zooms but stops gaining detail. The cost grows roughly 2.5×
+per level, so 11 would more than double the download for street-level detail no part of this
+system uses.
+
+**It is downloaded, not committed.** Committing 86 MB of binary to the repository was rejected for
+the reason the 3 October entry gave against a raster extract: it would be paid again every time the
+box moved, and git keeps every version. A `make basemap` target cuts the archive with the `go-pmtiles`
+tool and fetches the glyphs and sprite. It runs in containers like every other target, so nothing
+beyond Docker is needed on the host. Each of the 774 files is then checked against a SHA-256 in a
+committed manifest that also records the source, build, box, zoom, licence and attribution. Nothing
+is installed unless every checksum matches, so a mismatch leaves the previous set or none. Two
+properties were measured rather than assumed:
+- *Reproducibility:* a second extract of the same build was byte-identical to the first (archive
+  SHA-256 `a0e7eeec…46eb`, 85,630,679 bytes). That is what makes pinning a checksum on a cut, rather
+  than on a published file, workable at all.
+- *Failure:* with one checksum altered in a copy of the manifest, the target named the failing file,
+  installed nothing and left the existing archive untouched.
+
+The whole download takes about fifteen seconds.
+
+**The glyphs and sprite are self-hosted with the archive.** This is where the offline claim would
+have been lost without anyone noticing. A stock Protomaps style points both at a CDN, and the map
+renders perfectly that way. The check that keeps them local is on the style the adapter builds:
+every URL in it must be a path on this server. That is checkable without WebGL. In the browser, the
+production build was then confirmed to make no request to any other host. The only entries that
+aren't from this server are inline `data:` images from MapLibre's own stylesheet.
+
+**Three faults passed every unit test and were found only by opening the map in a browser.** They
+are recorded together because they share a shape. In each, the map started, showed its attribution
+and drew nothing, and nothing on the screen said why.
+
+| Fault | Where | Cause | Fix |
+|---|---|---|---|
+| Worker failed to load | dev server | MapLibre 6 works out its worker's address from where its own file sits; Vite's dependency bundling moves that file | Import the worker as a URL through Vite and set it explicitly |
+| Town and capital icons missing | both | MapLibre refuses a relative sprite address. The error was silent because once the component listens for map errors, MapLibre stops logging them | Resolve the sprite against this origin when the map is made; pass non-satellite errors on to the console |
+| Worker refused | nginx (`:8080`) | nginx's type map does not know `.mjs`, and a browser will not run a module worker served as `application/octet-stream` | A `.mjs` location in `nginx.conf` serving `text/javascript` |
+
+Each fix now has a test, written after the implementation, which is a deviation from the workflow
+and is recorded as one. The general point for the Implementation chapter: a boundary that the rest
+of the application can mock wholesale is exactly what lets these faults pass every test. The
+mutation pass confirms the adapter's 25 tests hold up everything *around* the drawing (25 of 25
+mutants caught, one after tightening a test), and says nothing about the drawing itself. Opening
+the screen in a browser, in both the dev server and the production build, is part of this item's
+proof and not a courtesy.
+
+**Two limitations worth naming.** First, the cut ends at the box. Panning past 3°E or 11°E shows
+the style's background, not a map, and a reader may take that edge for a fault. Second, the
+satellite option was exercised only against a deliberately unresolvable address (`.invalid`). That
+proves the option is offered only when configured, that switching keeps the overlays and the credit
+right, and that failing tiles are stated rather than replaced. It does not prove any particular
+imagery provider works, because none is named in the repository, by design.
+
+### The map turns light, gains Europe and becomes something to ask questions of
+
+The user reviewed the first build on 8 October 2026 and asked for four things. The grey cut-off at the
+box was unwelcome. The dots were hard to read; the design reference shows aircraft and antenna icons.
+They asked for a light basemap. And clicking an entity showed nothing (`qa.md` §154: nothing specced
+did). All four were taken as amendments to `map-001` and `map-003` and a new `map-005`, specified and
+tested before the code.
+
+**The dark basemap was reversed, and the argument for it moved to the markers.** The vector-over-raster
+entry above argued that a dark, muted basemap keeps the anomaly overlays salient. The user preferred
+Protomaps' light flavour, which was offered alongside a greyscale one recommended on exactly that
+argument. The argument does not disappear; it changes owner. The markers now carry salience by
+themselves: anomalous entities are one orange for both kinds, nominal ones a dark kind colour, and
+unexamined ones grey and hollow, all with a white outline. What the reversal shows is that "overlays
+first" was a property assigned to the basemap when it is really a property of the pair, and either
+half can carry it.
+
+**The grey edge was closed with a second, coarse archive rather than a wider fine one.** Dry-run
+extracts of the same build priced the options. Widening the zoom-10 cut by 2°, 3° or 5° each side
+costs 147, 214 or 324 MB, and still leaves an edge, only further out. A Europe overview
+(-11–30°E, 35–61°N) to zoom 6 costs 6.2 MB (zoom 7 would be 33 MB, zoom 8 118 MB). It is drawn under
+the box at every zoom, so the map never ends: outside the box, past zoom 6, it is coarse rather than
+grey. Making that work needed three details in the style, each pinned by a test:
+- the box's source starts at zoom 7, which MapLibre honours over the archive's own header because a
+  style's source options override the TileJSON they extend;
+- the box's background layer is dropped, since a second background would paint over the overview
+  wherever the box has no tiles, which is the grey edge again;
+- the overview's labels stop at zoom 7, so they never collide with the box's.
+
+The camera is bounded to the overview's box. Total download: 92 MB, 775 files, all checksummed; a
+second run of `make basemap` reproduced the overview byte for byte.
+
+**Markers became HTML, a trade made deliberately.** A canvas symbol layer would give label collision
+for free and scale to thousands of points. HTML markers give each entity a real button, with its
+state in its accessible name, which is what `map-003` requires. They also give keyboard focus, and
+tests that run without WebGL. The cost is performance: MapLibre repositions every marker on every
+frame of a pan. Under *All* one hour carries 427 entities. That cost could not be measured from the
+automated browser: its tab is backgrounded, Chrome runs no animation frames for it, and a frame
+logger recorded none. The spec requires the measurement before the item passes, so it was handed to
+the user's own foreground tab. The user took it on 8 October 2026, in
+Chrome on their Mac, on the dev server under *All* with 427 markers, panning for eight seconds:
+**912 frames, median 8 ms, p90 9 ms, p99 9 ms, one frame over 50 ms**. That is the display's 120 Hz
+cadence held throughout the pan, so the canvas fallback the spec allowed was not needed. The
+condition matters: one hour's worth of entities, on a recent laptop. A busier hour or a slower
+machine would need measuring again.
+
+**Labels were the part the browser corrected again.** The spec's rule hid the less important of
+two overlapping *labels*. In the browser the cluster around Schiphol showed what it missed: aircraft
+labels ran across other aircraft icons, and the anomalous receiver's icon sat under four aircraft.
+Two changes followed:
+- markers stack by importance, so an anomalous receiver draws on top;
+- a label now also gives way to the icon of any entity at least as important as its own. A less
+  important icon never hides it, so an anomalous receiver's station always shows.
+
+The second goes beyond the spec's wording. It was tested after the code, and that is recorded as a
+deviation.
+
+**Two payload gaps, kept visible rather than papered over.** The design reference labels aircraft
+with a speed and draws them pointing along a heading. The payload carries neither. So the pop-up and
+labels show only payload fields, and the aircraft icon has a fixed orientation that the code comments
+say is not a heading. A test fails if "kts", "speed" or "heading" appears. `map-003`'s "linked
+hypothesis" was deferred for the same reason: no field links a hypothesis to an entity.
+
+**The mutation pass found two real gaps and one equivalent mutant.** The first run of 48 left three
+survivors:
+- A pop-up for an entity that left the payload disappeared but would have reappeared if the entity
+  returned. A test was added.
+- The label collision test happened to list the anomalous receiver first, so arrival order rather
+  than rank kept its label. The order was reversed.
+- Placing a new marker latitude first survived because the marker pass runs on every render and
+  re-places markers, correcting the swap one render later. It was removed as equivalent rather than
+  tested around.
+
+The final pass caught 47 of 47.
 
 ### Containerisation: a Makefile over Compose, and what the first working `up` exposed
 

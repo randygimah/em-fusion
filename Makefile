@@ -5,7 +5,7 @@
 .DEFAULT_GOAL := help
 .PHONY: help build build-backend build-frontend-test up demo dev down restart \
         logs ps shell db-shell db-reset migrate db-test-create \
-        generate measure build-pipeline ensure-artifacts replay \
+        generate measure build-pipeline ensure-artifacts replay basemap \
         test test-backend test-frontend lint format type-check check smoke clean
 
 COMPOSE ?= docker compose
@@ -211,6 +211,40 @@ ensure-artifacts: ## Generate the demo dataset only if artefacts are missing
 		echo "Data artefacts are missing; generating the deterministic dataset..."; \
 		$(MAKE) generate DATA_DIR="$(DATA_DIR)"; \
 	fi
+
+# map-001. The default basemap: a Protomaps cut of the corpus box to zoom 10,
+# a Europe overview to zoom 6 drawn under it so the map never ends in grey,
+# and the glyphs and sprite the style would otherwise fetch from a CDN, all
+# served from the frontend's own origin. Only the manifest is committed. It is the single
+# source of what is fetched (the URLs, box and zoom below are read from it, one
+# field per line) and pins every file by SHA-256. Everything lands in .staging
+# first and is moved into place only once every checksum matches, so a mismatch
+# leaves the previous set, or none, never half of one.
+BASEMAP_DIR := frontend/public/basemap
+BASEMAP_MANIFEST := $(BASEMAP_DIR)/manifest.json
+PMTILES_IMAGE ?= protomaps/go-pmtiles:v1.31.2
+ALPINE_IMAGE ?= alpine:3.20
+basemap_field = $(shell sed -n 's/^ *"$(1)": *"\{0,1\}\([^",]*\)"\{0,1\},\{0,1\}$$/\1/p' $(BASEMAP_MANIFEST))
+basemap_box = $(shell sed -n 's/^ *"$(1)": *\[\(.*\)\],\{0,1\}$$/\1/p' $(BASEMAP_MANIFEST) | tr -d ' ')
+BASEMAP_MOUNT = --user "$$(id -u):$$(id -g)" -v "$(CURDIR)/$(BASEMAP_DIR):/basemap"
+
+basemap: ## Download the offline map and check every file against its pinned checksum
+	rm -rf $(BASEMAP_DIR)/.staging && mkdir -p $(BASEMAP_DIR)/.staging
+	sed -n 's/^ *{"path": "\(.*\)", "sha256": "\([0-9a-f]\{64\}\)"},\{0,1\}$$/\2  \1/p' \
+		$(BASEMAP_MANIFEST) > $(BASEMAP_DIR)/.staging/SHA256SUMS
+	@test -s $(BASEMAP_DIR)/.staging/SHA256SUMS || { echo "basemap: no checksums in $(BASEMAP_MANIFEST)"; exit 1; }
+	docker run --rm $(BASEMAP_MOUNT) $(PMTILES_IMAGE) extract "$(call basemap_field,source)" /basemap/.staging/em-fusion.pmtiles \
+		--bbox=$(call basemap_box,bbox) --maxzoom=$(call basemap_field,maxzoom)
+	docker run --rm $(BASEMAP_MOUNT) $(PMTILES_IMAGE) extract "$(call basemap_field,source)" /basemap/.staging/europe-overview.pmtiles \
+		--bbox=$(call basemap_box,overviewBbox) --maxzoom=$(call basemap_field,overviewMaxzoom)
+	docker run --rm $(BASEMAP_MOUNT) -w /basemap/.staging $(ALPINE_IMAGE) \
+		sh -c 'wget -qO- "$(call basemap_field,assets)" | tar -xzf - --strip-components=1'
+	docker run --rm $(BASEMAP_MOUNT) -w /basemap/.staging $(ALPINE_IMAGE) \
+		sh -c 'sha256sum -c SHA256SUMS > checked; s=$$?; grep -v ": OK$$" checked; exit $$s' \
+		|| { rm -rf $(BASEMAP_DIR)/.staging; echo "basemap: a file does not match manifest.json -- nothing installed"; exit 1; }
+	docker run --rm $(BASEMAP_MOUNT) -w /basemap $(ALPINE_IMAGE) sh -c 'cut -c67- .staging/SHA256SUMS \
+		| while IFS= read -r f; do mkdir -p "$$(dirname "$$f")" && mv ".staging/$$f" "$$f"; done && rm -rf .staging'
+	@echo "Basemap verified and installed in $(BASEMAP_DIR)."
 
 ## ---------------------------------------------------------------- quality
 

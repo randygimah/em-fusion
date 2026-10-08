@@ -1,0 +1,654 @@
+import { layers, namedFlavor } from "@protomaps/basemaps";
+import type { LayerSpecification, Map as MapLibreMap, Marker as MapLibreMarker, StyleSpecification } from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
+// The worker as a URL, not a module: MapLibre derives its worker's address from
+// where its own file sits, and Vite's dependency bundling moves that file, so
+// the derived address 404s and the map draws nothing. The worker is one
+// self-contained file, so Vite serves (and in a build, emits) it as it is.
+import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { cn } from "../../lib/utils";
+import type { AircraftTrack, RFSensor } from "../../types/operationalPicture";
+
+// The map, and the only module in the app that touches a map library.
+// spec: map-001, map-002, map-003, map-005.
+//
+// Everything else sees a component that takes receivers and aircraft and draws
+// them, which is what lets every other test replace it wholesale and keeps the
+// rest of the app ignorant of MapLibre. Its imports of `maplibre-gl` and
+// `pmtiles` that execute anything are dynamic: with no basemap configured the
+// library is never loaded, and a test proves it.
+//
+// Two basemaps, not of equal standing. The DEFAULT is Protomaps' light flavour
+// over two archives served from this origin by `make basemap`: a Europe
+// overview to zoom 6, drawn everywhere so the map never ends in grey, and the
+// corpus box to zoom 10 drawn over it. SATELLITE is an optional orientation
+// view, configured by an XYZ URL and its attribution, offered only when both
+// are set and chosen only by the analyst. Nothing falls back to it, and when
+// its tiles fail the screen says so rather than quietly drawing the default,
+// which would make the two indistinguishable.
+//
+// Receivers and aircraft are HTML markers, not layers: each is a button with
+// its state in its accessible name (map-003), opens one pop-up of payload
+// fields (map-005), and survives a basemap switch, which wipes layers.
+
+export interface SatelliteSource {
+  tiles: string;
+  attribution: string;
+}
+
+export interface BasemapConfig {
+  defaultArchive: string | null;
+  satellite: SatelliteSource | null;
+}
+
+type Env = Record<string, string | boolean | undefined>;
+
+const setting = (env: Env, key: string): string | null => {
+  const value = env[key];
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+};
+
+/** The basemap configuration from the frontend's environment. Empty means unset. */
+export function readBasemapConfig(env: Env): BasemapConfig {
+  const defaultArchive = setting(env, "VITE_BASEMAP_ARCHIVE");
+  // A path on this server and nothing else: the default basemap is the one that
+  // must work offline, so a URL to another host is refused rather than fetched.
+  if (defaultArchive !== null && !/^\/[^/]/.test(defaultArchive)) {
+    throw new Error(`VITE_BASEMAP_ARCHIVE must be a path on this server, such as /basemap/em-fusion.pmtiles, not ${defaultArchive}`);
+  }
+  const tiles = setting(env, "VITE_SATELLITE_TILES");
+  const attribution = setting(env, "VITE_SATELLITE_ATTRIBUTION");
+  return { defaultArchive, satellite: tiles && attribution ? { tiles, attribution } : null };
+}
+
+/** ODbL requires the OpenStreetMap credit; Protomaps built the tiles. Plain text: no URL in the style. */
+const DEFAULT_ATTRIBUTION = "© OpenStreetMap contributors · Protomaps";
+
+const FLAVOUR = namedFlavor("light");
+
+/** Where the detailed box starts drawing over the overview, and the overview's labels stop. */
+const DETAIL_FROM_ZOOM = 7;
+
+const folderOf = (archive: string) => archive.slice(0, archive.lastIndexOf("/"));
+
+/** The Europe overview `make basemap` puts beside the detailed archive. */
+const overviewArchive = (archive: string) => `${folderOf(archive)}/europe-overview.pmtiles`;
+
+/**
+ * The self-hosted style. Glyphs and sprite sit beside the archives; a stock
+ * Protomaps style points both at a CDN, and the map would still render.
+ *
+ * The overview draws at every zoom (overzoomed past its own 6), with its
+ * labels only below 7 so they never collide with the box's. The box draws over
+ * it from 7, without a background of its own: a second background would paint
+ * over the overview wherever the box has no tiles, which is the grey edge again.
+ */
+export function buildDefaultStyle(archive: string): StyleSpecification {
+  const folder = folderOf(archive);
+  const overview = layers("overview", FLAVOUR, { lang: "en" }).map(
+    (layer): LayerSpecification => ({
+      ...layer,
+      id: `overview-${layer.id}`,
+      ...(layer.type === "symbol" ? { maxzoom: Math.min(layer.maxzoom ?? 24, DETAIL_FROM_ZOOM) } : {}),
+    }),
+  );
+  const detail = layers("protomaps", FLAVOUR, { lang: "en" }).filter((layer) => layer.type !== "background");
+  return {
+    version: 8,
+    glyphs: `${folder}/fonts/{fontstack}/{range}.pbf`,
+    sprite: `${folder}/sprites/v4/light`,
+    sources: {
+      overview: { type: "vector", url: `pmtiles://${overviewArchive(archive)}`, attribution: DEFAULT_ATTRIBUTION },
+      protomaps: { type: "vector", url: `pmtiles://${archive}`, attribution: DEFAULT_ATTRIBUTION, minzoom: DETAIL_FROM_ZOOM },
+    },
+    layers: [...overview, ...detail],
+  };
+}
+
+/**
+ * The style as this page hands it to MapLibre. MapLibre refuses a relative
+ * sprite (it must be absolute), so the path is resolved against this page's
+ * origin here: still this server, and the style itself keeps carrying paths.
+ */
+function onThisOrigin(style: StyleSpecification): StyleSpecification {
+  return typeof style.sprite === "string" ? { ...style, sprite: new URL(style.sprite, window.location.origin).href } : style;
+}
+
+export function buildSatelliteStyle(satellite: SatelliteSource): StyleSpecification {
+  return {
+    version: 8,
+    sources: {
+      satellite: { type: "raster", tiles: [satellite.tiles], tileSize: 256, attribution: satellite.attribution },
+    },
+    layers: [{ id: "satellite", type: "raster", source: "satellite" }],
+  };
+}
+
+// ------------------------------------------------------------ the entities
+
+type Kind = "receiver" | "aircraft";
+
+/** The states `api-007`'s anomalous view admits: one definition of anomalous. */
+const ANOMALOUS = new Set(["fault", "deviating", "interrupted"]);
+
+/**
+ * How a marker is drawn for its state (map-003 (1)). DESIGN.md tokens, with a
+ * white outline so they read on the light basemap. Anomalous is one orange
+ * for both kinds; nominal is each kind's own colour; not examined is grey and
+ * hollow, and never the nominal look.
+ */
+export function markerLook(kind: Kind, state: string): { fill: string; stroke: string } {
+  if (ANOMALOUS.has(state)) return { fill: "#df7412", stroke: "#ffffff" };
+  if (state === "nominal") return { fill: kind === "aircraft" ? "#005ac2" : "#00424e", stroke: "#ffffff" };
+  return { fill: "none", stroke: "#424754" };
+}
+
+/** A state as the map names it: `unknown` is what it means, not the word. */
+const stateWord = (state: string) => (state === "unknown" ? "not examined" : state);
+
+/** The exception panel's wording for an altitude. */
+const altitude = (feet: number | null): string => (feet === null ? "not reported" : `${feet.toLocaleString("en-GB")} ft`);
+
+const position = (lat: number, lon: number) =>
+  `${Math.abs(lat).toFixed(4)}° ${lat >= 0 ? "N" : "S"}, ${Math.abs(lon).toFixed(4)}° ${lon >= 0 ? "E" : "W"}`;
+
+interface Entity {
+  key: string;
+  kind: Kind;
+  name: string;
+  state: string;
+  lat: number;
+  lon: number;
+  /** The pop-up's rows: payload fields only (map-005). */
+  fields: [string, string][];
+  /** Lower is more important when two labels collide (map-005 (2)). */
+  rank: number;
+  sensor?: RFSensor;
+  track?: AircraftTrack;
+}
+
+function entitiesOf(sensors: RFSensor[], tracks: AircraftTrack[]): Entity[] {
+  return [
+    ...sensors.map(
+      (sensor): Entity => ({
+        key: `receiver:${sensor.id}`,
+        kind: "receiver",
+        name: `Receiver ${sensor.id} (${sensor.stationName}), ${stateWord(sensor.health)}`,
+        state: sensor.health,
+        lat: sensor.lat,
+        lon: sensor.lon,
+        fields: [
+          ["Receiver", sensor.id],
+          ["Station", sensor.stationName],
+          ["Band", sensor.signalId],
+          ["State", stateWord(sensor.health)],
+          ["Position", position(sensor.lat, sensor.lon)],
+        ],
+        rank: ANOMALOUS.has(sensor.health) ? 0 : 1,
+        sensor,
+      }),
+    ),
+    ...tracks.map(
+      (track): Entity => ({
+        key: `aircraft:${track.id}`,
+        kind: "aircraft",
+        name: `Aircraft ${track.name}, ${stateWord(track.state)}`,
+        state: track.state,
+        lat: track.lat,
+        lon: track.lon,
+        fields: [
+          ["Aircraft", track.name],
+          ["Altitude", altitude(track.altitudeFt)],
+          ["State", stateWord(track.state)],
+          ["Position", position(track.lat, track.lon)],
+        ],
+        rank: ANOMALOUS.has(track.state) ? 2 : 3,
+        track,
+      }),
+    ),
+  ];
+}
+
+/** Every aircraft is labelled from this zoom; below it, only interrupted ones. */
+const ALL_AIRCRAFT_LABELS_FROM_ZOOM = 9;
+
+function labelOf(entity: Entity, zoom: number): string | null {
+  if (entity.sensor) return entity.sensor.stationName;
+  const track = entity.track;
+  if (!track || (!ANOMALOUS.has(track.state) && zoom < ALL_AIRCRAFT_LABELS_FROM_ZOOM)) return null;
+  return track.altitudeFt === null ? track.name : `${track.name} · ${altitude(track.altitudeFt)}`;
+}
+
+export interface LabelCandidate {
+  id: string;
+  rank: number;
+  x: number;
+  y: number;
+  text: string;
+}
+
+/**
+ * Which labels to show, so none overlaps another (map-005 (2)). Greedy by rank:
+ * a label is kept unless it would overlap one already kept, so where two collide
+ * the more important one survives whatever order they arrive in. The box is an
+ * estimate from the text's length (11 px monospace), centred under the icon.
+ *
+ * A label also gives way to the icon of any entity at least as important as its
+ * own (`icons`), so a cluster's labels never cover the icons that matter; a less
+ * important icon does not hide it, so an anomalous receiver's name always shows.
+ */
+export function placeLabels(candidates: LabelCandidate[], icons: Omit<LabelCandidate, "text">[] = []): Set<string> {
+  type Box = { left: number; top: number; right: number; bottom: number };
+  const overlaps = (a: Box, b: Box) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+  const iconBox = (icon: Omit<LabelCandidate, "text">): Box => ({ left: icon.x - 12, right: icon.x + 12, top: icon.y - 12, bottom: icon.y + 12 });
+  const kept: Box[] = [];
+  const shown = new Set<string>();
+  for (const candidate of [...candidates].sort((a, b) => a.rank - b.rank)) {
+    const width = candidate.text.length * 6.6 + 10;
+    const box = { left: candidate.x - width / 2, right: candidate.x + width / 2, top: candidate.y + 14, bottom: candidate.y + 32 };
+    if (kept.some((other) => overlaps(box, other))) continue;
+    if (icons.some((icon) => icon.id !== candidate.id && icon.rank <= candidate.rank && overlaps(box, iconBox(icon)))) continue;
+    kept.push(box);
+    shown.add(candidate.id);
+  }
+  return shown;
+}
+
+function Icon({ kind, state }: { kind: Kind; state: string }) {
+  const look = markerLook(kind, state);
+  const ink = look.fill === "none" ? look.stroke : look.fill;
+  return (
+    <svg
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill={look.fill}
+      stroke={look.stroke}
+      strokeWidth="1.5"
+      aria-hidden="true"
+    >
+      {kind === "aircraft" ? (
+        // Fixed orientation: the payload carries no heading, and this does not imply one.
+        <path
+          d="M12 1.5 13.6 9 22.5 13.2v2.1l-8.9-2.6-.5 6.2 3 2.1v1.5l-4.1-1.1-4.1 1.1V21l3-2.1-.5-6.2-8.9 2.6v-2.1L10.4 9z"
+          strokeLinejoin="round"
+        />
+      ) : (
+        <>
+          <path
+            d="M12 9.5 17 22.5h-2.4L12 15.6 9.4 22.5H7z"
+            strokeLinejoin="round"
+          />
+          <circle
+            cx="12"
+            cy="7.5"
+            r="2.4"
+          />
+          <path
+            d="M7.4 3.2a6.5 6.5 0 0 0 0 8.6M16.6 3.2a6.5 6.5 0 0 1 0 8.6"
+            fill="none"
+            stroke={ink}
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          />
+        </>
+      )}
+    </svg>
+  );
+}
+
+// ----------------------------------------------------------------- the view
+
+/** Reads the archive's header: a missing file is caught before a map is made. */
+async function readArchiveHeader(archive: string): Promise<void> {
+  const { PMTiles } = await import("pmtiles");
+  await new PMTiles(archive).getHeader();
+}
+
+let pmtilesRegistered = false;
+
+/** The corpus box (implementation.md): 3–11°E, 49–54°N. Where the map opens. */
+const CORPUS_BOUNDS: [[number, number], [number, number]] = [
+  [3, 49],
+  [11, 54],
+];
+
+/** The Europe overview's box (map-001 (11)): the camera stays inside it. */
+const OVERVIEW_BOUNDS: [[number, number], [number, number]] = [
+  [-11, 35],
+  [30, 61],
+];
+
+type Status = "unconfigured" | "loading" | "unreadable" | "failed" | "map";
+type Basemap = "default" | "satellite";
+type MapLibre = typeof import("maplibre-gl");
+
+function configFromEnv(): BasemapConfig | Error {
+  try {
+    return readBasemapConfig(import.meta.env);
+  } catch (error) {
+    return error instanceof Error ? error : new Error(String(error));
+  }
+}
+
+const count = (n: number, noun: string) => `${n} ${noun}${n === 1 ? "" : "s"}`;
+
+const sameSet = (a: Set<string>, b: Set<string>) => a.size === b.size && [...a].every((item) => b.has(item));
+
+export interface MapViewProps {
+  sensors: RFSensor[];
+  tracks: AircraftTrack[];
+  /** Defaults to the frontend's environment. */
+  config?: BasemapConfig | Error;
+  /** Defaults to reading the PMTiles header. Rejects when the archive cannot be read. */
+  readArchive?: (archive: string) => Promise<void>;
+}
+
+export function MapView({ sensors, tracks, config = configFromEnv(), readArchive = readArchiveHeader }: MapViewProps) {
+  const settings = config instanceof Error ? null : config;
+  const archive = settings?.defaultArchive ?? null;
+  const satellite = settings?.satellite ?? null;
+
+  const container = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<MapLibreMap | null>(null);
+  const libRef = useRef<MapLibre | null>(null);
+  const basemapRef = useRef<Basemap>("default");
+  const markersRef = useRef(new Map<string, { marker: MapLibreMarker; element: HTMLElement }>());
+  const entities = entitiesOf(sensors, tracks);
+  const entitiesRef = useRef(entities);
+  entitiesRef.current = entities;
+
+  const [status, setStatus] = useState<Status>(archive ? "loading" : "unconfigured");
+  const [basemap, setBasemap] = useState<Basemap>("default");
+  const [satelliteFailing, setSatelliteFailing] = useState(false);
+  const [hosts, setHosts] = useState<Map<string, HTMLElement>>(new Map());
+  const [labelled, setLabelled] = useState<Map<string, string>>(new Map());
+  const [selected, setSelected] = useState<string | null>(null);
+  const [, setMoved] = useState(0);
+  const selectedRef = useRef(selected);
+  selectedRef.current = selected;
+
+  /** Which labels to show at the camera's current zoom and position. */
+  const relabel = () => {
+    const map = mapRef.current;
+    if (!map) return;
+    const zoom = map.getZoom();
+    const candidates: LabelCandidate[] = [];
+    const icons: Omit<LabelCandidate, "text">[] = [];
+    const texts = new Map<string, string>();
+    for (const entity of entitiesRef.current) {
+      const { x, y } = map.project([entity.lon, entity.lat]);
+      icons.push({ id: entity.key, rank: entity.rank, x, y });
+      const text = labelOf(entity, zoom);
+      if (text === null) continue;
+      candidates.push({ id: entity.key, rank: entity.rank, x, y, text });
+      texts.set(entity.key, text);
+    }
+    const shown = placeLabels(candidates, icons);
+    const next = new Map([...texts].filter(([key]) => shown.has(key)));
+    setLabelled((current) =>
+      sameSet(new Set(current.keys()), new Set(next.keys())) && [...next].every(([key, text]) => current.get(key) === text) ? current : next,
+    );
+  };
+  const relabelRef = useRef(relabel);
+  relabelRef.current = relabel;
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: readArchive is a seam for tests; the map is built once per archive.
+  useEffect(() => {
+    if (!archive) return;
+    let cancelled = false;
+    const markers = markersRef.current;
+
+    (async () => {
+      try {
+        await Promise.all([readArchive(archive), readArchive(overviewArchive(archive))]);
+      } catch {
+        if (!cancelled) setStatus("unreadable");
+        return;
+      }
+      const maplibre = await import("maplibre-gl");
+      if (cancelled || !container.current) return;
+      maplibre.setWorkerUrl(maplibreWorkerUrl);
+      if (!pmtilesRegistered) {
+        const { Protocol } = await import("pmtiles");
+        maplibre.addProtocol("pmtiles", new Protocol().tile);
+        pmtilesRegistered = true;
+      }
+      let map: MapLibreMap;
+      try {
+        map = new maplibre.Map({
+          container: container.current,
+          style: onThisOrigin(buildDefaultStyle(archive)),
+          bounds: CORPUS_BOUNDS,
+          maxBounds: OVERVIEW_BOUNDS,
+          attributionControl: { compact: false },
+        });
+      } catch {
+        setStatus("failed");
+        return;
+      }
+      mapRef.current = map;
+      libRef.current = maplibre;
+      map.addControl(new maplibre.NavigationControl({ showCompass: false }));
+      map.on("moveend", () => relabelRef.current());
+      // The pop-up is placed in screen space, so it follows the camera.
+      map.on("move", () => {
+        if (selectedRef.current) setMoved((n) => n + 1);
+      });
+      map.on("click", (event) => {
+        // A click on a marker reaches the map too; it is the marker's to handle.
+        const target = (event as { originalEvent?: { target?: unknown } }).originalEvent?.target;
+        if (target instanceof Element && target.closest("[data-map-marker]")) return;
+        setSelected(null);
+      });
+      map.on("error", (event) => {
+        // A failed tile carries the id of the source it was for.
+        if ((event as { sourceId?: string }).sourceId === "satellite") {
+          if (basemapRef.current === "satellite") setSatelliteFailing(true);
+          return;
+        }
+        // Listening for errors stops MapLibre logging them, so anything else is
+        // passed on rather than swallowed: a broken sprite was silent this way.
+        console.error(event.error);
+      });
+      setStatus("map");
+    })();
+
+    return () => {
+      cancelled = true;
+      for (const { marker } of markers.values()) marker.remove();
+      markers.clear();
+      mapRef.current?.remove();
+      mapRef.current = null;
+    };
+  }, [archive]);
+
+  // The markers follow the payload: added, moved and removed as rows arrive
+  // and leave (map-001 (12)). Each is an empty element MapLibre positions;
+  // React renders the button into it through a portal.
+  useEffect(() => {
+    const map = mapRef.current;
+    const maplibre = libRef.current;
+    if (status !== "map" || !map || !maplibre) return;
+    const current = markersRef.current;
+    const keys = new Set(entities.map((entity) => entity.key));
+    let changed = false;
+    for (const [key, { marker }] of current) {
+      if (keys.has(key)) continue;
+      marker.remove();
+      current.delete(key);
+      changed = true;
+    }
+    for (const entity of entities) {
+      const existing = current.get(entity.key);
+      if (existing) {
+        existing.marker.setLngLat([entity.lon, entity.lat]);
+        continue;
+      }
+      const element = document.createElement("div");
+      element.dataset.mapMarker = entity.kind;
+      // The more important entity draws on top: an anomalous receiver is never
+      // buried under a cluster of aircraft.
+      element.style.zIndex = String(4 - entity.rank);
+      const marker = new maplibre.Marker({ element, anchor: "center" }).setLngLat([entity.lon, entity.lat]).addTo(map);
+      current.set(entity.key, { marker, element });
+      changed = true;
+    }
+    if (changed) setHosts(new Map([...current].map(([key, { element }]) => [key, element])));
+    relabelRef.current();
+  });
+
+  // A pop-up for an entity the payload no longer carries closes (map-005).
+  const popup = entities.find((entity) => entity.key === selected) ?? null;
+  useEffect(() => {
+    if (selected && !popup) setSelected(null);
+  }, [selected, popup]);
+
+  useEffect(() => {
+    if (!selected) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSelected(null);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [selected]);
+
+  const choose = (next: Basemap) => {
+    const map = mapRef.current;
+    if (!map || !archive || next === basemap) return;
+    if (next === "satellite" && !satellite) return;
+    basemapRef.current = next;
+    setBasemap(next);
+    setSatelliteFailing(false);
+    map.setStyle(next === "satellite" && satellite ? buildSatelliteStyle(satellite) : onThisOrigin(buildDefaultStyle(archive)));
+  };
+
+  const counts = `${count(sensors.length, "receiver")} · ${tracks.length} aircraft`;
+  const message =
+    config instanceof Error
+      ? `No basemap is configured: ${config.message}.`
+      : status === "unconfigured"
+        ? "No basemap is configured, so there is no map to draw."
+        : status === "failed"
+          ? "This browser could not start the map. It may not support WebGL."
+          : null;
+  const anchor = popup && mapRef.current ? mapRef.current.project([popup.lon, popup.lat]) : null;
+
+  return (
+    <section
+      aria-label="Map"
+      className="relative h-full min-h-[320px] w-full overflow-hidden border border-[#424754] bg-black"
+    >
+      {/* MapLibre sets position: relative on its container, so the container fills a positioned wrapper. */}
+      <div className="absolute inset-0">
+        <div
+          ref={container}
+          className="h-full w-full"
+        />
+      </div>
+
+      {status === "map" &&
+        entities.map((entity) => {
+          const host = hosts.get(entity.key);
+          if (!host) return null;
+          const label = labelled.get(entity.key);
+          return createPortal(
+            <button
+              type="button"
+              aria-label={entity.name}
+              onClick={(event) => {
+                event.stopPropagation();
+                setSelected(entity.key);
+              }}
+              className="relative block h-6 w-6 cursor-pointer"
+            >
+              <Icon
+                kind={entity.kind}
+                state={entity.state}
+              />
+              {label && (
+                <span className="pointer-events-none absolute left-1/2 top-[26px] -translate-x-1/2 whitespace-nowrap border border-[#424754] bg-[#10131a]/90 px-1 font-mono text-[11px] leading-4 text-[#e1e2ec]">
+                  {label}
+                </span>
+              )}
+            </button>,
+            host,
+            entity.key,
+          );
+        })}
+
+      {popup && anchor && (
+        <div
+          role="dialog"
+          aria-label={popup.kind === "aircraft" ? `Aircraft ${popup.track?.name}` : `Receiver ${popup.sensor?.id}`}
+          className="absolute z-10 w-60 -translate-x-1/2 -translate-y-full border border-[#424754] bg-[#10131a] p-3 text-xs text-[#e1e2ec] shadow-lg"
+          style={{ left: anchor.x, top: anchor.y - 18 }}
+        >
+          <div className="mb-2 flex items-center justify-between">
+            <p className="font-mono uppercase tracking-[0.05em] text-[#8c909f]">{popup.kind}</p>
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={() => setSelected(null)}
+              className="px-1 text-[#8c909f] hover:text-[#e1e2ec]"
+            >
+              ×
+            </button>
+          </div>
+          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+            {popup.fields.map(([term, value]) => (
+              <div
+                key={term}
+                className="contents"
+              >
+                <dt className="text-[#8c909f]">{term}</dt>
+                <dd className={cn("font-mono", term === "State" && ANOMALOUS.has(popup.state) && "text-[#ffb786]")}>{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      )}
+
+      {(message || status === "unreadable") && (
+        <div className="absolute inset-0 flex flex-col justify-center gap-2 p-6">
+          <p className="font-mono text-xs uppercase tracking-[0.05em] text-[#8c909f]">Map</p>
+          {status === "unreadable" ? (
+            <p className="text-sm text-[#e1e2ec]">
+              The basemap at {archive} could not be read. Download it with <code className="font-mono">make basemap</code>.
+            </p>
+          ) : (
+            <p className="text-sm text-[#e1e2ec]">{message}</p>
+          )}
+          <p className="font-mono text-xs text-[#8c909f]">{counts}</p>
+        </div>
+      )}
+
+      {status === "map" && satellite && (
+        <div className="absolute left-2 top-2 flex border border-[#424754] bg-[#10131a] font-mono text-xs uppercase">
+          {(["default", "satellite"] as const).map((option) => (
+            <button
+              key={option}
+              type="button"
+              aria-pressed={basemap === option}
+              onClick={() => choose(option)}
+              className={cn("px-3 py-1.5 text-[#8c909f]", basemap === option && "bg-[#424754] text-[#e1e2ec]")}
+            >
+              {option === "default" ? "Map" : "Satellite"}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {satelliteFailing && basemap === "satellite" && (
+        <p
+          role="status"
+          className="absolute inset-x-2 bottom-8 border border-[#ffb786] bg-[#10131a] p-2 text-xs text-[#ffb786]"
+        >
+          Satellite tiles are failing to load. Nothing is drawn in their place; switch back to Map for the offline basemap.
+        </p>
+      )}
+    </section>
+  );
+}

@@ -9241,6 +9241,36 @@ service is a static build. Two ways to get a reloading frontend:
 forwarding `/api` to `localhost:8000` there reaches nothing — and because the operational picture
 falls back to its mock on first paint, the screen would look healthy while showing invented data.
 
+
+## 154. Currently clicking on the receivers and aircraft shows nothing — is there anything specced to show more info, e.g. a pop-up dialog when clicked, and labels like the design?
+
+**No. Nothing specced draws a pop-up or a label on the map.** The nearest item is the one that
+highlights anomalous entities, and it asks for a selection *event*, not a display:
+
+| What exists in the spec | What it gives the analyst |
+|---|---|
+| The map adapter: a layer per entity kind | Positions only. A dot cannot be clicked for anything |
+| Anomalous items highlighted on the map | Anomalous entities look different from nominal ones, carry their state in an accessible name, and selecting one *emits an event* naming the entity and any linked hypothesis. Nothing consumes that event yet |
+| The exception panel under the map | The same rows as a table: receiver, station, band, state; aircraft, altitude, state |
+| The drill-down tables | Unfiltered lists, reached from the panel's *View all*. Not built |
+
+So the design reference's aircraft labels (callsign, altitude, speed), its antenna and aircraft
+icons and its dashed interference outline were drawn ahead of any item that would build them.
+
+**Two limits on what a label or pop-up could truthfully show.** Both come from the payload rather
+than the map:
+
+- **No speed and no heading.** The design's `410kts` has no field behind it. The payload carries an
+  aircraft's name, altitude, position and state, and a receiver's id, station, band, health and
+  position. A label showing speed, or an icon rotated to a heading, would be drawing a value the
+  server never sent. The exception panel's rule (payload columns only) applies here too.
+- **No zone shape.** The dashed outline needs a polygon, and the payload has none. Interference
+  zones were deferred to their own item for exactly this reason.
+
+**The trap.** An on-map label is not free once the view is *All*: one hour carries 410–450 aircraft.
+Labels for all of them overlap into noise, so a label rule has to say which entities get one, or
+leave MapLibre to drop colliding labels and say so.
+
 ---
 
 | **Composing copy** | Turning a finding type the backend sends verbatim into a sentence an analyst reads. Done on the screen by design, so prose never arrives from a detector — and in one module, because two panels carry the same type. See §148. |
@@ -9252,3 +9282,4 @@ falls back to its mock on first paint, the screen would look healthy while showi
 | **An unpinned experimental variable** | A setting that is recorded but not fixed, so two runs of the same code disagree and the record is the only thing that says why. The baseline's quiet-run population is one. See §151. |
 | **In series, not side by side** | The AI explains what the deterministic rules already detected; it does not detect. So detection metrics score the rules against ground truth, and the AI is scored against the template generator, never against the rules. See §152. |
 | **A static build versus a dev server** | `:8080` serves a production build frozen when the image was built; a dev server serves the working tree and reloads on save. A screen that does not change after an edit is usually the first, not a bug. See §153. |
+| **A selection event versus a display** | Selecting a map entity *emitting an event* (what the highlighting item asks for) is not the same as anything appearing on screen. The event is for another component to act on; a pop-up or a highlighted row is that action, and needs its own item. See §154. |

@@ -34,3 +34,13 @@ graphify-out/
 
 # Mutation harness crash guard (measurements/mutation/*.in-progress.json)
 *.in-progress.json
+
+# The default basemap (map-001): downloaded by `make basemap`, checked against
+# the committed manifest, never committed itself (86 MB plus fonts and sprites).
+frontend/public/basemap/*
+!frontend/public/basemap/manifest.json
+
+# The frontend's committed settings. Vite publishes every VITE_ variable into the
+# bundle, so these hold only public, non-secret values (a test enforces it).
+!frontend/.env.development
+!frontend/.env.production

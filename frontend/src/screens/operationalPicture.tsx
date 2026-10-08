@@ -1,6 +1,7 @@
 import { EmEvidencePanel } from "../components/em/EmEvidencePanel";
 import { EmExceptionPanel } from "../components/em/EmExceptionPanel";
 import { EmLevel } from "../components/em/EmLevel";
+import { MapView } from "../components/map/MapView";
 import { findingLabel } from "../lib/detectionVocabulary";
 import { showingSentence, VIEW_OPTIONS } from "../lib/viewVocabulary";
 import type { EvidenceView } from "../types/evidence";
@@ -213,11 +214,10 @@ const OperationalPictureScreen = ({
               under the map and not in the rail. The receivers that used to fill
               this box are the panel's RF tab now — one list, rendered once. */}
           <div className="flex min-h-0 flex-col gap-4">
-            <div className="min-h-[320px] flex-1 border border-[#424754] bg-black p-4">
-              <p className="font-mono text-xs uppercase tracking-[0.05em] text-[#8c909f]">Operational Picture</p>
-              <p className="mt-4 text-sm text-[#8c909f]">
-                The map is not built yet. Receivers and aircraft are listed in the panel below.
-              </p>
+            {/* The map and the panel read the same filtered rows (map-001, op-007),
+                so the two cannot disagree about what the view shows. */}
+            <div className="min-h-[320px] flex-1">
+              <MapView sensors={operationalPicture.rfSensors} tracks={operationalPicture.aircraftTracks} />
             </div>
             <EmExceptionPanel picture={operationalPicture} />
           </div>

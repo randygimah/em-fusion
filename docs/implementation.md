@@ -128,18 +128,18 @@ Added after the original checklist was written. The exception-first default stan
 
 ## Phase 4: MapView Boundary
 
-- [ ] Install MapLibre GL JS only when the placeholder no longer teaches enough. (MapLibre, not Mapbox — no account or token needed; see `em_fusion_v2.md` section 10.)
-- [ ] **Self-host a vector basemap; do not point at a tile provider.** Vector rather than raster, because the style is written client-side from the `DESIGN.md` tokens — a raster basemap ships whatever colour scheme its renderer baked in, and bright standard-OSM tiles under a dark operational picture compete with the anomaly overlays the screen exists to make salient. Vector also gives continuous zoom and upright, collision-managed labels.
-- [ ] Cut a **PMTiles** archive covering the same bounding box as the OpenSky extract — **49–54°N, 3–11°E**, fixed 2026-08-19 (Protomaps build of OpenStreetMap). A single file served over HTTP range requests by the frontend's existing nginx — **no tile-server process and no new Compose service**. A one-box extract is tens of MB rather than the ~100 GB planet file.
-- [ ] **Self-host the glyphs and sprites too.** A vector style references fonts and icons by URL, and the default styles point them at a CDN. Miss this and the hosted dependency you just removed comes back silently, with the map still rendering perfectly.
-- [ ] Record the **ODbL attribution requirement** ("© OpenStreetMap contributors") at download time, alongside the OpenSky licence note, and render it on the map. Same rule as the corpus: licence terms cannot be reconstructed later.
-- [ ] Decide whether the `.pmtiles` archive is **committed or downloaded once against a checksum**. The OpenSky Parquet is committed for reproducibility; the basemap is less critical because `MapView` degrades to a placeholder without it. Tens of MB in git is not free — pick deliberately and write down which.
-- [ ] Add `.env.example` entries for the tile archive path/URL and confirm the placeholder path still works when they are unset.
-- [ ] Create a small `MapView` adapter component — the only file that imports the map library.
-- [ ] Show a graceful placeholder if no tile source is configured.
-- [ ] Mock `MapView` in React tests.
-- [ ] Manually verify the real map in the browser.
-- [ ] Record the diff size for the boundary — it is a cheap second data point for the RQ1 substitutability argument (`thesis_notes.md`).
+- [x] Install MapLibre GL JS only when the placeholder no longer teaches enough. (MapLibre, not Mapbox — no account or token needed; see `em_fusion_v2.md` section 10.)
+- [x] **Self-host a vector basemap; do not point at a tile provider.** Vector rather than raster, because the style is written client-side from the `DESIGN.md` tokens — a raster basemap ships whatever colour scheme its renderer baked in, and bright standard-OSM tiles under a dark operational picture compete with the anomaly overlays the screen exists to make salient. Vector also gives continuous zoom and upright, collision-managed labels.
+- [x] Cut a **PMTiles** archive covering the same bounding box as the OpenSky extract — **49–54°N, 3–11°E**, fixed 2026-08-19 (Protomaps build of OpenStreetMap). A single file served over HTTP range requests by the frontend's existing nginx — **no tile-server process and no new Compose service**. A one-box extract is tens of MB rather than the ~100 GB planet file.
+- [x] **Self-host the glyphs and sprites too.** A vector style references fonts and icons by URL, and the default styles point them at a CDN. Miss this and the hosted dependency you just removed comes back silently, with the map still rendering perfectly.
+- [x] Record the **ODbL attribution requirement** ("© OpenStreetMap contributors") at download time, alongside the OpenSky licence note, and render it on the map. Same rule as the corpus: licence terms cannot be reconstructed later.
+- [x] Decide whether the `.pmtiles` archive is **committed or downloaded once against a checksum**. The OpenSky Parquet is committed for reproducibility; the basemap is less critical because `MapView` degrades to a placeholder without it. Tens of MB in git is not free — pick deliberately and write down which. **Done 2026-10-07: downloaded by `make basemap` against SHA-256 values in the committed `frontend/public/basemap/manifest.json`; zoom 10, 86 MB (`thesis_notes.md`).**
+- [x] Add `.env.example` entries for the tile archive path/URL and confirm the placeholder path still works when they are unset. *(Done as committed `frontend/.env.development` and `.env.production` instead: the archive path is public, not a secret, and satellite settings go in the gitignored `.local` files.)*
+- [x] Create a small `MapView` adapter component — the only file that imports the map library.
+- [x] Show a graceful placeholder if no tile source is configured.
+- [x] Mock `MapView` in React tests.
+- [x] Manually verify the real map in the browser.
+- [x] Record the diff size for the boundary — it is a cheap second data point for the RQ1 substitutability argument (`thesis_notes.md`).
 
 ### Playback (specs `op-008`, `map-004`, `api-008`)
 
