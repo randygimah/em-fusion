@@ -8,162 +8,177 @@ Abstraction Layer, detects deviations deterministically, and turns evidence bund
 schema-validated, grounding-checked AI hypotheses for analyst review. Decision support, not
 autonomous decision-making.
 
-This session (7–8 October 2026) built **the map**. The user chose zoom 10, a checksum-pinned download
-and zones deferred. `map-001` and `map-002` were built and reviewed in the browser. The review asked
-for four changes, which became an amendment to `map-001` and `map-003` and a new `map-005`, all
-built and reviewed:
-- a light basemap;
-- no grey edge;
-- real icons, coloured by state;
-- a pop-up and labels.
+This session (8 October 2026) put **interference zones on the map** and fixed the pop-up after review:
+- `api-017`: the picture serves each stored interference claim as a zone, with the radius recorded with
+  it;
+- `map-006`: the map draws the assessed disc, a centre marker, a label and a pop-up;
+- `map-005` amended: the pop-up opens inside the map and can be moved.
 
-Every item followed spec → failing tests → code → browser review → `passes: true`, committed on
-`main`.
+The user chose the assessed disc over an evidence footprint or receivers only, and a separate API item
+before the map item. Review then asked for two changes: a zone colour distinct from the markers, and a
+movable pop-up. Every item followed spec → failing tests → code → browser review → `passes: true`,
+committed on `main`.
 
 ## Current state
 
-Backlog **95 of 119** (91 of 118 at the start; `map-005` was added). Tree clean once this handoff and
-the progress note are committed; `main` in sync with `origin/main`.
+Backlog **97 of 121** (95 of 119 at the start; `api-017` and `map-006` were added and built). Tree clean
+once this handoff is committed; `main` in sync with `origin/main`.
 
-- Backend: **2117 passed, 99.93% coverage** (5571 statements, 4 missed; 2107 at the start), ruff, Black and mypy clean on what changed.
-- Frontend: **353 passed** (298 at the start), locally and in the `frontend-test` container; Biome lint
-  and `tsc -b` clean.
-- Mutation: `mutate_map001_view.log` **47 of 47** (covers `map-001`, `map-002`, `map-003`, `map-005`).
+- Backend: **2134 passed, 99.93% coverage** (5611 statements, 4 missed; 2117 at the start); ruff, Black
+  and mypy clean on what changed.
+- Frontend: **378 passed** (353 at the start); Biome lint and `tsc -b` clean.
+- Mutation:
 
-### What the map does now
+  | Log | Result | Covers |
+  |---|---|---|
+  | `mutate_map001_view.log` | **47 of 47** (re-run with zones in place) | `map-001`, `map-002`, `map-003`, `map-005` (1)–(2) |
+  | `mutate_map006_zones.log` | **26 of 26** | `map-006` |
+  | `mutate_map005_popup.log` | **10 of 10** | `map-005` (3) |
 
-- **Basemap** (`map-001`):
-  - Protomaps **light** flavour from build 20261006, served from this origin.
-  - Two archives: the corpus box (3–11°E, 49–54°N) to zoom 10, and a Europe overview
-    (-11–30°E, 35–61°N) to zoom 6 drawn under it at every zoom. The box's source starts at zoom 7, it
-    has no background layer of its own, and the overview's labels stop at zoom 7.
-  - The camera's `maxBounds` is the overview box.
-  - `make basemap` fetches 775 files (92 MB) in Docker, verifies every SHA-256 against
-    `frontend/public/basemap/manifest.json`, and installs only if all match.
-  - Satellite is opt-in through two env variables; nothing in the repo names a provider.
-- **Three non-map states** (`map-002`): not configured; archive unreadable (names `make basemap`);
-  library failed to start.
-- **Markers** (`map-001` (12), `map-003`):
-  - HTML buttons with an accessible name like "Aircraft AC-1, interrupted".
-  - Colours: orange for anomalous (fault / deviating / interrupted), dark blue for nominal aircraft,
-    dark teal for nominal receivers, grey hollow for unexamined (named "not examined").
-  - Stacked by importance, so an anomalous receiver draws on top.
-- **Pop-up and labels** (`map-005`):
-  - One pop-up, payload fields only. Escape, ×, or a map click closes it; it closes if the entity
-    leaves the payload.
-  - Receivers labelled with their station; interrupted aircraft with name · altitude; all aircraft
-    from zoom 9.
-  - Labels are placed greedily by rank and avoid other labels and the icons of entities at least as
-    important.
+### What zones do now
 
-### Measured this session
+- **Server (`api-017`):**
+  - `interferenceZones` on GET `/api/v1/operational-picture`, one per stored `FUSION-SPATIAL`
+    `possible_interference_zone`.
+  - Each zone's `id` equals its timeline event's id.
+  - `radiusKm` comes from the policy stored with the row (`interference_radii_for_run` in
+    `app/db/findings.py`), null when none was stored, never a default.
+  - `confidence` is a Level; `corroboration` is sent verbatim.
+  - Filtered like events: *Nominal only* withholds them and counts them in
+    `view.suppressed.interferenceZones`. An unexamined run has none.
+  - All 100 stored interference rows carry `confidence`, `corroboration` and the radius setting (checked
+    in the store).
+- **Map (`map-006`):**
+  - A dashed geodesic disc of the assessed radius, with a faint fill, in DESIGN.md's error-container red
+    `#93000a`, a colour no marker uses.
+  - The disc is redrawn on every `style.load` and updated with `setData` when the zones change.
+  - The disc binds no handlers.
+  - The basemap switch passes `diff: false`.
+  - Centre marker named "Interference zone over A and B, Medium confidence".
+  - Label "Possible interference · Medium", ranked above every other label.
+  - The pop-up shows receivers, window (UTC), confidence, the corroboration sentence
+    (`CORROBORATION_COPY` in `detectionVocabulary.ts`) and the centre. It always ends with the sentence
+    that the circle is the area assessed, not an extent. With no radius, there is no circle and the
+    pop-up says so.
+- **Pop-up (`map-005` (3)):**
+  - Opens above its marker, then below, then beside it (right, then left), pulled in from the edges.
+  - Moved by dragging its header or with the arrow keys (16 px).
+  - Keeps its offset from the marker on a pan; at least 40 px stays inside the map.
+  - Resets when closed, reopened or replaced.
 
-| Measurement | Result |
+### Checked in the browser (dev server, `:1234`)
+
+| Hour | Result |
 |---|---|
-| Basemap dry-run sizes, box at z9 / z10 / z11 / z12 | 27 / 86 / 219 / 529 MB |
-| Wider z10 cut, +2° / +3° / +5° each side | 147 / 214 / 324 MB |
-| Europe overview (-11..30E, 35..61N) at z6 / z7 / z8 | 6.2 / 33 / 118 MB |
-| `make basemap` | ~15 s; second run byte-identical (box `a0e7eeec…46eb`, 85,630,679 B; overview 6,201,154 B) |
-| Corrupted checksum in a manifest copy | names the file, installs nothing, existing set untouched |
-| Panning under *All* (427 markers), user's Mac, Chrome, dev server | 912 frames / 8 s, median 8 ms, p90 9, p99 9, one > 50 ms |
-| Production build, other-origin requests | none (two `data:` URIs from MapLibre's CSS) |
-| Run 480 (ambiguous-mixed-evidence) on screen | RF-01 Schiphol `fault`, conclusion at 12:38:51 = staged onset; 17 interrupted aircraft (22 gaps); 420 aircraft, 403 nominal |
+| Run 420 | One zone over RF-04 (Eindhoven) and RF-05 (Weeze), Medium, not measurable, centre 51.5262°N 5.7584°E, 60 km. Gone under *Nominal only* (marker and disc), back under *Anomalous only*. |
+| Run 411 | The pop-up opens beside the zone marker when it fits neither above nor below. The user confirmed a real drag and a pan both work. |
 
 ## Files in flight
 
-None once this handoff and the progress note are committed. `frontend/public/basemap/` holds the
-downloaded (gitignored) archives; a fresh clone needs `make basemap`.
+None once this handoff is committed.
 
 ## Changed
 
 | Commit | Message |
 |---|---|
-| `9f1ba8d` | `spec: amend map-001, map-002 -- zoom-10 Protomaps cut by checksum, self-hosted assets, three non-map states` |
-| `f761e5c` | `test: add tests for map-001, map-002` |
-| `82202f8` | `spec: amend map-001, map-003; add map-005 -- light basemap, Europe overview, markers, pop-up and labels` |
-| `a18f8a9` | `test: add tests for map-001, map-003, map-005` |
-| `bac8ac3` | `feat(map-001, map-002, map-003, map-005): offline light map with Europe overview, state markers, pop-up and labels - tests pass` |
+| `0e752cf` | `spec: add api-017, map-006 -- interference zones served from the store and drawn as the disc assessed` |
+| `a5523a6` | `test: add tests for api-017, map-006` |
+| `62fba71` | `feat(api-017, map-006): interference zones served with their recorded radius and drawn as the assessed disc - tests pass` |
+| `ea09d32` | `spec: amend map-005 -- pop-up fits inside the map and can be moved` |
+| `410b7bc` | `test: add tests for map-005 (3) -- pop-up placement and moving` |
+| `b31c8d0` | `feat(map-005): pop-up opens inside the map and can be moved - tests pass` |
 
 **New:**
-- `frontend/src/components/map/MapView.tsx`, the only importer of `maplibre-gl`, `pmtiles` and
-  `@protomaps/basemaps`.
-- `frontend/public/basemap/manifest.json`.
-- `frontend/.env.development` and `.env.production` (`VITE_BASEMAP_ARCHIVE`).
-- Tests: `mapView.test.tsx`, `mapBoundary.test.tsx`, `nodeFs.d.ts`.
-- `measurements/mutation/mutate_map001_view.*`.
-- Dependencies: `maplibre-gl` 6.13, `pmtiles` 4.5, `@protomaps/basemaps` 5.7.
+- `measurements/mutation/mutate_map006_zones.*` and `mutate_map005_popup.*`. Their mutants may make
+  several edits.
 
 **Changed:**
-- `Makefile` (`basemap` target, pinned `go-pmtiles:v1.31.2` and `alpine:3.20`).
-- `.gitignore` (basemap files and the committed `.env` exceptions).
-- `frontend/nginx.conf` (`.mjs` served as `text/javascript`).
-- The screen (renders `MapView`).
-- `test/setup.ts` stub.
-- `exceptionPanel.test.tsx` re-pointed.
-- `test_ops_command_surface.py` (+10).
+- **Backend:**
+  - `app/db/findings.py` (`interference_radii_for_run`).
+  - `app/api/v1/schemas/operational_picture.py` (`ZoneCentre`, `InterferenceZone`, `Corroboration`,
+    `_zones`, `_event_id`, `_ordered`, `_corroboration`).
+  - `app/api/v1/operational_picture.py` (passes `zone_radii`).
+- **Frontend:**
+  - `types/operationalPicture.ts` and the mock.
+  - `lib/detectionVocabulary.ts` (`CORROBORATION_COPY`).
+  - The screen (passes `zones`).
+  - `components/map/MapView.tsx` (`zoneOutline`, zone source and layers, zone entity, pop-up
+    placement and moving).
+- **Tests:** `test_api_operational_picture.py`, `mapView.test.tsx`, `mapBoundary.test.tsx`;
+  `exceptionPanel.test.tsx` and `viewFilter.test.tsx` (fixtures only).
+- **Measurements:** `mutate_map001_view.py` (one anchor re-pointed).
 
 **Docs:**
-- `CLAUDE.md` repo map, `README.md` (`make basemap`), `implementation.md` Phase 4,
-  `measurements/README.md`.
-- `qa.md` §154 (pop-ups and labels were unspecced).
-- `thesis_notes.md`: two subsections on the checksum download and browser-only faults, and on the
-  light / overview / markers round. The MapView diff-size gap is filled.
-- `progress_note.html`: a new section with three screenshots of run 480.
+- `CLAUDE.md` repo map.
+- `implementation.md` Phase 4.
+- `measurements/README.md` (two rows).
+- `qa.md` §155 (the pop-up question, with the fitting-versus-moving distinction in the glossary).
+- `thesis_notes.md`: two subsections, one on zones drawn as the assessed disc (including the colour
+  reversal), one on the pop-up learning the map's edges.
 
 ## Failed attempts
 
-**Three faults passed every unit test and showed a blank map in the browser:**
-- MapLibre 6 derives its worker URL from its own file location, which Vite's dependency bundling
-  moves. Fixed with `setWorkerUrl` and a `?url` import.
-- MapLibre refuses a relative sprite URL. The error was silent because listening for `error` stops
-  MapLibre logging. Fixed by making the sprite absolute on this origin and re-logging non-satellite
-  errors.
-- nginx served `.mjs` as `application/octet-stream`, so the module worker was refused. Fixed with a
-  `location ~ \.mjs$` block. The browser had cached the old type, so a `cache: 'reload'` fetch was
-  needed before the fix showed.
+**My own errors:**
+- **I claimed `app/db/findings.py` could import `app.detection.fusion` at module level.** I checked
+  only direct imports. `fusion` reaches `db.findings` through `rate_excess.findings_near`, so collection
+  failed on a cycle. The import now sits inside the function, with a comment.
+- **I named the window formatter `window`, shadowing the global.** `onThisOrigin` read
+  `window.location` from my function, threw inside the map's start-up `try`, and 37 tests reported
+  "could not start the map". The blanket catch turns any bug into the WebGL message.
+- **I first drew the zone in the anomalous orange,** reasoning that a zone is an anomalous finding. In
+  review it read as part of the orange markers inside it, and the user asked for a different colour.
+  Recorded as a reversal in the thesis notes.
+- **I chose a clamp for a pop-up that fits neither above nor below.** It covered the marker it
+  described (seen on run 411); now it opens beside the marker. The spec was widened after the code.
+- **One mutation run was wasted** by a `sed` anchor that silently did not match. Python replacements
+  that assert a count of 1 replaced it.
 
-Each fix got a test after the code.
+**Faults the tests could not see:**
+- **MapLibre's `setStyle` diffs by default.** A successful diff fires no `style.load` and drops sources
+  the new style lacks, so the disc would vanish on a basemap switch. The switch now passes
+  `diff: false`. Found by reading MapLibre's source. **Unverified in a browser:** satellite is not
+  configured locally.
+- **`setPointerCapture` throws for a pointer the browser does not consider active**, which cancelled
+  the drag before its listeners were attached. Now guarded.
+- **The first zone mutation pass left a stale-disc survivor:** a disc never updated when the zones
+  changed. The test double's `getSource` returned nothing, so the update path never ran. The double now
+  keeps its sources until `setStyle`, and a test asserts the disc empties.
 
-**The committed boundary test could not read `.env` files.** Vite's `server.fs.deny` blocks them,
-and `new URL(…, import.meta.url)` is rewritten into an asset import. Changed to `readFileSync`
-relative to the Vitest root, with a narrow `node:fs` declaration instead of adding Node types.
-
-**The boundary test's filter missed test files.** `import.meta.glob` lists them as `./x.test.tsx`,
-not `/test/`, so it failed when `mapView.test.tsx` imported `@protomaps/basemaps`. The filter was
-fixed after the test commit.
+**Instrument limits:**
+- The automation tool's drag sends no pointer-down, so a real drag could not be done through it. The
+  drag was exercised by dispatching pointer events in the page, and the user confirmed it by hand.
+- The automation tab is hidden, so Chrome runs no animation frames and pan-following could not be
+  watched (the same limit as the frame-rate measurement).
 
 **Tests written or changed after implementation (deviations):**
-- the worker-URL, absolute-sprite and nginx tests;
-- the satellite-start tightening (round-one mutation survivor);
-- the label-avoids-icon test, added when the browser showed labels across a cluster's icons, which
-  goes beyond the spec's wording;
-- the reordered collision test and the reopen test (round-two mutation survivors).
-
-One mutant (a new marker placed latitude first) was removed as equivalent: the next render
-re-places it.
-
-**I could not measure frame rate myself.** The automation tab is backgrounded
-(`visibilityState: hidden`) and Chrome runs no rAF there, so the user ran the logger.
-
-**First-round dark basemap and dots were rejected on review** for the grey edge, readability, a light
-map preferred, and nothing on click. The reversal is recorded in the thesis notes.
+- The stale-disc test and the stand-in map change.
+- The unrecognised-corroboration refusal test (proved against a mutant).
+- The zone-colour test (written before the colour change, after the zone code).
+- The beside-the-marker test (proved against the old fallback).
+- The `corroboration` added to the existing `_zone` fixture: it lacked a field every stored row has.
+- `interferenceZones: 0` added to ten frontend fixtures. `tsc -b` caught them; Vitest does not
+  type-check.
 
 ## Next step
 
-1. **`op-005`**, the drill-down tables. The panel's *View all* is still disabled waiting on them.
-2. **Interference zones**: a new API item first (the payload has no zone shape), then the map.
-3. **`map-004`**, playback, still gated on `op-008` / `api-008`.
+1. **Offer the progress-note update.** Zones are the conclusion the map exists to show, and run 420 or
+   411 would carry it.
+2. **`op-005`**, the drill-down tables. The panel's *View all* is still disabled waiting on them.
+3. **`map-004`**, playback, still gated on `op-008` / `api-008`. Zones appearing and clearing over time
+   belongs to it.
 4. Then, unchanged: `hyp-*`, and `eval-006` (waits on the second rater, mid-October).
 
 Open and unowned:
 
+- **`diff: false` on the basemap switch is unverified in a browser.** Configure satellite (two
+  `VITE_SATELLITE_*` variables in `.env.development.local`), switch, and check the disc survives.
+- **Whether "the circle is the area assessed" is read as such** is an evaluation question. A tidy
+  circle invites reading it as a footprint.
 - **The frame-rate figure is one machine and one hour.** Re-measure on slower hardware before
   claiming it generally.
-- **Long pseudonymous aircraft names** (`AC-849585568dda`) make wide labels. They are payload names,
-  shown as sent.
+- **Long pseudonymous aircraft names** (`AC-849585568dda`) make wide labels.
 - **The frontend is not in Biome's format** and nothing checks it (`pnpm lint` is lint only).
-- **"Tracks (13 interrupted)" / orange aircraft on a quiet hour** may read as an alarm. Flagged for
-  the evaluation in the progress note and thesis notes.
+- **"Tracks (13 interrupted)" / orange aircraft on a quiet hour** may read as an alarm.
 - **The evidence panel's sentence for an unexplained conclusion is stale** ("built and not kept").
 - **`detection_metrics.py` still imports `save_findings`**, unused.
 - **"20.7M observations" is stale** in seven places (the store holds 15.5M).
