@@ -132,6 +132,60 @@ def findings_for_run(
     return [_finding(row) for row in rows]
 
 
+#: The setting `anom-015` records with each finding that names the radius
+#: `anom-012` measured the aircraft side over.
+_ZONE_RADIUS_SETTING = "FUSION-SPATIAL.excess_radius_km"
+
+
+def interference_radii_for_run(
+    session_factory: sessionmaker[Session], run_id: int
+) -> dict[str, float]:
+    """The radius each interference claim on one run was judged under. Spec: api-017.
+
+    Keyed by the claim's timeline event id, `rule:subject:started_at`, which is
+    how the picture joins a zone to its conclusion.
+
+    **Read from the settings stored with the row, never from the detector's
+    current ones**: the system does not estimate how far interference reaches,
+    so the only radius it can honestly draw is the one the claim was assessed
+    over. A row stored without settings is unprovenanced (`0008`) and is simply
+    absent here -- a default of 60 would be a code value presented as a
+    recorded one.
+    """
+    # Imported here because `fusion` reaches this module through `rate_excess`'s
+    # `findings_near`, so a module-level import is a cycle.
+    from app.detection.fusion import ANOMALY_TYPE as INTERFERENCE_TYPE
+    from app.detection.fusion import RULE_ID as FUSION_RULE
+
+    with session_factory.begin() as session:
+        rows = (
+            session.execute(
+                text(
+                    "SELECT rule_id, subject, started_at, "
+                    "  policy ->> :setting AS radius_km "
+                    "FROM detection_findings "
+                    "WHERE scenario_run_id = :run_id AND rule_id = :rule_id "
+                    "  AND finding_type = :finding_type "
+                    "  AND policy ->> :setting IS NOT NULL"
+                ),
+                {
+                    "run_id": run_id,
+                    "rule_id": FUSION_RULE,
+                    "finding_type": INTERFERENCE_TYPE,
+                    "setting": _ZONE_RADIUS_SETTING,
+                },
+            )
+            .mappings()
+            .all()
+        )
+    return {
+        f"{row['rule_id']}:{row['subject']}:{row['started_at'].isoformat()}": float(
+            row["radius_km"]
+        )
+        for row in rows
+    }
+
+
 def _row(finding: DetectionFinding) -> dict[str, object]:
     """One finding as the insert's parameters.
 

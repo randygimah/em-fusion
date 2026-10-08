@@ -217,7 +217,7 @@ const OperationalPictureScreen = ({
             {/* The map and the panel read the same filtered rows (map-001, op-007),
                 so the two cannot disagree about what the view shows. */}
             <div className="min-h-[320px] flex-1">
-              <MapView sensors={operationalPicture.rfSensors} tracks={operationalPicture.aircraftTracks} />
+              <MapView sensors={operationalPicture.rfSensors} tracks={operationalPicture.aircraftTracks} zones={operationalPicture.interferenceZones} />
             </div>
             <EmExceptionPanel picture={operationalPicture} />
           </div>

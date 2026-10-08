@@ -84,12 +84,25 @@ const operationalPicture: OperationalPicture = {
       source: "sensor-001",
     },
   ],
+  // The interference claim above, placed (api-017): same id as its event.
+  interferenceZones: [
+    {
+      id: "FUSION-SPATIAL:sensor-001:2024-06-01T12:00:00Z",
+      centre: { lat: 34.0522, lon: -118.2437 },
+      radiusKm: 60,
+      receivers: ["sensor-001"],
+      startedAt: "2024-06-01T12:00:00Z",
+      endedAt: "2024-06-01T12:05:00Z",
+      confidence: "Medium",
+      corroboration: "not_measurable",
+    },
+  ],
   // What the server sends when no view is asked for (api-007): everything,
   // nothing withheld. Examined, because the summary above is a reading.
   view: {
     selected: "all",
     examined: true,
-    suppressed: { rfSensors: 0, aircraftTracks: 0, timelineEvents: 0 },
+    suppressed: { rfSensors: 0, aircraftTracks: 0, timelineEvents: 0, interferenceZones: 0 },
   },
 };
 export default operationalPicture;

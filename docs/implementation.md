@@ -140,6 +140,7 @@ Added after the original checklist was written. The exception-first default stan
 - [x] Mock `MapView` in React tests.
 - [x] Manually verify the real map in the browser.
 - [x] Record the diff size for the boundary — it is a cheap second data point for the RQ1 substitutability argument (`thesis_notes.md`).
+- [x] Draw interference zones (specs `api-017`, `map-006`). **Done 2026-10-08:** the picture serves each stored interference claim with the radius recorded with it (null, never a default), filtered like its conclusion; the map draws the assessed disc, a centre marker with the top-ranked label, and a pop-up stating that the circle is the area assessed, not an extent. Appearing and clearing over time stays with playback below.
 
 ### Playback (specs `op-008`, `map-004`, `api-008`)
 

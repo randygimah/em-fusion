@@ -755,7 +755,12 @@ def _zone(*sensors: str, offset_s: int = 0):
         finding_type=INTERFERENCE_TYPE,
         subject=sensors[0],
         offset_s=offset_s,
-        details={"confidence": "medium", "sensors": list(sensors)},
+        # The shape the pass stores: every stored zone carries both (api-017).
+        details={
+            "confidence": "medium",
+            "sensors": list(sensors),
+            "corroboration": "not_measurable",
+        },
     )
 
 
@@ -2090,6 +2095,12 @@ def test_the_corroboration_is_served_verbatim_for_the_screen_to_word() -> None:
     (zone,) = _zones(_scored([claim]))
 
     assert zone["corroboration"] == "corroborated"
+
+
+def test_an_unrecognised_corroboration_is_refused_rather_than_served() -> None:
+    # spec: api-017 -- written after the code, for the one refusal no test reached.
+    with pytest.raises(PictureError, match="corroboration"):
+        _scored([_claim(RECEIVER, OTHER_RECEIVER, corroboration="probably")])
 
 
 @pytest.mark.database

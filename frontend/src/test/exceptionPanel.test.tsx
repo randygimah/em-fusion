@@ -46,7 +46,7 @@ const EVENT: TimelineEvent = {
   source: "RF-01",
 };
 
-const NONE: SuppressedCounts = { rfSensors: 0, aircraftTracks: 0, timelineEvents: 0 };
+const NONE: SuppressedCounts = { rfSensors: 0, aircraftTracks: 0, timelineEvents: 0, interferenceZones: 0 };
 
 const picture = (
   selected: ViewSelection,
@@ -133,7 +133,7 @@ describe("the tab labels", () => {
           rfSensors: ["RF-03", "RF-04", "RF-05", "RF-06", "RF-07"].map((id) => sensor(id, "nominal")),
           aircraftTracks: [track("AC-fine", "nominal")],
         },
-        { rfSensors: 2, aircraftTracks: 1, timelineEvents: 1 },
+        { rfSensors: 2, aircraftTracks: 1, timelineEvents: 1, interferenceZones: 0 },
       ),
     );
 
@@ -260,7 +260,7 @@ describe("the footer", () => {
 
   it("names what Nominal only withheld by what it is", () => {
     // spec: op-004 (2)
-    show(picture("nominal", {}, { rfSensors: 2, aircraftTracks: 10, timelineEvents: 1 }));
+    show(picture("nominal", {}, { rfSensors: 2, aircraftTracks: 10, timelineEvents: 1, interferenceZones: 0 }));
 
     expect(openPanel().getByText(/\+2 anomalous hidden/i)).toBeInTheDocument();
     openTab(/^Tracks/);

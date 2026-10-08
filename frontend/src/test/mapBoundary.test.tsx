@@ -77,7 +77,7 @@ describe("the screen hands the map the filtered payload", () => {
       { id: "opensky-replay:AC-1", name: "AC-1", altitudeFt: 30000, lat: 51.2, lon: 7.5, state: "interrupted" },
       { id: "opensky-replay:AC-2", name: "AC-2", altitudeFt: 31000, lat: 51.3, lon: 7.6, state: "interrupted" },
     ],
-    view: { selected: "anomalous", examined: true, suppressed: { rfSensors: 6, aircraftTracks: 410, timelineEvents: 0 } },
+    view: { selected: "anomalous", examined: true, suppressed: { rfSensors: 6, aircraftTracks: 410, timelineEvents: 0, interferenceZones: 0 } },
   };
 
   it("draws the map where the placeholder box was", () => {

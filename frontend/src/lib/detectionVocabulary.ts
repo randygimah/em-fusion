@@ -1,5 +1,5 @@
 import type { AbsenceKind, EvidenceFindingType, Grounding } from "../types/evidence";
-import type { ReportableFindingType } from "../types/operationalPicture";
+import type { Corroboration, ReportableFindingType } from "../types/operationalPicture";
 
 /**
  * What each conclusion says to an analyst. spec: op-003, op-006.
@@ -159,3 +159,20 @@ export const ABSENCE_COPY: Record<AbsenceKind, string> = {
 
 export const absenceLabel = (kind: string): string =>
   ABSENCE_COPY[kind as AbsenceKind] ?? "Unrecognised kind of absence";
+
+/**
+ * What the aircraft side said about an interference claim. spec: map-006, api-017.
+ *
+ * Three sentences and never two, for the reason `anom-012` gives: a disc with
+ * no aircraft findings in it is not a disc that showed no disruption. *Could
+ * not be measured* must not read as *checked and nothing found*, and a zone's
+ * pop-up is the one place an analyst reads the distinction.
+ */
+export const CORROBORATION_COPY: Record<Corroboration, string> = {
+  corroborated: "Aircraft reporting in the area was disrupted beyond normal, which supports it",
+  not_corroborated: "Aircraft reporting in the area was measured and not disrupted beyond normal",
+  not_measurable: "Aircraft reporting in the area could not be measured, so it neither supports nor weakens it",
+};
+
+export const corroborationLabel = (corroboration: string): string =>
+  CORROBORATION_COPY[corroboration as Corroboration] ?? "Unrecognised corroboration";

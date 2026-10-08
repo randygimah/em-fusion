@@ -26,7 +26,7 @@ const RECEIVER: RFSensor = {
 const viewOf = (selected: ViewSelection, overrides: Partial<PictureView> = {}): PictureView => ({
   selected,
   examined: true,
-  suppressed: { rfSensors: 0, aircraftTracks: 0, timelineEvents: 0 },
+  suppressed: { rfSensors: 0, aircraftTracks: 0, timelineEvents: 0, interferenceZones: 0 },
   ...overrides,
 });
 
@@ -110,7 +110,7 @@ describe("what the receiver grid says when the view empties it", () => {
   it("says no receiver is out of nominal, and how many nominal ones the view hides", () => {
     // spec: op-007 — a quiet hour under the default view. An empty grid with
     // no sentence is the named failure case.
-    renderScreen(served(viewOf("anomalous", { suppressed: { rfSensors: 7, aircraftTracks: 410, timelineEvents: 0 } })));
+    renderScreen(served(viewOf("anomalous", { suppressed: { rfSensors: 7, aircraftTracks: 410, timelineEvents: 0, interferenceZones: 0 } })));
 
     expect(within(receiverGrid()).getByText(/no receiver is out of nominal/i)).toBeInTheDocument();
     expect(within(receiverGrid()).getByText(/7 nominal hidden by this view/i)).toBeInTheDocument();
@@ -118,7 +118,7 @@ describe("what the receiver grid says when the view empties it", () => {
 
   it("says no receiver is nominal under the nominal view, and how many the view hides", () => {
     // spec: op-007
-    renderScreen(served(viewOf("nominal", { suppressed: { rfSensors: 2, aircraftTracks: 0, timelineEvents: 0 } })));
+    renderScreen(served(viewOf("nominal", { suppressed: { rfSensors: 2, aircraftTracks: 0, timelineEvents: 0, interferenceZones: 0 } })));
 
     expect(within(receiverGrid()).getByText(/no receiver is nominal/i)).toBeInTheDocument();
     // Worded "2 out of nominal" until op-004's amendment (2), which names the
@@ -129,7 +129,7 @@ describe("what the receiver grid says when the view empties it", () => {
   it("states what the view hides beside the rows it served", () => {
     // spec: op-007, FR-809 — the count is the server's, never the rows': here
     // one receiver arrived and five did not.
-    renderScreen(served(viewOf("anomalous", { suppressed: { rfSensors: 5, aircraftTracks: 0, timelineEvents: 0 } }), { rfSensors: [RECEIVER] }));
+    renderScreen(served(viewOf("anomalous", { suppressed: { rfSensors: 5, aircraftTracks: 0, timelineEvents: 0, interferenceZones: 0 } }), { rfSensors: [RECEIVER] }));
 
     expect(within(receiverGrid()).getByText(RECEIVER.stationName)).toBeInTheDocument();
     expect(within(receiverGrid()).getByText(/5 nominal hidden by this view/i)).toBeInTheDocument();
@@ -138,7 +138,7 @@ describe("what the receiver grid says when the view empties it", () => {
   it("says nothing is hidden-and-clean on an hour nobody examined", () => {
     // spec: op-007, api-007 — seven withheld rows on an unexamined hour are
     // not seven nominal receivers.
-    renderScreen(served(viewOf("anomalous", { examined: false, suppressed: { rfSensors: 7, aircraftTracks: 2, timelineEvents: 0 } })));
+    renderScreen(served(viewOf("anomalous", { examined: false, suppressed: { rfSensors: 7, aircraftTracks: 2, timelineEvents: 0, interferenceZones: 0 } })));
 
     expect(within(receiverGrid()).getByText(/not been examined/i)).toBeInTheDocument();
     expect(within(receiverGrid()).queryByText(/nominal hidden/i)).not.toBeInTheDocument();
@@ -149,7 +149,7 @@ describe("what the receiver grid says when the view empties it", () => {
 describe("what the timeline says when the view empties it", () => {
   it("counts the conclusions the view hides rather than saying there are none", () => {
     // spec: op-007 — the named failure case: "no events" while one is withheld.
-    renderScreen(served(viewOf("nominal", { suppressed: { rfSensors: 0, aircraftTracks: 0, timelineEvents: 1 } })));
+    renderScreen(served(viewOf("nominal", { suppressed: { rfSensors: 0, aircraftTracks: 0, timelineEvents: 1, interferenceZones: 0 } })));
 
     expect(within(timeline()).getByText(/1 conclusion hidden by this view/i)).toBeInTheDocument();
     expect(within(timeline()).queryByText(/no events in this hour/i)).not.toBeInTheDocument();
@@ -157,7 +157,7 @@ describe("what the timeline says when the view empties it", () => {
 
   it("pluralises the count", () => {
     // spec: op-007
-    renderScreen(served(viewOf("nominal", { suppressed: { rfSensors: 0, aircraftTracks: 0, timelineEvents: 3 } })));
+    renderScreen(served(viewOf("nominal", { suppressed: { rfSensors: 0, aircraftTracks: 0, timelineEvents: 3, interferenceZones: 0 } })));
 
     expect(within(timeline()).getByText(/3 conclusions hidden by this view/i)).toBeInTheDocument();
   });
@@ -166,7 +166,7 @@ describe("what the timeline says when the view empties it", () => {
     // spec: op-007, op-006 — no conclusion withheld and none reached, while
     // the view hides the seven nominal receivers: the timeline keeps its
     // sentence and claims nothing is hidden.
-    renderScreen(served(viewOf("anomalous", { suppressed: { rfSensors: 7, aircraftTracks: 410, timelineEvents: 0 } })));
+    renderScreen(served(viewOf("anomalous", { suppressed: { rfSensors: 7, aircraftTracks: 410, timelineEvents: 0, interferenceZones: 0 } })));
 
     expect(within(timeline()).getByText(/no events in this hour/i)).toBeInTheDocument();
     expect(within(timeline()).queryByText(/hidden by this view/i)).not.toBeInTheDocument();

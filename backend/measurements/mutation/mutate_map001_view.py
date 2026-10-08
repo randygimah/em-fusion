@@ -273,7 +273,7 @@ M: dict[str, tuple[Path, str, str]] = {
     ),
     "the placeholder comes back": (
         SCREEN,
-        "<MapView sensors={operationalPicture.rfSensors} tracks={operationalPicture.aircraftTracks} />",
+        "<MapView sensors={operationalPicture.rfSensors} tracks={operationalPicture.aircraftTracks} zones={operationalPicture.interferenceZones} />",
         "<p>The map is not built yet. Receivers and aircraft are listed in the panel below.</p>",
     ),
 }

@@ -49,7 +49,7 @@ from app.api.v1.schemas.operational_picture import (
     build_operational_picture,
 )
 from app.db.bundles import stored_bundles_for_run
-from app.db.findings import findings_for_run
+from app.db.findings import findings_for_run, interference_radii_for_run
 from app.db.repository import (
     detection_pass_for_run,
     latest_positions,
@@ -109,6 +109,9 @@ def get_operational_picture(
         findings=findings_for_run(sessions, run.id),
         detection_pass=detection_pass_for_run(sessions, run.id),
         view=view,
+        # The radius each interference claim was judged under, from the
+        # settings stored with it -- never the detector's current one (`api-017`).
+        zone_radii=interference_radii_for_run(sessions, run.id),
     )
 
 

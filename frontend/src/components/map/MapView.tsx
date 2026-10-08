@@ -1,5 +1,5 @@
 import { layers, namedFlavor } from "@protomaps/basemaps";
-import type { LayerSpecification, Map as MapLibreMap, Marker as MapLibreMarker, StyleSpecification } from "maplibre-gl";
+import type { GeoJSONSource, LayerSpecification, Map as MapLibreMap, Marker as MapLibreMarker, StyleSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 // The worker as a URL, not a module: MapLibre derives its worker's address from
 // where its own file sits, and Vite's dependency bundling moves that file, so
@@ -8,11 +8,12 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { corroborationLabel } from "../../lib/detectionVocabulary";
 import { cn } from "../../lib/utils";
-import type { AircraftTrack, RFSensor } from "../../types/operationalPicture";
+import type { AircraftTrack, InterferenceZone, RFSensor } from "../../types/operationalPicture";
 
 // The map, and the only module in the app that touches a map library.
-// spec: map-001, map-002, map-003, map-005.
+// spec: map-001, map-002, map-003, map-005, map-006.
 //
 // Everything else sees a component that takes receivers and aircraft and draws
 // them, which is what lets every other test replace it wholesale and keeps the
@@ -32,6 +33,11 @@ import type { AircraftTrack, RFSensor } from "../../types/operationalPicture";
 // Receivers and aircraft are HTML markers, not layers: each is a button with
 // its state in its accessible name (map-003), opens one pop-up of payload
 // fields (map-005), and survives a basemap switch, which wipes layers.
+//
+// An interference zone is both (map-006): a GeoJSON layer for the disc the
+// claim was assessed over, re-added after every switch, and an HTML marker at
+// its centre that carries the name, the label and the pop-up. The disc has no
+// handlers of its own, so it never takes a click meant for a marker.
 
 export interface SatelliteSource {
   tiles: string;
@@ -126,9 +132,72 @@ export function buildSatelliteStyle(satellite: SatelliteSource): StyleSpecificat
   };
 }
 
+// ------------------------------------------------------------- the zones
+
+/** The mean Earth radius (IUGG), in km. */
+const EARTH_RADIUS_KM = 6371.0088;
+
+/**
+ * The disc a zone was assessed over, as a closed ring of [lon, lat] vertices
+ * (map-006 (1)). Each vertex is the point `radiusKm` along the great circle
+ * from the centre on its bearing, so the ring is the geodesic circle and not
+ * a circle in degrees, which at 50°N would be two-thirds as wide as it is tall.
+ */
+export function zoneOutline(centre: { lat: number; lon: number }, radiusKm: number, steps = 64): [number, number][] {
+  const rad = Math.PI / 180;
+  const lat1 = centre.lat * rad;
+  const lon1 = centre.lon * rad;
+  const angular = radiusKm / EARTH_RADIUS_KM;
+  const ring: [number, number][] = [];
+  for (let step = 0; step < steps; step++) {
+    const bearing = (2 * Math.PI * step) / steps;
+    const lat2 = Math.asin(Math.sin(lat1) * Math.cos(angular) + Math.cos(lat1) * Math.sin(angular) * Math.cos(bearing));
+    const lon2 = lon1 + Math.atan2(Math.sin(bearing) * Math.sin(angular) * Math.cos(lat1), Math.cos(angular) - Math.sin(lat1) * Math.sin(lat2));
+    ring.push([lon2 / rad, lat2 / rad]);
+  }
+  ring.push(ring[0]);
+  return ring;
+}
+
+const ZONE_SOURCE = "zones";
+
+/** Only zones with a recorded radius have a disc (map-006 (4)). */
+const zoneDiscs = (zones: InterferenceZone[]) => ({
+  type: "FeatureCollection" as const,
+  features: zones.flatMap((zone) =>
+    zone.radiusKm === null
+      ? []
+      : [
+          {
+            type: "Feature" as const,
+            properties: { id: zone.id },
+            geometry: { type: "Polygon" as const, coordinates: [zoneOutline(zone.centre, zone.radiusKm)] },
+          },
+        ],
+  ),
+});
+
+/**
+ * DESIGN.md's error-container red: the one token family no marker uses, so the
+ * disc never reads as part of the orange anomalous markers inside it, and far
+ * darker than that orange, so the two stay apart for red-green colour blindness.
+ */
+const ZONE_COLOUR = "#93000a";
+
+/** Faint enough that the basemap and the aircraft inside stay readable; dashed because it is an assessed area, not an edge. */
+const ZONE_LAYERS: LayerSpecification[] = [
+  { id: "zones-fill", type: "fill", source: ZONE_SOURCE, paint: { "fill-color": ZONE_COLOUR, "fill-opacity": 0.08 } },
+  {
+    id: "zones-line",
+    type: "line",
+    source: ZONE_SOURCE,
+    paint: { "line-color": ZONE_COLOUR, "line-width": 1.5, "line-dasharray": [3, 2] },
+  },
+];
+
 // ------------------------------------------------------------ the entities
 
-type Kind = "receiver" | "aircraft";
+type Kind = "receiver" | "aircraft" | "zone";
 
 /** The states `api-007`'s anomalous view admits: one definition of anomalous. */
 const ANOMALOUS = new Set(["fault", "deviating", "interrupted"]);
@@ -139,7 +208,7 @@ const ANOMALOUS = new Set(["fault", "deviating", "interrupted"]);
  * for both kinds; nominal is each kind's own colour; not examined is grey and
  * hollow, and never the nominal look.
  */
-export function markerLook(kind: Kind, state: string): { fill: string; stroke: string } {
+export function markerLook(kind: Exclude<Kind, "zone">, state: string): { fill: string; stroke: string } {
   if (ANOMALOUS.has(state)) return { fill: "#df7412", stroke: "#ffffff" };
   if (state === "nominal") return { fill: kind === "aircraft" ? "#005ac2" : "#00424e", stroke: "#ffffff" };
   return { fill: "none", stroke: "#424754" };
@@ -167,10 +236,42 @@ interface Entity {
   rank: number;
   sensor?: RFSensor;
   track?: AircraftTrack;
+  zone?: InterferenceZone;
 }
 
-function entitiesOf(sensors: RFSensor[], tracks: AircraftTrack[]): Entity[] {
+/** "RF-01", "RF-01 and RF-02", "RF-01, RF-02 and RF-03". */
+const listed = (names: string[]) => (names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`);
+
+/** A zone's window in simulated time, in UTC: the payload's instants, reformatted. */
+function zoneWindow(zone: InterferenceZone): string {
+  const [from, to] = [zone.startedAt, zone.endedAt].map((iso) => new Date(iso).toISOString());
+  const day = from.slice(0, 10);
+  const end = to.slice(0, 10) === day ? to.slice(11, 19) : `${to.slice(0, 10)} ${to.slice(11, 19)}`;
+  return `${day} ${from.slice(11, 19)} – ${end} UTC`;
+}
+
+function entitiesOf(sensors: RFSensor[], tracks: AircraftTrack[], zones: InterferenceZone[]): Entity[] {
   return [
+    ...zones.map(
+      (zone): Entity => ({
+        key: `zone:${zone.id}`,
+        kind: "zone",
+        name: `Interference zone over ${listed(zone.receivers)}, ${zone.confidence} confidence`,
+        state: "zone",
+        lat: zone.centre.lat,
+        lon: zone.centre.lon,
+        fields: [
+          ["Receivers", zone.receivers.join(", ")],
+          ["Window", zoneWindow(zone)],
+          ["Confidence", zone.confidence],
+          ["Aircraft", corroborationLabel(zone.corroboration)],
+          ["Centre", position(zone.centre.lat, zone.centre.lon)],
+        ],
+        // Above every other label: the conclusion is what the map is for.
+        rank: -1,
+        zone,
+      }),
+    ),
     ...sensors.map(
       (sensor): Entity => ({
         key: `receiver:${sensor.id}`,
@@ -215,6 +316,7 @@ function entitiesOf(sensors: RFSensor[], tracks: AircraftTrack[]): Entity[] {
 const ALL_AIRCRAFT_LABELS_FROM_ZOOM = 9;
 
 function labelOf(entity: Entity, zoom: number): string | null {
+  if (entity.zone) return `Possible interference · ${entity.zone.confidence}`;
   if (entity.sensor) return entity.sensor.stationName;
   const track = entity.track;
   if (!track || (!ANOMALOUS.has(track.state) && zoom < ALL_AIRCRAFT_LABELS_FROM_ZOOM)) return null;
@@ -256,7 +358,37 @@ export function placeLabels(candidates: LabelCandidate[], icons: Omit<LabelCandi
   return shown;
 }
 
+function ZoneIcon() {
+  return (
+    <svg
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <circle
+        cx="12"
+        cy="12"
+        r="9.5"
+        fill="#ffffff"
+        stroke={ZONE_COLOUR}
+        strokeWidth="2"
+        strokeDasharray="3 2"
+      />
+      <circle
+        cx="12"
+        cy="12"
+        r="4"
+        fill={ZONE_COLOUR}
+        stroke="#ffffff"
+        strokeWidth="1.5"
+      />
+    </svg>
+  );
+}
+
 function Icon({ kind, state }: { kind: Kind; state: string }) {
+  if (kind === "zone") return <ZoneIcon />;
   const look = markerLook(kind, state);
   const ink = look.fill === "none" ? look.stroke : look.fill;
   return (
@@ -340,13 +472,15 @@ const sameSet = (a: Set<string>, b: Set<string>) => a.size === b.size && [...a].
 export interface MapViewProps {
   sensors: RFSensor[];
   tracks: AircraftTrack[];
+  /** The interference claims the payload placed (map-006). */
+  zones?: InterferenceZone[];
   /** Defaults to the frontend's environment. */
   config?: BasemapConfig | Error;
   /** Defaults to reading the PMTiles header. Rejects when the archive cannot be read. */
   readArchive?: (archive: string) => Promise<void>;
 }
 
-export function MapView({ sensors, tracks, config = configFromEnv(), readArchive = readArchiveHeader }: MapViewProps) {
+export function MapView({ sensors, tracks, zones = [], config = configFromEnv(), readArchive = readArchiveHeader }: MapViewProps) {
   const settings = config instanceof Error ? null : config;
   const archive = settings?.defaultArchive ?? null;
   const satellite = settings?.satellite ?? null;
@@ -356,9 +490,11 @@ export function MapView({ sensors, tracks, config = configFromEnv(), readArchive
   const libRef = useRef<MapLibre | null>(null);
   const basemapRef = useRef<Basemap>("default");
   const markersRef = useRef(new Map<string, { marker: MapLibreMarker; element: HTMLElement }>());
-  const entities = entitiesOf(sensors, tracks);
+  const entities = entitiesOf(sensors, tracks, zones);
   const entitiesRef = useRef(entities);
   entitiesRef.current = entities;
+  const zonesRef = useRef(zones);
+  zonesRef.current = zones;
 
   const [status, setStatus] = useState<Status>(archive ? "loading" : "unconfigured");
   const [basemap, setBasemap] = useState<Basemap>("default");
@@ -394,6 +530,23 @@ export function MapView({ sensors, tracks, config = configFromEnv(), readArchive
   };
   const relabelRef = useRef(relabel);
   relabelRef.current = relabel;
+
+  /**
+   * The discs, into the current style. A style switch wipes sources and
+   * layers, so this runs on every style load as well as when zones change.
+   */
+  const drawZones = () => {
+    const map = mapRef.current;
+    if (!map) return;
+    const data = zoneDiscs(zonesRef.current);
+    const source = map.getSource(ZONE_SOURCE) as GeoJSONSource | undefined;
+    if (source) {
+      source.setData(data);
+      return;
+    }
+    map.addSource(ZONE_SOURCE, { type: "geojson", data });
+    for (const layer of ZONE_LAYERS) map.addLayer(layer);
+  };
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: readArchive is a seam for tests; the map is built once per archive.
   useEffect(() => {
@@ -433,6 +586,8 @@ export function MapView({ sensors, tracks, config = configFromEnv(), readArchive
       libRef.current = maplibre;
       map.addControl(new maplibre.NavigationControl({ showCompass: false }));
       map.on("moveend", () => relabelRef.current());
+      map.on("load", drawZones);
+      map.on("style.load", drawZones);
       // The pop-up is placed in screen space, so it follows the camera.
       map.on("move", () => {
         if (selectedRef.current) setMoved((n) => n + 1);
@@ -500,6 +655,15 @@ export function MapView({ sensors, tracks, config = configFromEnv(), readArchive
     relabelRef.current();
   });
 
+  // A changed set of zones redraws the discs; before the style has loaded there
+  // is no source yet, and the load handler draws them.
+  const zoneKey = zones.map((zone) => `${zone.id}|${zone.radiusKm}|${zone.centre.lat}|${zone.centre.lon}`).join(";");
+  // biome-ignore lint/correctness/useExhaustiveDependencies: zoneKey stands for the zones' drawn content.
+  useEffect(() => {
+    if (status !== "map" || !mapRef.current?.getSource(ZONE_SOURCE)) return;
+    drawZones();
+  }, [zoneKey, status]);
+
   // A pop-up for an entity the payload no longer carries closes (map-005).
   const popup = entities.find((entity) => entity.key === selected) ?? null;
   useEffect(() => {
@@ -522,7 +686,9 @@ export function MapView({ sensors, tracks, config = configFromEnv(), readArchive
     basemapRef.current = next;
     setBasemap(next);
     setSatelliteFailing(false);
-    map.setStyle(next === "satellite" && satellite ? buildSatelliteStyle(satellite) : onThisOrigin(buildDefaultStyle(archive)));
+    // Rebuilt rather than diffed: a successful diff fires no style.load and drops
+    // the zone source, so the discs would vanish with nothing to redraw them.
+    map.setStyle(next === "satellite" && satellite ? buildSatelliteStyle(satellite) : onThisOrigin(buildDefaultStyle(archive)), { diff: false });
   };
 
   const counts = `${count(sensors.length, "receiver")} · ${tracks.length} aircraft`;
@@ -582,12 +748,14 @@ export function MapView({ sensors, tracks, config = configFromEnv(), readArchive
       {popup && anchor && (
         <div
           role="dialog"
-          aria-label={popup.kind === "aircraft" ? `Aircraft ${popup.track?.name}` : `Receiver ${popup.sensor?.id}`}
-          className="absolute z-10 w-60 -translate-x-1/2 -translate-y-full border border-[#424754] bg-[#10131a] p-3 text-xs text-[#e1e2ec] shadow-lg"
+          aria-label={
+            popup.kind === "aircraft" ? `Aircraft ${popup.track?.name}` : popup.kind === "zone" ? "Possible interference" : `Receiver ${popup.sensor?.id}`
+          }
+          className="absolute z-10 w-72 -translate-x-1/2 -translate-y-full border border-[#424754] bg-[#10131a] p-3 text-xs text-[#e1e2ec] shadow-lg"
           style={{ left: anchor.x, top: anchor.y - 18 }}
         >
           <div className="mb-2 flex items-center justify-between">
-            <p className="font-mono uppercase tracking-[0.05em] text-[#8c909f]">{popup.kind}</p>
+            <p className="font-mono uppercase tracking-[0.05em] text-[#8c909f]">{popup.kind === "zone" ? "Possible interference" : popup.kind}</p>
             <button
               type="button"
               aria-label="Close"
@@ -608,6 +776,13 @@ export function MapView({ sensors, tracks, config = configFromEnv(), readArchive
               </div>
             ))}
           </dl>
+          {popup.zone && (
+            <p className="mt-2 border-t border-[#424754] pt-2 text-[#c2c6d6]">
+              {popup.zone.radiusKm === null
+                ? "No assessed radius was recorded with this conclusion, so no circle is drawn. The system does not estimate how far interference reaches."
+                : `The circle is the ${popup.zone.radiusKm} km area the rule assessed, not a measured extent of the interference.`}
+            </p>
+          )}
         </div>
       )}
 

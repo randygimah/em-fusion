@@ -122,6 +122,30 @@ export interface TimelineEvent {
   source: string;
 }
 
+// What the aircraft side had to say about an interference claim (anom-005,
+// anom-012). Sent verbatim; the screen words it from detectionVocabulary.
+export type Corroboration = "corroborated" | "not_corroborated" | "not_measurable";
+
+export interface ZoneCentre {
+  lat: number;
+  lon: number;
+}
+
+// One stored interference claim, placed (api-017). `id` equals the claim's
+// timeline event id, so the zone and its conclusion join. `radiusKm` is the
+// radius the rule assessed the aircraft side over, recorded with the claim —
+// not a measured extent of the interference — and null when none was recorded.
+export interface InterferenceZone {
+  id: string;
+  centre: ZoneCentre;
+  radiusKm: number | null;
+  receivers: string[];
+  startedAt: string;
+  endedAt: string;
+  confidence: Level;
+  corroboration: Corroboration;
+}
+
 export interface OperationalPicture {
   scenario: Scenario | null;
   hypotheses: Hypothesis[];
@@ -132,6 +156,8 @@ export interface OperationalPicture {
   rfSensors: RFSensor[];
   aircraftTracks: AircraftTrack[];
   timelineEvents: TimelineEvent[];
+  // The interference claims among the events, placed for the map (api-017).
+  interferenceZones: InterferenceZone[];
   // The view served and what it withheld (api-007). detectionSummary above is
   // never filtered: it is the account of the whole run whatever the view.
   view: PictureView;
@@ -148,6 +174,7 @@ export interface SuppressedCounts {
   rfSensors: number;
   aircraftTracks: number;
   timelineEvents: number;
+  interferenceZones: number;
 }
 
 // `examined` is false exactly when detectionSummary is null. On an unexamined

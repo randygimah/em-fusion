@@ -34,6 +34,7 @@ interface FakeMapInstance {
   addSource: ReturnType<typeof vi.fn>;
   addLayer: ReturnType<typeof vi.fn>;
   layerHandlers: string[];
+  sources: Map<string, { setData: ReturnType<typeof vi.fn> }>;
   emit: (event: string, payload?: unknown) => void;
 }
 
@@ -50,11 +51,14 @@ vi.mock("maplibre-gl", () => {
     handlers: Record<string, ((payload?: unknown) => void)[]> = {};
     // Layers named in on(event, layerId, handler): a handler bound to a layer.
     layerHandlers: string[] = [];
-    setStyle = vi.fn();
-    addSource = vi.fn();
+    // Sources live until the style is replaced, as in MapLibre, so an update
+    // reaches the source already drawn rather than a new one.
+    sources = new Map<string, { setData: ReturnType<typeof vi.fn> }>();
+    setStyle = vi.fn(() => this.sources.clear());
+    addSource = vi.fn((id: string) => this.sources.set(id, { setData: vi.fn() }));
     addLayer = vi.fn();
     addControl = vi.fn();
-    getSource = vi.fn(() => undefined);
+    getSource = vi.fn((id: string) => this.sources.get(id));
     getLayer = vi.fn(() => undefined);
     remove = vi.fn();
     constructor(options: { container: HTMLElement; style: unknown }) {
@@ -775,6 +779,22 @@ describe("interference zones", () => {
     expect(layers.find((layer) => layer.type === "line")?.paint?.["line-dasharray"]).toBeDefined();
   });
 
+  it("draws the disc in a colour no receiver or aircraft is drawn in", async () => {
+    // spec: map-006 (1) — review feedback, 8 Oct: the disc read as part of the orange markers.
+    renderMap({ zones: [zone] });
+    await mapReady();
+    act(() => lib.instances[0].emit("load"));
+
+    const markerColours = new Set(
+      (["receiver", "aircraft"] as const).flatMap((kind) =>
+        ["fault", "deviating", "interrupted", "nominal", "unknown"].flatMap((state) => Object.values(markerLook(kind, state))),
+      ),
+    );
+    const zoneColours = zoneLayers(lib.instances[0]).flatMap((layer) => [layer.paint?.["fill-color"], layer.paint?.["line-color"]].filter(Boolean));
+    expect(zoneColours).toHaveLength(2);
+    for (const colour of zoneColours) expect(markerColours.has(String(colour).toLowerCase())).toBe(false);
+  });
+
   it("redraws the disc after a basemap switch", async () => {
     // spec: map-006 (1) — the named failure case: a zone lost on a switch.
     renderMap({ zones: [zone], config: { defaultArchive: ARCHIVE, satellite: SATELLITE } });
@@ -875,6 +895,21 @@ describe("interference zones", () => {
 
     expect(within(dialog).getByText(/no assessed radius was recorded/i)).toBeInTheDocument();
     expect(dialog.textContent).not.toMatch(/\d+ km/);
+  });
+
+  it("empties the drawn disc when the payload stops carrying the zone", async () => {
+    // spec: map-006 — written after the code, for the mutation pass's one survivor:
+    // a disc left on the map after the view withheld its zone.
+    const { rerenderWith } = renderMap({ zones: [zone] });
+    await screen.findByRole("button", { name: ZONE_MARKER });
+    act(() => lib.instances[0].emit("load"));
+
+    rerenderWith({ zones: [] });
+
+    const setData = lib.instances[0].sources.get("zones")?.setData;
+    await waitFor(() => expect(setData).toHaveBeenCalled());
+    const last = setData?.mock.calls[setData.mock.calls.length - 1][0] as { features: unknown[] };
+    expect(last.features).toEqual([]);
   });
 
   it("removes the zone and closes its pop-up when the payload stops carrying it", async () => {

@@ -3044,6 +3044,71 @@ survivors:
 
 The final pass caught 47 of 47.
 
+### Interference zones are drawn as the disc the rule assessed, not as an extent
+
+The system's most important conclusion, interference over an area, reached the screen only as a line in
+the timeline. The picture carried no shape a map could draw, so placing it took a server item (`api-017`)
+before the map item (`map-006`), and the user chose that split over one combined item on 8 October 2026.
+
+**The system has no estimate of how far interference reaches, so nothing it draws may look like one.**
+Three shapes were offered. An *evidence footprint*, the outline around the receivers and the aircraft-gap
+positions the claim cites, is drawn from data but irregular, and where gap clusters chain together it
+sprawls into an area nobody measured. *Receivers only*, a dashed line between the receivers with the
+marker at their midpoint, claims the least but gives the analyst nothing to read aircraft against. The
+*assessed disc*, chosen, is the circle the fusion rule measured the aircraft side over (`anom-012`). It is
+the one area the system actually examined, and the pop-up says so in every case: the circle is the
+assessed area, not a measured extent. The danger it carries is that a tidy circle reads as a footprint;
+the sentence is the mitigation, and whether it works is a question for the evaluation, not something the
+build can show.
+
+**The radius is read from the store, never from the code.** The detector's current setting is 60 km, and
+writing 60 into the endpoint would have been the obvious implementation and the named failure case. The
+pass records its settings with every finding (`anom-015`), so the endpoint reads
+`FUSION-SPATIAL.excess_radius_km` from the row; a finding stored without settings is served with no radius,
+and the map then draws the centre marker, no circle, and a sentence saying none was recorded. In the store
+on 8 October all 100 interference rows carried the setting. The same rule holds for corroboration: the
+server sends the stored word (`corroborated`, `not_corroborated`, `not_measurable`), and the screen words
+it, keeping *could not be measured* apart from *measured and not disrupted* because `anom-012` found the
+first to be the majority case.
+
+**A zone is admitted by the view filter as its conclusion is.** It is a reportable claim, so *Anomalous
+only* and *All* serve it and *Nominal only* withholds and counts it (`api-007`), and its id equals its
+timeline event's so the two join. Checked in the browser on run 420: one zone over RF-04 (Eindhoven) and
+RF-05 (Weeze), Medium confidence, aircraft side not measurable, centre 51.5262°N 5.7584°E, disc 60 km;
+gone under *Nominal only*, back under *Anomalous only*.
+
+**The disc was first drawn in the anomalous orange, and review moved it to its own colour.** The reasoning
+had been that a zone is an anomalous finding, so it should share the anomalous colour. In the browser the
+disc read as part of the orange aircraft and receivers inside it: the one conclusion and the entities it
+concerns became one blob. The user asked for it to differ (8 October). It is now DESIGN.md's
+error-container red (`#93000a`), the one token family no marker uses, and far darker than the orange, so
+the two separate by lightness as well as hue, which matters under red-green colour blindness. The lesson is
+that a colour shared across *kinds* of thing says they are the same kind; state colours belong to entities,
+and a conclusion about an area is a different kind. A test now holds the disc's colours apart from every
+marker colour.
+
+**Two faults the unit tests could not see, and one they nearly missed.**
+- MapLibre's `setStyle` diffs by default. A successful diff fires no `style.load` and removes any source
+  the new style does not name, so a zone redrawn on `style.load` would vanish on the first basemap
+  switch and nothing would put it back. The switch now passes `diff: false`. This was found by reading
+  MapLibre's source, not by a test: the test double has no diff semantics, and with satellite
+  unconfigured locally it is unverified in a browser.
+- Naming the window formatter `window` shadowed the global, so the map's start-up code read
+  `window.location` from a function, threw inside the start-up `try`, and every map test reported "could
+  not start the map". Obvious once seen, and a reminder that a blanket catch converts any bug into the
+  WebGL message.
+- `tsc -b` caught ten test fixtures building the withheld counts without the new field. Vitest does not
+  type-check, so they had passed; they were fixed after the test commit.
+
+**The mutation pass found the one gap that mattered.** 25 mutants of the zone code; the first run killed 24.
+The survivor left the disc unchanged when the zones changed, so a disc would have stayed on the map after
+*Nominal only* withheld its zone, which is the item's own failure case of a zone drawn that the payload did
+not carry. The tests could not see it because the test double's `getSource` returned nothing, so the
+update path never ran. The double now keeps its sources until a style replaces them, as MapLibre does, and a
+test written after the code asserts the disc empties. The second run killed 25 of 25, and the browser
+confirmed no disc under *Nominal only* on run 420. With the colour mutant added after review, the pass
+stands at 26 of 26.
+
 ### Containerisation: a Makefile over Compose, and what the first working `up` exposed
 
 The three services (backend, frontend, and a profiled one-shot pipeline) are driven through a root

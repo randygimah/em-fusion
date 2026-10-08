@@ -56,6 +56,7 @@ from app.detection.control import REGISTER, Key, Producer, reportable_keys
 from app.detection.findings import DetectionFinding
 from app.detection.fusion import ANOMALY_TYPE as INTERFERENCE_TYPE
 from app.detection.fusion import RULE_ID as FUSION_RULE
+from app.detection.fusion import Corroboration as CorroborationState
 from app.detection.rf_noise import ANOMALY_TYPE as RF_TYPE
 from app.detection.rf_noise import RULE_ID as RF_RULE
 from app.detection.sensor_fault import ANOMALY_TYPE as FAULT_TYPE
@@ -110,6 +111,10 @@ TrackState = Literal["nominal", "interrupted", "unknown"]
 #: What the screen may ask to see (`api-007`, `FR-809`). An absent parameter is
 #: `all`, which is what every request received before the filter existed.
 ViewSelection = Literal["anomalous", "nominal", "all"]
+
+#: What the aircraft side had to say about an interference claim (`anom-005`,
+#: `anom-012`), sent verbatim for the screen to word (`op-003`).
+Corroboration = Literal["corroborated", "not_corroborated", "not_measurable"]
 
 _Row = TypeVar("_Row")
 
@@ -319,6 +324,41 @@ class TimelineEvent(BaseModel):
     source: str
 
 
+class ZoneCentre(BaseModel):
+    """Where an interference claim is filed. Spec: api-017."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    lat: float
+    lon: float
+
+
+class InterferenceZone(BaseModel):
+    """One stored interference claim, as the map draws it. Spec: api-017.
+
+    **The same claim as a timeline event, in a shape a map can place**, and
+    joined to it by `id`: the event says *what* was concluded and when, this
+    says where and over what. Nothing here is computed in the request.
+
+    `radiusKm` is the radius the aircraft side was **assessed over**
+    (`anom-012`), read from the settings recorded with the finding. The system
+    never estimates how far interference reaches, so this is the area the rule
+    looked at and not an extent -- and it is null when the finding was stored
+    without settings, rather than defaulted to the detector's current value.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    id: str
+    centre: ZoneCentre
+    radiusKm: float | None  # noqa: N815 -- mirrors the contract
+    receivers: list[str]
+    startedAt: str  # noqa: N815 -- mirrors the contract
+    endedAt: str  # noqa: N815 -- mirrors the contract
+    confidence: Level
+    corroboration: Corroboration
+
+
 class SelectableHour(BaseModel):
     """One hour the picture will serve. Spec: `api-013`.
 
@@ -370,6 +410,7 @@ class SuppressedCounts(BaseModel):
     rfSensors: int  # noqa: N815 -- mirrors the contract
     aircraftTracks: int  # noqa: N815 -- mirrors the contract
     timelineEvents: int  # noqa: N815 -- mirrors the contract
+    interferenceZones: int  # noqa: N815 -- mirrors the contract
 
 
 class PictureView(BaseModel):
@@ -406,6 +447,8 @@ class OperationalPicture(BaseModel):
     rfSensors: list[RFSensor]  # noqa: N815 -- mirrors the contract
     aircraftTracks: list[AircraftTrack]  # noqa: N815 -- mirrors the contract
     timelineEvents: list[TimelineEvent]  # noqa: N815 -- mirrors the contract
+    #: The interference claims among the events, placed (`api-017`).
+    interferenceZones: list[InterferenceZone]  # noqa: N815 -- mirrors the contract
     #: The view served and what it withheld (`api-007`). The summary above is
     #: never filtered: it is the account of the whole run whatever the view.
     view: PictureView
@@ -651,6 +694,69 @@ def _detection_summary(
     )
 
 
+def _event_id(finding: DetectionFinding) -> str:
+    """How a claim is named on the timeline, and how a zone joins to it."""
+    return f"{finding.rule_id}:{finding.subject}:{finding.started_at.isoformat()}"
+
+
+def _ordered(findings: Sequence[DetectionFinding]) -> list[DetectionFinding]:
+    """Oldest first. Spec: op-006.
+
+    On the **datetime** and not on the rendered string, then by the two fields
+    that make the order total. The store returns rows in whatever order it finds
+    them and `op-006` requires the ordering to be independent of that; sorting
+    the rendered form would additionally be wrong the moment two rows came back
+    with different UTC offsets, which is a property of the session's timezone
+    rather than of the data.
+    """
+    return sorted(findings, key=lambda f: (f.started_at, f.subject, f.finding_type))
+
+
+def _corroboration(word: object) -> Corroboration:
+    """A stored corroboration, refused by name if it is not one of the three."""
+    known = {state.value for state in CorroborationState}
+    if isinstance(word, str) and word in known:
+        return word  # type: ignore[return-value]
+    raise PictureError(
+        f"a stored interference claim reports corroboration={word!r}, which is "
+        f"not one of {', '.join(sorted(known))}."
+    )
+
+
+def _zones(
+    findings: Sequence[DetectionFinding], radii: Mapping[str, float]
+) -> list[InterferenceZone]:
+    """Each stored interference claim, placed. Spec: api-017.
+
+    **Only** `FUSION-SPATIAL` zones: a sensor fault is an attribution to one
+    receiver and is drawn as that receiver, and no intermediate finding is a
+    conclusion. Ordered as the timeline orders them, so the two lists read in
+    the same order.
+
+    The receivers are the finding's sensors, which `anom-005` stores subject
+    first; the radius is looked up by event id and is absent when the store
+    recorded none.
+    """
+    zones = []
+    for finding in _ordered(_of(findings, (FUSION_RULE, INTERFERENCE_TYPE))):
+        identifier = _event_id(finding)
+        zones.append(
+            InterferenceZone(
+                id=identifier,
+                centre=ZoneCentre(lat=finding.location.lat, lon=finding.location.lon),
+                radiusKm=radii.get(identifier),
+                receivers=list(_receivers_named(finding)),
+                startedAt=finding.started_at.isoformat(),
+                endedAt=finding.ended_at.isoformat(),
+                confidence=_level(
+                    finding.details.get("confidence"), field="confidence"
+                ),
+                corroboration=_corroboration(finding.details.get("corroboration")),
+            )
+        )
+    return zones
+
+
 def _timeline(
     findings: Sequence[DetectionFinding], register: Mapping[Key, Producer]
 ) -> list[TimelineEvent]:
@@ -669,17 +775,12 @@ def _timeline(
     the scoring pack.
     """
     reportable = reportable_keys(register)
-    claims = [f for f in findings if (f.rule_id, f.finding_type) in reportable]
-    # Ordered on the **datetime** and not on the rendered string, then by the
-    # two fields that make the order total. The store returns rows in whatever
-    # order it finds them and `op-006` requires the ordering to be independent
-    # of that; sorting the rendered form would additionally be wrong the moment
-    # two rows came back with different UTC offsets, which is a property of the
-    # session's timezone rather than of the data.
-    claims.sort(key=lambda f: (f.started_at, f.subject, f.finding_type))
+    claims = _ordered(
+        [f for f in findings if (f.rule_id, f.finding_type) in reportable]
+    )
     return [
         TimelineEvent(
-            id=f"{f.rule_id}:{f.subject}:{f.started_at.isoformat()}",
+            id=_event_id(f),
             time=f.started_at.isoformat(),
             event=f.finding_type,
             source=f.subject,
@@ -697,6 +798,7 @@ def build_operational_picture(
     detection_pass: DetectionPass | None = None,
     register: Mapping[Key, Producer] = REGISTER,
     view: ViewSelection = "all",
+    zone_radii: Mapping[str, float] | None = None,
 ) -> OperationalPicture:
     """Assemble the payload from a run and what has been read for it.
 
@@ -716,6 +818,10 @@ def build_operational_picture(
     decided, and counts what it withheld (`api-007`). Filtering is server-side
     and after the rows are built, so the payload shrinks with the selection
     while the state keeps one definition.
+
+    `zone_radii` is the radius each interference claim was judged under, keyed
+    by event id and read from the store (`api-017`); a claim missing from it is
+    served with no radius.
     """
     scenario = (
         None
@@ -764,6 +870,13 @@ def build_operational_picture(
     events, events_withheld = _admit(
         view, _timeline(findings, register), lambda _event: _EVENT
     )
+    # A zone is a reportable claim placed on the map, so it is admitted exactly
+    # as its event is. An unexamined run has no findings to place.
+    zones, zones_withheld = _admit(
+        view,
+        _zones(findings, zone_radii or {}) if scored else [],
+        lambda _zone: _EVENT,
+    )
     return OperationalPicture(
         scenario=scenario,
         hypotheses=[],
@@ -773,6 +886,7 @@ def build_operational_picture(
         rfSensors=sensors,
         aircraftTracks=tracks,
         timelineEvents=events,
+        interferenceZones=zones,
         view=PictureView(
             selected=view,
             examined=scored,
@@ -780,6 +894,7 @@ def build_operational_picture(
                 rfSensors=sensors_withheld,
                 aircraftTracks=tracks_withheld,
                 timelineEvents=events_withheld,
+                interferenceZones=zones_withheld,
             ),
         ),
     )
