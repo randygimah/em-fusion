@@ -455,6 +455,20 @@ GITIGNORE_PATHS = (
 BASEMAP_BBOX = [3, 49, 11, 54]
 BASEMAP_MAXZOOM = 10
 
+#: The Europe overview under the box (map-001 (11), agreed 2026-10-08): 6.2 MB
+#: by dry run, so zooming out or panning past the box never shows the background.
+OVERVIEW_BBOX = [-11, 35, 30, 61]
+OVERVIEW_MAXZOOM = 6
+OVERVIEW_ARCHIVE = "europe-overview.pmtiles"
+
+#: The light flavour's sprite (map-001 (10)), at both pixel densities.
+LIGHT_SPRITE = {
+    "sprites/v4/light.json",
+    "sprites/v4/light.png",
+    "sprites/v4/light@2x.json",
+    "sprites/v4/light@2x.png",
+}
+
 
 def _basemap_manifest() -> dict[str, Any]:
     return dict(json.loads(_read_first(BASEMAP_MANIFEST_PATHS)))
@@ -488,6 +502,25 @@ def test_every_basemap_file_is_pinned_by_checksum() -> None:
     )
 
 
+def test_the_basemap_manifest_records_the_europe_overview() -> None:
+    # spec: map-001 (11)
+    manifest = _basemap_manifest()
+    paths = {entry["path"] for entry in manifest["files"]}
+
+    assert manifest["overviewBbox"] == OVERVIEW_BBOX
+    assert manifest["overviewMaxzoom"] == OVERVIEW_MAXZOOM
+    assert OVERVIEW_ARCHIVE in paths
+
+
+def test_the_basemap_ships_the_light_sprite_and_not_the_dark_one() -> None:
+    # spec: map-001 (10) -- a sprite the style does not name is dead weight,
+    # and the one it does name missing is a map without its icons.
+    paths = {entry["path"] for entry in _basemap_manifest()["files"]}
+
+    assert LIGHT_SPRITE <= paths
+    assert not any(path.startswith("sprites/") and "dark" in path for path in paths)
+
+
 def test_the_basemap_files_are_ignored_and_the_manifest_is_not() -> None:
     # spec: map-001 (2) -- downloaded, not committed.
     ignore = _read_first(GITIGNORE_PATHS)
@@ -510,3 +543,29 @@ def test_make_basemap_runs_its_tools_in_containers_and_checks_what_it_fetched() 
                 ), f"{tool.strip()} outside a container: {line}"
     assert "sha256sum" in joined
     assert "manifest.json" in joined
+
+
+def test_make_basemap_cuts_the_overview_as_well_as_the_box() -> None:
+    # spec: map-001 (11) -- two extracts, each read from the manifest.
+    joined = " ".join(_recipes()["basemap"])
+
+    assert joined.count(" extract ") == 2
+    assert OVERVIEW_ARCHIVE in joined
+    # The box and zoom come from the manifest, like the detailed cut's.
+    assert "overviewBbox" in _makefile()
+    assert "overviewMaxzoom" in _makefile()
+
+
+def test_nginx_serves_the_map_worker_as_javascript() -> None:
+    """A module worker served as octet-stream is refused, and the map draws nothing."""
+    # spec: map-001 -- added after implementation, when the built map started,
+    # credited its sources and stayed blank behind nginx.
+    source = "\n".join(
+        line
+        for line in _read_first(NGINX_PATHS).splitlines()
+        if not line.strip().startswith("#")
+    )
+    block = re.search(r"location\s+~\s+\\\.mjs\$\s*\{([^}]*\{\s*\}[^}]*)\}", source)
+
+    assert block is not None
+    assert re.search(r"default_type\s+(text|application)/javascript;", block.group(1))

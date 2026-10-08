@@ -1,7 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import envDevelopment from "../../.env.development?raw";
-import envProduction from "../../.env.production?raw";
+import { readFileSync } from "node:fs";
 import operationalPictureMock from "../mocks/operationalPictureMock";
 import OperationalPictureScreen from "../screens/operationalPicture";
 import type { OperationalPicture } from "../types/operationalPicture";
@@ -15,6 +14,13 @@ import type { OperationalPicture } from "../types/operationalPicture";
 
 const MAP_LIBRARIES = ["maplibre-gl", "pmtiles", "@protomaps/basemaps"];
 const ADAPTER = "../components/map/MapView.tsx";
+
+// Read from disk, not through Vite: Vite refuses to serve .env files as modules
+// (server.fs.deny), a default worth keeping rather than loosening for a test.
+// Relative to the Vitest root, which is frontend/ here and in the container.
+const envFile = (name: string) => readFileSync(name, "utf8");
+const envDevelopment = envFile(".env.development");
+const envProduction = envFile(".env.production");
 
 const sources = import.meta.glob("../**/*.{ts,tsx}", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 

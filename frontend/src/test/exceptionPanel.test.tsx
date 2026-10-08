@@ -96,13 +96,14 @@ describe("where the panel sits", () => {
     expect(within(screen.getByRole("complementary")).queryByRole("tablist")).not.toBeInTheDocument();
   });
 
-  it("lists the receivers once, in the RF tab, and leaves the map box a placeholder", () => {
+  it("lists the receivers once, in the RF tab, under the map", () => {
     // spec: op-004 (3) — one list rendered twice is the drift this item removes.
+    // Re-pointed by map-001: the box above the panel is the map now, not a placeholder.
     show(anomalous());
 
     expect(screen.getAllByText("Station RF-01")).toHaveLength(1);
     expect(openPanel().getByText("Station RF-01")).toBeInTheDocument();
-    expect(screen.getByText(/the map is not built yet/i)).toBeInTheDocument();
+    expect(screen.getByTestId("map-view-stub")).toBeInTheDocument();
   });
 
   it("absorbs the timeline rather than sitting beside it", () => {
