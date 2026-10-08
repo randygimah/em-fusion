@@ -6,7 +6,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 // the derived address 404s and the map draws nothing. The worker is one
 // self-contained file, so Vite serves (and in a build, emits) it as it is.
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { corroborationLabel } from "../../lib/detectionVocabulary";
 import { cn } from "../../lib/utils";
@@ -431,6 +431,64 @@ function Icon({ kind, state }: { kind: Kind; state: string }) {
   );
 }
 
+// ------------------------------------------------------------ the pop-up
+
+/** Clearance between the pop-up and its marker's centre: half the 24 px icon and a margin. */
+const POPUP_GAP = 18;
+
+/** How much of a moved pop-up must stay inside the map, so it can always be dragged back. */
+const POPUP_KEEP = 40;
+
+/** One arrow-key press on the move handle (map-005 (3)). */
+const POPUP_STEP = 16;
+
+interface Size {
+  width: number;
+  height: number;
+}
+
+interface Point {
+  x: number;
+  y: number;
+}
+
+const clamp = (value: number, low: number, high: number) => Math.min(Math.max(value, low), Math.max(low, high));
+
+/**
+ * Where a pop-up opens: its top-left corner in the map's pixels (map-005 (3)).
+ * Above the marker when it fits, below it when it does not, then beside it --
+ * right, then left -- so a tall pop-up on a short map does not cover the marker
+ * it describes; pulled in from the edges either way, so it never opens clipped
+ * when the map has room for it.
+ */
+function fittedCorner(anchor: Point, popup: Size, map: Size): Point {
+  const x = clamp(anchor.x - popup.width / 2, 0, map.width - popup.width);
+  const above = anchor.y - POPUP_GAP - popup.height;
+  if (above >= 0) return { x, y: above };
+  const below = anchor.y + POPUP_GAP;
+  if (below + popup.height <= map.height) return { x, y: below };
+  const y = clamp(anchor.y - popup.height / 2, 0, map.height - popup.height);
+  const right = anchor.x + POPUP_GAP;
+  if (right + popup.width <= map.width) return { x: right, y };
+  const left = anchor.x - POPUP_GAP - popup.width;
+  return { x: left >= 0 ? left : x, y };
+}
+
+/** A moved pop-up's corner: its offset from the marker, kept far enough inside the map to grab again. */
+function movedCorner(anchor: Point, offset: Point, popup: Size, map: Size): Point {
+  return {
+    x: clamp(anchor.x + offset.x, POPUP_KEEP - popup.width, map.width - POPUP_KEEP),
+    y: clamp(anchor.y + offset.y, 0, map.height - POPUP_KEEP),
+  };
+}
+
+const ARROWS: Record<string, Point> = {
+  ArrowLeft: { x: -POPUP_STEP, y: 0 },
+  ArrowRight: { x: POPUP_STEP, y: 0 },
+  ArrowUp: { x: 0, y: -POPUP_STEP },
+  ArrowDown: { x: 0, y: POPUP_STEP },
+};
+
 // ----------------------------------------------------------------- the view
 
 /** Reads the archive's header: a missing file is caught before a map is made. */
@@ -486,6 +544,8 @@ export function MapView({ sensors, tracks, zones = [], config = configFromEnv(),
   const satellite = settings?.satellite ?? null;
 
   const container = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const libRef = useRef<MapLibre | null>(null);
   const basemapRef = useRef<Basemap>("default");
@@ -503,6 +563,11 @@ export function MapView({ sensors, tracks, zones = [], config = configFromEnv(),
   const [labelled, setLabelled] = useState<Map<string, string>>(new Map());
   const [selected, setSelected] = useState<string | null>(null);
   const [, setMoved] = useState(0);
+  // The pop-up's measured size and the map's, read after layout; and, once the
+  // analyst has moved it, its offset from the marker for the entity it was moved for.
+  const [popupSize, setPopupSize] = useState<Size | null>(null);
+  const [mapSize, setMapSize] = useState<Size>({ width: 0, height: 0 });
+  const [dragged, setDragged] = useState<{ key: string; offset: Point } | null>(null);
   const selectedRef = useRef(selected);
   selectedRef.current = selected;
 
@@ -670,6 +735,24 @@ export function MapView({ sensors, tracks, zones = [], config = configFromEnv(),
     if (selected && !popup) setSelected(null);
   }, [selected, popup]);
 
+  // Any change of pop-up -- closed, reopened or replaced -- opens in its fitted place.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the reset is keyed on the selection itself.
+  useEffect(() => setDragged(null), [selected]);
+
+  // Sizes are read after layout and stored only when they change, so this settles in one pass.
+  useLayoutEffect(() => {
+    const measure = (element: Element | null): Size | null => {
+      if (!element) return null;
+      const { width, height } = element.getBoundingClientRect();
+      return { width, height };
+    };
+    const same = (a: Size | null, b: Size | null) => a?.width === b?.width && a?.height === b?.height;
+    const map = measure(sectionRef.current);
+    if (map && !same(map, mapSize)) setMapSize(map);
+    const popup = measure(popupRef.current);
+    if (popup && !same(popup, popupSize)) setPopupSize(popup);
+  });
+
   useEffect(() => {
     if (!selected) return;
     const onKey = (event: KeyboardEvent) => {
@@ -701,9 +784,38 @@ export function MapView({ sensors, tracks, zones = [], config = configFromEnv(),
           ? "This browser could not start the map. It may not support WebGL."
           : null;
   const anchor = popup && mapRef.current ? mapRef.current.project([popup.lon, popup.lat]) : null;
+  const size = popupSize ?? { width: 0, height: 0 };
+  const offset = dragged && dragged.key === selected ? dragged.offset : null;
+  const corner = anchor ? (offset ? movedCorner(anchor, offset, size, mapSize) : fittedCorner(anchor, size, mapSize)) : null;
+
+  /** Moves the open pop-up by a distance, starting from wherever it is drawn now. */
+  const moveBy = (from: Point, delta: Point) => {
+    if (!anchor || !selected) return;
+    setDragged({ key: selected, offset: { x: from.x - anchor.x + delta.x, y: from.y - anchor.y + delta.y } });
+  };
+
+  const startDrag = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (event.button !== 0 || !corner) return;
+    const start = { x: event.clientX, y: event.clientY };
+    const from = corner;
+    // Capture keeps the drag when the pointer outruns the handle. It throws for a
+    // pointer the browser does not consider active, which must not cancel the drag.
+    try {
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+    } catch {}
+    const onMove = (move: PointerEvent) => moveBy(from, { x: move.clientX - start.x, y: move.clientY - start.y });
+    const onUp = (up: PointerEvent) => {
+      onMove(up);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  };
 
   return (
     <section
+      ref={sectionRef}
       aria-label="Map"
       className="relative h-full min-h-[320px] w-full overflow-hidden border border-[#424754] bg-black"
     >
@@ -745,17 +857,33 @@ export function MapView({ sensors, tracks, zones = [], config = configFromEnv(),
           );
         })}
 
-      {popup && anchor && (
+      {popup && corner && (
         <div
+          ref={popupRef}
           role="dialog"
           aria-label={
             popup.kind === "aircraft" ? `Aircraft ${popup.track?.name}` : popup.kind === "zone" ? "Possible interference" : `Receiver ${popup.sensor?.id}`
           }
-          className="absolute z-10 w-72 -translate-x-1/2 -translate-y-full border border-[#424754] bg-[#10131a] p-3 text-xs text-[#e1e2ec] shadow-lg"
-          style={{ left: anchor.x, top: anchor.y - 18 }}
+          className="absolute z-10 w-72 border border-[#424754] bg-[#10131a] p-3 text-xs text-[#e1e2ec] shadow-lg"
+          // Hidden for the one render before its size is known, so it never flashes in the wrong place.
+          style={{ left: corner.x, top: corner.y, visibility: popupSize ? "visible" : "hidden" }}
         >
-          <div className="mb-2 flex items-center justify-between">
-            <p className="font-mono uppercase tracking-[0.05em] text-[#8c909f]">{popup.kind === "zone" ? "Possible interference" : popup.kind}</p>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            {/* The header is the move handle: dragged with a pointer, or nudged with the arrow keys. */}
+            <button
+              type="button"
+              aria-label="Move pop-up (drag, or use the arrow keys)"
+              onPointerDown={startDrag}
+              onKeyDown={(event) => {
+                const delta = ARROWS[event.key];
+                if (!delta || !corner) return;
+                event.preventDefault();
+                moveBy(corner, delta);
+              }}
+              className="flex-1 cursor-move touch-none select-none text-left font-mono uppercase tracking-[0.05em] text-[#8c909f]"
+            >
+              {popup.kind === "zone" ? "Possible interference" : popup.kind}
+            </button>
             <button
               type="button"
               aria-label="Close"

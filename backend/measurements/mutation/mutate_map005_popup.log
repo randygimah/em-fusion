@@ -1,0 +1,14 @@
+sentinel killed (Tests  5 failed | 68 passed (73)) -- edits reach the tests
+
+always above                                         KILLED   Tests  2 failed | 71 passed (73)
+never below                                          KILLED   Tests  1 failed | 72 passed (73)
+never beside                                         KILLED   Tests  1 failed | 72 passed (73)
+not pulled in from the side edges                    KILLED   Tests  1 failed | 72 passed (73)
+no drag                                              KILLED   Tests  4 failed | 69 passed (73)
+no arrow keys                                        KILLED   Tests  1 failed | 72 passed (73)
+the arrow step is ten pixels                         KILLED   Tests  1 failed | 72 passed (73)
+a moved pop-up is left behind when the map pans      KILLED   Tests  1 failed | 72 passed (73)
+a moved pop-up can leave the map                     KILLED   Tests  1 failed | 72 passed (73)
+a reopened pop-up keeps its move                     KILLED   Tests  1 failed | 72 passed (73)
+
+10 of 10 valid mutants killed

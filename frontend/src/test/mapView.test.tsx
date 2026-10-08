@@ -724,6 +724,17 @@ describe("placing and moving the pop-up", () => {
     expect(inside(box())).toBe(true);
   });
 
+  it("opens beside its marker when it fits neither above nor below, rather than covering it", async () => {
+    // spec: map-005 (3) — written after the code: the browser showed a tall pop-up on a
+    // short map clamped over the very marker it described.
+    markerAt(400, 200);
+    await open();
+
+    const b = box();
+    expect(inside(b)).toBe(true);
+    expect(b.left <= 400 && 400 <= b.right && b.top <= 200 && 200 <= b.bottom).toBe(false);
+  });
+
   it("is pulled in from either side edge", async () => {
     // spec: map-005 (3)
     markerAt(10, 300);

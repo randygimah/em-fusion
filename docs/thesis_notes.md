@@ -3109,6 +3109,40 @@ test written after the code asserts the disc empties. The second run killed 25 o
 confirmed no disc under *Nominal only* on run 420. With the colour mutant added after review, the pass
 stands at 26 of 26.
 
+### The pop-up learns where the map's edges are, and can be moved
+
+Review on run 411 (8 October 2026) showed the zone's pop-up with its top rows cut off: the pop-up always
+opened above its marker, and the map clips what falls outside it. Nothing in `map-005` said what happens
+near an edge, so the build did the simplest thing. The user asked for a way to move it; the amendment
+answers two problems separately (`qa.md` §155). **Fitting** is the map's job: the pop-up opens above the
+marker, below it when there is no room above, and pulled in from the side edges, so it never opens clipped
+when the map has room. **Moving** is the analyst's: drag the header, or use the arrow keys on it, 16 px a
+press. A pop-up that had to be dragged before it could be read would be a defect with a workaround, which
+is why fitting came first.
+
+**A moved pop-up keeps its offset from its marker, not its place on screen.** The alternative, leaving it
+where it was dropped, is simpler and fails as soon as the map pans: the pop-up stays put and ends up
+beside a different aircraft, describing one entity while pointing at another. It is held at least 40 px
+inside the map so it can always be grabbed again, and closing, reopening or replacing it starts it in its
+fitted place.
+
+**The browser added a third placement the spec had not named.** At the zoom of the review a zone pop-up
+is 275 px tall in a 485 px map, so with its marker mid-map it fitted neither above nor below, and the
+fallback (clamped to the top) laid it over the very marker it described. It now opens beside the marker,
+right then left, before clamping. The spec was widened to say so and a test written after the code holds
+it; that test fails against the clamp fallback.
+
+**Two browser findings about the instrument rather than the code.** The automation tool's drag sends
+pointer moves with no pointer-down, so a real drag could not be performed through it; the drag was
+exercised by dispatching a pointer sequence in the page, which moved the pop-up by exactly the distance
+dragged (+200, −50 px). That exposed one real fault: `setPointerCapture` throws for a pointer the browser
+does not consider active, and the throw cancelled the drag before its listeners were attached. Capture is
+now attempted and a failure ignored. The pan-following behaviour could not be watched in the browser,
+because the automation tab is hidden and Chrome runs no animation frames there (the same limit that
+stopped the frame-rate measurement); it rests on its unit test.
+
+The mutation pass for the amendment killed 10 of 10.
+
 ### Containerisation: a Makefile over Compose, and what the first working `up` exposed
 
 The three services (backend, frontend, and a profiled one-shot pipeline) are driven through a root
