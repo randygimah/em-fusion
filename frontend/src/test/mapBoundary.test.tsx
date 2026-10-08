@@ -96,4 +96,27 @@ describe("the screen hands the map the filtered payload", () => {
     expect(map.getByText(`receivers: ${picture.rfSensors[0].id}`)).toBeInTheDocument();
     expect(map.getByText("aircraft: opensky-replay:AC-1, opensky-replay:AC-2")).toBeInTheDocument();
   });
+
+  it("gives the map the interference zones the payload carried", () => {
+    // spec: map-006, api-017 — filtered like every other row, by the same view.
+    const zoneId = "FUSION-SPATIAL:RF-04:2022-06-27T12:02:00+00:00";
+    const withZone = {
+      ...picture,
+      interferenceZones: [
+        {
+          id: zoneId,
+          centre: { lat: 51.4, lon: 6.1 },
+          radiusKm: 60,
+          receivers: ["RF-04", "RF-05"],
+          startedAt: "2022-06-27T12:02:00+00:00",
+          endedAt: "2022-06-27T12:08:00+00:00",
+          confidence: "Medium" as const,
+          corroboration: "not_measurable" as const,
+        },
+      ],
+    };
+    render(<OperationalPictureScreen operationalPicture={withZone} />);
+
+    expect(within(screen.getByTestId("map-view-stub")).getByText(`zones: ${zoneId}`)).toBeInTheDocument();
+  });
 });

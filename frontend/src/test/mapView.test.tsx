@@ -1,7 +1,8 @@
 import { namedFlavor } from "@protomaps/basemaps";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { AircraftTrack, RFSensor } from "../types/operationalPicture";
+import { CORROBORATION_COPY } from "../lib/detectionVocabulary";
+import type { AircraftTrack, InterferenceZone, RFSensor } from "../types/operationalPicture";
 
 // spec: map-001, map-002, map-003, map-005 — the MapView adapter, what it shows
 // when it cannot be a map, how its markers say what state each entity is in,
@@ -30,6 +31,9 @@ const lib = vi.hoisted(() => ({
 interface FakeMapInstance {
   options: { container: HTMLElement; style: unknown; maxBounds?: unknown };
   setStyle: ReturnType<typeof vi.fn>;
+  addSource: ReturnType<typeof vi.fn>;
+  addLayer: ReturnType<typeof vi.fn>;
+  layerHandlers: string[];
   emit: (event: string, payload?: unknown) => void;
 }
 
@@ -44,6 +48,8 @@ vi.mock("maplibre-gl", () => {
   class FakeMap {
     options: { container: HTMLElement; style: unknown };
     handlers: Record<string, ((payload?: unknown) => void)[]> = {};
+    // Layers named in on(event, layerId, handler): a handler bound to a layer.
+    layerHandlers: string[] = [];
     setStyle = vi.fn();
     addSource = vi.fn();
     addLayer = vi.fn();
@@ -66,6 +72,7 @@ vi.mock("maplibre-gl", () => {
     }
     on(event: string, a: unknown, b?: unknown) {
       const callback = (typeof a === "function" ? a : b) as (payload?: unknown) => void;
+      if (typeof a === "string") this.layerHandlers.push(a);
       this.handlers[event] = [...(this.handlers[event] ?? []), callback];
       return this;
     }
@@ -124,7 +131,9 @@ vi.mock("pmtiles", () => ({
   },
 }));
 
-const { MapView, buildDefaultStyle, buildSatelliteStyle, markerLook, placeLabels, readBasemapConfig } = await import("../components/map/MapView");
+const { MapView, buildDefaultStyle, buildSatelliteStyle, markerLook, placeLabels, readBasemapConfig, zoneOutline } = await import(
+  "../components/map/MapView"
+);
 
 const ARCHIVE = "/basemap/em-fusion.pmtiles";
 const OVERVIEW = "/basemap/europe-overview.pmtiles";
@@ -705,5 +714,178 @@ describe("placing labels", () => {
   it("keeps both when they are apart", () => {
     // spec: map-005 (2)
     expect(placeLabels([label("a", 3, 0), label("b", 3, 500)])).toEqual(new Set(["a", "b"]));
+  });
+});
+
+describe("interference zones", () => {
+  // spec: map-006 — the disc the claim was assessed over, never an extent.
+  const zone: InterferenceZone = {
+    id: "FUSION-SPATIAL:RF-01:2022-06-27T12:00:00+00:00",
+    centre: { lat: 50.05, lon: 6.05 },
+    radiusKm: 60,
+    receivers: ["RF-01", "RF-02"],
+    startedAt: "2022-06-27T12:00:00+00:00",
+    endedAt: "2022-06-27T12:05:30+00:00",
+    confidence: "Medium",
+    corroboration: "not_measurable",
+  };
+  const ZONE_MARKER = "Interference zone over RF-01 and RF-02, Medium confidence";
+
+  /** Great-circle distance in km: the check is geometric, not a copy of the code. */
+  const haversineKm = ([lon1, lat1]: number[], [lon2, lat2]: number[]) => {
+    const rad = Math.PI / 180;
+    const a = Math.sin(((lat2 - lat1) * rad) / 2) ** 2 + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(((lon2 - lon1) * rad) / 2) ** 2;
+    return 2 * 6371.0088 * Math.asin(Math.sqrt(a));
+  };
+
+  type Feature = { geometry: { type: string; coordinates: number[][][] } };
+  const zoneSourceData = (map: FakeMapInstance): Feature[] => {
+    const calls = map.addSource.mock.calls.filter((call) => call[0] === "zones");
+    const last = calls[calls.length - 1];
+    return (last?.[1] as { data: { features: Feature[] } } | undefined)?.data.features ?? [];
+  };
+  const zoneLayers = (map: FakeMapInstance) =>
+    map.addLayer.mock.calls
+      .map((call) => call[0] as { id: string; type: string; source: string; paint?: Record<string, unknown> })
+      .filter((layer) => layer.source === "zones");
+
+  it("outlines a closed ring whose every vertex lies at the radius from the centre", () => {
+    // spec: map-006 — the named failure case: a circle the wrong size.
+    const ring = zoneOutline(zone.centre, 60);
+
+    expect(ring.length).toBeGreaterThanOrEqual(33);
+    expect(ring[0]).toEqual(ring[ring.length - 1]);
+    for (const vertex of ring) {
+      expect(haversineKm([zone.centre.lon, zone.centre.lat], vertex)).toBeCloseTo(60, 0);
+    }
+  });
+
+  it("draws the disc as a dashed outline and a faint fill once the style has loaded", async () => {
+    // spec: map-006 (1)
+    renderMap({ zones: [zone] });
+    await mapReady();
+
+    act(() => lib.instances[0].emit("load"));
+
+    const features = zoneSourceData(lib.instances[0]);
+    expect(features).toHaveLength(1);
+    expect(features[0].geometry.type).toBe("Polygon");
+    const layers = zoneLayers(lib.instances[0]);
+    expect(layers.map((layer) => layer.type).sort()).toEqual(["fill", "line"]);
+    expect(layers.find((layer) => layer.type === "line")?.paint?.["line-dasharray"]).toBeDefined();
+  });
+
+  it("redraws the disc after a basemap switch", async () => {
+    // spec: map-006 (1) — the named failure case: a zone lost on a switch.
+    renderMap({ zones: [zone], config: { defaultArchive: ARCHIVE, satellite: SATELLITE } });
+    await mapReady();
+    act(() => lib.instances[0].emit("load"));
+    const before = lib.instances[0].addSource.mock.calls.filter((call) => call[0] === "zones").length;
+
+    fireEvent.click(screen.getByRole("button", { name: /satellite/i }));
+    act(() => lib.instances[0].emit("style.load"));
+
+    expect(lib.instances[0].addSource.mock.calls.filter((call) => call[0] === "zones").length).toBe(before + 1);
+    expect(zoneSourceData(lib.instances[0])).toHaveLength(1);
+  });
+
+  it("binds nothing to the disc, so it never takes a click meant for a marker", async () => {
+    // spec: map-006 — the named failure case.
+    renderMap({ zones: [zone] });
+    await mapReady();
+    act(() => lib.instances[0].emit("load"));
+
+    const zoneLayerIds = zoneLayers(lib.instances[0]).map((layer) => layer.id);
+    // Tightened before the test commit: with no zone layers at all this passed vacuously.
+    expect(zoneLayerIds).toHaveLength(2);
+    expect(lib.instances[0].layerHandlers.filter((id) => zoneLayerIds.includes(id))).toEqual([]);
+  });
+
+  it("draws no circle for a zone with no recorded radius, and keeps its centre marker", async () => {
+    // spec: map-006 (4) — the named failure case: a circle without a radius.
+    renderMap({ zones: [{ ...zone, radiusKm: null }] });
+    await mapReady();
+    act(() => lib.instances[0].emit("load"));
+
+    expect(zoneSourceData(lib.instances[0])).toEqual([]);
+    expect(await screen.findByRole("button", { name: ZONE_MARKER })).toBeInTheDocument();
+  });
+
+  it("draws nothing the payload did not carry", async () => {
+    // spec: map-006 — the named failure case.
+    renderMap();
+    await markersReady();
+    act(() => lib.instances[0].emit("load"));
+
+    // Tightened before the test commit: the source exists and is empty, rather
+    // than the check passing because nothing was drawn at all.
+    expect(lib.instances[0].addSource.mock.calls.some((call) => call[0] === "zones")).toBe(true);
+    expect(zoneSourceData(lib.instances[0])).toEqual([]);
+    expect(screen.queryByRole("button", { name: /^Interference zone/ })).not.toBeInTheDocument();
+  });
+
+  it("marks the centre with a button naming the receivers and the confidence, at the centre", async () => {
+    // spec: map-006 (2)
+    renderMap({ zones: [zone] });
+
+    const button = await screen.findByRole("button", { name: ZONE_MARKER });
+    const marker = liveMarkers().find((m) => m.element.contains(button));
+    expect(marker && at(marker)).toEqual([zone.centre.lon, zone.centre.lat]);
+  });
+
+  it("labels the zone, and the label outranks every other", async () => {
+    // spec: map-006 (2), map-005 (2) — everything on one point: only the zone's label survives.
+    lib.project = () => ({ x: 100, y: 100 });
+    lib.zoom = 9;
+    renderMap({ zones: [zone] });
+    await screen.findByRole("button", { name: ZONE_MARKER });
+    act(() => lib.instances[0].emit("moveend"));
+
+    await waitFor(() => expect(shown("Possible interference · Medium")).toBe(true));
+    expect(shown("Station 1")).toBe(false);
+    expect(shown("AC-1 · 30,000 ft")).toBe(false);
+  });
+
+  it("opens a pop-up with the receivers, window, confidence, corroboration and what the circle is", async () => {
+    // spec: map-006 (3)
+    renderMap({ zones: [zone] });
+    fireEvent.click(await screen.findByRole("button", { name: ZONE_MARKER }));
+    const popup = within(await screen.findByRole("dialog"));
+
+    expect(popup.getByText("RF-01, RF-02")).toBeInTheDocument();
+    expect(popup.getByText(/12:00:00.*12:05:30/)).toBeInTheDocument();
+    expect(popup.getByText("Medium")).toBeInTheDocument();
+    expect(popup.getByText(CORROBORATION_COPY.not_measurable)).toBeInTheDocument();
+    expect(popup.getByText(/the 60 km area the rule assessed, not a measured extent of the interference/i)).toBeInTheDocument();
+  });
+
+  it("words every corroboration from the vocabulary module", () => {
+    // spec: map-006 (3), op-003 — one place for the words.
+    for (const value of ["corroborated", "not_corroborated", "not_measurable"] as const) {
+      expect(CORROBORATION_COPY[value]).toMatch(/\w/);
+    }
+    expect(new Set(Object.values(CORROBORATION_COPY)).size).toBe(3);
+  });
+
+  it("says when no assessed radius was recorded, and names no radius", async () => {
+    // spec: map-006 (4)
+    renderMap({ zones: [{ ...zone, radiusKm: null }] });
+    fireEvent.click(await screen.findByRole("button", { name: ZONE_MARKER }));
+    const dialog = await screen.findByRole("dialog");
+
+    expect(within(dialog).getByText(/no assessed radius was recorded/i)).toBeInTheDocument();
+    expect(dialog.textContent).not.toMatch(/\d+ km/);
+  });
+
+  it("removes the zone and closes its pop-up when the payload stops carrying it", async () => {
+    // spec: map-006, map-005 — e.g. the view switched to nominal only.
+    const { rerenderWith } = renderMap({ zones: [zone] });
+    fireEvent.click(await screen.findByRole("button", { name: ZONE_MARKER }));
+    await screen.findByRole("dialog");
+
+    rerenderWith({ zones: [] });
+
+    await waitFor(() => expect(screen.queryByRole("button", { name: ZONE_MARKER })).not.toBeInTheDocument());
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });

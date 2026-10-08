@@ -122,6 +122,11 @@ MODELS = {
     # contract by the same check as every other shape.
     "PictureView": PictureView,
     "SuppressedCounts": SuppressedCounts,
+    # `api-017`. Looked up rather than imported, so the shapes going missing
+    # fails the parity tests one by one instead of the whole module at
+    # collection.
+    "InterferenceZone": getattr(picture_module, "InterferenceZone", None),
+    "ZoneCentre": getattr(picture_module, "ZoneCentre", None),
 }
 
 #: The two fields that carried `74.2` and `0.92` before this item, rendered as
@@ -1699,7 +1704,7 @@ def test_the_endpoint_serves_each_track_with_its_state(
 # definition of *interrupted* in SQL is a definition that can drift.
 
 VIEWS = ("anomalous", "nominal", "all")
-COLLECTIONS = ("rfSensors", "aircraftTracks", "timelineEvents")
+COLLECTIONS = ("rfSensors", "aircraftTracks", "timelineEvents", "interferenceZones")
 
 
 def _viewed(
@@ -1764,6 +1769,7 @@ def test_anomalous_admits_only_the_rows_a_finding_put_out_of_nominal() -> None:
         "rfSensors": len(LAYOUT.sensors) - 1,
         "aircraftTracks": 1,
         "timelineEvents": 0,
+        "interferenceZones": 0,
     }
 
 
@@ -1779,6 +1785,7 @@ def test_nominal_admits_only_nominal_rows_and_no_event() -> None:
         "rfSensors": 1,
         "aircraftTracks": 1,
         "timelineEvents": 1,
+        "interferenceZones": 0,
     }
 
 
@@ -1942,7 +1949,222 @@ def test_the_endpoint_serves_the_selected_view_with_its_metadata(
             "rfSensors": len(LAYOUT.sensors),
             "aircraftTracks": 1,
             "timelineEvents": 0,
+            "interferenceZones": 0,
         },
     }
     assert absent["view"]["selected"] == "all"
     assert len(absent["aircraftTracks"]) == 2
+
+
+# ------------------------------------------------- interference zones, api-017
+#
+# The most important conclusion the system reaches -- interference over an
+# area -- had no place on the map, because the picture carried it as a line in
+# the timeline and nothing more. Each stored claim now travels with its centre,
+# its receivers, its window, its confidence, its corroboration and the radius
+# the aircraft side was measured over. The system never estimates how far
+# interference reaches, so the radius is the one the claim was judged under,
+# read from the settings stored with it, and absent when none was stored.
+
+#: The setting stored with a finding that names the radius anom-012 measured over.
+RADIUS_KEY = "FUSION-SPATIAL.excess_radius_km"
+
+
+def _claim(
+    *sensors: str,
+    offset_s: int = 0,
+    confidence: str = "medium",
+    corroboration: str = "not_measurable",
+) -> DetectionFinding:
+    return _finding(
+        rule_id=FUSION_RULE,
+        finding_type=INTERFERENCE_TYPE,
+        subject=sensors[0],
+        offset_s=offset_s,
+        details={
+            "confidence": confidence,
+            "sensors": list(sensors),
+            "corroboration": corroboration,
+        },
+    )
+
+
+def _id_of(finding: DetectionFinding) -> str:
+    return f"{finding.rule_id}:{finding.subject}:{finding.started_at.isoformat()}"
+
+
+def _zones(picture: OperationalPicture) -> list[dict[str, Any]]:
+    return list(picture.model_dump()["interferenceZones"])
+
+
+def test_an_interference_claim_becomes_one_zone_joined_to_its_conclusion() -> None:
+    # spec: api-017
+    claim = _claim(RECEIVER, OTHER_RECEIVER)
+    picture = _scored([claim], zone_radii={_id_of(claim): 60.0})
+
+    (zone,) = _zones(picture)
+    assert zone == {
+        "id": picture.timelineEvents[0].id,
+        "centre": {"lat": LAT, "lon": LON},
+        "radiusKm": 60.0,
+        "receivers": [RECEIVER, OTHER_RECEIVER],
+        "startedAt": claim.started_at.isoformat(),
+        "endedAt": claim.ended_at.isoformat(),
+        "confidence": "Medium",
+        "corroboration": "not_measurable",
+    }
+
+
+def test_a_radius_the_store_did_not_record_is_served_as_absent() -> None:
+    # spec: api-017 -- the named failure case: a code default of 60.
+    (zone,) = _zones(_scored([_claim(RECEIVER, OTHER_RECEIVER)]))
+
+    assert zone["radiusKm"] is None
+
+
+def test_the_radius_is_the_one_recorded_with_the_claim() -> None:
+    # spec: api-017 -- never the detector's current setting.
+    claim = _claim(RECEIVER, OTHER_RECEIVER)
+
+    (zone,) = _zones(_scored([claim], zone_radii={_id_of(claim): 45.0}))
+
+    assert zone["radiusKm"] == 45.0
+
+
+def test_only_interference_claims_become_zones() -> None:
+    # spec: api-017 -- a sensor fault is a receiver, and no intermediate is a zone.
+    claim = _claim(RECEIVER, OTHER_RECEIVER, offset_s=60)
+
+    zones = _zones(_scored([_fault(OTHER_RECEIVER), _rf(), _gap(), claim]))
+
+    assert [zone["id"] for zone in zones] == [_id_of(claim)]
+
+
+def test_zones_are_ordered_like_their_conclusions() -> None:
+    # spec: api-017, op-006
+    later = _claim(OTHER_RECEIVER, RECEIVER, offset_s=600)
+    earlier = _claim(RECEIVER, OTHER_RECEIVER, offset_s=60)
+
+    picture = _scored([later, earlier])
+
+    assert [zone["id"] for zone in _zones(picture)] == [
+        event.id for event in picture.timelineEvents
+    ]
+
+
+@pytest.mark.parametrize(
+    ("view", "served", "withheld"),
+    (("anomalous", 1, 0), ("nominal", 0, 1), ("all", 1, 0)),
+)
+def test_zones_are_filtered_like_the_conclusions(
+    view: str, served: int, withheld: int
+) -> None:
+    # spec: api-017 (3), api-007 -- the named failure case: a zone under nominal.
+    picture = _viewed(view, [_claim(RECEIVER, OTHER_RECEIVER)])
+
+    assert len(_zones(picture)) == served
+    assert _suppressed(picture)["interferenceZones"] == withheld
+
+
+def test_an_unexamined_run_serves_no_zones() -> None:
+    # spec: api-017 (3)
+    picture = _viewed("all", scored=False)
+
+    assert _zones(picture) == []
+    assert picture.view.examined is False
+
+
+def test_the_confidence_is_a_level_and_not_a_number() -> None:
+    # spec: api-017 -- the named failure case, and the project-wide rule.
+    (zone,) = _zones(_scored([_claim(RECEIVER, OTHER_RECEIVER, confidence="high")]))
+
+    assert zone["confidence"] == "High"
+    with pytest.raises(PictureError):
+        _scored([_claim(RECEIVER, OTHER_RECEIVER, confidence="0.8")])
+
+
+def test_the_corroboration_is_served_verbatim_for_the_screen_to_word() -> None:
+    # spec: api-017 -- facts, never prose (op-003).
+    claim = _claim(RECEIVER, OTHER_RECEIVER, corroboration="corroborated")
+
+    (zone,) = _zones(_scored([claim]))
+
+    assert zone["corroboration"] == "corroborated"
+
+
+@pytest.mark.database
+@requires_database
+def test_the_store_returns_the_radius_recorded_with_each_interference_claim(
+    picture_database: Engine,
+) -> None:
+    # spec: api-017 (2) -- read from the settings stored with the finding.
+    from app.db.findings import interference_radii_for_run
+
+    _insert_run(picture_database, RUN_ID, completed=True)
+    factory = sessionmaker(bind=picture_database, autoflush=False)
+    claim = _claim(RECEIVER, OTHER_RECEIVER)
+    save_findings(
+        factory,
+        scenario_run_id=RUN_ID,
+        rule_id=FUSION_RULE,
+        findings=[claim],
+        policy={RADIUS_KEY: "60.0"},
+    )
+    save_findings(
+        factory,
+        scenario_run_id=RUN_ID,
+        rule_id=FAULT_RULE,
+        findings=[_fault(OTHER_RECEIVER)],
+        policy={RADIUS_KEY: "60.0"},
+    )
+
+    assert interference_radii_for_run(factory, RUN_ID) == {_id_of(claim): 60.0}
+
+
+@pytest.mark.database
+@requires_database
+def test_the_store_returns_no_radius_for_a_claim_stored_without_settings(
+    picture_database: Engine,
+) -> None:
+    # spec: api-017 -- unprovenanced is absent, never defaulted.
+    from app.db.findings import interference_radii_for_run
+
+    _insert_run(picture_database, RUN_ID, completed=True)
+    factory = sessionmaker(bind=picture_database, autoflush=False)
+    save_findings(
+        factory,
+        scenario_run_id=RUN_ID,
+        rule_id=FUSION_RULE,
+        findings=[_claim(RECEIVER, OTHER_RECEIVER)],
+    )
+
+    assert interference_radii_for_run(factory, RUN_ID) == {}
+
+
+@pytest.mark.database
+@requires_database
+def test_the_endpoint_serves_each_zone_with_its_recorded_radius(
+    picture_database: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # spec: api-017 -- on the wire, from the stored claim, its settings and the stamp.
+    _insert_run(picture_database, RUN_ID, completed=True)
+    _save(picture_database, _two_aircraft())
+    factory = sessionmaker(bind=picture_database, autoflush=False)
+    save_findings(
+        factory,
+        scenario_run_id=RUN_ID,
+        rule_id=FUSION_RULE,
+        findings=[_claim(RECEIVER, OTHER_RECEIVER)],
+        policy={RADIUS_KEY: "60.0"},
+    )
+    record_detection_pass(factory, RUN_ID, policy={RADIUS_KEY: "60.0"})
+
+    _, anomalous = _get_with(picture_database, monkeypatch, view="anomalous")
+    _, nominal = _get_with(picture_database, monkeypatch, view="nominal")
+
+    (zone,) = anomalous["interferenceZones"]
+    assert zone["radiusKm"] == 60.0
+    assert zone["id"] == anomalous["timelineEvents"][0]["id"]
+    assert zone["receivers"] == [RECEIVER, OTHER_RECEIVER]
+    assert nominal["interferenceZones"] == []
+    assert nominal["view"]["suppressed"]["interferenceZones"] == 1

@@ -16,11 +16,12 @@ afterEach(cleanup);
 // receives the same filtered rows as the exception panel. mapView.test.tsx
 // unmocks it to test the real adapter.
 vi.mock("../components/map/MapView", () => ({
-  MapView: ({ sensors, tracks }: { sensors: { id: string }[]; tracks: { id: string }[] }) =>
+  MapView: ({ sensors, tracks, zones = [] }: { sensors: { id: string }[]; tracks: { id: string }[]; zones?: { id: string }[] }) =>
     createElement(
       "div",
       { "data-testid": "map-view-stub" },
       createElement("p", null, `receivers: ${sensors.map((sensor) => sensor.id).join(", ")}`),
       createElement("p", null, `aircraft: ${tracks.map((track) => track.id).join(", ")}`),
+      createElement("p", null, `zones: ${zones.map((zone) => zone.id).join(", ")}`),
     ),
 }));
