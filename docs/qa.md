@@ -9271,6 +9271,33 @@ than the map:
 Labels for all of them overlap into noise, so a label rule has to say which entities get one, or
 leave MapLibre to drop colliding labels and say so.
 
+## 155. Can we add a way to move the pop-up around so that it's not stuck to the top of the map?
+
+**Yes, and the clipping is the real defect; dragging is the remedy you asked for.** Nothing in the
+pop-up item (`map-005`) says what happens near the map's edge, and the build does the simplest
+thing: it places the pop-up above the marker, centred on it, and the map clips whatever falls
+outside. A marker near the top of the map therefore gets a pop-up with its top rows cut off. Run
+411's zone marker sits close to the top edge at the zoom shown, so the receivers and window rows
+were hidden.
+
+Two separate things fix two separate problems:
+
+| Problem | Fix | Who acts |
+|---|---|---|
+| The pop-up opens partly outside the map | Place it so it fits: below the marker when there is no room above, and pulled in from the side edges | The map, automatically |
+| The pop-up covers something the analyst wants to see | Let the analyst drag it by its header (or nudge it with the arrow keys) | The analyst |
+
+The first is what makes the second optional rather than necessary. A pop-up that must be dragged
+before it can be read is a defect with a workaround.
+
+**What moving it must not break.** The pop-up describes one entity, so after a move it should still
+follow that entity when the map pans, kept at the offset the analyst chose, rather than staying put on
+screen and ending up beside something else. Reopening a pop-up starts it in its fitted place again.
+
+**Worth recording as a limitation.** A drag handle only works with a pointer. Arrow keys on the
+handle are what keep the move available from the keyboard, which the markers already are.
+
+
 ---
 
 | **Composing copy** | Turning a finding type the backend sends verbatim into a sentence an analyst reads. Done on the screen by design, so prose never arrives from a detector — and in one module, because two panels carry the same type. See §148. |
@@ -9283,3 +9310,4 @@ leave MapLibre to drop colliding labels and say so.
 | **In series, not side by side** | The AI explains what the deterministic rules already detected; it does not detect. So detection metrics score the rules against ground truth, and the AI is scored against the template generator, never against the rules. See §152. |
 | **A static build versus a dev server** | `:8080` serves a production build frozen when the image was built; a dev server serves the working tree and reloads on save. A screen that does not change after an edit is usually the first, not a bug. See §153. |
 | **A selection event versus a display** | Selecting a map entity *emitting an event* (what the highlighting item asks for) is not the same as anything appearing on screen. The event is for another component to act on; a pop-up or a highlighted row is that action, and needs its own item. See §154. |
+| **Fitting a pop-up versus moving it** | Fitting is the map placing a pop-up so it opens wholly inside the view (flipping below a marker near the top edge); moving is the analyst dragging it out of the way. The first fixes a defect, the second is a convenience. See §155. |
