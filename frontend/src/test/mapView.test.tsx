@@ -1,6 +1,6 @@
 import { namedFlavor } from "@protomaps/basemaps";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CORROBORATION_COPY } from "../lib/detectionVocabulary";
 import type { AircraftTrack, InterferenceZone, RFSensor } from "../types/operationalPicture";
 
@@ -650,6 +650,173 @@ describe("the pop-up", () => {
     rerenderWith({ tracks: [tracks[1]] });
 
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+});
+
+describe("placing and moving the pop-up", () => {
+  // spec: map-005 (3) — amended on review: a pop-up near the top edge opened with its
+  // top rows clipped, and could not be moved out of the way.
+  //
+  // jsdom lays nothing out, so sizes are stubbed: the map is 800 × 400 and the
+  // pop-up 288 × 200. The pop-up's inline left and top are read as its top-left
+  // corner in the map's pixels, which is the same frame map.project answers in.
+  const MAP_W = 800;
+  const MAP_H = 400;
+  const POP_W = 288;
+  const POP_H = 200;
+  const MARKER = "Receiver RF-01 (Station 1), fault";
+
+  beforeEach(() => {
+    // jsdom has no PointerEvent; a MouseEvent carries the coordinates a drag needs.
+    if (!("PointerEvent" in globalThis)) {
+      (globalThis as Record<string, unknown>).PointerEvent = class extends MouseEvent {};
+    }
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (this: Element) {
+      const sized = (width: number, height: number) =>
+        ({ x: 0, y: 0, left: 0, top: 0, width, height, right: width, bottom: height, toJSON: () => ({}) }) as DOMRect;
+      if (this.getAttribute("role") === "dialog") return sized(POP_W, POP_H);
+      if (this.getAttribute("aria-label") === "Map") return sized(MAP_W, MAP_H);
+      return sized(0, 0);
+    });
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  /** Every marker projects to `at`, so the open pop-up's anchor is known. */
+  const markerAt = (x: number, y: number) => {
+    lib.project = () => ({ x, y });
+  };
+  const box = () => {
+    const style = (screen.getByRole("dialog") as HTMLElement).style;
+    const left = Number.parseFloat(style.left);
+    const top = Number.parseFloat(style.top);
+    return { left, top, right: left + POP_W, bottom: top + POP_H };
+  };
+  const open = async () => {
+    renderMap();
+    await markersReady();
+    fireEvent.click(screen.getByRole("button", { name: MARKER }));
+    await screen.findByRole("dialog");
+  };
+  const handle = () => within(screen.getByRole("dialog")).getByRole("button", { name: /move/i });
+  const drag = (dx: number, dy: number) => {
+    const grip = handle();
+    fireEvent.pointerDown(grip, { clientX: 100, clientY: 100, button: 0, pointerId: 1 });
+    fireEvent.pointerMove(grip, { clientX: 100 + dx, clientY: 100 + dy, pointerId: 1 });
+    fireEvent.pointerUp(grip, { clientX: 100 + dx, clientY: 100 + dy, pointerId: 1 });
+  };
+  const inside = (b: ReturnType<typeof box>) => b.left >= 0 && b.top >= 0 && b.right <= MAP_W && b.bottom <= MAP_H;
+
+  it("opens above its marker when there is room", async () => {
+    // spec: map-005 (3)
+    markerAt(400, 300);
+    await open();
+
+    expect(box().bottom).toBeLessThanOrEqual(300);
+    expect(inside(box())).toBe(true);
+  });
+
+  it("opens below its marker when there is no room above, rather than clipped by the top edge", async () => {
+    // spec: map-005 (3) — the named failure case, as reviewed on run 411.
+    markerAt(400, 50);
+    await open();
+
+    expect(box().top).toBeGreaterThanOrEqual(50);
+    expect(inside(box())).toBe(true);
+  });
+
+  it("is pulled in from either side edge", async () => {
+    // spec: map-005 (3)
+    markerAt(10, 300);
+    await open();
+    expect(inside(box())).toBe(true);
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    markerAt(795, 300);
+    fireEvent.click(screen.getByRole("button", { name: MARKER }));
+    await screen.findByRole("dialog");
+    expect(inside(box())).toBe(true);
+  });
+
+  it("moves by the distance its header is dragged", async () => {
+    // spec: map-005 (3)
+    markerAt(400, 300);
+    await open();
+    const before = box();
+
+    drag(-120, 40);
+
+    await waitFor(() => expect(box()).toEqual({ ...before, left: before.left - 120, right: before.right - 120, top: before.top + 40, bottom: before.bottom + 40 }));
+  });
+
+  it("moves with the arrow keys from its move handle, sixteen pixels a press", async () => {
+    // spec: map-005 (3) — the named failure case: a move that only works with a pointer.
+    markerAt(400, 300);
+    await open();
+    const before = box();
+
+    fireEvent.keyDown(handle(), { key: "ArrowLeft" });
+    fireEvent.keyDown(handle(), { key: "ArrowUp" });
+    fireEvent.keyDown(handle(), { key: "ArrowUp" });
+
+    await waitFor(() => expect([box().left, box().top]).toEqual([before.left - 16, before.top - 32]));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("keeps its offset from the marker when the map pans after a move", async () => {
+    // spec: map-005 (3) — the named failure case: a moved pop-up left behind.
+    markerAt(400, 300);
+    await open();
+    const fitted = box();
+    drag(-120, 40);
+    await waitFor(() => expect(box().left).toBe(fitted.left - 120));
+    const moved = box();
+
+    markerAt(430, 280);
+    act(() => lib.instances[0].emit("move"));
+
+    await waitFor(() => expect([box().left, box().top]).toEqual([moved.left + 30, moved.top - 20]));
+  });
+
+  it("cannot be dragged wholly out of the map", async () => {
+    // spec: map-005 (3) — the named failure case.
+    markerAt(400, 300);
+    await open();
+
+    drag(-5000, -5000);
+
+    await waitFor(() => {
+      const b = box();
+      expect(b.right > 0 && b.bottom > 0 && b.left < MAP_W && b.top < MAP_H).toBe(true);
+    });
+  });
+
+  it("opens in its fitted place again after it was moved and closed", async () => {
+    // spec: map-005 (3)
+    markerAt(400, 300);
+    await open();
+    const fitted = box();
+    drag(-120, 40);
+    await waitFor(() => expect(box()).not.toEqual(fitted));
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    fireEvent.click(screen.getByRole("button", { name: MARKER }));
+    await screen.findByRole("dialog");
+
+    expect(box()).toEqual(fitted);
+  });
+
+  it("opens in its fitted place when another entity replaces it", async () => {
+    // spec: map-005 (3)
+    markerAt(400, 300);
+    await open();
+    const fitted = box();
+    drag(-120, 40);
+    await waitFor(() => expect(box()).not.toEqual(fitted));
+
+    fireEvent.click(screen.getByRole("button", { name: "Aircraft AC-1, interrupted" }));
+
+    await waitFor(() => expect(screen.getByRole("dialog")).toHaveAccessibleName("Aircraft AC-1"));
+    expect(box()).toEqual(fitted);
   });
 });
 
