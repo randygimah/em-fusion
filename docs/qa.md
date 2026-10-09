@@ -9297,6 +9297,28 @@ screen and ending up beside something else. Reopening a pop-up starts it in its 
 **Worth recording as a limitation.** A drag handle only works with a pointer. Arrow keys on the
 handle are what keep the move available from the keyboard, which the markers already are.
 
+## 156. What is our next implementations?
+
+**Two chains are ready to start, and everything else is gated or deferred.** At 9 October 2026 the
+backlog stands at 98 of 121. The 23 open items fall into groups by what gates them, not by area:
+
+| Group | Items | Gated on |
+|---|---|---|
+| Playback: the map moving through the hour | `api-008` → `op-008` → `map-004` | Nothing; `api-008` first |
+| The hypothesis workbench (the third screen) | `api-004`, `api-005`, `hyp-001`–`hyp-004`, `fbk-001`, `fbk-002`, `op-002`, `ai-010` | Nothing; `api-004` first |
+| Ground truth never leaks | `api-009` | Nothing |
+| The extensibility measurement | `adp-003` | Nothing |
+| Detection leftovers | `anom-003` (z-score), `anom-006` (SOURCE-GAP, recorded as future work) | A decision to build or retire |
+| The local AI arm | `ai-005`, `ai-006` | Deferred in `phase9_hypothesis_layer.md` |
+| Blind scoring | `eval-006` | The second rater, mid-October |
+| Tooling | `ops-001`, `ops-002` (CI) | Nothing |
+| Possibly already met | `op-006` | Its timeline moved into the Events tab; its flag was never revisited |
+
+**The distinction worth keeping: "next in the handoff" is not "most important to the thesis".** The
+handoff lists playback next because it was the remaining map work. The hypothesis workbench is what the
+human-in-the-loop claim rests on: the analyst reading an explanation, its evidence and its
+uncertainty, and returning a verdict. Without it the system detects and explains but nobody judges.
+Playback improves how an hour is read; it does not complete the loop.
 
 ---
 
@@ -9311,3 +9333,4 @@ handle are what keep the move available from the keyboard, which the markers alr
 | **A static build versus a dev server** | `:8080` serves a production build frozen when the image was built; a dev server serves the working tree and reloads on save. A screen that does not change after an edit is usually the first, not a bug. See §153. |
 | **A selection event versus a display** | Selecting a map entity *emitting an event* (what the highlighting item asks for) is not the same as anything appearing on screen. The event is for another component to act on; a pop-up or a highlighted row is that action, and needs its own item. See §154. |
 | **Fitting a pop-up versus moving it** | Fitting is the map placing a pop-up so it opens wholly inside the view (flipping below a marker near the top edge); moving is the analyst dragging it out of the way. The first fixes a defect, the second is a convenience. See §155. |
+| **Next in order versus next in importance** | The handoff's next step follows the build order of an area; which item the thesis most needs follows what its claims rest on. They can differ, and did at 98 of 121: playback was next on the map, the hypothesis workbench was next for the claim. See §156. |
