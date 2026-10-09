@@ -30,10 +30,39 @@ window). Review found that broken segments were missing for most gaps, which exp
 mechanism (frozen) the first build ignored; fixed by amending the spec and the code. Two items were
 then specified for receiver states over time (`api-018`, `map-007`).
 
+Late in the session **`api-018`'s tests were written and proved failing** (implementation not started),
+and then the user, mid-scoring, found that **pass two of the blind scoring had no answer sheet**: the
+rubric promises one and nothing produced it (`qa.md` §160). That became **`eval-010`**, built and
+committed: `scoring_pack/answer_sheet.md`, one fixed correct-answer sentence per scenario type from
+`scn-002`'s pre-campaign definitions, plus the staged facts copied from each run's record. Building it
+exposed that the five mixed-evidence packs carry no aircraft evidence at all. The user also pushed their
+completed pass-one sheet (`score_sheet1.xlsx`), and saw the arm key between passes.
+
 ## Current state
 
-Backlog **101 of 123** (97 of 121 at the start; `api-018` and `map-007` added). Tree clean once this handoff is committed; `main` in sync
-with `origin/main`.
+Backlog **102 of 124** (97 of 121 at the start; `api-018`, `map-007` and `eval-010` added; `eval-010`
+passes). Tree clean once this handoff is committed; `main` in sync with `origin/main`.
+
+**The full backend suite is red on purpose**: `api-018`'s 27 tests and 4 parity cases in
+`test_api_operational_picture.py` were committed failing (`904eb55`) and stay red until `api-018` is
+implemented. The figures below predate them.
+
+### The blind scoring and the answer sheet (`eval-010`)
+
+- **The user's pass-one sheet is `scoring_pack/score_sheet1.xlsx`** (their commit `484d073`); the blank
+  `score_sheet.xlsx` was renamed `score_sheet2.xlsx` for the second rater. **Not opened by this session.**
+- **`scoring_pack/answer_sheet.md`** (`build_answer_sheet.py`, log committed): 20 sections in the pack's
+  order, 20 distinct runs, **all 20 conclusions about their run's staged incident** (10 gnss-degradation,
+  5 rf-sensor-fault, 5 ambiguous-mixed-evidence). Arm scan clean; every other pack file byte-identical
+  before and after (checksums).
+- **On all five mixed-evidence packs (00288, 00289, 00295, 00299, 00302) none of the staged aircraft
+  appear in the evidence**: each pack's evidence is RF-NOISE plus two SENSOR-FAULT kinds, and its own
+  uncertainty says "the aircraft side was not consulted". The answer *cannot be distinguished* rests on
+  evidence the pack lacks. **The user decided to leave the sheet as is**; cause correctness is reported
+  separately for those five packs (rubric change log, 2026-10-09; thesis notes).
+- **The user (first rater) saw the arm key between passes.** Their pass-two judgements are unblinded and
+  reported as such. `arm_key.*` still sits in `scoring_pack/`.
+- `app/evaluation/answers.py`: 26 tests, 100% coverage; the five eval suites, 102 passed.
 
 - Backend: **2179 passed** (2134 at the start: 40 `api-008` tests, 4 parametrised parity cases, and
   one empty-run test). Ruff, Black and mypy are clean on what changed. `playback.py` has 100% coverage,
@@ -229,6 +258,14 @@ None once this handoff is committed.
 | `8a03d0c` | `docs: progress note covers the drill-down tables` (published to the same page, version 7) |
 | `603eae7` | `docs: qa 156 -- what comes next` |
 | `e56d16d` | `docs: qa 157 -- the hypothesis design against the stored data` |
+| `34b3a3a` | `docs: progress note plays the hour back; correct the frozen-gap overstatement` (published, version 9) |
+| `904eb55` | `test: add tests for api-018` (27 tests and 4 parity cases, failing by design) |
+| `725d163` | `docs: qa 160, the pass-2 answer sheet was never built` |
+| `484d073` | `feat: completed score sheet` (the user's commit: `score_sheet1.xlsx`, the rename, two lock files) |
+| `2c7af38` | `spec: add eval-010 -- the pass-2 answer sheet; correct qa 160` |
+| `59f77e8` | `test: add tests for eval-010` |
+| `f2af32b` | `chore: remove Office lock files from the scoring pack; ignore them` |
+| *this commit* | `feat(eval-010): the pass-two answer sheet - tests pass` |
 
 **New:**
 - `frontend/src/components/em/EmDrillDown.tsx`
@@ -246,9 +283,18 @@ None once this handoff is committed.
 - `exceptionPanel.test.tsx`: one op-004 test re-pointed.
 - `mutate_op004_panel.py`: re-pointed, with its log re-run.
 
+**New (`eval-010`, `api-018`):**
+- `backend/app/evaluation/answers.py`; `backend/tests/test_eval_answer_sheet.py` (26 tests).
+- `backend/measurements/corpus/build_answer_sheet.{py,log}`; `scoring_pack/answer_sheet.md`.
+- `backend/tests/test_api_receiver_states.py` (27 tests, failing until `api-018` is built); the three
+  receiver-state shapes registered in `test_api_operational_picture.py`'s `MODELS` via a lookup.
+- `.gitignore`: `~$*`.
+
 **Docs:**
 - `CLAUDE.md` repo map.
 - `implementation.md` view-filter checklist.
+- `scoring_rubric.md` change log (2026-10-09), `evaluation_harness.md` (the answer sheet), `qa.md` §160
+  with its correction, `thesis_notes.md` (the answer sheet and the mixed-scenario finding).
 - `measurements/README.md` (two rows).
 - `thesis_notes.md`: a new subsection on the drill-down tables.
 
@@ -266,6 +312,13 @@ None once this handoff is committed.
   / 35,000 sort the same as text and as numbers. AC-alpha now flies at 9,000 ft and the pass was re-run.
 - **The first watcher on the mutation logs exited at once.** It waited for a line the *previous*
   `op-004` log already contained.
+
+- **I told the user the mixed-evidence packs had no single correct answer** (`qa.md` §160). `scn-002`
+  states one: "the correct hypothesis is that they cannot be distinguished". Corrected by appending.
+- **An `awk` range meant to stop before the first explanation did not**, and printed part of one pack's
+  explanation A into the session while I checked its evidence. Nothing linking it to an arm was printed
+  or used. Separately, the arm key reached this session's context when the user attached it to a
+  question; it has not been repeated or used.
 
 **Instrument limits:**
 - The browser tool's ref-based clicks did not register on this page; coordinate clicks did.
@@ -310,6 +363,8 @@ None once this handoff is committed.
   separately.
 
 **Tests changed after implementation (deviations):**
+- `eval-010`: one test written after the code, `test_an_order_listing_a_pack_twice_is_refused_by_the_builder_too`,
+  to cover the builder's duplicate-order guard, the one line no test reached.
 - `op-005`:
   - The five header queries scoped to the dialog.
   - The "VENL" fixture.
@@ -340,7 +395,11 @@ None once this handoff is committed.
 done**, and while they score, do not print, open or summarise anything that links an explanation to its
 arm (the arm key, `campaign_arms.csv`, generator columns of the campaign rows).
 
-1. **`eval-006` scoring** (the user, now; the second rater from mid-October).
+1. **`eval-006` scoring.** The user's pass one is in (`score_sheet1.xlsx`); **pass two now, against
+   `scoring_pack/answer_sheet.md`**. The second rater from mid-October: hand them `hypotheses.md` and
+   `score_sheet2.xlsx` first and `answer_sheet.md` only after their pass one, **never `arm_key.*`**.
+   At analysis: report cause correctness for the five mixed-evidence packs separately, and the user's
+   pass two as unblinded.
 2. **The Hypotheses screen, once the user's scoring is done.** Decided 9 October 2026 (`qa.md` §157):
    - **Option A, one explanation per conclusion.** The analyst's queue is the 20 conclusions that have
      hypotheses, one explanation each, never the campaign's 5–6 hosted samples and 2 template copies.
@@ -377,16 +436,26 @@ arm (the arm key, `campaign_arms.csv`, generator columns of the campaign rows).
 
      Then build from `api-004` and the list.
 3. **While the screen is parked**, the next items touch no hypothesis data:
-   - **`api-018`**: receiver states over an hour, served as intervals per receiver joined from
-     stored findings (fault; deviating from noise deviations or an interference claim naming it),
-     worst first; null on an unexamined hour.
+   - **`api-018`: implement.** Tests committed failing (`904eb55`). Shape decided: `ReceiverStates
+     {runId, examined, receivers: [ReceiverTimeline {id, intervals: ReceiverStateInterval[] | null}]}`,
+     `ReceiverStateInterval {startedAt, endedAt, state: ReceiverOutOfNominal}`, union
+     `"fault" | "deviating"`. Every receiver in layout order; non-overlapping intervals, worst state
+     winning where findings overlap, same-state overlaps and touches merged, an instantaneous finding
+     kept; a finding naming a receiver outside the layout raises `PictureError`. Reuse
+     `RECEIVER_STATES`, `_receivers_named` and `_of` from the picture's schema. Route
+     `GET /operational-picture/receiver-states?run=` (required; 404 naming the run). Once the module
+     exists, replace the `MODELS` lookup with a plain import. No new SQL.
    - **Then `map-007`**: receivers in their state at the playback cursor.
-
-   Both were specified this session at the user's request and are agreed.
-4. **Offer the progress-note update.** Playback is now visible: the controls, aircraft moving with
-   trails, and broken segments where reporting stopped, all on run 480.
+4. **Offer the progress-note update** after `eval-010` (the answer sheet and the mixed-scenario
+   finding) if the user wants the evaluation story on it.
 
 Open and unowned:
+
+- **The mixed-evidence scenario cannot reach its own correct answer.** The sensor-fault verdict ends
+  the ladder before the aircraft side is consulted, so "cannot be distinguished" is never representable.
+  A detection-layer limitation, recorded in the thesis notes; no item addresses it.
+- **`arm_key.*` lives beside the pack in `scoring_pack/`.** Moving it to a held-back folder is a plain
+  file move, deferred while scoring is in progress.
 
 - **Playback under *All* costs about 25 ms per update in the dev build**, over a 16 ms frame. The
   frame rate degrades gracefully, but production is unmeasured and no throttle exists.

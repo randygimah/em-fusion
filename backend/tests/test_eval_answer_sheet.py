@@ -410,3 +410,11 @@ def test_arm_vocabulary_in_the_sheet_is_refused() -> None:
 
     with pytest.raises(_answers().AnswerSheetError):
         _sheet(truths=truths)
+
+
+def test_an_order_listing_a_pack_twice_is_refused_by_the_builder_too() -> None:
+    # spec: eval-010 -- a pack present twice, refused where the order is used and
+    # not only where it is read. Written after the implementation, to cover the
+    # one guard no test reached; recorded in the handoff.
+    with pytest.raises(_answers().AnswerSheetError):
+        _sheet(order=(ZONE_ID, FAULT_ID, ZONE_ID))

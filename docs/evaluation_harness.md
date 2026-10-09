@@ -205,6 +205,17 @@ definition may contain. A citation key with no entry is refused rather than omit
 the first time it ran, found that the bundle test fixtures had been using a finding type the
 detection layer never emits.
 
+**Pass two has an answer sheet of its own**, handed over only once every pass-one score is in:
+one section per pack, giving the correct answer and what was actually staged in the pack's run.
+The correct answers are one sentence per scenario type, taken from that type's definition written
+before the campaign, so nothing is decided pack by pack after the explanations have been read. It
+names neither label and is scanned like the other files. It was built late: the rubric promised it
+and nothing produced it until the first rater reached pass two and found only the arm key, which sat
+in the same folder and was opened. On the five mixed-evidence packs the answer (*a fault and
+interference cannot be told apart*) rests on aircraft evidence the pack never contains, because the
+sensor-fault verdict stops the aircraft side being consulted, so cause correctness there measures the
+detection layer rather than either arm and is reported separately.
+
 The blinding is **honestly imperfect and the imperfection is stated**: the template's prose is
 stylistically distinctive and a marker may well recognise it. That residual threat is recorded in the
 Evaluation chapter rather than claimed away. What the four mechanisms prevent is *adding* a

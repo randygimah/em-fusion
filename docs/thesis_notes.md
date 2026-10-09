@@ -8430,6 +8430,60 @@ glossary for a human reader, which is a further instance of this project's recur
 defects that survive the tests are found by building the first thing that actually consumes the
 output.
 
+### The pass-two answer sheet was built late, and building it exposed what the mixed scenario cannot show
+
+The pre-registered rubric tells each rater that, once every pass-one score is entered, they will be
+given "the correct answer for each evidence pack" and will judge cause correctness and confidence
+calibration against it. No item in the backlog produced that answer. The gap was found by the first
+rater at the moment it was needed: having finished pass one, they looked for the answers and found
+only the arm key, which sat in the same folder as the pack and was opened. The rubric's own wording
+had been treated as a description of a procedure when it was in fact a promise of an artefact, and
+nothing checked that every artefact the participant handout names exists.
+
+**Two ways of writing the answers were available, and the one chosen is the one that decides nothing
+late.** The first was a verdict per pack, written by the author. By then the author had read every
+explanation, so each verdict would have been formed in their light; for the second rater it would
+amount to the author scoring pass two on their behalf. The second, chosen, is one sentence per
+scenario type, taken from that type's definition in the scenario specification, which was written
+months before the campaign. The sentence for the mixed-evidence scenario carries its definition's
+words verbatim, and a test reads both and asserts the phrase appears in each. Everything else on the
+sheet is copied from the run's ground-truth record. The one judgement the sheet makes is mechanical
+and stated: whether the pack's conclusion is about the staged incident at all, meaning it names a
+staged receiver and its window overlaps the staged one. A staged hour still has a background, and a
+conclusion about some other receiver is not wrong about the incident; it is about something else.
+On the scored sample all twenty conclusions were about their staged incident.
+
+**I first told the rater the mixed-evidence packs had no single correct answer; that was wrong.** The
+scenario definition states one: because a fault and localised interference are both consistent with
+the evidence, "the correct hypothesis is that they cannot be distinguished". The correction is
+recorded in the Q&A log beside the original claim. The error mattered: it was the argument for a sheet
+of bare facts with no answer at all, and that sheet would have left each rater to invent the answer.
+
+**Building the sheet exposed a finding about the detection layer.** The mixed scenario stages two
+things together: one receiver deviating, and nearby aircraft dropping out. On all five sampled
+mixed-evidence packs, none of the staged aircraft appear in the evidence, and each pack says why in
+its own uncertainties: "the aircraft side was not consulted". The sensor-fault rule sits above the
+fusion rule in the precedence ladder, and a single-receiver fault verdict ends the chain before the
+aircraft evidence is gathered. So the evidence that makes the scenario ambiguous never reaches the
+explanation, and on that evidence a sensor fault is the reasonable reading. The system as built cannot
+represent "cannot be distinguished" for the very scenario designed to test it. That is a property of
+the ladder, not of either generator, and it is recorded here as a limitation of the detection layer in
+its own right.
+
+**What it does to the evaluation, decided before pass two was scored.** The answer was not softened:
+rewriting five answers after reading the explanations is precisely the late judgement the sheet exists
+to avoid. Instead, cause correctness is reported separately for the five mixed-evidence packs (ten
+items), where it measures the detection layer's gap rather than the arm's reasoning, and for the
+fifteen packs where the evidence carries what was staged. Confidence calibration is unaffected, because
+the rubric judges it against the pack's own evidence. The paired comparison is not biased, since both
+explanations on a pack face the same answer and the same missing evidence.
+
+**Threat to validity, recorded when it occurred.** The author, one of the two raters, saw the arm key
+after pass one and before pass two. Pass-one scores are unaffected. The author's pass-two judgements
+are made knowing which arm wrote each explanation and are reported as unblinded; the second rater's
+are the blind set, provided the key is withheld from what they are handed. Its location beside the
+pack is the proximate cause, and the second rater's copy should be packaged without it.
+
 ### Detection latency: defining a delay in a system that has no moment of noticing
 
 The scope document and the backlog both carried the same definition from the outset — detection

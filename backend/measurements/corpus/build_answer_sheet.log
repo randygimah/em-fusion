@@ -1,0 +1,10 @@
+sample       scored_sample.json, 20 bundles
+pack order   20 packs read from hypotheses.md
+runs         20 distinct
+
+about the staged incident, by scenario type:
+  ambiguous-mixed-evidence    5 yes   0 no
+  gnss-degradation           10 yes   0 no
+  rf-sensor-fault             5 yes   0 no
+
+written      scoring_pack/answer_sheet.md; nothing else touched
