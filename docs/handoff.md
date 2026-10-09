@@ -19,12 +19,19 @@ The session then scoped **the Hypotheses screen** against the design reference a
 the blind evaluation pack, and the screen would name the generator of the very explanations being
 scored. Nothing about it is specified or built yet; the decisions are under Next step.
 
+While the user scores, the session started **playback** and built **`api-008`**, the time-windowed
+track query: every aircraft's positions over a span of at most 300 s, filtered by the view, with the
+stored gaps. The spec was amended before tests on measuring the store, and the user reviewed it against
+real figures for run 480.
+
 ## Current state
 
-Backlog **98 of 121** (97 at the start). Tree clean once this handoff is committed; `main` in sync
+Backlog **99 of 121** (97 at the start). Tree clean once this handoff is committed; `main` in sync
 with `origin/main`.
 
-- Backend: untouched this session (**2134 passed, 99.93%** at the last run).
+- Backend: **2179 passed** (2134 at the start: 40 `api-008` tests, 4 parametrised parity cases, and
+  one empty-run test). Ruff, Black and mypy are clean on what changed. `playback.py` has 100% coverage,
+  and both new repository reads are covered.
 - Frontend: **408 passed** (378 at the start); Biome lint and `tsc -b` clean.
 - Mutation:
 
@@ -32,6 +39,41 @@ with `origin/main`.
   |---|---|---|
   | `mutate_op005_drilldown.log` | **31 of 31 (second run; first 30 of 31)** | `op-005` |
   | `mutate_op004_panel.log` | **20 of 20** (re-run; one mutant retired, three anchors re-pointed) | `op-004` |
+
+### What the tracks endpoint does now (`api-008`)
+
+- **Request:** GET `/api/v1/operational-picture/tracks?run=<id>&from=<iso>&to=<iso>&view=<view>`.
+  `run`, `from` and `to` are required; a missing `view` means all.
+- **The span:**
+  - Half-open, and at most `MAX_SPAN_SECONDS = 300`.
+  - It must run forwards and carry a timezone, or the request gets a 422 naming the bound.
+  - It is checked before any read, and refused rather than truncated.
+- **Errors and empties:** an unknown run is a 404 naming it; a span outside the run is a 200 with no
+  aircraft.
+- **Response (`PlaybackWindow`):**
+  - `runId`, `recordedFrom` and `recordedTo` (the run's first and last position, or null);
+  - `servedFrom` and `servedTo` (exactly what was asked);
+  - `view`, `examined` and `withheld`.
+- **Per aircraft:**
+  - `id`, `name` and `state` from the picture's own `_track`;
+  - positions oldest first, with altitude in feet or null;
+  - `gaps`: the stored `TRACK-GAP` findings overlapping the span, oldest first; `[]` when examined and
+    none overlap; `null` when unexamined.
+- **Code:**
+  - `app/api/v1/schemas/playback.py` is pure, and imports the picture's `_track`, `_interrupted`,
+    `_admit`, `_feet` and `_of`, so there is one definition of each.
+  - `app/db/repository.py` gains `track_positions_between` (ordered by aircraft, then time) and
+    `track_window`.
+  - The four `Playback*` shapes are in `types/operationalPicture.ts`, parity-checked.
+- **Measured on the running backend, run 480, 12:37–12:42:**
+
+  | View | Aircraft | Positions | Size | Time |
+  |---|---|---|---|---|
+  | All | 413 | 10,974 | 1.13 MB | ≈0.45 s |
+  | *Anomalous only* | 19 (394 withheld), 15 gaps | 472 | 50 KB | ≈0.45 s |
+
+  The run's recorded window is 12:37:00–12:51:50. A run holds about 33,000 positions from about 520
+  aircraft at an exact 10 s cadence, about 3 MB as JSON in total.
 
 ### What the drill-down does now
 
@@ -87,6 +129,9 @@ None once this handoff is committed.
 | `3719784` | `spec: amend op-005 -- drill-down tables as an unfiltered overlay over the hour on screen` |
 | `d895044` | `test: add tests for op-005` |
 | `988c349` | `feat(op-005): drill-down tables over the hour on screen, unfiltered - tests pass` |
+| `a9acda4` | `spec: amend api-008 -- time-windowed tracks, bounded, filtered by view, with stored gaps` |
+| `0918211` | `test: add tests for api-008` |
+| `6c3bc2f` | `feat(api-008): time-windowed track query for playback - tests pass` |
 | `503860c` | `docs: handoff for the drill-down tables` |
 | `8a03d0c` | `docs: progress note covers the drill-down tables` (published to the same page, version 7) |
 | `603eae7` | `docs: qa 156 -- what comes next` |
@@ -132,10 +177,22 @@ None once this handoff is committed.
 **Instrument limits:**
 - The browser tool's ref-based clicks did not register on this page; coordinate clicks did.
 
+- **An `api-008` test passed before the endpoint existed.** The unknown-run test expected a 404, and
+  a missing route is also a 404. It now asserts that the detail names run 999.
+- **I wrote a test that could not fail** (that the fixtures are a 2022 hour) and removed it before
+  committing.
+
 **Tests changed after implementation (deviations):**
-- The five header queries scoped to the dialog.
-- The "VENL" fixture.
-- The 9,000 ft altitude.
+- `op-005`:
+  - The five header queries scoped to the dialog.
+  - The "VENL" fixture.
+  - The 9,000 ft altitude.
+- `api-008`:
+  - The four `Playback*` shapes registered in `test_api_operational_picture.py`'s `MODELS`. Its parser
+    check requires every interface in the contract to have a model.
+  - The empty-run database test, added when coverage showed `track_window`'s empty branch untested.
+    Removing the branch's guard is equivalent at the API, since both serve nulls; the test pins the
+    behaviour, not the guard.
 
 ## Next step
 
@@ -179,14 +236,23 @@ arm (the arm key, `campaign_arms.csv`, generator columns of the campaign rows).
      - add the `nav-*` address item.
 
      Then build from `api-004` and the list.
-3. **`map-004`**, playback, gated on `op-008` / `api-008`. A candidate while the screen is parked: it
-   touches no hypothesis data.
+3. **Playback, continuing while the screen is parked** (it touches no hypothesis data):
+   - **`op-008`**, the transport control: play, pause, speed and scrub over simulated time. The same
+     cursor must show the same data at 1x and 4x.
+   - **`map-004`**, aircraft at interpolated positions with trails. Stored gaps are drawn as broken
+     segments, and zones appear and clear with their windows. A track whose buffer has not loaded
+     holds its last position and is marked stale.
+
+     It reads `api-008` in 300 s spans buffered ahead of the cursor, and needs a `fetchTracks` in
+     `lib/api.ts`. Zones need no new endpoint: the picture already serves their windows.
 
 Open and unowned:
 
 - **The page behind the drill-down is not inert.** The dialog is `aria-modal`, but a screen reader can
   still reach the panel's table behind it. Fix it (mark the rest of the screen `inert` while it is open)
   or record it as a limitation.
+- **The backend does not compress responses.** `api-008`'s five-minute span under *All* is 1.13 MB on
+  the wire; gzip (FastAPI's middleware, or nginx in the container) would cut it substantially.
 - **The table is not virtualised.** It renders all 420 rows, which was smooth here; a bigger hour has
   not been tried.
 - **`diff: false` on the basemap switch is unverified in a browser.** Configure satellite (two
