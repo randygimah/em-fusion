@@ -278,6 +278,7 @@ test-backend: build-backend db-test-create ## Pytest inside the backend containe
 		-v "$(abspath frontend/public/basemap):/repo/frontend/public/basemap:ro" \
 		-v "$(abspath .gitignore):/repo/.gitignore:ro" \
 		-v "$(abspath frontend/src/types):/repo/frontend/src/types:ro" \
+		-v "$(abspath docs/spec.jsonl):/repo/docs/spec.jsonl:ro" \
 		backend pytest $(PYTEST_ARGS)
 
 test-backend-nobuild: db-test-create ## Pytest with no image rebuild — for mutation passes only
@@ -299,6 +300,7 @@ test-backend-nobuild: db-test-create ## Pytest with no image rebuild — for mut
 		-v "$(abspath frontend/public/basemap):/repo/frontend/public/basemap:ro" \
 		-v "$(abspath .gitignore):/repo/.gitignore:ro" \
 		-v "$(abspath frontend/src/types):/repo/frontend/src/types:ro" \
+		-v "$(abspath docs/spec.jsonl):/repo/docs/spec.jsonl:ro" \
 		backend pytest $(PYTEST_ARGS)
 
 test-frontend: build-frontend-test ## Vitest inside the frontend build stage

@@ -30,6 +30,7 @@ import pytest
 
 from app.detection.bundle import EvidenceBundle
 from app.evaluation.pack import BLINDING_GIVEAWAYS
+from tests.contracts import read_contract
 from tests.test_ai_template import fault_bundle, zone_bundle
 from tests.test_evb_bundle import END, START
 
@@ -42,7 +43,13 @@ def _answers() -> Any:
     return answers
 
 
-SPEC = Path(__file__).resolve().parents[2] / "docs" / "spec.jsonl"
+#: Native checkout first, then the read-only mount the Makefile's test targets
+#: add inside the container. Read, never skipped when missing: a skip would
+#: let the pre-campaign wording go unchecked (the `tests/contracts.py` rule).
+SPEC_PATHS = (
+    Path(__file__).resolve().parents[2] / "docs" / "spec.jsonl",
+    Path("/repo/docs/spec.jsonl"),
+)
 
 #: Pseudonyms in the shape the DAL produces (`dal-004`).
 STAGED = "AC-48089ab4e5a9"
@@ -209,7 +216,7 @@ def test_the_ambiguous_answer_is_scn_002s_own_pre_campaign_wording() -> None:
     phrase = "cannot be distinguished"
     [scn_002] = [
         json.loads(line)
-        for line in SPEC.read_text().splitlines()
+        for line in read_contract(SPEC_PATHS).splitlines()
         if '"id": "scn-002"' in line
     ]
 
