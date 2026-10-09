@@ -9320,6 +9320,50 @@ human-in-the-loop claim rests on: the analyst reading an explanation, its eviden
 uncertainty, and returning a verdict. Without it the system detects and explains but nobody judges.
 Playback improves how an hour is read; it does not complete the loop.
 
+## 157. Does the hypothesis screen design fit what we have in terms of data, what needs adding or changing, and how do we separate the template generator from the AI generator on the screen?
+
+**Partly. The design's skeleton fits; most of its content is invented, it omits two fields every
+hypothesis has, and it assumes one explanation per event where the store holds eight.** The design
+was drawn before any of the hypothesis layer existed (9 October 2026).
+
+**What the store holds.** 155 hypotheses over 20 evidence bundles in 20 runs (102–175): ten
+interference conclusions and ten receiver-fault conclusions. Per bundle there are 5–6 rows from the
+hosted model (`gpt-4.1-2025-04-14`, temperature 0, repeated by the campaign) and 2 from the template.
+Every row passed grounding, every status is `New`, and there is no feedback. The picture serves
+`hypotheses: []` for every hour.
+
+| Design element | Data behind it | Verdict |
+|---|---|---|
+| Title, confidence pips, time window | `hypothesis_title`, `confidence`; the bundle's window | Fits |
+| *Awaiting review* | Status `New` | Fits, reworded |
+| *ID: HYP-2024-0812* | A numeric id | Fits, reformatted |
+| *Sector A / Zone AZ-402* | A centre point and the receivers named in the bundle's subject | Invented names; show what exists |
+| Evidence rows: source, sentence, rule chip, *grounded* | Citation = `(rule_id, finding_type, statement)`; grounding stored as one boolean per hypothesis | The chip and sentence fit; the source is the bundle's evidence group, not a named sensor; a per-row marker needs the grounding check re-run on read |
+| *SIGINT Array*, *LEO-SAT Node*, *Solar flare Kp-4*, *Scheduled maintenance* | Nothing: only RF receivers and aircraft tracks exist | Invented; drop |
+| One *Uncertainty & counter-indicators* section with category tags | Two separate lists of plain sentences: `evidence_against_or_uncertainty` and `alternative_explanations` | Split into two sections (required); no categories |
+| Satellite heat map | A centre point (and a radius for interference) | Use the existing map |
+| Verdict buttons, note, disclaimer | The `analyst_feedback` table; the disclaimer text | Fits |
+| *(absent)* `summary`, `recommended_human_action` | Required on every hypothesis | Must be added |
+| *(absent)* which generator wrote it | `generator`, `requested_generator`, `model_id` | Must be added |
+| *(absent)* a list to choose from | — | Must be added |
+
+**Template versus AI is three cases, not two**, because a row records both the arm that was *asked*
+and the arm that *answered*:
+
+| Asked | Answered | Means |
+|---|---|---|
+| hosted | hosted | The AI's explanation |
+| template | template | The rule template, run as the evaluation baseline |
+| hosted | template | The AI was asked, its answer failed the checks, and the template replaced it: a fallback, which must look different (none stored yet) |
+
+**The trap: the campaign's rows are not an analyst's queue.** Six AI samples and two identical
+templates per conclusion are an experiment's output. A screen that lists all eight asks the analyst
+to review the experiment, and a verdict needs exactly one explanation to attach to.
+
+**Threat to validity, worth recording: blinding.** The two raters will score these same forty
+explanations without knowing which arm wrote which. A screen that names the generator on those
+hypotheses can unblind a rater who opens it before scoring.
+
 ---
 
 | **Composing copy** | Turning a finding type the backend sends verbatim into a sentence an analyst reads. Done on the screen by design, so prose never arrives from a detector — and in one module, because two panels carry the same type. See §148. |
@@ -9334,3 +9378,5 @@ Playback improves how an hour is read; it does not complete the loop.
 | **A selection event versus a display** | Selecting a map entity *emitting an event* (what the highlighting item asks for) is not the same as anything appearing on screen. The event is for another component to act on; a pop-up or a highlighted row is that action, and needs its own item. See §154. |
 | **Fitting a pop-up versus moving it** | Fitting is the map placing a pop-up so it opens wholly inside the view (flipping below a marker near the top edge); moving is the analyst dragging it out of the way. The first fixes a defect, the second is a convenience. See §155. |
 | **Next in order versus next in importance** | The handoff's next step follows the build order of an area; which item the thesis most needs follows what its claims rest on. They can differ, and did at 98 of 121: playback was next on the map, the hypothesis workbench was next for the claim. See §156. |
+| **Asked versus answered** | A hypothesis row records the arm that was requested and the generator that produced it. They differ only on a fallback, and that difference is the definition of one. See §157. |
+| **An experiment's output versus an analyst's queue** | The campaign stores several explanations per conclusion to measure the arms; an analyst reviews one explanation per conclusion. A screen over the first is an evaluation tool, not a workbench. See §157. |
