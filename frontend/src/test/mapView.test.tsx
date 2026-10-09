@@ -1136,6 +1136,16 @@ describe("playback", () => {
     expect(screen.getByRole("button", { name: "Aircraft AC-2, nominal" })).toBeInTheDocument();
   });
 
+  it("names a receiver still showing its whole-hour state as such", async () => {
+    // spec: map-007 — until the intervals load, a receiver keeps the picture's
+    // state and says so, in its accessible name, rather than reading as current.
+    const [first, ...rest] = sensors;
+    renderMap({ sensors: [{ ...first, provisional: true } as (typeof sensors)[number], ...rest] });
+
+    expect(await screen.findByRole("button", { name: "Receiver RF-01 (Station 1), fault, state for the whole hour" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Receiver RF-02 (Station 2), nominal" })).toBeInTheDocument();
+  });
+
   it("draws each trail segment as a line, flagged broken or not", async () => {
     // spec: map-004 (4)
     renderMap({ trails });

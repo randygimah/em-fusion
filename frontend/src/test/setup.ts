@@ -15,7 +15,8 @@ afterEach(cleanup);
 // renders the props it was handed as text, so a screen test can check the map
 // receives the same filtered rows as the exception panel. mapView.test.tsx
 // unmocks it to test the real adapter. The playback cursor (op-008) is shown
-// too, so the screen's tests can check the map is handed the cursor.
+// too, so the screen's tests can check the map is handed the cursor, and each
+// receiver's state (map-007), marked when it is the whole hour's.
 vi.mock("../components/map/MapView", () => ({
   MapView: ({
     sensors,
@@ -24,7 +25,7 @@ vi.mock("../components/map/MapView", () => ({
     cursor = null,
     trails = [],
   }: {
-    sensors: { id: string }[];
+    sensors: { id: string; health?: string; provisional?: boolean }[];
     tracks: { id: string; lat: number; lon: number; stale?: boolean }[];
     zones?: { id: string }[];
     cursor?: string | null;
@@ -37,6 +38,11 @@ vi.mock("../components/map/MapView", () => ({
       createElement("p", null, `aircraft: ${tracks.map((track) => track.id).join(", ")}`),
       createElement("p", null, `zones: ${zones.map((zone) => zone.id).join(", ")}`),
       createElement("p", null, `cursor: ${cursor ?? "none"}`),
+      createElement(
+        "p",
+        null,
+        `receiver states: ${sensors.map((sensor) => `${sensor.id} ${sensor.health}${sensor.provisional ? " (whole hour)" : ""}`).join("; ")}`,
+      ),
       // map-004: where each aircraft is drawn, and the trails behind them.
       createElement(
         "p",
