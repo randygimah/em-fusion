@@ -9457,6 +9457,15 @@ the pack, and the first rater opened it after pass 1 and before pass 2. Pass 1 i
 author's pass-2 judgements will be made knowing the arm. The second rater's will not, provided the
 key is kept out of what they are handed.
 
+**Correction, same day.** The second bullet above is wrong. The ambiguous-mixed-evidence packs *do*
+have a stated correct answer, and it was written down before the campaign: the scenario's own
+definition says that because a sensor fault and localised interference are both consistent with the
+evidence, "the correct hypothesis is that they cannot be distinguished". So the answer sheet can give
+a correct answer for every pack without the author deciding anything after reading the explanations,
+by quoting each scenario type's definition. What still matters is the other point: a pack whose
+conclusion is not about the staged incident at all (another receiver, another time) must be told
+apart from one that is, and given "nothing was staged here" rather than its run's sentence.
+
 ---
 
 | **Composing copy** | Turning a finding type the backend sends verbatim into a sentence an analyst reads. Done on the screen by design, so prose never arrives from a detector — and in one module, because two panels carry the same type. See §148. |
