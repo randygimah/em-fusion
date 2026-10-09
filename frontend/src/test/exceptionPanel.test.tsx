@@ -284,12 +284,12 @@ describe("the footer", () => {
     expect(openPanel().getByText(/this view hides nothing/i)).toBeInTheDocument();
   });
 
-  it("offers View all disabled, with the reason", () => {
-    // spec: op-004 (2), op-005 — decided 2026-10-06, as RESET and REPLAY are.
+  it("offers View all", () => {
+    // spec: op-004 (2) — re-pointed by op-005: it was disabled, with a reason,
+    // until the drill-down tables existed. When it is enabled is tested there.
     show(anomalous());
 
-    expect(screen.getByRole("button", { name: /view all/i })).toBeDisabled();
-    expect(screen.getByText(/drill-down tables are not built yet/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /view all/i })).toBeInTheDocument();
   });
 });
 
