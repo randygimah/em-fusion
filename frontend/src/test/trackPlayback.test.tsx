@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import type { LoadTracks } from "../hooks/useTrackBuffer";
 import operationalPictureMock from "../mocks/operationalPictureMock";
 import OperationalPictureScreen from "../screens/operationalPicture";
 import type {
@@ -61,6 +62,20 @@ const D = aircraft("AC-d", every10(0, 60), [[60, 200]], "interrupted");
 const E = aircraft("AC-e", [...every10(0, 30), ...every10(80, 290)]);
 const F = aircraft("AC-f", every10(0, 300));
 const LOADED: [number, number][] = [[START, START + 600_000]];
+// G: a FROZEN gap, the GNSS-degradation staging and 17 of run 480's 22 gaps.
+// Rows keep arriving every 10 s, but from 50 s to 140 s each repeats the last
+// good fix (40 s); the stored gap runs 45 s to 150 s, and at 150 s it resumes
+// well to the north. Added on review (map-004 amended): the first build drew
+// this as an aircraft standing still, then sliding north along a solid line.
+const G: PlaybackAircraft = {
+  ...aircraft("AC-g", every10(0, 290), [[45, 150]], "interrupted"),
+  positions: every10(0, 290).map((s) => ({
+    time: iso(at(s)),
+    lat: BASE_LAT + (s > 40 && s < 150 ? 40 : s) * 0.001,
+    lon: BASE_LON,
+    altitudeFt: 30000,
+  })),
+};
 
 const trackOf = (cursorS: number, name: string, loaded = LOADED) =>
   lib()
@@ -146,6 +161,46 @@ describe("where an aircraft is at the cursor", () => {
 
     expect(again).toEqual(first);
     expect(lib().playbackTracks.length).toBe(3);
+  });
+});
+
+describe("a frozen gap, where reports keep arriving", () => {
+  // spec: map-004, amended on review — the stored gap is the authority, not the
+  // absence of rows.
+  const frozen = (cursorS: number) => lib().playbackTracks([G], at(cursorS), LOADED)[0];
+  const frozenTrail = (cursorS: number) => lib().trailsAt([G], at(cursorS))[0];
+
+  it("marks the aircraft not reporting through the gap, at its last good fix", () => {
+    // spec: map-004 — the named failure case: a frozen gap drawn as reporting.
+    const track = frozen(100);
+
+    expect(track.stale).toBe(true);
+    expect(track.lat).toBeCloseTo(BASE_LAT + 0.04, 6);
+  });
+
+  it("does not slide from the frozen fix to where it resumed", () => {
+    // spec: map-004 — the resumption is not ten seconds of flight.
+    const track = frozen(145);
+
+    expect(track.lat).toBeCloseTo(BASE_LAT + 0.04, 6);
+    expect(track.stale).toBe(true);
+    expect(frozen(150).lat).toBeCloseTo(BASE_LAT + 0.15, 6);
+    expect(frozen(150).stale).toBe(false);
+  });
+
+  it("joins the last good fix to the first report after the gap with one broken segment", () => {
+    // spec: map-004 — the named failure case: the resumption drawn as a solid jump.
+    const segments = frozenTrail(200).segments;
+    const broken = segments.filter((segment) => segment.broken);
+
+    expect(broken).toHaveLength(1);
+    expect(broken[0].coordinates[0][1]).toBeCloseTo(BASE_LAT + 0.04, 6);
+    expect(broken[0].coordinates[1][1]).toBeCloseTo(BASE_LAT + 0.15, 6);
+    for (const segment of segments.filter((one) => !one.broken)) {
+      const lats = segment.coordinates.map(([, lat]) => lat);
+      // No solid line runs through the frozen stretch.
+      expect(lats.some((lat) => lat > BASE_LAT + 0.041 && lat < BASE_LAT + 0.149)).toBe(false);
+    }
   });
 });
 
@@ -285,7 +340,7 @@ const served = (from: number, to: number): PlaybackWindow => ({
 
 const loader = () => vi.fn(async (_run: number, from: string, to: string, _view: ViewSelection) => served(Date.parse(from), Date.parse(to)));
 
-const show = (loadTracks: ReturnType<typeof loader> | ((...args: never[]) => Promise<PlaybackWindow>) = loader(), view: ViewSelection = "anomalous") => {
+const show = (loadTracks: LoadTracks = loader(), view: ViewSelection = "anomalous") => {
   const props = { hours: HOURS, pinnedRun: 480, operationalPicture: picture(view), selectedView: view, loadTracks };
   const rendered = render(<OperationalPictureScreen {...props} />);
   return {
