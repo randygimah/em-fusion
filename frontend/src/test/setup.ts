@@ -14,14 +14,26 @@ afterEach(cleanup);
 // is what lets every test file but its own replace it wholesale. The stand-in
 // renders the props it was handed as text, so a screen test can check the map
 // receives the same filtered rows as the exception panel. mapView.test.tsx
-// unmocks it to test the real adapter.
+// unmocks it to test the real adapter. The playback cursor (op-008) is shown
+// too, so the screen's tests can check the map is handed the cursor.
 vi.mock("../components/map/MapView", () => ({
-  MapView: ({ sensors, tracks, zones = [] }: { sensors: { id: string }[]; tracks: { id: string }[]; zones?: { id: string }[] }) =>
+  MapView: ({
+    sensors,
+    tracks,
+    zones = [],
+    cursor = null,
+  }: {
+    sensors: { id: string }[];
+    tracks: { id: string }[];
+    zones?: { id: string }[];
+    cursor?: string | null;
+  }) =>
     createElement(
       "div",
       { "data-testid": "map-view-stub" },
       createElement("p", null, `receivers: ${sensors.map((sensor) => sensor.id).join(", ")}`),
       createElement("p", null, `aircraft: ${tracks.map((track) => track.id).join(", ")}`),
       createElement("p", null, `zones: ${zones.map((zone) => zone.id).join(", ")}`),
+      createElement("p", null, `cursor: ${cursor ?? "none"}`),
     ),
 }));
