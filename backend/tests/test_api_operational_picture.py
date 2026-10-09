@@ -34,6 +34,8 @@ import ast
 import json
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
+from importlib import import_module
+from importlib.util import find_spec
 from pathlib import Path
 from typing import Any
 
@@ -134,6 +136,20 @@ MODELS = {
     "PlaybackAircraft": playback_module.PlaybackAircraft,
     "PlaybackPosition": playback_module.PlaybackPosition,
     "PlaybackGap": playback_module.PlaybackGap,
+    # `api-018`. Looked up rather than imported until the module exists, so its
+    # absence fails these parity tests rather than the whole suite.
+    **{
+        name: getattr(
+            (
+                import_module("app.api.v1.schemas.receiver_states")
+                if find_spec("app.api.v1.schemas.receiver_states")
+                else None
+            ),
+            name,
+            None,
+        )
+        for name in ("ReceiverStates", "ReceiverTimeline", "ReceiverStateInterval")
+    },
 }
 
 #: The two fields that carried `74.2` and `0.92` before this item, rendered as
