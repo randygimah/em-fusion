@@ -24,24 +24,68 @@ track query: every aircraft's positions over a span of at most 300 s, filtered b
 stored gaps. The spec was amended before tests on measuring the store, and the user reviewed it against
 real figures for run 480. Then **`op-008`**, the playback transport: play, pause, speed and scrub over
 the hour's simulated window, producing a cursor the map is handed (and ignores until `map-004`). Review
-changed one thing: the bar now pushes the exception panel down instead of shrinking the map.
+changed one thing: the bar now pushes the exception panel down instead of shrinking the map. Then
+**`map-004`**: the map follows the cursor (aircraft, trails with stored gaps broken, zones in their
+window). Review found that broken segments were missing for most gaps, which exposed a second gap
+mechanism (frozen) the first build ignored; fixed by amending the spec and the code. Two items were
+then specified for receiver states over time (`api-018`, `map-007`).
 
 ## Current state
 
-Backlog **100 of 121** (97 at the start). Tree clean once this handoff is committed; `main` in sync
+Backlog **101 of 123** (97 of 121 at the start; `api-018` and `map-007` added). Tree clean once this handoff is committed; `main` in sync
 with `origin/main`.
 
 - Backend: **2179 passed** (2134 at the start: 40 `api-008` tests, 4 parametrised parity cases, and
   one empty-run test). Ruff, Black and mypy are clean on what changed. `playback.py` has 100% coverage,
   and both new repository reads are covered.
-- Frontend: **432 passed** (378 at the start; 30 `op-005`, 24 `op-008`); Biome lint and `tsc -b` clean.
+- Frontend: **472 passed** (378 at the start; 30 `op-005`, 24 `op-008`, 40 `map-004`); Biome lint and
+  `tsc -b` clean.
 - Mutation:
 
   | Log | Result | Covers |
   |---|---|---|
+  | `mutate_map001_view.log`, `mutate_map006_zones.log` | **47 of 47**, **26 of 26** (re-run; five anchors re-pointed after the `MarkerButton` refactor and the screen's `mapTracks`/`mapZones`) | `map-001`, `map-005`, `map-006` |
+  | `mutate_map004_playback.log` | **35 of 35** (second run; first 32 of 35) | `map-004` |
   | `mutate_op008_playback.log` | **25 of 26** (second run; first 24 of 27). The survivor, an unclamped seek, is equivalent at the UI | `op-008` |
   | `mutate_op005_drilldown.log` | **31 of 31 (second run; first 30 of 31)** | `op-005` |
   | `mutate_op004_panel.log` | **20 of 20** (re-run; one mutant retired, three anchors re-pointed) | `op-004` |
+
+### What the map does during playback now (`map-004`)
+
+- **Pure arithmetic in `lib/trackPlayback.ts`:**
+  - `playbackTracks`: interpolate between reports ≤ 20 s apart; otherwise hold at the last report,
+    marked `stale` once 20 s have passed; not drawn before the first report; removed 60 s after the
+    last unless a stored gap covers the cursor. In an unloaded span it holds at the last known
+    position, marked, unless the loaded data shows the aircraft had already left.
+  - `trailsAt`: the last 120 s. A hole crossing a stored gap is one broken segment; any other hole
+    breaks the trail and is not drawn.
+  - `zonesAt`, `spansToLoad` (300 s spans aligned to the window's start), `mergeWindow`.
+  - **The stored gap is the authority**: reports strictly inside a stored gap are set aside, so a
+    frozen gap (rows arriving with a repeated stale fix) is a gap.
+- **`useTrackBuffer`:**
+  - loads the span holding the cursor and the next, under `selected`, each once;
+  - keeps what has loaded;
+  - resets on a new run, view or window;
+  - takes the loader from `App.tsx` (`fetchTracks` in `lib/api.ts`).
+- **The screen** hands the map `playbackTracks`, `zonesAt` and `trailsAt` while open, and the picture's
+  own rows when closed.
+- **`MapView`:**
+  - a `trails` source with a muted solid layer and a dashed `#ffb4ab` broken layer, filtered on
+    `broken`, redrawn on `style.load`, with no handlers bound;
+  - "Aircraft …, not reporting" for a held aircraft, which is drawn faded;
+  - marker buttons memoised in `MarkerButton`.
+- **Run 480, measured:**
+  - 22 stored gaps: 17 frozen, 5 holes. Broken segments appear at 69 of 91 ten-second moments, the
+    first at 220 s; 16 aircraft.
+  - Between 9 and 20 aircraft are not reporting at any moment.
+  - *Anomalous only*: 19 aircraft at 12:41:51, 4 not reporting.
+  - Three span requests on open plus a scrub, with no duplicates under StrictMode.
+- **Performance (dev build, one synchronous cursor update, about 360 aircraft under *All*):**
+  - about 34 ms before memoising the markers, **about 25 ms after** (90th percentile 31–35 ms);
+  - the pure work is 0.3 ms (positions, 518 aircraft, 33,273 reports) and 1.3 ms (trails);
+  - no redraw throttle added;
+  - production is not measured.
+- **The user confirmed it works**, including the broken segments after the fix.
 
 ### What the playback transport does now (`op-008`)
 
@@ -174,6 +218,13 @@ None once this handoff is committed.
 | `5c1f610` | `test: add tests for op-008` |
 | `209a883` | `spec: amend op-008 -- the bar pushes the panel down, the map keeps its height` |
 | `6ed02e9` | `feat(op-008): playback transport over the hour's simulated window - tests pass` |
+| `005caf0` | `docs: handoff for op-008` |
+| `237590a` | `spec: amend map-004 -- playback positions, holes, trails and zones from the cursor alone` |
+| `ac92306` | `test: add tests for map-004` |
+| `4c1ed22` | `spec: amend map-004 -- a frozen gap is a gap; the stored gap is the authority` |
+| `c0a48d6` | `test: add tests for map-004 frozen gaps` |
+| `6a7fa73` | `feat(map-004): the map follows the playback cursor - tests pass` |
+| `403295c` | `spec: add api-018, map-007 -- receiver states over the hour, drawn at the cursor` |
 | `503860c` | `docs: handoff for the drill-down tables` |
 | `8a03d0c` | `docs: progress note covers the drill-down tables` (published to the same page, version 7) |
 | `603eae7` | `docs: qa 156 -- what comes next` |
@@ -233,6 +284,20 @@ None once this handoff is committed.
   on its own.
 - **I first laid the bar out inside the one-window layout**, so opening it shrank the map. The user asked
   for the panel to move instead (`qa.md` §158). The spec was amended after the code.
+- **I built `map-004`'s broken segments for one of the gap rule's two mechanisms.** `anom-010`'s own
+  module documents both (rows that stop; rows that keep arriving with a frozen, stale position), and
+  my fixture had only the first. On run 480, 17 of 22 gaps are frozen, so the user saw no red
+  segments. Found in review (`qa.md` §159); the spec was amended, failing tests were committed, then
+  the fix.
+- **I ran `biome format --write src` over the whole frontend**, which reformatted about 25 files
+  outside the item. I reverted them, then split the remaining diff into minimal hunks and
+  reverse-applied the 16 that were formatting only. The frontend is still not in Biome's format;
+  never format the tree wholesale.
+- **I named callback parameters `window` twice more** in `map-004` (`useTrackBuffer`, `mergeWindow`),
+  and caught both before running.
+- **Timing loops in the hidden tab:** waits between iterations are throttled to about 1 s, so a 40-step
+  loop overran the tool's 45 s limit, and loops with waits gave inflated, non-comparable figures
+  (40–60 ms). The comparable method is a tight synchronous loop with no waits.
 - **My handoff edit assumed a placeholder I had already replaced.** Its assertion stopped the edit,
   but the git commands followed on a new line rather than after `&&`, so they ran anyway and made the
   `op-008` feature commit without the handoff. The feature commit is complete; the handoff followed
@@ -249,6 +314,14 @@ None once this handoff is committed.
   - The empty-run database test, added when coverage showed `track_window`'s empty branch untested.
     Removing the branch's guard is equivalent at the API, since both serve nulls; the test pins the
     behaviour, not the guard.
+- `map-004`:
+  - The test helper's loader type, fixed when `tsc -b` failed (Vitest does not type-check).
+  - The frozen-gap tests followed a spec amendment made after the first implementation. They were
+    committed failing before the fix.
+  - Three tests written after the first mutation pass, one per survivor:
+    - a merge with the later span first;
+    - the trails' `addSource` counted after a basemap switch;
+    - `fetchTracks`' URL and its two refusals.
 - `op-008`:
   - Two tests written after the first mutation pass: an inverted window disables the button, and a
     seek past the end holds at the end.
@@ -297,21 +370,22 @@ arm (the arm key, `campaign_arms.csv`, generator columns of the campaign rows).
      - add the `nav-*` address item.
 
      Then build from `api-004` and the list.
-3. **Playback, continuing while the screen is parked** (it touches no hypothesis data):
-   - **`map-004`**, aircraft at interpolated positions with trails. Stored gaps are drawn as broken
-     segments, and zones appear and clear with their windows. A track whose buffer has not loaded
-     holds its last position and is marked stale.
+3. **While the screen is parked**, the next items touch no hypothesis data:
+   - **`api-018`**: receiver states over an hour, served as intervals per receiver joined from
+     stored findings (fault; deviating from noise deviations or an interference claim naming it),
+     worst first; null on an unexamined hour.
+   - **Then `map-007`**: receivers in their state at the playback cursor.
 
-     It reads `api-008` in 300 s spans buffered ahead of the cursor, and needs a `fetchTracks` in
-     `lib/api.ts`. Zones need no new endpoint: the picture already serves their windows.
-
-     The cursor is already handed to `MapView` as `cursor` (ISO or null). The hour's window
-     (12:36:51–12:51:51 on run 480) is wider than its positions (12:37:00–12:51:50), so a cursor in the
-     margins finds nothing: hold and mark stale, never fault. The view switch must drive playback's
-     request too.
+   Both were specified this session at the user's request and are agreed.
+4. **Offer the progress-note update.** Playback is now visible: the controls, aircraft moving with
+   trails, and broken segments where reporting stopped, all on run 480.
 
 Open and unowned:
 
+- **Playback under *All* costs about 25 ms per update in the dev build**, over a 16 ms frame. The
+  frame rate degrades gracefully, but production is unmeasured and no throttle exists.
+- **During playback the exception panel still shows the whole hour.** That is by design, but a
+  reader could expect it to follow the cursor.
 - **Closing playback leaves the hour pinned.** The spec does not ask for unpinning, and *Follow the
   newest* is beside it; whether analysts expect closing to unpin is unasked.
 - **The page behind the drill-down is not inert.** The dialog is `aria-modal`, but a screen reader can
