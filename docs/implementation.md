@@ -119,7 +119,7 @@ Added after the original checklist was written. The exception-first default stan
 
 - [ ] Add a three-state view filter — `Anomalous only` / `Nominal only` / `All` — defaulting to anomalous-only.
 - [ ] One control drives the map and the exception panel together. They must never disagree about what is shown.
-- [ ] Leave drill-down tables unfiltered. They are the show-everything view by definition.
+- [x] Leave drill-down tables unfiltered. They are the show-everything view by definition. *(Built 2026-10-09 as `op-005`: an overlay from the panel's View all, the open tab's whole collection for the hour on screen, fetched with `view=all` and refused if the answer is filtered or for another hour.)*
 - [ ] Filter server-side via a `view` query parameter, not by fetching everything and discarding client-side. Phase 5 is now built first, so this goes straight into the backend — no mock shim.
 - [ ] Carry per-collection suppressed counts in the response. Once the backend filters, the excluded rows never arrive, so the "+n nominal hidden" footer can no longer be computed from the payload — this amends the panel built above.
 - [ ] **Adopt TanStack Query here, not before.** Decided 2026-09-05: `api-003` polls one endpoint from one screen with a forty-line hook, and a data-fetching library earns nothing against that. This subsection is the trigger — a second polled endpoint, two consumers of overlapping requests, and a selection that must survive poll ticks are the problems the library exists to solve. `src/lib/api.ts` stays the fetcher either way, so the swap touches the hook and nothing else. Rationale in `docs/qa.md` §42.

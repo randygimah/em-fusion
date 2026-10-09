@@ -78,6 +78,9 @@ interface Props {
   // screen still renders as a pure function of a payload.
   selectedView?: ViewSelection;
   onSelectView?: (view: ViewSelection) => void;
+  // spec: op-005 — how to fetch one hour unfiltered, for the drill-down tables.
+  // Optional like the rest; without it View all is disabled with its reason.
+  loadUnfiltered?: (runId: number) => Promise<OperationalPictureData>;
 }
 
 const OperationalPictureScreen = ({
@@ -90,6 +93,7 @@ const OperationalPictureScreen = ({
   evidence = "loading",
   selectedView,
   onSelectView,
+  loadUnfiltered,
 }: Props) => {
   // A null summary means no detection pass has run on this run, which is not
   // the same as a pass that found nothing (api-012). The panel says so in
@@ -219,7 +223,10 @@ const OperationalPictureScreen = ({
             <div className="min-h-[320px] flex-1">
               <MapView sensors={operationalPicture.rfSensors} tracks={operationalPicture.aircraftTracks} zones={operationalPicture.interferenceZones} />
             </div>
-            <EmExceptionPanel picture={operationalPicture} />
+            <EmExceptionPanel
+              loadUnfiltered={loadUnfiltered}
+              picture={operationalPicture}
+            />
           </div>
 
           <aside className="space-y-4 lg:overflow-y-auto">

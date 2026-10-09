@@ -74,6 +74,8 @@ const picture = (
 // reporting broke among four (one with no altitude), two conclusions served
 // newest first. Neither the anomalous-first order nor the oldest-first order
 // coincides with array or alphabetical order, so each is tested for itself.
+// AC-alpha flies at 9,000 ft so that numeric and text order disagree: with
+// 12,000 here, comparing altitudes as text survived the mutation pass.
 const RECEIVERS = [
   sensor("RF-01", "nominal", "Aachen"),
   sensor("RF-07", "nominal", "Weeze"),
@@ -84,7 +86,7 @@ const RECEIVERS = [
   sensor("RF-04", "nominal", "Essen"),
 ];
 const AIRCRAFT = [
-  track("AC-alpha", "nominal", 12000),
+  track("AC-alpha", "nominal", 9000),
   track("AC-delta", "interrupted", 30000),
   track("AC-charlie", "nominal", null),
   track("AC-bravo", "interrupted", 35000),
@@ -280,7 +282,7 @@ describe("the order", () => {
     await opened(/^RF/);
 
     expect(firstColumn()).toEqual(["RF-03", "RF-05", "RF-01", "RF-02", "RF-04", "RF-06", "RF-07"]);
-    expect(screen.getByRole("columnheader", { name: "State" })).toHaveAttribute("aria-sort", "ascending");
+    expect(within(dialog()).getByRole("columnheader", { name: "State" })).toHaveAttribute("aria-sort", "ascending");
   });
 
   it("puts aircraft whose reporting broke first, then orders by aircraft", async () => {
@@ -295,18 +297,18 @@ describe("the order", () => {
     await opened(/^Events/);
 
     expect(firstColumn()).toEqual(["2022-06-27 12:05", "2022-06-27 12:40"]);
-    expect(screen.getByRole("columnheader", { name: "Time" })).toHaveAttribute("aria-sort", "ascending");
+    expect(within(dialog()).getByRole("columnheader", { name: "Time" })).toHaveAttribute("aria-sort", "ascending");
   });
 
   it("sorts by a column whose header is clicked, and reverses on a second click", async () => {
     // spec: op-005 — and says so to assistive technology.
     await opened(/^Tracks/);
-    const aircraft = () => screen.getByRole("columnheader", { name: "Aircraft" });
+    const aircraft = () => within(dialog()).getByRole("columnheader", { name: "Aircraft" });
 
     fireEvent.click(within(aircraft()).getByRole("button"));
     expect(firstColumn()).toEqual(["AC-alpha", "AC-bravo", "AC-charlie", "AC-delta"]);
     expect(aircraft()).toHaveAttribute("aria-sort", "ascending");
-    expect(screen.getByRole("columnheader", { name: "State" })).toHaveAttribute("aria-sort", "none");
+    expect(within(dialog()).getByRole("columnheader", { name: "State" })).toHaveAttribute("aria-sort", "none");
 
     fireEvent.click(within(aircraft()).getByRole("button"));
     expect(firstColumn()).toEqual(["AC-delta", "AC-charlie", "AC-bravo", "AC-alpha"]);
@@ -316,7 +318,7 @@ describe("the order", () => {
   it("sorts altitudes as numbers and an altitude not reported last, either way", async () => {
     // spec: op-005
     await opened(/^Tracks/);
-    const altitude = () => within(screen.getByRole("columnheader", { name: "Altitude" })).getByRole("button");
+    const altitude = () => within(within(dialog()).getByRole("columnheader", { name: "Altitude" })).getByRole("button");
 
     fireEvent.click(altitude());
     expect(firstColumn()).toEqual(["AC-alpha", "AC-delta", "AC-bravo", "AC-charlie"]);
@@ -335,7 +337,7 @@ describe("the find box", () => {
     await opened(/^RF/);
     expect(within(dialog()).getByText(/7 of 7 shown/i)).toBeInTheDocument();
 
-    find("VEN");
+    find("VENL");
     expect(firstColumn()).toEqual(["RF-02"]);
     expect(within(dialog()).getByText(/1 of 7 shown/i)).toBeInTheDocument();
 

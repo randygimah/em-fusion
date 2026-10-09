@@ -13,7 +13,8 @@ one, call interrupted aircraft anomalous, and count rows the tab does not show.
 **The footer.** Mutants call an unexamined hour's withheld rows nominal, call
 what Nominal only withheld nominal, report "+0" instead of saying the view hides
 nothing, pluralise one conclusion, count withheld rows from the rows that
-arrived, and enable View all.
+arrived. (Enabling View all was a mutant here until `op-005` enabled it;
+when it is enabled is that item's pass now.)
 
 **An empty tab.** Mutants render an empty table instead of a sentence, drop the
 not-examined sentence, say a quiet hour where Nominal only withheld the
@@ -35,8 +36,10 @@ REPO = Path(__file__).resolve().parents[3]
 FRONTEND = REPO / "frontend"
 PANEL = FRONTEND / "src/components/em/EmExceptionPanel.tsx"
 WORDS = FRONTEND / "src/lib/viewVocabulary.ts"
+# Row formatting moved here when op-005 shared it with the drill-down tables.
+ROWS = FRONTEND / "src/components/em/rowFormat.ts"
 SCREEN = FRONTEND / "src/screens/operationalPicture.tsx"
-FILES = (PANEL, WORDS, SCREEN)
+FILES = (PANEL, WORDS, SCREEN, ROWS)
 FRONTEND_TESTS = [
     "src/test/exceptionPanel.test.tsx",
     "src/test/viewFilter.test.tsx",
@@ -81,7 +84,6 @@ M: dict[str, tuple[Path, str, str]] = {
         "    rf: suppressed.rfSensors,\n",
         "    rf: picture.rfSensors.length,\n",
     ),
-    "View all is enabled": (PANEL, "              disabled\n", ""),
     # -- an empty tab
     "an empty tab renders an empty table": (PANEL, "if (shown[tab] === 0) return", "if (false) return"),
     "an empty tab drops the not-examined sentence": (PANEL, "    if (!examined) return NOT_EXAMINED;\n", ""),
@@ -92,9 +94,9 @@ M: dict[str, tuple[Path, str, str]] = {
     ),
     "an empty Tracks tab blurs what it found": (WORDS, '"No aircraft\'s reporting broke."', '"No aircraft."'),
     # -- rows and the open tab
-    "a missing altitude is a dash": (PANEL, 'feet === null ? "not reported"', 'feet === null ? "—"'),
+    "a missing altitude is a dash": (ROWS, 'feet === null ? "not reported"', 'feet === null ? "—"'),
     "events follow array order": (
-        PANEL,
+        ROWS,
         "[...events].sort((a, b) => a.time.localeCompare(b.time))",
         "[...events]",
     ),
@@ -107,8 +109,8 @@ M: dict[str, tuple[Path, str, str]] = {
     "every tab is marked selected": (PANEL, "aria-selected={tab === open}", "aria-selected={true}"),
     "a new hour resets the open tab": (
         SCREEN,
-        "<EmExceptionPanel picture={operationalPicture} />",
-        '<EmExceptionPanel key={operationalPicture.scenario?.id ?? ""} picture={operationalPicture} />',
+        "<EmExceptionPanel\n              loadUnfiltered",
+        '<EmExceptionPanel key={operationalPicture.scenario?.id ?? ""}\n              loadUnfiltered',
     ),
 }
 

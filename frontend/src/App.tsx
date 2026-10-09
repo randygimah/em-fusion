@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { EmDataModeBadge } from "./components/em/EmDataModeBadge";
 import { EmNavRail } from "./components/em/EmNavRail";
 import { EmSystemStatus } from "./components/em/EmSystemStatus";
@@ -9,6 +9,7 @@ import { useEvidenceAccount } from "./hooks/useEvidenceAccount";
 import { useOperationalPicture } from "./hooks/useOperationalPicture";
 import { useSelectableHours } from "./hooks/useSelectableHours";
 import { useSystemHealth } from "./hooks/useSystemHealth";
+import { fetchOperationalPicture } from "./lib/api";
 import { DEFAULT_VIEW } from "./lib/viewVocabulary";
 import { SCREENS } from "./routes";
 import HypothesesScreen from "./screens/hypotheses";
@@ -43,12 +44,17 @@ const OperationalPictureRoute = () => {
   // Keyed on the same pinned hour as the picture, so the evidence on screen
   // always belongs to the conclusion above it (spec: op-010).
   const evidence = useEvidenceAccount(pinnedRun);
+  // The drill-down tables (spec: op-005) read the endpoint the panel reads, for
+  // the hour the panel names and never filtered: a view over the same data,
+  // fetched when asked for and not polled.
+  const loadUnfiltered = useCallback((runId: number) => fetchOperationalPicture("", runId, "all"), []);
 
   return (
     <OperationalPictureScreen
       degraded={degraded}
       evidence={evidence}
       hours={hours}
+      loadUnfiltered={loadUnfiltered}
       onFollowNewest={() => setPinnedRun(null)}
       onSelectHour={(runId) => setPinnedRun(Number.isNaN(runId) ? null : runId)}
       onSelectView={setView}

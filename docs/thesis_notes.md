@@ -3143,6 +3143,53 @@ stopped the frame-rate measurement); it rests on its unit test.
 
 The mutation pass for the amendment killed 10 of 10.
 
+### The drill-down tables: all of one hour, or nothing, and a table that exists beside a view called All
+
+`op-005` was written before the view filter existed, as *full RF observation stream from the RF tab, full
+track inventory from the Tracks tab*. Two things had changed by the time it was built (9 October 2026), and
+the amendment answers both.
+
+**There is no observation stream to show.** The picture carries one row per receiver, its state from the
+detection pass; the raw RF observations behind it are in the store and reach no endpoint. Showing them would
+have meant a new endpoint, which the item's own failure case forbids (*a drill-down fetching from an
+endpoint the panel does not use*). The RF table therefore lists receivers, and the wording was dropped rather
+than satisfied with something else under its name.
+
+**The *All* view already lists every row in the panel**, so a drill-down table needed a reason to exist. The
+user chose a full table over the same data, opened as an overlay, rather than retiring the item or making it
+a separate screen. Three things justify it over the panel under *All*: room (the panel is a fixed 160 px under
+the map, so 420 aircraft is a long scroll in a short box), finding and ordering (sortable columns and a find
+box, which the panel does not have and should not, since it is the exception list), and independence from the
+switch (FR-716: the table is always unfiltered, so seeing the whole hour does not mean changing what the map
+and panel show and changing it back).
+
+**"All" is enforced, not assumed.** The table is fetched for the hour the panel's payload names, with the view
+set to all, from the endpoint the panel already reads. An answer naming a different hour, or served under a
+filtered view, is refused as a failure. A failure says so and offers a retry; it does not fall back to the
+panel's rows, which are filtered and would sit under a heading saying *all*. The hour is captured when the
+table opens, so a poll that moves the screen to a newer hour leaves the table on its own hour, which its
+heading names. This is the same conflation `op-010` guarded against for evidence: one hour's rows under
+another hour's heading.
+
+**The table is fetched once and not polled.** The hook pattern from the evidence account applies: the hour
+does not change under it. The loader is a function handed down from the seam (`App.tsx`), so the component
+imports no fetcher; because the seam would hand down a fresh function on every poll, the component reads it
+through a reference and keys the fetch on the hour and the retry count only, or it would have refetched every
+five seconds. *(React's development mode runs the effect twice, so the browser shows two requests per opening
+in development and one in a production build; the first answer is discarded.)*
+
+**Two test errors, one of them instructive.** Five sort tests queried column headers across the whole page
+and found the exception panel's headers behind the dialog as well. The fix was to scope them to the dialog,
+but the collision is a real property of the build: the dialog is marked modal, and nothing makes the page
+behind it inert, so a screen reader can still reach the panel's table. *(Open: make the page behind the
+dialog inert, or record it as a limitation.)* The other was a fixture: a find for "VEN" was meant to match
+Venlo and also matched Eind*hoven*.
+
+The mutation pass killed 31 of 31 on its second run. The first left one survivor, altitudes compared as
+text, because the fixture's altitudes (12,000, 30,000 and 35,000 ft) sort the same as text and as numbers;
+one aircraft now flies at 9,000 ft. The panel's own pass (`op-004`) was re-run after the shared formatting
+moved: 20 of 20, one mutant retired because it enabled the *View all* this item enabled.
+
 ### Containerisation: a Makefile over Compose, and what the first working `up` exposed
 
 The three services (backend, frontend, and a profiled one-shot pipeline) are driven through a root

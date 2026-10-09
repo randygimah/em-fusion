@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { findingLabel } from "../../lib/detectionVocabulary";
 import {
   EVENTS_ARE_ANOMALOUS,
@@ -7,11 +7,14 @@ import {
   NOT_EXAMINED,
   noReceiverSentence,
   noTrackSentence,
+  DRILL_DOWN_UNWIRED,
+  NO_HOUR_TO_DRILL,
   QUIET_HOUR,
   tabLabel,
-  VIEW_ALL_REASON,
 } from "../../lib/viewVocabulary";
 import type { AircraftTrack, OperationalPicture, RFSensor, TimelineEvent } from "../../types/operationalPicture";
+import { EmDrillDown } from "./EmDrillDown";
+import { altitude, cell, headCell, oldestFirst, position, simulatedInstant } from "./rowFormat";
 
 /**
  * What is exceptional in this hour, in three tabs. spec: op-004.
@@ -34,24 +37,13 @@ import type { AircraftTrack, OperationalPicture, RFSensor, TimelineEvent } from 
  *
  * The open tab is component state: it survives polls, hours and views, because
  * nothing keys this component on them, and a reload opens on RF.
+ *
+ * **View all opens the open tab's drill-down table (op-005)** for the hour the
+ * payload names, through the loader the seam hands down. It is disabled, with
+ * its reason, when there is no hour to list or no loader to list it with.
  */
 
 const TABS: readonly ExceptionTab[] = ["rf", "tracks", "events"];
-
-// The instant an event happened, in the simulated time it happened at (op-006):
-// sliced from the ISO string, because a relative time or a local format states
-// the wrong hour for a replayed 2022 hour generated in 2026.
-const simulatedInstant = (iso: string): string => `${iso.slice(0, 10)} ${iso.slice(11, 16)}`;
-
-// Oldest first, by event time and never by array order (op-006).
-const oldestFirst = (events: readonly TimelineEvent[]): TimelineEvent[] => [...events].sort((a, b) => a.time.localeCompare(b.time));
-
-const altitude = (feet: number | null): string => (feet === null ? "not reported" : `${feet.toLocaleString("en-GB")} ft`);
-
-const position = (track: AircraftTrack): string => `${track.lat.toFixed(2)}, ${track.lon.toFixed(2)}`;
-
-const headCell = "px-3 py-2 font-mono text-[10px] uppercase tracking-[0.05em] text-[#8c909f]";
-const cell = "px-3 py-2";
 
 const ReceiverTable = ({ sensors }: { sensors: RFSensor[] }) => (
   <table className="w-full border-collapse text-left text-sm">
@@ -120,11 +112,28 @@ const EventList = ({ events }: { events: TimelineEvent[] }) => (
   </ol>
 );
 
-type PanelData = Pick<OperationalPicture, "rfSensors" | "aircraftTracks" | "timelineEvents" | "view">;
+type PanelData = Pick<OperationalPicture, "scenario" | "rfSensors" | "aircraftTracks" | "timelineEvents" | "view">;
 
-export const EmExceptionPanel = ({ picture }: { picture: PanelData }) => {
+// The hour the payload names, or null when it names none a table can be asked
+// for: no run at all, or the first-paint mock's id, which is not a run.
+const hourOf = (picture: PanelData): number | null =>
+  picture.scenario && /^\d+$/.test(picture.scenario.id) ? Number(picture.scenario.id) : null;
+
+export const EmExceptionPanel = ({
+  picture,
+  loadUnfiltered,
+}: {
+  picture: PanelData;
+  loadUnfiltered?: (runId: number) => Promise<OperationalPicture>;
+}) => {
   const [open, setOpen] = useState<ExceptionTab>("rf");
+  // The table open over the screen, and the hour it was opened for: kept here,
+  // so a poll that moves the screen to a newer hour leaves the table on its own.
+  const [drill, setDrill] = useState<{ tab: ExceptionTab; runId: number } | null>(null);
+  const viewAllRef = useRef<HTMLButtonElement>(null);
   const id = useId();
+  const hour = hourOf(picture);
+  const unavailable = !loadUnfiltered ? DRILL_DOWN_UNWIRED : hour === null ? NO_HOUR_TO_DRILL : null;
   const { view } = picture;
   const { selected, examined, suppressed } = view;
 
@@ -199,13 +208,17 @@ export const EmExceptionPanel = ({ picture }: { picture: PanelData }) => {
         <div className="h-40 overflow-y-auto p-4">{body(open)}</div>
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#424754] px-4 py-2 font-mono text-xs">
           <span className="text-[#8c909f]">{footerSentence(open, hidden[open], selected, examined)}</span>
-          {/* Disabled with its reason, as RESET and REPLAY are (decided
-              2026-10-06): the drill-down tables are op-005's. */}
           <span className="flex items-center gap-2">
-            <span className="text-[#8c909f]">{VIEW_ALL_REASON}</span>
+            {unavailable && <span className="text-[#8c909f]">{unavailable}</span>}
             <button
-              className="uppercase tracking-[0.05em] text-[#8c909f] opacity-60"
-              disabled
+              className={
+                unavailable
+                  ? "uppercase tracking-[0.05em] text-[#8c909f] opacity-60"
+                  : "uppercase tracking-[0.05em] text-[#adc6ff] hover:text-[#e1e2ec]"
+              }
+              disabled={unavailable !== null}
+              onClick={() => hour !== null && setDrill({ tab: open, runId: hour })}
+              ref={viewAllRef}
               type="button"
             >
               View all
@@ -213,6 +226,17 @@ export const EmExceptionPanel = ({ picture }: { picture: PanelData }) => {
           </span>
         </div>
       </div>
+      {drill && loadUnfiltered && (
+        <EmDrillDown
+          load={loadUnfiltered}
+          onClose={() => {
+            setDrill(null);
+            viewAllRef.current?.focus();
+          }}
+          runId={drill.runId}
+          tab={drill.tab}
+        />
+      )}
     </section>
   );
 };

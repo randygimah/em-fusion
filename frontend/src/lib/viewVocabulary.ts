@@ -86,5 +86,39 @@ export const EVENTS_ARE_ANOMALOUS = "Conclusions are anomalous by definition, so
 
 export const QUIET_HOUR = "No events in this hour. Nothing the detectors reported reached the analyst.";
 
-/** The disabled View all link's reason (decided 2026-10-06; op-005). */
-export const VIEW_ALL_REASON = "The drill-down tables are not built yet.";
+/** Why View all is disabled (op-005): only when there is no hour to list in full. */
+export const NO_HOUR_TO_DRILL = "No hour is on screen to list in full.";
+
+/** Why View all is disabled when nothing was handed a loader — a screen rendered as a pure function of a payload. */
+export const DRILL_DOWN_UNWIRED = "The full tables are not connected on this screen.";
+
+// ---------------------------------------------------------------- drill-down
+//
+// The drill-down tables' words (op-005). A table there is the whole of one
+// collection for one hour, served unfiltered, so its heading says "all" and
+// says so against the view rather than leaving the analyst to infer it.
+
+/** What a drill-down table lists, by the tab it was opened from, singular and plural. */
+const COLLECTION: Record<ExceptionTab, readonly [string, string]> = {
+  rf: ["receiver", "receivers"],
+  tracks: ["aircraft", "aircraft"],
+  events: ["conclusion", "conclusions"],
+};
+
+/** The heading, and the dialog's name: the hour, and — once it has arrived — how many rows "all" is. */
+export const drillDownHeading = (tab: ExceptionTab, runId: number, total: number | null): string => {
+  const [one, many] = COLLECTION[tab];
+  if (total === null) return `Run ${runId} · all ${many}`;
+  return `Run ${runId} · all ${total} ${plural(total, one, many)}`;
+};
+
+export const UNFILTERED = "Every row in this hour, nominal and anomalous — not filtered by the view.";
+
+export const drillDownLoading = (tab: ExceptionTab, runId: number): string => `Loading every ${COLLECTION[tab][0]} in run ${runId}…`;
+
+export const drillDownFailed = (runId: number): string => `The full table for run ${runId} could not be loaded.`;
+
+/** The running count beside the find box: a find that hides rows says how many. */
+export const shownCount = (shown: number, total: number): string => `${shown} of ${total} shown`;
+
+export const noMatch = (text: string): string => `Nothing in this table matches “${text}”.`;
