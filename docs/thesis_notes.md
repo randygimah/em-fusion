@@ -3343,6 +3343,41 @@ keeping one is nothing. And an unexamined hour answers with each receiver's inte
 than the whole answer null, mirroring the playback span's gaps: the answer still names its run, so
 the screen can refuse an answer for another hour, which a bare null cannot be checked against.
 
+### Receivers at the cursor: never nominal for want of an answer
+
+With the intervals served, drawing a receiver at the cursor is a lookup: the state of the interval
+holding the cursor, nominal outside every interval, not examined on an hour no pass examined. Two
+details carry the argument. Intervals are closed, so where a fault ends at the instant a deviation
+begins, both hold that instant and the worse is drawn, which is the ladder applied to a point. And
+the function takes the cursor and the served intervals and nothing else, as the aircraft's
+positions do, so the same moment reads the same at any speed.
+
+**The decision that needed making was what to draw before the answer arrives.** The obvious
+implementation draws a receiver with no interval at the cursor as nominal, and before the intervals
+load every receiver has no interval. For the length of one request, and for the whole of playback if
+the request fails, every receiver would read nominal, including the one the picture says faulted.
+That is the unexamined-hour failure in a new form: a reassurance nobody checked. Three alternatives
+were weighed. Hiding the receivers until the answer arrives removes the one fixed reference on the
+map. Drawing them grey, as not examined, misstates the hour, which was examined. Keeping the
+picture's whole-hour state is true of the hour, and wrong only about the moment, so it was chosen,
+**said as such**: the receiver's accessible name and its pop-up say the state is the whole hour's.
+The same rule covers an answer for another hour (refused, as the drill-down refuses one) and a
+receiver the timeline does not name.
+
+On run 480 in a browser, RF-01 read nominal at 12:38:41, fault from 12:38:51 through 12:44:01, and
+nominal at 12:44:11, the stored window to the second; one request served the session, and closing
+restored the whole-hour states. The whole-hour marking was not observed in the browser, because the
+answer (338 bytes) arrives within a frame; it is held by the tests, including the failed and
+wrong-hour cases.
+
+**What the mutation pass found.** The first run killed 18 of 22 mutants. The four survivors were all
+cases the first tests never staged: a lesser state listed before a worse one at a shared instant (my
+fixture listed the fault first, so taking the first interval found passed); an answer naming another
+hour, which the hook refused twice over so that removing either refusal passed until the screen moved
+to the hour the bogus answer named; a failed request never asked again; and the previous hour's
+answer shown on the next hour before its own arrived. One test per survivor, written after the pass
+and recorded as such, and the second run killed 22 of 22.
+
 ### The Hypotheses screen shows one explanation per conclusion, and waits for the blind scoring
 
 Scoped on 9 October 2026 against the design reference and the store, before any spec item was

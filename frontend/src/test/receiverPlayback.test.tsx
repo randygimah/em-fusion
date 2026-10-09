@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { LoadReceiverStates } from "../hooks/useReceiverStates";
 import * as api from "../lib/api";
 import operationalPictureMock from "../mocks/operationalPictureMock";
 import OperationalPictureScreen from "../screens/operationalPicture";
@@ -24,7 +25,6 @@ const lib = () => {
 };
 
 type MapSensor = RFSensor & { provisional?: boolean };
-type LoadReceiverStates = (runId: number) => Promise<ReceiverStates>;
 
 // Run 480's window.
 const START = Date.UTC(2022, 5, 27, 12, 36, 51);
@@ -91,6 +91,17 @@ describe("a receiver's state at the cursor", () => {
     expect(statesAt(200)["RF-01"]).toBe("fault");
   });
 
+  it("is the worse state where two intervals touch, whichever is listed first", () => {
+    // Written after the mutation pass: the deviation is listed first and is
+    // the lesser, so taking the first interval found would draw it.
+    const states: ReceiverStates = {
+      ...STATES,
+      receivers: [{ id: "RF-01", intervals: [interval(0, 100, "deviating"), interval(100, 200, "fault")] }],
+    };
+
+    expect(statesAt(100, states, [SENSORS[0]])["RF-01"]).toBe("fault");
+  });
+
   it("is not examined on an hour nobody examined, never nominal", () => {
     // The failure case: an unexamined hour shown as nominal.
     expect(statesAt(150, UNEXAMINED)).toEqual({ "RF-01": "unknown", "RF-02": "unknown", "RF-03": "unknown" });
@@ -150,9 +161,23 @@ const show = (loadReceiverStates?: LoadReceiverStates) =>
       pinnedRun={480}
       operationalPicture={picture()}
       selectedView="all"
-      {...({ loadReceiverStates } as Record<string, unknown>)}
+      loadReceiverStates={loadReceiverStates}
     />,
   );
+
+// Two hours, for the tests that move from one to the other.
+const LATER = START + 3_600_000;
+const BOTH_HOURS: SelectableHour[] = [
+  ...HOURS,
+  { runId: 481, observedFrom: iso(LATER), observedTo: iso(LATER + 900_000), examined: true },
+];
+const pictureOf = (runId: number): OperationalPicture => ({ ...picture(), scenario: { id: String(runId), name: `Run ${runId}`, dataMode: "mixed" } });
+
+const showHour = (runId: number, loadReceiverStates: LoadReceiverStates) => {
+  const props = { hours: BOTH_HOURS, selectedView: "all" as const, loadReceiverStates };
+  const rendered = render(<OperationalPictureScreen {...props} pinnedRun={runId} operationalPicture={pictureOf(runId)} />);
+  return (next: number) => rendered.rerender(<OperationalPictureScreen {...props} pinnedRun={next} operationalPicture={pictureOf(next)} />);
+};
 
 const stub = () => within(screen.getByTestId("map-view-stub"));
 const line = () => stub().getByText(/^receiver states:/).textContent ?? "";
@@ -211,6 +236,47 @@ describe("receivers through the screen", () => {
     await waitFor(() => expect(load).toHaveBeenCalled());
 
     scrubTo(at(150));
+    expect(line()).toBe(WHOLE_HOUR);
+  });
+
+  // The three below were written after the mutation pass, one per survivor.
+  it("asks again on the next opening after a request failed", async () => {
+    const load = vi.fn((_run: number): Promise<ReceiverStates> => Promise.reject(new Error("503")));
+    show(load);
+    openPlayback();
+    await waitFor(() => expect(load).toHaveBeenCalledTimes(1));
+    closePlayback();
+
+    load.mockImplementationOnce(() => Promise.resolve(STATES));
+    openPlayback();
+    await waitFor(() => expect(line()).toBe("receiver states: RF-01 nominal; RF-02 nominal; RF-03 nominal"));
+    expect(load).toHaveBeenCalledTimes(2);
+  });
+
+  it("never shows one hour's receiver states on the next", async () => {
+    const load = vi.fn((run: number) => (run === 480 ? Promise.resolve(STATES) : new Promise<ReceiverStates>(() => {})));
+    const moveTo = showHour(480, load);
+    openPlayback();
+    await waitFor(() => expect(line()).toBe("receiver states: RF-01 nominal; RF-02 nominal; RF-03 nominal"));
+    closePlayback();
+
+    moveTo(481);
+    openPlayback();
+    await waitFor(() => expect(load.mock.calls).toEqual([[480], [481]]));
+    expect(line()).toBe(WHOLE_HOUR);
+  });
+
+  it("keeps an answer naming the wrong hour off the hour it names", async () => {
+    // Asked for 480 and answered for 481: refused, and not held over for 481.
+    const load = vi.fn((run: number) => (run === 480 ? Promise.resolve({ ...STATES, runId: 481 }) : new Promise<ReceiverStates>(() => {})));
+    const moveTo = showHour(480, load);
+    openPlayback();
+    await waitFor(() => expect(load).toHaveBeenCalledTimes(1));
+    closePlayback();
+
+    moveTo(481);
+    openPlayback();
+    await waitFor(() => expect(load.mock.calls).toEqual([[480], [481]]));
     expect(line()).toBe(WHOLE_HOUR);
   });
 

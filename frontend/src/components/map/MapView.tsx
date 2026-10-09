@@ -294,7 +294,7 @@ function zoneWindow(zone: InterferenceZone): string {
   return `${day} ${from.slice(11, 19)} – ${end} UTC`;
 }
 
-function entitiesOf(sensors: RFSensor[], tracks: MapTrack[], zones: InterferenceZone[]): Entity[] {
+function entitiesOf(sensors: MapSensor[], tracks: MapTrack[], zones: InterferenceZone[]): Entity[] {
   return [
     ...zones.map(
       (zone): Entity => ({
@@ -320,7 +320,9 @@ function entitiesOf(sensors: RFSensor[], tracks: MapTrack[], zones: Interference
       (sensor): Entity => ({
         key: `receiver:${sensor.id}`,
         kind: "receiver",
-        name: `Receiver ${sensor.id} (${sensor.stationName}), ${stateWord(sensor.health)}`,
+        // Still showing the whole hour's state during playback (map-007): said
+        // in the name, so it is never read as the state at the cursor.
+        name: `Receiver ${sensor.id} (${sensor.stationName}), ${stateWord(sensor.health)}${sensor.provisional ? ", state for the whole hour" : ""}`,
         state: sensor.health,
         lat: sensor.lat,
         lon: sensor.lon,
@@ -328,7 +330,7 @@ function entitiesOf(sensors: RFSensor[], tracks: MapTrack[], zones: Interference
           ["Receiver", sensor.id],
           ["Station", sensor.stationName],
           ["Band", sensor.signalId],
-          ["State", stateWord(sensor.health)],
+          ["State", `${stateWord(sensor.health)}${sensor.provisional ? " · for the whole hour" : ""}`],
           ["Position", position(sensor.lat, sensor.lon)],
         ],
         rank: ANOMALOUS.has(sensor.health) ? 0 : 1,
@@ -624,8 +626,11 @@ const sameSet = (a: Set<string>, b: Set<string>) => a.size === b.size && [...a].
 /** A track as the map draws it: during playback it may be held and not reporting (map-004). */
 export type MapTrack = AircraftTrack & { stale?: boolean };
 
+/** A receiver as the map draws it: during playback it may still show the whole hour's state (map-007). */
+export type MapSensor = RFSensor & { provisional?: boolean };
+
 export interface MapViewProps {
-  sensors: RFSensor[];
+  sensors: MapSensor[];
   tracks: MapTrack[];
   /** The interference claims the payload placed (map-006). */
   zones?: InterferenceZone[];

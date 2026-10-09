@@ -1,0 +1,26 @@
+sentinel killed (Tests  8 failed | 161 passed (169)) -- edits reach the tests
+
+outside every interval reads the whole hour          KILLED   Tests  8 failed | 161 passed (169)
+the start bound is open                              KILLED   Tests  2 failed | 167 passed (169)
+the end bound is open                                KILLED   Tests  2 failed | 167 passed (169)
+the first interval wins, not the worse               KILLED   Tests  1 failed | 168 passed (169)
+the ladder is inverted                               KILLED   Tests  2 failed | 167 passed (169)
+an unexamined hour reads nominal                     KILLED   Tests  2 failed | 167 passed (169)
+a missing answer is unmarked                         KILLED   Tests  7 failed | 162 passed (169)
+a missing answer reads nominal                       KILLED   Tests  7 failed | 162 passed (169)
+an unnamed receiver reads nominal                    KILLED   Tests  1 failed | 168 passed (169)
+a loaded receiver is still marked                    KILLED   Tests  6 failed | 163 passed (169)
+another hour's answer is accepted                    KILLED   Tests  1 failed | 168 passed (169)
+asked while closed                                   KILLED   Tests  2 failed | 167 passed (169)
+asked on every render                                KILLED   Tests  3 failed | 166 passed (169)
+a failure is never asked again                       KILLED   Tests  1 failed | 168 passed (169)
+the previous hour's answer is served                 KILLED   Tests  1 failed | 168 passed (169)
+the map keeps whole-hour states in playback          KILLED   Tests  10 failed | 159 passed (169)
+closing leaves cursor states                         KILLED   Tests  1 failed | 168 passed (169)
+the loader is never handed down                      KILLED   Tests  9 failed | 160 passed (169)
+the whole-hour marking is not named                  KILLED   Tests  1 failed | 168 passed (169)
+the fetcher drops the run                            KILLED   Tests  1 failed | 168 passed (169)
+the fetcher accepts a non-answer                     KILLED   Tests  1 failed | 168 passed (169)
+the fetcher returns a refusal                        KILLED   Tests  1 failed | 168 passed (169)
+
+22 of 22 valid mutants killed

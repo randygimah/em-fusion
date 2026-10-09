@@ -5,9 +5,11 @@ import { EmLevel } from "../components/em/EmLevel";
 import { EmPlaybackBar } from "../components/em/EmPlaybackBar";
 import { MapView } from "../components/map/MapView";
 import { usePlayback } from "../hooks/usePlayback";
+import { type LoadReceiverStates, useReceiverStates } from "../hooks/useReceiverStates";
 import { type LoadTracks, useTrackBuffer } from "../hooks/useTrackBuffer";
 import { findingLabel } from "../lib/detectionVocabulary";
 import { NO_PLAYBACK_WINDOW, windowOf } from "../lib/playback";
+import { receiversAt } from "../lib/receiverPlayback";
 import { playbackTracks, trailsAt, zonesAt } from "../lib/trackPlayback";
 import { showingSentence, VIEW_OPTIONS } from "../lib/viewVocabulary";
 import type { EvidenceView } from "../types/evidence";
@@ -91,6 +93,10 @@ interface Props {
   // playback. Optional like the rest; without it playback moves the clock and
   // draws no aircraft.
   loadTracks?: LoadTracks;
+  // spec: map-007 — how to fetch the hour's receiver states for playback.
+  // Optional like the rest; without it receivers keep the whole hour's state,
+  // said as such.
+  loadReceiverStates?: LoadReceiverStates;
 }
 
 const OperationalPictureScreen = ({
@@ -105,6 +111,7 @@ const OperationalPictureScreen = ({
   onSelectView,
   loadUnfiltered,
   loadTracks,
+  loadReceiverStates,
 }: Props) => {
   // A null summary means no detection pass has run on this run, which is not
   // the same as a pass that found nothing (api-012). The panel says so in
@@ -173,6 +180,10 @@ const OperationalPictureScreen = ({
   const mapTracks = playingBack ? playbackTracks(buffer.aircraft, playback.cursor, buffer.loaded) : operationalPicture.aircraftTracks;
   const mapZones = playingBack ? zonesAt(operationalPicture.interferenceZones, playback.cursor) : operationalPicture.interferenceZones;
   const mapTrails = playingBack ? trailsAt(buffer.aircraft, playback.cursor) : [];
+  // Receivers in their state at the cursor (map-007), from the hour's intervals
+  // fetched once on opening; until they arrive, the whole hour's, marked.
+  const receiverStates = useReceiverStates({ load: loadReceiverStates, runId, open: playback.open });
+  const mapSensors = playingBack ? receiversAt(operationalPicture.rfSensors, receiverStates, playback.cursor) : operationalPicture.rfSensors;
   // 16 px is the column's gap-4, which the bar brings with it.
   const extraHeight = { "--playback-extra": `${barHeight > 0 ? barHeight + 16 : 0}px` } as CSSProperties;
   return (
@@ -289,7 +300,7 @@ const OperationalPictureScreen = ({
             <div className="relative min-h-[320px] flex-1">
               <MapView
                 cursor={playback.open ? new Date(playback.cursor).toISOString() : null}
-                sensors={operationalPicture.rfSensors}
+                sensors={mapSensors}
                 tracks={mapTracks}
                 trails={mapTrails}
                 zones={mapZones}

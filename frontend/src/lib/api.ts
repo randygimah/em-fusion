@@ -1,5 +1,5 @@
 import type { EvidenceAccount } from "../types/evidence";
-import type { OperationalPicture, PlaybackWindow, SelectableHour, ViewSelection } from "../types/operationalPicture";
+import type { OperationalPicture, PlaybackWindow, ReceiverStates, SelectableHour, ViewSelection } from "../types/operationalPicture";
 import type { InFlightBatch, ScenarioConfiguration, ScenarioRunRecord } from "../types/scenarioControl";
 
 /**
@@ -166,6 +166,28 @@ export const fetchTracks = async (
     throw new Error(`${TRACKS_PATH} answered something that is not a span of tracks`);
   }
   return payload as PlaybackWindow;
+};
+
+export const RECEIVER_STATES_PATH = "/api/v1/operational-picture/receiver-states";
+
+/**
+ * Every receiver's states through one run, or throw. spec: map-007, api-018.
+ *
+ * Fetched once when playback opens and never polled: a replayed hour's
+ * conclusions do not change while it is played back. A few hundred bytes for
+ * the hour, so there is nothing to buffer.
+ */
+export const fetchReceiverStates = async (runId: number, baseUrl = "", signal?: AbortSignal): Promise<ReceiverStates> => {
+  const params = new URLSearchParams({ run: String(runId) });
+  const response = await fetch(`${baseUrl}${RECEIVER_STATES_PATH}?${params}`, { signal });
+  if (!response.ok) {
+    throw new Error(`${RECEIVER_STATES_PATH} responded ${response.status}`);
+  }
+  const payload = await response.json();
+  if (!Array.isArray(payload?.receivers)) {
+    throw new Error(`${RECEIVER_STATES_PATH} answered something that is not receiver states`);
+  }
+  return payload as ReceiverStates;
 };
 
 // ---------------------------------------------------------------- scenario

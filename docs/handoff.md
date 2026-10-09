@@ -37,15 +37,33 @@ committed: `scoring_pack/answer_sheet.md`, one fixed correct-answer sentence per
 exposed that the five mixed-evidence packs carry no aircraft evidence at all. The user also pushed their
 completed pass-one sheet (`score_sheet1.xlsx`), and saw the arm key between passes. Then **`api-018`** was
 implemented and reviewed: each receiver's out-of-nominal intervals through a run, on the picture's own
-ladder. `map-007` is next.
+ladder. Then **`map-007`**: the receivers on the map follow the cursor. Reviewed in the browser, mutation
+pass 22 of 22 on its second run.
 
 ## Current state
 
-Backlog **103 of 124** (97 of 121 at the start; `api-018`, `map-007` and `eval-010` added; `eval-010`
-and `api-018` pass). Tree clean once this commit lands; `main` in sync with `origin/main`.
+Backlog **104 of 124** (97 of 121 at the start; `api-018`, `map-007` and `eval-010` added; all three
+pass). Tree clean once this commit lands; `main` in sync with `origin/main`.
 
 **Full backend suite: 2,235 passed** (2,234 plus the one `eval-010` test fixed in `ceb869f`), about 12
 minutes. The per-item figures below predate `eval-010` and `api-018`.
+
+Frontend: **496 passed** (472 before `map-007`: 23 in `receiverPlayback.test.tsx`, 1 in
+`mapView.test.tsx`); Biome lint and `tsc -b` clean.
+
+### Receivers at the cursor (`map-007`)
+
+- `lib/receiverPlayback.ts` `receiversAt(sensors, states, cursor)`: the state of the interval holding
+  the cursor (closed bounds; the worse where two touch), nominal outside every interval, `unknown` when
+  intervals are null. Unloaded, failed, another hour's answer, or a receiver not named: the picture's
+  state with `provisional: true`, which `MapView` names "…, state for the whole hour".
+- `hooks/useReceiverStates.ts`: asked once per hour when playback opens; an answer naming another run
+  refused; a failure asked again on the next opening; returns null unless the held answer is this
+  run's. `fetchReceiverStates` in `lib/api.ts`; the loader from `App.tsx`.
+- **Browser, run 480 under *All*:** RF-01 nominal at 12:38:41, fault 12:38:51 through 12:44:01, nominal
+  at 12:44:11; one request for the session; closing restored the whole-hour states. The whole-hour
+  marking was not seen in the browser (the answer lands within a frame).
+- Mutation: `mutate_map007_receivers.log`, **22 of 22** (first run 18 of 22).
 
 ### Receiver states over the hour (`api-018`)
 
@@ -279,7 +297,9 @@ None once this handoff is committed.
 | `f2af32b` | `chore: remove Office lock files from the scoring pack; ignore them` |
 | `25a527f` | `feat(eval-010): the pass-two answer sheet - tests pass` |
 | `ceb869f` | `fix(eval-010): mount spec.jsonl into the test container for the pre-campaign wording check` |
-| *this commit* | `feat(api-018): receiver states over the hour - tests pass` |
+| `2bdc0b6` | `feat(api-018): receiver states over the hour - tests pass` |
+| `0231b06` | `test: add tests for map-007` |
+| *this commit* | `feat(map-007): receivers in their state at the playback cursor - tests pass` |
 
 **New:**
 - `frontend/src/components/em/EmDrillDown.tsx`
@@ -306,6 +326,11 @@ None once this handoff is committed.
   `Receiver*` shapes in `frontend/src/types/operationalPicture.ts`;
   `backend/measurements/corpus/receiver_states_agreement.{py,log}`.
 - `Makefile`: both backend test targets mount `docs/spec.jsonl` read-only at `/repo/docs/`.
+- `frontend/src/lib/receiverPlayback.ts`, `frontend/src/hooks/useReceiverStates.ts`,
+  `frontend/src/test/receiverPlayback.test.tsx`; `fetchReceiverStates` in `api.ts`; `MapSensor` and the
+  whole-hour name in `MapView.tsx`; the screen's `loadReceiverStates` prop; the loader in `App.tsx`; the
+  map stand-in in `setup.ts` prints each receiver's state;
+  `backend/measurements/mutation/mutate_map007_receivers.{py,log}`.
 - `.gitignore`: `~$*`.
 
 **Docs:**
@@ -386,6 +411,10 @@ None once this handoff is committed.
   separately.
 
 **Tests changed after implementation (deviations):**
+- `map-007`: four tests written after the first mutation pass, one per survivor (the worse state
+  listed second; the previous hour's answer; a bogus other-hour answer; a retry after failure). The
+  screen test's prop was cast while the prop did not exist and typed properly once it did; one mock's
+  return type was annotated when `tsc -b` failed.
 - `eval-010`: one test written after the code, `test_an_order_listing_a_pack_twice_is_refused_by_the_builder_too`,
   to cover the builder's duplicate-order guard, the one line no test reached.
 - `op-005`:
@@ -459,9 +488,10 @@ arm (the arm key, `campaign_arms.csv`, generator columns of the campaign rows).
 
      Then build from `api-004` and the list.
 3. **While the screen is parked**, the next items touch no hypothesis data:
-   - **`map-007`** (started): receivers in their state at the playback cursor, from `api-018`.
-4. **Offer the progress-note update** after `eval-010` (the answer sheet and the mixed-scenario
-   finding) if the user wants the evaluation story on it.
+   - Playback is complete: transport, aircraft, trails, zones and receivers all follow the cursor.
+4. **Offer the progress-note update**: receivers now change state during playback (the note's
+   "does not do yet" says they do not), and the evaluation story (the answer sheet and the
+   mixed-scenario finding) if the user wants it there.
 
 Open and unowned:
 
