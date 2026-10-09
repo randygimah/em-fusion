@@ -3221,6 +3221,48 @@ than empty, the typed-absence rule applied once more.
 span under All is 1.13 MB on the wire. Compression would reduce it substantially and belongs to the
 deployment rather than to this item.)*
 
+### The playback cursor is simulated time moved by capped intervals, and the map keeps its height
+
+`op-008` was built on 9 October 2026 as a transport with no visible effect on the map: it produces a
+cursor, a moment in the replayed hour, and `map-004` reads it. Separating the two made the item's
+sharpest property testable on the cursor alone. "The same moment shows the same data at any speed"
+reduces to arithmetic, since four seconds of play at 1× and one second at 4× must reach the same
+moment, and that is a pure function rather than an animation.
+
+**The window comes from the hours index, not from a request.** Every one of the 460 selectable
+hours carries its simulated window in the index the screen already holds, so the transport needs no
+fetch of its own. The window is the hour the run was configured to replay (run 480: 12:36:51 to
+12:51:51), slightly wider than the positions actually stored (12:37:00 to 12:51:50). A cursor in the
+nine-second margins simply finds no position, which `map-004` must handle as stale rather than as a
+fault.
+
+**A hidden tab must not make the cursor leap.** Browsers run no animation frames in a background
+tab, so the first frame back measures the whole absence; played at 60×, a minute away would advance
+the hour by an hour. Each frame's interval is capped at 250 ms. This was visible during browser
+verification: the automation tab is hidden, frames arrived only when a screenshot forced one, and
+each moved the cursor by at most 15 s at 60× rather than jumping to the end.
+
+**Opening playback pins the hour.** Following the newest hour, a batch completing mid-playback would
+replace the hour under the cursor. Pinning on open makes the hour the analyst is playing the one that
+stays on screen, and choosing another hour closes playback rather than carrying a cursor from one
+hour into another.
+
+**A reversal on review: the bar adds height instead of taking it.** As first built, the bar sat
+between the map and the exception panel inside a layout one window high, so opening it shrank the
+map by the bar's height. The user asked for the opposite: the map keeps its height and the panel
+moves down. The screen now measures the bar, re-measuring as it resizes because it wraps on a narrow
+column, and adds that height plus the gap to the page. Measured in the browser: the map is 486 px
+with playback closed and open, and the panel moves down 60 px (a 44 px bar and a 16 px gap). jsdom
+has no layout engine, so no unit test can observe this; the measurement is the evidence.
+
+The mutation pass killed 24 of 27 on its first run. Two survivors were killable and gained tests written
+after the code: an inverted window accepted, and a seek outside the hour left unclamped. The third was
+equivalent and was retired: timing frames with `Date.now()` rather than `performance.now()`, which
+differ only when the system clock is changed, something fake timers cannot express. The second run
+killed 25 of 26. The remaining survivor, the unclamped seek, is equivalent at the interface, because a
+range input sanitises its own value to its maximum and is the only caller; the clamp is kept for
+`map-004`, which may seek from elsewhere.
+
 ### The Hypotheses screen shows one explanation per conclusion, and waits for the blind scoring
 
 Scoped on 9 October 2026 against the design reference and the store, before any spec item was

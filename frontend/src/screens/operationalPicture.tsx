@@ -1,8 +1,12 @@
+import { type CSSProperties, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { EmEvidencePanel } from "../components/em/EmEvidencePanel";
 import { EmExceptionPanel } from "../components/em/EmExceptionPanel";
 import { EmLevel } from "../components/em/EmLevel";
+import { EmPlaybackBar } from "../components/em/EmPlaybackBar";
 import { MapView } from "../components/map/MapView";
+import { usePlayback } from "../hooks/usePlayback";
 import { findingLabel } from "../lib/detectionVocabulary";
+import { NO_PLAYBACK_WINDOW, windowOf } from "../lib/playback";
 import { showingSentence, VIEW_OPTIONS } from "../lib/viewVocabulary";
 import type { EvidenceView } from "../types/evidence";
 import type {
@@ -112,13 +116,53 @@ const OperationalPictureScreen = ({
   const reportable = (detectionSummary?.counts ?? []).filter(
     (entry) => entry.kind === "reportable",
   );
+  // Playback (op-008) runs over the hour on screen, in the window the hours
+  // index records for it. Memoised on the two strings, so the transport's frame
+  // loop is not restarted by every render.
+  const runId = scenario && /^\d+$/.test(scenario.id) ? Number(scenario.id) : null;
+  const hourEntry = runId === null ? undefined : hours.find((hour) => hour.runId === runId);
+  const observedFrom = hourEntry?.observedFrom ?? null;
+  const observedTo = hourEntry?.observedTo ?? null;
+  const span = useMemo(() => windowOf(observedFrom, observedTo), [observedFrom, observedTo]);
+  const playback = usePlayback(scenario?.id ?? null, span);
+  // Opening pins the hour (op-009), so a newer hour landing cannot move the
+  // ground under the cursor.
+  const openPlayback = () => {
+    if (runId !== null && pinnedRun !== runId) onSelectHour?.(runId);
+    playback.start();
+  };
+  // The bar adds its height to the page rather than taking it from the map
+  // (op-008, amended on review): the screen is one window high, so the bar's
+  // height and the gap above it are added to that height and the panel under
+  // the map moves down instead. Measured, and re-measured as it resizes,
+  // because the bar wraps on a narrow column.
+  const barRef = useRef<HTMLElement>(null);
+  const [barHeight, setBarHeight] = useState(0);
+  useLayoutEffect(() => {
+    const bar = barRef.current;
+    if (!playback.open || bar === null) {
+      setBarHeight(0);
+      return;
+    }
+    const measure = () => setBarHeight(bar.getBoundingClientRect().height);
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(bar);
+    return () => observer.disconnect();
+  }, [playback.open]);
+  // 16 px is the column's gap-4, which the bar brings with it.
+  const extraHeight = { "--playback-extra": `${barHeight > 0 ? barHeight + 16 : 0}px` } as CSSProperties;
   return (
     <main className="min-h-screen bg-[#0b0e15] text-[#e1e2ec]">
       {/* One screen high on a wide display (op-004 (4)): the header, then the
           map taking whatever height is left, with the exception panel docked
           along the bottom edge as the design reference has it. The evidence
           (op-010) sits below the fold rather than squeezing the map. */}
-      <div className="flex flex-col lg:h-dvh">
+      <div
+        className="flex flex-col lg:h-[calc(100dvh+var(--playback-extra,0px))]"
+        style={extraHeight}
+      >
         <header className="flex shrink-0 items-center justify-between border-b border-[#424754] bg-[#1d2027] px-6 py-4">
           <div>
             <p className="font-mono text-xs uppercase tracking-[0.05em] text-[#8c909f]">EM Fusion</p>
@@ -220,9 +264,42 @@ const OperationalPictureScreen = ({
           <div className="flex min-h-0 flex-col gap-4">
             {/* The map and the panel read the same filtered rows (map-001, op-007),
                 so the two cannot disagree about what the view shows. */}
-            <div className="min-h-[320px] flex-1">
-              <MapView sensors={operationalPicture.rfSensors} tracks={operationalPicture.aircraftTracks} zones={operationalPicture.interferenceZones} />
+            <div className="relative min-h-[320px] flex-1">
+              <MapView
+                cursor={playback.open ? new Date(playback.cursor).toISOString() : null}
+                sensors={operationalPicture.rfSensors}
+                tracks={operationalPicture.aircraftTracks}
+                zones={operationalPicture.interferenceZones}
+              />
+              {/* The way into playback, over the map's free corner, so the map
+                  keeps its height until the bar is actually open (op-008). */}
+              {!playback.open && (
+                <div className="absolute bottom-2 left-2 z-10 flex items-center gap-2 font-mono text-xs">
+                  <button
+                    className="border border-[#424754] bg-[#1d2027] px-2 py-1 uppercase tracking-[0.05em] text-[#adc6ff] hover:bg-[#272a31] disabled:text-[#8c909f] disabled:opacity-60"
+                    disabled={span === null}
+                    onClick={openPlayback}
+                    type="button"
+                  >
+                    Play back this hour
+                  </button>
+                  {span === null && <span className="bg-[#1d2027] px-1 text-[#8c909f]">{NO_PLAYBACK_WINDOW}</span>}
+                </div>
+              )}
             </div>
+            {playback.open && span !== null && (
+              <EmPlaybackBar
+                barRef={barRef}
+                cursor={playback.cursor}
+                onClose={playback.close}
+                onSeek={playback.seek}
+                onSpeed={playback.setSpeed}
+                onToggle={playback.toggle}
+                playing={playback.playing}
+                span={span}
+                speed={playback.speed}
+              />
+            )}
             <EmExceptionPanel
               loadUnfiltered={loadUnfiltered}
               picture={operationalPicture}

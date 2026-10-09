@@ -532,6 +532,9 @@ export interface MapViewProps {
   tracks: AircraftTrack[];
   /** The interference claims the payload placed (map-006). */
   zones?: InterferenceZone[];
+  // The playback cursor in simulated time, or null at the end of the hour
+  // (op-008). Handed down now and read by map-004.
+  cursor?: string | null;
   /** Defaults to the frontend's environment. */
   config?: BasemapConfig | Error;
   /** Defaults to reading the PMTiles header. Rejects when the archive cannot be read. */

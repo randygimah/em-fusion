@@ -9364,6 +9364,27 @@ to review the experiment, and a verdict needs exactly one explanation to attach 
 explanations without knowing which arm wrote which. A screen that names the generator on those
 hypotheses can unblind a rater who opens it before scoring.
 
+## 158. Instead of the map losing some height, can we not just cause the RF, Tracks and Events box to move down instead, so the map maintains its height?
+
+**Yes.** The map shrank because the screen is laid out to be exactly one window high. The header,
+the map and the exception panel share that fixed height, and the map takes whatever is left. Any new
+strip placed between them, such as the playback bar, comes out of the map's share.
+
+| Layout | Opening the bar | Cost |
+|---|---|---|
+| One window high, map takes the rest (as first built) | The map shrinks by the bar's height | The map, which is what the screen is for, gets smaller |
+| One window high **plus the bar** (now) | The map keeps its height; the panel moves down by the bar's height and the gap | The page scrolls 60 px further while playback is open |
+
+**Worked on run 480:** the map is 486 px with playback closed and open. The panel's top moves from
+607 to 667 px, which is the 44 px bar plus the 16 px gap between them.
+
+**Why it is measured rather than a fixed number.** The bar wraps onto two lines when the column is
+narrow, so its height is not a constant. The screen measures it and re-measures when it resizes.
+
+**Worth recording as a limitation:** jsdom, where the unit tests run, has no layout engine, so no
+test can see a height. The measurement in the browser is the only evidence that the map keeps its
+size.
+
 ---
 
 | **Composing copy** | Turning a finding type the backend sends verbatim into a sentence an analyst reads. Done on the screen by design, so prose never arrives from a detector — and in one module, because two panels carry the same type. See §148. |
@@ -9380,3 +9401,4 @@ hypotheses can unblind a rater who opens it before scoring.
 | **Next in order versus next in importance** | The handoff's next step follows the build order of an area; which item the thesis most needs follows what its claims rest on. They can differ, and did at 98 of 121: playback was next on the map, the hypothesis workbench was next for the claim. See §156. |
 | **Asked versus answered** | A hypothesis row records the arm that was requested and the generator that produced it. They differ only on a fallback, and that difference is the definition of one. See §157. |
 | **An experiment's output versus an analyst's queue** | The campaign stores several explanations per conclusion to measure the arms; an analyst reviews one explanation per conclusion. A screen over the first is an evaluation tool, not a workbench. See §157. |
+| **A layout one window high** | A screen whose regions share exactly the window's height, so anything added takes room from something else. Making it the window plus an added strip is what lets the map keep its size. See §158. |

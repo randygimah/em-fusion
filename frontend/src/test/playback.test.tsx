@@ -155,6 +155,18 @@ describe("opening and closing", () => {
     expect(mapCursor()).toBe("cursor: none");
   });
 
+  it("is disabled, with a reason, for an hour whose window ends before it starts", () => {
+    // spec: op-008 — added after the mutation pass, where accepting an inverted
+    // window survived: a cursor clamped to an impossible window has no moment to be.
+    show({
+      runId: "77",
+      hours: [...HOURS, { runId: 77, observedFrom: "2022-06-27T13:00:00+00:00", observedTo: "2022-06-27T12:45:00+00:00", examined: true }],
+    });
+
+    expect(screen.getByRole("button", { name: /play back this hour/i })).toBeDisabled();
+    expect(screen.getByText(/no recorded window to play back/i)).toBeInTheDocument();
+  });
+
   it("is disabled, with a reason, for an hour with no recorded window", () => {
     // spec: op-008
     show({ runId: "99" });
@@ -315,5 +327,16 @@ describe("scrubbing", () => {
 
     fireEvent.change(slider(), { target: { value: String(START + 60_000) } });
     expect(cursorOnSlider()).toBe(START + 60_000);
+  });
+
+  it("holds a seek outside the hour at its edge", () => {
+    // spec: op-008 — added after the mutation pass, where an unclamped seek
+    // survived; the map is handed the cursor, not the slider's value.
+    show();
+    openPlayback();
+
+    fireEvent.change(slider(), { target: { value: String(END + 60_000) } });
+
+    expect(mapCursor()).toBe(`cursor: ${new Date(END).toISOString()}`);
   });
 });

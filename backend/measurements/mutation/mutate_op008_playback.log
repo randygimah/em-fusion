@@ -1,0 +1,31 @@
+sentinel killed (Tests  11 failed | 13 passed (24)) -- edits reach the tests
+
+speed is ignored                                     KILLED   Tests  5 failed | 19 passed (24)
+the end is not clamped                               KILLED   Tests  1 failed | 23 passed (24)
+the start is not clamped                             KILLED   Tests  1 failed | 23 passed (24)
+the frame cap is removed                             KILLED   Tests  1 failed | 23 passed (24)
+the frame cap is a second                            KILLED   Tests  1 failed | 23 passed (24)
+the speeds are different                             KILLED   Tests  3 failed | 21 passed (24)
+a step is one second                                 KILLED   Tests  1 failed | 23 passed (24)
+the clock is local time                              KILLED   Tests  4 failed | 20 passed (24)
+elapsed seconds are unpadded                         KILLED   Tests  4 failed | 20 passed (24)
+an inverted window is accepted                       KILLED   Tests  1 failed | 23 passed (24)
+another hour does not close it                       KILLED   Tests  1 failed | 23 passed (24)
+the end does not pause                               KILLED   Tests  1 failed | 23 passed (24)
+play from the end does not restart                   KILLED   Tests  1 failed | 23 passed (24)
+it opens at the end                                  KILLED   Tests  3 failed | 21 passed (24)
+it opens playing                                     KILLED   Tests  4 failed | 20 passed (24)
+pause resets the cursor                              KILLED   Tests  1 failed | 23 passed (24)
+a seek is not clamped                                SURVIVED Tests  24 passed (24)
+the time is announced as a number                    KILLED   Tests  1 failed | 23 passed (24)
+the play button is always Play                       KILLED   Tests  1 failed | 23 passed (24)
+the first speed is always marked                     KILLED   Tests  1 failed | 23 passed (24)
+the slider steps one millisecond                     KILLED   Tests  1 failed | 23 passed (24)
+the hour is not pinned                               KILLED   Tests  1 failed | 23 passed (24)
+the hour is pinned again                             KILLED   Tests  1 failed | 23 passed (24)
+the map gets no cursor                               KILLED   Tests  3 failed | 21 passed (24)
+the button is enabled with no window                 KILLED   Tests  2 failed | 22 passed (24)
+the reason is dropped                                KILLED   Tests  2 failed | 22 passed (24)
+
+25 of 26 valid mutants killed
+survivors: a seek is not clamped
