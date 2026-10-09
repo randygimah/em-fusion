@@ -9417,6 +9417,46 @@ slide. The red segments that show up are mostly the 5 holes: four share the wind
 is run 480's staged incident, and jump 9.5 to 75 km. They were already drawn broken before the fix,
 but only from 430 s, so the first look was probably just before them as well.
 
+## 160. The rubric's second pass says the correct answer for each evidence pack will be given, but I only see the arm key, which lists which generator wrote which explanation. Is there any other doc with the correct answers?
+
+**No. The answer sheet the rubric promises was never built.** Part A of the scoring rubric says
+that once pass 1 is finished the rater is "given the correct answer for each evidence pack — what
+the system was actually looking at". No spec item produces that document, and the scoring pack
+folder holds the explanations, the score sheet and the arm key only. A gap in the instrument, found
+by the first rater at the moment it was needed.
+
+**The arm key is not an answer key, and must not be read as one.** They answer different questions:
+
+| Document | What it records | Who may see it, when |
+|---|---|---|
+| **Arm key** | Which generator wrote explanation A and which wrote B, per pack | Nobody scoring, until both raters have finished both passes |
+| **Answer sheet** (unbuilt) | What was actually staged in the run each pack came from | Each rater, after their own pass 1 and before their pass 2 |
+
+**The facts an answer sheet needs already exist; they are just not rendered.** Every sampled pack
+carries its run's scenario type in the committed sample record (10 interference packs from
+GNSS-degradation runs; 10 fault packs, 5 from RF-sensor-fault runs and 5 from ambiguous-mixed-evidence
+runs), and every run stores what it staged: which receivers, which channels, the window, the
+elevation, and which aircraft were made to drop out. That record is what "what the system was
+actually looking at" means, and it is ground truth kept away from the detectors and the generators
+by design.
+
+**Building it is an evaluation item, not a lookup**, for two reasons:
+
+- **It is part of the instrument.** Both raters must get the same sheet, it has to pass the same
+  arm-vocabulary scan as the rest of the pack, and it must state what was staged rather than which
+  conclusion is "right". A sheet that said "the correct answer is a sensor fault" would be the author
+  scoring pass 2 for the second rater.
+- **The ambiguous-mixed-evidence packs have no single correct cause by design.** That scenario stages
+  one receiver deviating *and* aircraft dropping out, built to look like both a fault and
+  interference. Stating the staged facts lets each rater judge *Partly correct* for themselves;
+  writing a one-word verdict would decide it for them, and it would be written after the author had
+  read every explanation.
+
+**A threat to validity, recorded the moment it was raised.** The arm key sits in the same folder as
+the pack, and the first rater opened it after pass 1 and before pass 2. Pass 1 is unaffected; the
+author's pass-2 judgements will be made knowing the arm. The second rater's will not, provided the
+key is kept out of what they are handed.
+
 ---
 
 | **Composing copy** | Turning a finding type the backend sends verbatim into a sentence an analyst reads. Done on the screen by design, so prose never arrives from a detector — and in one module, because two panels carry the same type. See §148. |
@@ -9435,3 +9475,5 @@ but only from 430 s, so the first look was probably just before them as well.
 | **An experiment's output versus an analyst's queue** | The campaign stores several explanations per conclusion to measure the arms; an analyst reviews one explanation per conclusion. A screen over the first is an evaluation tool, not a workbench. See §157. |
 | **A layout one window high** | A screen whose regions share exactly the window's height, so anything added takes room from something else. Making it the window plus an added strip is what lets the map keep its size. See §158. |
 | **A frozen gap versus a hole** | Two ways a track gap is stored: rows that stop (a hole in the positions) and rows that keep arriving with a stale, repeated position (frozen). Drawing only holes misses the frozen kind. See §159. |
+
+| **An answer sheet versus an arm key** | The answer sheet says what was actually staged in a pack's run, for pass 2 of the blind scoring; the arm key says which generator wrote which explanation. The first is given to raters between passes; the second only after all scoring. See §160. |
