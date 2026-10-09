@@ -30,22 +30,34 @@ window). Review found that broken segments were missing for most gaps, which exp
 mechanism (frozen) the first build ignored; fixed by amending the spec and the code. Two items were
 then specified for receiver states over time (`api-018`, `map-007`).
 
-Late in the session **`api-018`'s tests were written and proved failing** (implementation not started),
-and then the user, mid-scoring, found that **pass two of the blind scoring had no answer sheet**: the
+Late in the session **`api-018`'s tests were written and proved failing**; the user, mid-scoring, found that **pass two of the blind scoring had no answer sheet**: the
 rubric promises one and nothing produced it (`qa.md` §160). That became **`eval-010`**, built and
 committed: `scoring_pack/answer_sheet.md`, one fixed correct-answer sentence per scenario type from
 `scn-002`'s pre-campaign definitions, plus the staged facts copied from each run's record. Building it
 exposed that the five mixed-evidence packs carry no aircraft evidence at all. The user also pushed their
-completed pass-one sheet (`score_sheet1.xlsx`), and saw the arm key between passes.
+completed pass-one sheet (`score_sheet1.xlsx`), and saw the arm key between passes. Then **`api-018`** was
+implemented and reviewed: each receiver's out-of-nominal intervals through a run, on the picture's own
+ladder. `map-007` is next.
 
 ## Current state
 
-Backlog **102 of 124** (97 of 121 at the start; `api-018`, `map-007` and `eval-010` added; `eval-010`
-passes). Tree clean once this handoff is committed; `main` in sync with `origin/main`.
+Backlog **103 of 124** (97 of 121 at the start; `api-018`, `map-007` and `eval-010` added; `eval-010`
+and `api-018` pass). Tree clean once this commit lands; `main` in sync with `origin/main`.
 
-**The full backend suite is red on purpose**: `api-018`'s 27 tests and 4 parity cases in
-`test_api_operational_picture.py` were committed failing (`904eb55`) and stay red until `api-018` is
-implemented. The figures below predate them.
+**Full backend suite: 2,235 passed** (2,234 plus the one `eval-010` test fixed in `ceb869f`), about 12
+minutes. The per-item figures below predate `eval-010` and `api-018`.
+
+### Receiver states over the hour (`api-018`)
+
+- `GET /api/v1/operational-picture/receiver-states?run=` → `ReceiverStates {runId, examined,
+  receivers: [{id, intervals: [{startedAt, endedAt, state: "fault" | "deviating"}] | null}]}`. Run
+  required; 404 naming an unknown run; no view; every receiver in layout order; intervals closed, oldest
+  first, non-overlapping; worst wins by the picture's `RECEIVER_STATES`; null intervals when unexamined.
+- `app/api/v1/schemas/receiver_states.py`, 100% coverage; 27 tests plus 4 parity cases.
+- **Measured** (`receiver_states_agreement.{py,log}`): 460 hours, all examined; **3,220 of 3,220
+  receiver-hours** have a worst interval equal to the picture's state. 439 intervals; **no receiver-hour
+  holds both a fault and a deviation**, so the overlap split is exercised by fixtures only. Run 480:
+  RF-01 fault 12:38:51–12:44:01, the rest nominal. 338 B median, 520 B max, 7 ms median over HTTP.
 
 ### The blind scoring and the answer sheet (`eval-010`)
 
@@ -265,7 +277,9 @@ None once this handoff is committed.
 | `2c7af38` | `spec: add eval-010 -- the pass-2 answer sheet; correct qa 160` |
 | `59f77e8` | `test: add tests for eval-010` |
 | `f2af32b` | `chore: remove Office lock files from the scoring pack; ignore them` |
-| *this commit* | `feat(eval-010): the pass-two answer sheet - tests pass` |
+| `25a527f` | `feat(eval-010): the pass-two answer sheet - tests pass` |
+| `ceb869f` | `fix(eval-010): mount spec.jsonl into the test container for the pre-campaign wording check` |
+| *this commit* | `feat(api-018): receiver states over the hour - tests pass` |
 
 **New:**
 - `frontend/src/components/em/EmDrillDown.tsx`
@@ -286,8 +300,12 @@ None once this handoff is committed.
 **New (`eval-010`, `api-018`):**
 - `backend/app/evaluation/answers.py`; `backend/tests/test_eval_answer_sheet.py` (26 tests).
 - `backend/measurements/corpus/build_answer_sheet.{py,log}`; `scoring_pack/answer_sheet.md`.
-- `backend/tests/test_api_receiver_states.py` (27 tests, failing until `api-018` is built); the three
-  receiver-state shapes registered in `test_api_operational_picture.py`'s `MODELS` via a lookup.
+- `backend/tests/test_api_receiver_states.py` (27 tests); the three receiver-state shapes in
+  `test_api_operational_picture.py`'s `MODELS`.
+- `backend/app/api/v1/schemas/receiver_states.py`; the route in `operational_picture.py`; the
+  `Receiver*` shapes in `frontend/src/types/operationalPicture.ts`;
+  `backend/measurements/corpus/receiver_states_agreement.{py,log}`.
+- `Makefile`: both backend test targets mount `docs/spec.jsonl` read-only at `/repo/docs/`.
 - `.gitignore`: `~$*`.
 
 **Docs:**
@@ -319,6 +337,11 @@ None once this handoff is committed.
   explanation A into the session while I checked its evidence. Nothing linking it to an arm was printed
   or used. Separately, the arm key reached this session's context when the user attached it to a
   question; it has not been repeated or used.
+
+- **I committed `eval-010` as passing having run its tests only natively.** One reads
+  `docs/spec.jsonl`, which the test container did not mount, and the full suite (in Docker) failed it.
+  Fixed in `ceb869f` with a read-only mount and a native-then-mounted lookup that fails rather than skips.
+- **My first agreement script used `hour.id`**; `SelectableRun`'s field is `run_id`.
 
 **Instrument limits:**
 - The browser tool's ref-based clicks did not register on this page; coordinate clicks did.
@@ -436,16 +459,7 @@ arm (the arm key, `campaign_arms.csv`, generator columns of the campaign rows).
 
      Then build from `api-004` and the list.
 3. **While the screen is parked**, the next items touch no hypothesis data:
-   - **`api-018`: implement.** Tests committed failing (`904eb55`). Shape decided: `ReceiverStates
-     {runId, examined, receivers: [ReceiverTimeline {id, intervals: ReceiverStateInterval[] | null}]}`,
-     `ReceiverStateInterval {startedAt, endedAt, state: ReceiverOutOfNominal}`, union
-     `"fault" | "deviating"`. Every receiver in layout order; non-overlapping intervals, worst state
-     winning where findings overlap, same-state overlaps and touches merged, an instantaneous finding
-     kept; a finding naming a receiver outside the layout raises `PictureError`. Reuse
-     `RECEIVER_STATES`, `_receivers_named` and `_of` from the picture's schema. Route
-     `GET /operational-picture/receiver-states?run=` (required; 404 naming the run). Once the module
-     exists, replace the `MODELS` lookup with a plain import. No new SQL.
-   - **Then `map-007`**: receivers in their state at the playback cursor.
+   - **`map-007`** (started): receivers in their state at the playback cursor, from `api-018`.
 4. **Offer the progress-note update** after `eval-010` (the answer sheet and the mixed-scenario
    finding) if the user wants the evaluation story on it.
 

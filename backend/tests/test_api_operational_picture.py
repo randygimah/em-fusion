@@ -34,8 +34,6 @@ import ast
 import json
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
-from importlib import import_module
-from importlib.util import find_spec
 from pathlib import Path
 from typing import Any
 
@@ -50,6 +48,7 @@ from alembic import command
 from app.api.v1.operational_picture import FINAL_WINDOW_SECONDS
 from app.api.v1.schemas import operational_picture as picture_module
 from app.api.v1.schemas import playback as playback_module
+from app.api.v1.schemas import receiver_states as receiver_states_module
 from app.api.v1.schemas.operational_picture import (
     PERSISTED_PRODUCERS,
     AircraftTrack,
@@ -136,20 +135,11 @@ MODELS = {
     "PlaybackAircraft": playback_module.PlaybackAircraft,
     "PlaybackPosition": playback_module.PlaybackPosition,
     "PlaybackGap": playback_module.PlaybackGap,
-    # `api-018`. Looked up rather than imported until the module exists, so its
-    # absence fails these parity tests rather than the whole suite.
-    **{
-        name: getattr(
-            (
-                import_module("app.api.v1.schemas.receiver_states")
-                if find_spec("app.api.v1.schemas.receiver_states")
-                else None
-            ),
-            name,
-            None,
-        )
-        for name in ("ReceiverStates", "ReceiverTimeline", "ReceiverStateInterval")
-    },
+    # `api-018`. Declared in the same contract and so held by the same parser
+    # check; its own suite compares the fields too.
+    "ReceiverStates": receiver_states_module.ReceiverStates,
+    "ReceiverTimeline": receiver_states_module.ReceiverTimeline,
+    "ReceiverStateInterval": receiver_states_module.ReceiverStateInterval,
 }
 
 #: The two fields that carried `74.2` and `0.92` before this item, rendered as

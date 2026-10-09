@@ -1,0 +1,10 @@
+hours            460 offered by the hours index
+unexamined       0
+receiver-hours   3220
+  agree          3220
+  disagree       0
+worst state      {'deviating': 242, 'fault': 180, 'nominal': 2798}
+intervals        439 in all
+  per receiver   {0: 2798, 1: 406, 2: 15, 3: 1}
+  both states    0 receiver-hours hold a fault and a deviation
+elapsed          1.0 s for both builders over every hour

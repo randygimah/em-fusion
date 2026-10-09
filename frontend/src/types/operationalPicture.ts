@@ -255,3 +255,29 @@ export interface PlaybackWindow {
   withheld: number;
   aircraft: PlaybackAircraft[];
 }
+
+// Receiver states through one run, for playback (api-018): per receiver in the
+// layout, the stretches of simulated time in which stored findings put it out
+// of nominal. The worst state wins where findings overlap, by the same ladder
+// as the picture's whole-hour `health`, so the two agree on the worst moment.
+// Intervals are closed, oldest first and never overlap; between them the
+// receiver is nominal. `intervals` is null on an hour no pass examined, since
+// an empty list would read as nominal throughout. Filtered by no view.
+export type ReceiverOutOfNominal = "fault" | "deviating";
+
+export interface ReceiverStateInterval {
+  startedAt: string;
+  endedAt: string;
+  state: ReceiverOutOfNominal;
+}
+
+export interface ReceiverTimeline {
+  id: string;
+  intervals: ReceiverStateInterval[] | null;
+}
+
+export interface ReceiverStates {
+  runId: number;
+  examined: boolean;
+  receivers: ReceiverTimeline[];
+}

@@ -3313,6 +3313,36 @@ the view passed. Three tests written after the code killed them, and the second 
 refactor this item made to the map's markers moved code that five older mutants were anchored to;
 they were re-pointed and the `map-001` and `map-006` passes re-run.
 
+### Receivers through the hour: intervals joined on the picture's own ladder, so the worst moment cannot disagree
+
+Playback moved the aircraft and the zones but left the seven receivers in their whole-hour state, so
+a receiver faulted for five minutes read as faulted from the first second of the hour to the last.
+The receivers' timeline is served as intervals per receiver: the closed stretches of simulated time
+in which stored findings put the receiver out of nominal, with nominal implied between them. The
+alternative, a state per receiver per span alongside the tracks endpoint, was rejected because a
+receiver's state is not a quantity sampled at a cadence like a position; it changes at the bounds of
+a handful of findings, and serving those bounds whole costs a few hundred bytes for the hour.
+
+**The decisive choice was where the ranking lives.** The picture already decides each receiver's
+whole-hour state from the same findings, worst first, and two independent statements of "fault
+outranks deviating" could drift apart. So the timeline imports the picture's declared ladder and the
+function that reads which receivers a finding names, and resolves overlaps with it: where a fault
+falls inside a deviation, the deviation is served either side and the fault between. The property
+this buys is checkable rather than asserted. On every hour the store offers, the worst interval of
+each receiver's timeline equals the picture's state for it: 3,220 of 3,220 receiver-hours across
+460 hours, all examined (`receiver_states_agreement.py`). The same measurement found that **no real
+hour holds both a fault and a deviation on one receiver**, so the overlap resolution, which is the
+case the ladder exists for, is exercised only by the test fixtures. That is recorded as a limit on
+what the agreement figure shows: it shows the two builders read the same findings the same way, not
+that the split was ever needed on this corpus.
+
+**Two smaller decisions, each with a rejected alternative.** Intervals are closed and the timeline is
+cut into instants as well as the stretches between them, because a sweep over half-open stretches
+silently drops a finding whose window is a single instant; none exists in the store, and the cost of
+keeping one is nothing. And an unexamined hour answers with each receiver's intervals null rather
+than the whole answer null, mirroring the playback span's gaps: the answer still names its run, so
+the screen can refuse an answer for another hour, which a bare null cannot be checked against.
+
 ### The Hypotheses screen shows one explanation per conclusion, and waits for the blind scoring
 
 Scoped on 9 October 2026 against the design reference and the store, before any spec item was

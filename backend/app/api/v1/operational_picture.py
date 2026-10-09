@@ -56,6 +56,7 @@ from app.api.v1.schemas.playback import (
     build_playback_window,
     check_span,
 )
+from app.api.v1.schemas.receiver_states import ReceiverStates, build_receiver_states
 from app.db.bundles import stored_bundles_for_run
 from app.db.findings import findings_for_run, interference_radii_for_run
 from app.db.repository import (
@@ -233,4 +234,34 @@ def get_tracks(
         findings=findings_for_run(sessions, run.id),
         detection_pass=detection_pass_for_run(sessions, run.id),
         view=view,
+    )
+
+
+@router.get("/operational-picture/receiver-states", tags=["operational-picture"])
+def get_receiver_states(
+    sessions: SessionFactory = Depends(get_sessionmaker),
+    run_id: int = Query(alias="run"),
+) -> ReceiverStates:
+    """Each receiver's states through one run. spec: api-018.
+
+    **The run is required**, as playback's tracks require it: the timeline is
+    of the hour being played back, and an unknown run is a 404 naming it and
+    never another run's states (`api-013`).
+
+    **No view parameter.** The receivers' timeline is not a view: every
+    receiver in the layout is served, clean ones included, whatever the
+    screen is showing. Nothing new is read: the same findings and pass stamp
+    the picture reads, joined into intervals by the builder.
+    """
+    run = run_summary(sessions, run_id)
+    if run is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"no scenario run {run_id} in the store",
+        )
+    return build_receiver_states(
+        run=run,
+        layout=load_layout(),
+        findings=findings_for_run(sessions, run.id),
+        detection_pass=detection_pass_for_run(sessions, run.id),
     )
