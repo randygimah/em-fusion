@@ -45,8 +45,8 @@ pass 22 of 22 on its second run.
 Backlog **104 of 124** (97 of 121 at the start; `api-018`, `map-007` and `eval-010` added; all three
 pass). Tree clean once this commit lands; `main` in sync with `origin/main`.
 
-**Full backend suite: 2,235 passed** (2,234 plus the one `eval-010` test fixed in `ceb869f`), about 12
-minutes. The per-item figures below predate `eval-010` and `api-018`.
+**Full backend suite: 2,235 passed, coverage 99.93%** (5,834 statements, 4 missed), about 12½ minutes,
+re-run after `map-007`. The per-item figures below predate `eval-010` and `api-018`.
 
 Frontend: **496 passed** (472 before `map-007`: 23 in `receiverPlayback.test.tsx`, 1 in
 `mapView.test.tsx`); Biome lint and `tsc -b` clean.
@@ -299,7 +299,8 @@ None once this handoff is committed.
 | `ceb869f` | `fix(eval-010): mount spec.jsonl into the test container for the pre-campaign wording check` |
 | `2bdc0b6` | `feat(api-018): receiver states over the hour - tests pass` |
 | `0231b06` | `test: add tests for map-007` |
-| *this commit* | `feat(map-007): receivers in their state at the playback cursor - tests pass` |
+| `456adc3` | `feat(map-007): receivers in their state at the playback cursor - tests pass` |
+| *this commit* | `docs: progress note covers receivers through the hour and the answer sheet` (published, version 10) |
 
 **New:**
 - `frontend/src/components/em/EmDrillDown.tsx`
@@ -489,9 +490,8 @@ arm (the arm key, `campaign_arms.csv`, generator columns of the campaign rows).
      Then build from `api-004` and the list.
 3. **While the screen is parked**, the next items touch no hypothesis data:
    - Playback is complete: transport, aircraft, trails, zones and receivers all follow the cursor.
-4. **Offer the progress-note update**: receivers now change state during playback (the note's
-   "does not do yet" says they do not), and the evaluation story (the answer sheet and the
-   mixed-scenario finding) if the user wants it there.
+4. The progress note is current (version 10): receivers through the hour, the answer sheet and the
+   mixed-scenario finding, and the test, coverage and capability figures.
 
 Open and unowned:
 
