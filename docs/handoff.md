@@ -14,6 +14,11 @@ the hour on screen, always unfiltered. The user chose a full table over the same
 retiring the item, since *All* already lists every row in the panel) and an overlay (rather than a
 screen). Spec → failing tests → code → browser review → mutation → `passes: true`, committed on `main`.
 
+The session then scoped **the Hypotheses screen** against the design reference and the store
+(`qa.md` §157). The user settled five decisions and then **parked the feature**: they are about to score
+the blind evaluation pack, and the screen would name the generator of the very explanations being
+scored. Nothing about it is specified or built yet; the decisions are under Next step.
+
 ## Current state
 
 Backlog **98 of 121** (97 at the start). Tree clean once this handoff is committed; `main` in sync
@@ -61,6 +66,16 @@ with `origin/main`.
 
 The user confirmed it works.
 
+### What the store holds for the Hypotheses screen (read 9 October 2026)
+
+- **155 hypotheses over 20 bundles**, one bundle in each of runs 102–175: 10 `FUSION-SPATIAL`
+  interference and 10 `SENSOR-FAULT` conclusions.
+- **Per bundle:** 5–6 hosted rows (`gpt-4.1-2025-04-14`, temperature 0, seed 20260925, titles differing
+  between samples) and 2 template rows.
+- **State:** every `grounding_passed` is true, every status `New`, and `analyst_feedback` is empty.
+- **No timestamp column** on `hypotheses`, so order is by id.
+- The picture serves `hypotheses: []` for every hour, so the rail always reads *No active hypotheses*.
+
 ## Files in flight
 
 None once this handoff is committed.
@@ -72,6 +87,10 @@ None once this handoff is committed.
 | `3719784` | `spec: amend op-005 -- drill-down tables as an unfiltered overlay over the hour on screen` |
 | `d895044` | `test: add tests for op-005` |
 | `988c349` | `feat(op-005): drill-down tables over the hour on screen, unfiltered - tests pass` |
+| `503860c` | `docs: handoff for the drill-down tables` |
+| `8a03d0c` | `docs: progress note covers the drill-down tables` (published to the same page, version 7) |
+| `603eae7` | `docs: qa 156 -- what comes next` |
+| `e56d16d` | `docs: qa 157 -- the hypothesis design against the stored data` |
 
 **New:**
 - `frontend/src/components/em/EmDrillDown.tsx`
@@ -120,11 +139,48 @@ None once this handoff is committed.
 
 ## Next step
 
-1. **Offer the progress-note update.** The drill-down is a small addition to the story: a sentence in
-   the screen section, not a figure.
-2. **`map-004`**, playback, still gated on `op-008` / `api-008`. Zones appearing and clearing over time
-   belong to it.
-3. Then, unchanged: `hyp-*`, and `eval-006` (waits on the second rater, mid-October).
+**The user is scoring the blind pack now. Do not start the Hypotheses screen until they say scoring is
+done**, and while they score, do not print, open or summarise anything that links an explanation to its
+arm (the arm key, `campaign_arms.csv`, generator columns of the campaign rows).
+
+1. **`eval-006` scoring** (the user, now; the second rater from mid-October).
+2. **The Hypotheses screen, once the user's scoring is done.** Decided 9 October 2026 (`qa.md` §157):
+   - **Option A, one explanation per conclusion.** The analyst's queue is the 20 conclusions that have
+     hypotheses, one explanation each, never the campaign's 5–6 hosted samples and 2 template copies.
+     Rejected: B (a read-only template tab beside the AI, which invites anchoring on agreement) and
+     C (both side by side with a verdict each, which makes the workbench an arm-comparison tool; that
+     is the blind scoring's job).
+   - **"The" explanation is the pack's row**: the generation at `SCORED_ORDINAL` for the bundle and the
+     requested arm, as `_scored_generations` in `app/evaluation/pack.py` takes it, so verdicts and blind
+     scores refer to the same text. For the AI-arm explanation that is the hosted request's scored row.
+   - **Provenance is always shown** (`ai-010`): the generator and model on every explanation, and a
+     fallback (`requested_generator` hosted, `generator` template) styled as degraded, not as a neutral
+     label. None is stored yet, so it needs a fixture.
+   - **Verdict → status** (fills the gap `api-005` leaves): confirm → Confirmed; reject → Rejected;
+     false positive → Rejected with the verdict kept on the feedback row; needs more evidence →
+     Under review. *Inconclusive* stays in the stored set and is unused.
+   - **A hypothesis gets its own address**, `#hypotheses/<id>`, as a small `nav-*` item, because
+     `screenFromHash` reads bare screen ids; the cards on the Operational Picture (`op-002`) link to it.
+   - **Against the design reference** (`assets/Design/Hypothesis_analysis_v2/`), which predates the
+     layer:
+     - *Keep:* the title, confidence pips, status (`New` reworded), window, verdict buttons and note,
+       and the disclaimer.
+     - *Drop:* the invented sources (SIGINT, LEO-SAT, solar flux, maintenance), categories on
+       uncertainty cards, "Sector A / Zone AZ-402", the satellite heat map, and the live-feed chrome.
+     - *Split:* uncertainty and alternatives into two sections (`hyp-003`).
+     - *Add:* summary, recommended action, provenance, a list to choose from, verdict history, a
+       not-found state, and a map of the conclusion's zone or receiver through `MapView`.
+   - **Spec work, in order:**
+     - amend `api-004`: join each hypothesis to its bundle (run, window, centre, receivers, rule), apply
+       the selection above, re-run `ai-008` per citation on read, and return verdict history;
+     - add an item for the picture to serve the hour's explanations, since it serves `hypotheses: []` today;
+     - amend `hyp-001`–`hyp-003` to the keep, drop and add lists above;
+     - pin the verdict mapping in `api-005`;
+     - add the `nav-*` address item.
+
+     Then build from `api-004` and the list.
+3. **`map-004`**, playback, gated on `op-008` / `api-008`. A candidate while the screen is parked: it
+   touches no hypothesis data.
 
 Open and unowned:
 

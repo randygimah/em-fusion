@@ -3190,6 +3190,42 @@ text, because the fixture's altitudes (12,000, 30,000 and 35,000 ft) sort the sa
 one aircraft now flies at 9,000 ft. The panel's own pass (`op-004`) was re-run after the shared formatting
 moved: 20 of 20, one mutant retired because it enabled the *View all* this item enabled.
 
+### The Hypotheses screen shows one explanation per conclusion, and waits for the blind scoring
+
+Scoped on 9 October 2026 against the design reference and the store, before any spec item was
+amended. The reference was drawn before the hypothesis layer existed, and it shows its age in two
+ways. Its content is largely invented: signal-intelligence arrays, satellite nodes, solar-flux readings
+and scheduled maintenance, none of which any part of the system produces. And it omits two fields
+every stored hypothesis carries, the summary and the recommended action. The layout survives; the
+content follows the payload, as it did on the exception panel (`qa.md` §157).
+
+**The structural decision is what the analyst reviews.** The evaluation campaign stored about eight
+explanations per conclusion: five or six samples from the hosted model and two identical template
+rows. That is an experiment's output, and a verdict has to attach to exactly one explanation. Three
+designs were considered:
+- **A**, one explanation per conclusion, with its generator always named.
+- **B**, A plus a read-only tab holding the template's explanation.
+- **C**, both explanations side by side, each with its own verdict.
+
+A was chosen. C turns the workbench into an instrument for comparing the arms, which is the blind
+scoring's job and should not be done again, unblinded, by the person meant to be judging the
+conclusion. B is milder, but it invites the analyst to settle on whatever the two readings agree on,
+which is an anchoring effect the uncertainty and alternatives sections exist to counter. The
+explanation shown is the one the scoring pack drew, so a verdict and a blind score refer to the same
+text and can later be read against each other.
+
+**The template is still visible when it matters.** A row records both the arm that was asked and the
+generator that answered. The two differ exactly when the model's answer failed grounding and the
+template replaced it, and that case is styled as degraded rather than as a neutral label: the analyst
+must know the AI layer fell back. No such row exists in the store yet.
+
+**Building the screen was deferred until the blind scoring is done.** This is a threat to validity
+managed by scheduling rather than by code. The screen names the generator of the same forty
+explanations the raters score without that knowledge, and one rater is the developer who would be
+reviewing the screen as it was built. Building it first would have put the arm of every scored item
+in front of a rater before they scored it. *(Record the date scoring completed and the date work on
+the screen resumed, so the ordering can be stated as fact rather than intention.)*
+
 ### Containerisation: a Makefile over Compose, and what the first working `up` exposed
 
 The three services (backend, frontend, and a profiled one-shot pipeline) are driven through a root
