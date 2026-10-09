@@ -22,23 +22,60 @@ scored. Nothing about it is specified or built yet; the decisions are under Next
 While the user scores, the session started **playback** and built **`api-008`**, the time-windowed
 track query: every aircraft's positions over a span of at most 300 s, filtered by the view, with the
 stored gaps. The spec was amended before tests on measuring the store, and the user reviewed it against
-real figures for run 480.
+real figures for run 480. Then **`op-008`**, the playback transport: play, pause, speed and scrub over
+the hour's simulated window, producing a cursor the map is handed (and ignores until `map-004`). Review
+changed one thing: the bar now pushes the exception panel down instead of shrinking the map.
 
 ## Current state
 
-Backlog **99 of 121** (97 at the start). Tree clean once this handoff is committed; `main` in sync
+Backlog **100 of 121** (97 at the start). Tree clean once this handoff is committed; `main` in sync
 with `origin/main`.
 
 - Backend: **2179 passed** (2134 at the start: 40 `api-008` tests, 4 parametrised parity cases, and
   one empty-run test). Ruff, Black and mypy are clean on what changed. `playback.py` has 100% coverage,
   and both new repository reads are covered.
-- Frontend: **408 passed** (378 at the start); Biome lint and `tsc -b` clean.
+- Frontend: **432 passed** (378 at the start; 30 `op-005`, 24 `op-008`); Biome lint and `tsc -b` clean.
 - Mutation:
 
   | Log | Result | Covers |
   |---|---|---|
+  | `mutate_op008_playback.log` | **25 of 26** (second run; first 24 of 27). The survivor, an unclamped seek, is equivalent at the UI | `op-008` |
   | `mutate_op005_drilldown.log` | **31 of 31 (second run; first 30 of 31)** | `op-005` |
   | `mutate_op004_panel.log` | **20 of 20** (re-run; one mutant retired, three anchors re-pointed) | `op-004` |
+
+### What the playback transport does now (`op-008`)
+
+- **Off by default.** *Play back this hour* sits in the map's bottom-left corner. It is disabled with
+  "This hour has no recorded window to play back." when the hours index gives no valid window for the
+  hour.
+- **Opening:**
+  - takes the window from the hours index (`observedFrom`/`observedTo`; all 460 hours have one);
+  - **pins the hour** (calls `onSelectHour` unless it is already pinned);
+  - opens the bar under the map with the cursor at the start, paused, at 1×.
+- **Playing:**
+  - `usePlayback` runs a `requestAnimationFrame` loop timed with `performance.now()`;
+  - each frame's interval is capped at `MAX_FRAME_MS = 250`, so a hidden tab does not leap;
+  - the cursor is clamped to the window, and reaching the end pauses there; play from the end restarts.
+- **The bar (`EmPlaybackBar`):**
+  - Play/Pause and the speeds 1×/4×/16×/60×;
+  - a native range slider (`step` 10 s, `aria-valuetext` the clock), whose thumb snaps to 10 s while
+    the cursor itself does not;
+  - "12:41:20 UTC · 4:29 of 15:00";
+  - *Close playback*, which leaves the hour pinned.
+- **Hour changes:** another hour on screen closes playback.
+- **The map** gets `cursor` (ISO, or null when closed). `MapView` declares the prop and does not read it
+  yet.
+- **Layout (amended on review):** the screen measures the bar with a `ResizeObserver` and adds its
+  height plus the 16 px gap to the one-window page through `--playback-extra`. Measured on run 480: the
+  map is 486 px closed and open, and the panel moves down 60 px (a 44 px bar and a 16 px gap). jsdom
+  cannot see layout, so this rests on that measurement.
+- **Checked in the browser:**
+  - opening pinned run 480;
+  - 60× advanced, in ≤15 s steps per forced frame (the hidden tab);
+  - End then Left Left gave 12:51:31 · 14:40 of 15:00;
+  - close restored the button.
+
+  **The user confirmed it works.**
 
 ### What the tracks endpoint does now (`api-008`)
 
@@ -132,6 +169,11 @@ None once this handoff is committed.
 | `a9acda4` | `spec: amend api-008 -- time-windowed tracks, bounded, filtered by view, with stored gaps` |
 | `0918211` | `test: add tests for api-008` |
 | `6c3bc2f` | `feat(api-008): time-windowed track query for playback - tests pass` |
+| `2591ea5` | `docs: handoff for api-008` |
+| `35d38d1` | `spec: amend op-008 -- playback transport over the hour's simulated window` |
+| `5c1f610` | `test: add tests for op-008` |
+| `209a883` | `spec: amend op-008 -- the bar pushes the panel down, the map keeps its height` |
+| `6ed02e9` | `feat(op-008): playback transport over the hour's simulated window - tests pass` |
 | `503860c` | `docs: handoff for the drill-down tables` |
 | `8a03d0c` | `docs: progress note covers the drill-down tables` (published to the same page, version 7) |
 | `603eae7` | `docs: qa 156 -- what comes next` |
@@ -181,6 +223,20 @@ None once this handoff is committed.
   a missing route is also a 404. It now asserts that the detail names run 999.
 - **I wrote a test that could not fail** (that the fixtures are a 2022 hour) and removed it before
   committing.
+- **I named `usePlayback`'s parameter `window` again**, the same shadowing that broke 37 map tests last
+  session. I caught it before running anything, and a regex rename then missed three dependency
+  lists and rewrote a user-facing sentence ("recorded span"). Both were fixed before the tests ran.
+- **My first `op-008` test put the frame cap inside `advance`**, so `advance(START, 1000, 4)` would have
+  been capped at 250 ms. The cap became its own `frameInterval`.
+- **A missing module fails a whole Vitest file at load**, which would have hidden a screen test passing
+  for the wrong reason. The test looks `lib/playback.ts` up with `import.meta.glob`, so each test failed
+  on its own.
+- **I first laid the bar out inside the one-window layout**, so opening it shrank the map. The user asked
+  for the panel to move instead (`qa.md` §158). The spec was amended after the code.
+- **My handoff edit assumed a placeholder I had already replaced.** Its assertion stopped the edit,
+  but the git commands followed on a new line rather than after `&&`, so they ran anyway and made the
+  `op-008` feature commit without the handoff. The feature commit is complete; the handoff followed
+  separately.
 
 **Tests changed after implementation (deviations):**
 - `op-005`:
@@ -193,6 +249,11 @@ None once this handoff is committed.
   - The empty-run database test, added when coverage showed `track_window`'s empty branch untested.
     Removing the branch's guard is equivalent at the API, since both serve nulls; the test pins the
     behaviour, not the guard.
+- `op-008`:
+  - Two tests written after the first mutation pass: an inverted window disables the button, and a
+    seek past the end holds at the end.
+  - The map stand-in in `setup.ts` now prints the cursor. That was written with the tests, not after.
+  - The layout change has no test (jsdom has no layout); the browser measurement above is the evidence.
 
 ## Next step
 
@@ -237,8 +298,6 @@ arm (the arm key, `campaign_arms.csv`, generator columns of the campaign rows).
 
      Then build from `api-004` and the list.
 3. **Playback, continuing while the screen is parked** (it touches no hypothesis data):
-   - **`op-008`**, the transport control: play, pause, speed and scrub over simulated time. The same
-     cursor must show the same data at 1x and 4x.
    - **`map-004`**, aircraft at interpolated positions with trails. Stored gaps are drawn as broken
      segments, and zones appear and clear with their windows. A track whose buffer has not loaded
      holds its last position and is marked stale.
@@ -246,8 +305,15 @@ arm (the arm key, `campaign_arms.csv`, generator columns of the campaign rows).
      It reads `api-008` in 300 s spans buffered ahead of the cursor, and needs a `fetchTracks` in
      `lib/api.ts`. Zones need no new endpoint: the picture already serves their windows.
 
+     The cursor is already handed to `MapView` as `cursor` (ISO or null). The hour's window
+     (12:36:51–12:51:51 on run 480) is wider than its positions (12:37:00–12:51:50), so a cursor in the
+     margins finds nothing: hold and mark stale, never fault. The view switch must drive playback's
+     request too.
+
 Open and unowned:
 
+- **Closing playback leaves the hour pinned.** The spec does not ask for unpinning, and *Follow the
+  newest* is beside it; whether analysts expect closing to unpin is unasked.
 - **The page behind the drill-down is not inert.** The dialog is `aria-modal`, but a screen reader can
   still reach the panel's table behind it. Fix it (mark the rest of the screen `inert` while it is open)
   or record it as a limitation.
