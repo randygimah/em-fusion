@@ -44,3 +44,6 @@ frontend/public/basemap/*
 # bundle, so these hold only public, non-secret values (a test enforces it).
 !frontend/.env.development
 !frontend/.env.production
+
+# Office lock files: written while a workbook is open, and they record the account that opened it
+~$*
