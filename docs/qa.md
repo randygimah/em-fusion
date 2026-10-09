@@ -9385,6 +9385,31 @@ narrow, so its height is not a constant. The screen measures it and re-measures 
 test can see a height. The measurement in the browser is the only evidence that the map keeps its
 size.
 
+## 159. It works and I can see a trail, but these are not red. Not sure if it's just me?
+
+**It was not just you; it was a defect.** The first build drew a broken (red, dashed) segment only
+where an aircraft's reports *stopped*, leaving a hole in its positions. But the continuity rule
+stores a gap in two situations, and on run 480 most gaps are the other kind.
+
+| Kind of gap | What the stored reports look like | Run 480 | First build drew |
+|---|---|---|---|
+| **Not heard** | Rows stop; a hole in the positions | 5 of 22 | Held, marked, broken segment (correct) |
+| **Frozen** | Rows keep arriving every 10 s, each repeating the last good position | 17 of 22 | An aircraft standing still, then sliding along a solid grey line to where it resumed |
+
+A frozen gap is how the GNSS-degradation scenario stages a fault, and how a real receiver loses a
+position fix while keeping contact. The aircraft is still "heard", but its position is stale.
+
+**The fix: the stored gap is the authority, not the absence of rows.** Reports strictly inside a
+stored gap are set aside. Through the gap the aircraft holds at its last good fix, marked *not
+reporting*, and one broken segment joins that fix to the first report after the gap.
+
+**Measured on run 480:** broken segments now appear at 69 of the hour's 91 ten-second moments
+(previously 24), first at 220 s, one step after the earliest gap ends at 219 s; 16 aircraft get one.
+
+**Worth recording as a lesson:** the tests were written against a fixture with a hole and a gap
+together, the only mechanism I had in mind. The real data had a second mechanism, documented in the
+detector's own module, that no fixture exercised. Its fixture now exists.
+
 ---
 
 | **Composing copy** | Turning a finding type the backend sends verbatim into a sentence an analyst reads. Done on the screen by design, so prose never arrives from a detector — and in one module, because two panels carry the same type. See §148. |
@@ -9402,3 +9427,4 @@ size.
 | **Asked versus answered** | A hypothesis row records the arm that was requested and the generator that produced it. They differ only on a fallback, and that difference is the definition of one. See §157. |
 | **An experiment's output versus an analyst's queue** | The campaign stores several explanations per conclusion to measure the arms; an analyst reviews one explanation per conclusion. A screen over the first is an evaluation tool, not a workbench. See §157. |
 | **A layout one window high** | A screen whose regions share exactly the window's height, so anything added takes room from something else. Making it the window plus an added strip is what lets the map keep its size. See §158. |
+| **A frozen gap versus a hole** | Two ways a track gap is stored: rows that stop (a hole in the positions) and rows that keep arriving with a stale, repeated position (frozen). Drawing only holes misses the frozen kind. See §159. |

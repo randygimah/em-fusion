@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { fetchTracks, TRACKS_PATH } from "../lib/api";
 import type { LoadTracks } from "../hooks/useTrackBuffer";
 import operationalPictureMock from "../mocks/operationalPictureMock";
 import OperationalPictureScreen from "../screens/operationalPicture";
@@ -302,6 +303,26 @@ describe("the spans to load", () => {
     expect(merged[0].positions.map((p) => p.time)).toEqual([0, 10, 20, 30, 40].map((s) => iso(at(s))));
     expect(merged[0].gaps).toHaveLength(1);
   });
+
+  it("stay in time order when a later span arrives first", () => {
+    // spec: map-004 — added after the mutation pass, where an unsorted merge
+    // survived: scrubbing forward and then back loads spans out of order.
+    const window = (positions: number[]): PlaybackWindow => ({
+      runId: 480,
+      recordedFrom: iso(T0),
+      recordedTo: iso(at(890)),
+      servedFrom: iso(START),
+      servedTo: iso(START + 300_000),
+      view: "all",
+      examined: true,
+      withheld: 0,
+      aircraft: [aircraft("AC-a", positions)],
+    });
+
+    const merged = lib().mergeWindow(lib().mergeWindow([], window([300, 310])), window([0, 10]));
+
+    expect(merged[0].positions.map((p) => p.time)).toEqual([0, 10, 300, 310].map((s) => iso(at(s))));
+  });
 });
 
 // ------------------------------------------------------------ through the screen
@@ -470,5 +491,36 @@ describe("what the map is handed", () => {
     expect(line("aircraft")).toBe(`aircraft: ${operationalPictureMock.aircraftTracks.map((t) => t.id).join(", ")}`);
     expect(line("zones")).toBe(`zones: ${ZONE.id}`);
     expect(line("trails")).toBe("trails: ");
+  });
+});
+
+describe("the fetcher", () => {
+  // spec: map-004, api-008 — added after the mutation pass, where dropping the
+  // view from the request survived: the screen's tests use a stand-in loader.
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("asks for one span of one run under the view", async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => served(START, START + 300_000) }) as Response);
+    vi.stubGlobal("fetch", fetchMock);
+
+    await fetchTracks(480, iso(START), iso(START + 300_000), "anomalous");
+
+    const url = new URL(String((fetchMock.mock.calls[0] as unknown[])[0]), "http://localhost");
+    expect(url.pathname).toBe(TRACKS_PATH);
+    expect(Object.fromEntries(url.searchParams)).toEqual({ run: "480", from: iso(START), to: iso(START + 300_000), view: "anomalous" });
+  });
+
+  it("refuses an answer that is not a span of tracks", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ detail: "nope" }) }) as Response));
+
+    await expect(fetchTracks(480, iso(START), iso(START + 300_000), "all")).rejects.toThrow(/not a span of tracks/);
+  });
+
+  it("throws on a refusal rather than returning it", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: false, status: 422, json: async () => ({}) }) as Response));
+
+    await expect(fetchTracks(480, iso(START), iso(START + 600_000), "all")).rejects.toThrow(/422/);
   });
 });

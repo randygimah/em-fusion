@@ -9,7 +9,7 @@ import { useEvidenceAccount } from "./hooks/useEvidenceAccount";
 import { useOperationalPicture } from "./hooks/useOperationalPicture";
 import { useSelectableHours } from "./hooks/useSelectableHours";
 import { useSystemHealth } from "./hooks/useSystemHealth";
-import { fetchOperationalPicture } from "./lib/api";
+import { fetchOperationalPicture, fetchTracks } from "./lib/api";
 import { DEFAULT_VIEW } from "./lib/viewVocabulary";
 import { SCREENS } from "./routes";
 import HypothesesScreen from "./screens/hypotheses";
@@ -48,12 +48,16 @@ const OperationalPictureRoute = () => {
   // the hour the panel names and never filtered: a view over the same data,
   // fetched when asked for and not polled.
   const loadUnfiltered = useCallback((runId: number) => fetchOperationalPicture("", runId, "all"), []);
+  // Playback's spans of positions (spec: map-004, api-008), fetched as the
+  // buffer needs them and never polled.
+  const loadTracks = useCallback((runId: number, from: string, to: string, view: ViewSelection) => fetchTracks(runId, from, to, view), []);
 
   return (
     <OperationalPictureScreen
       degraded={degraded}
       evidence={evidence}
       hours={hours}
+      loadTracks={loadTracks}
       loadUnfiltered={loadUnfiltered}
       onFollowNewest={() => setPinnedRun(null)}
       onSelectHour={(runId) => setPinnedRun(Number.isNaN(runId) ? null : runId)}

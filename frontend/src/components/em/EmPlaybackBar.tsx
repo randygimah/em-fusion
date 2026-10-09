@@ -1,5 +1,5 @@
 import type { Ref } from "react";
-import { clockLabel, elapsedLabel, PLAYBACK_SPEEDS, type PlaybackSpeed, type PlaybackWindow, STEP_MS } from "../../lib/playback";
+import { clockLabel, elapsedLabel, PLAYBACK_SPEEDS, type PlaybackSpeed, type PlaybackSpan, STEP_MS } from "../../lib/playback";
 import { cn } from "../../lib/utils";
 
 /**
@@ -26,7 +26,7 @@ export const EmPlaybackBar = ({
 }: {
   // The screen measures the bar, to add its height to the page (op-008).
   barRef?: Ref<HTMLElement>;
-  span: PlaybackWindow;
+  span: PlaybackSpan;
   cursor: number;
   playing: boolean;
   speed: PlaybackSpeed;

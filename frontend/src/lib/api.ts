@@ -1,5 +1,5 @@
 import type { EvidenceAccount } from "../types/evidence";
-import type { OperationalPicture, SelectableHour, ViewSelection } from "../types/operationalPicture";
+import type { OperationalPicture, PlaybackWindow, SelectableHour, ViewSelection } from "../types/operationalPicture";
 import type { InFlightBatch, ScenarioConfiguration, ScenarioRunRecord } from "../types/scenarioControl";
 
 /**
@@ -132,6 +132,40 @@ export const fetchSelectableHours = async (baseUrl = "", signal?: AbortSignal): 
     throw new Error(`${SELECTABLE_HOURS_PATH} answered something that is not a list`);
   }
   return payload as SelectableHour[];
+};
+
+// ---------------------------------------------------------------- playback
+//
+// Aircraft positions across a span of one hour. spec: api-008, map-004.
+
+export const TRACKS_PATH = "/api/v1/operational-picture/tracks";
+
+/**
+ * One span of one run's aircraft positions, under a view, or throw.
+ *
+ * The span is at most 300 s and the server refuses anything longer with a 422
+ * rather than shortening it, so a resolved answer is the whole span asked for.
+ * Fetched when the playback buffer needs a span and never polled: a replayed
+ * hour's positions do not change.
+ */
+export const fetchTracks = async (
+  runId: number,
+  from: string,
+  to: string,
+  view: ViewSelection,
+  baseUrl = "",
+  signal?: AbortSignal,
+): Promise<PlaybackWindow> => {
+  const params = new URLSearchParams({ run: String(runId), from, to, view });
+  const response = await fetch(`${baseUrl}${TRACKS_PATH}?${params}`, { signal });
+  if (!response.ok) {
+    throw new Error(`${TRACKS_PATH} responded ${response.status}`);
+  }
+  const payload = await response.json();
+  if (!Array.isArray(payload?.aircraft)) {
+    throw new Error(`${TRACKS_PATH} answered something that is not a span of tracks`);
+  }
+  return payload as PlaybackWindow;
 };
 
 // ---------------------------------------------------------------- scenario

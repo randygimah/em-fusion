@@ -148,10 +148,10 @@ Added after the original checklist was written — a static snapshot cannot show
 
 - [x] Add a playback transport to Operational Picture: play, pause, speed, scrub — over **simulated** scenario time, consistent with the Track 0 latency definition. Never wall clock. **Done 2026-10-09 (`op-008`):** off by default; opens paused at the hour's start from the hours index's window; 1×/4×/16×/60×; a 10 s scrub step; the frame interval capped at 250 ms so a hidden tab does not leap; pins the hour; the bar pushes the panel down rather than shrinking the map. The cursor moves nothing on the map until `map-004`.
 - [ ] Render aircraft at the interpolated cursor position with a trailing path; anomalous track segments visually distinct; anomaly zones appear and clear as their windows enter and leave the cursor.
-- [ ] Buffer spans of positions ahead of the cursor and interpolate client-side. **The request rate must not be coupled to the frame rate** — this is what keeps playback inside the no-WebSockets decision rather than quietly reopening it.
+- [x] Buffer spans of positions ahead of the cursor and interpolate client-side. **The request rate must not be coupled to the frame rate** — this is what keeps playback inside the no-WebSockets decision rather than quietly reopening it. **Done 2026-10-09 (`map-004`):** 300 s spans, the one holding the cursor and the next, each asked once; three requests cover run 480.
 - [x] Add the backing time-window query, bounded server-side so an over-long span is rejected or truncated with the truncation reported, never silently served in full. **Done 2026-10-09 (`api-008`)** as `GET /api/v1/operational-picture/tracks`: at most 300 s per request, refused with 422 rather than truncated, filtered by the view, each aircraft with its stored gaps. Run 480's first five minutes: 413 aircraft, 10,974 positions, 1.13 MB, ≈0.45 s under *All*; 50 KB under *Anomalous only*.
-- [ ] Test: a track whose buffer has not yet loaded holds its last known position and is marked stale — it must not jump to a default coordinate or vanish.
-- [ ] Test: the same cursor renders the same data at 1x and 4x. Playback speed must not alter the simulated time of a rendered position.
+- [x] Test: a track whose buffer has not yet loaded holds its last known position and is marked stale — it must not jump to a default coordinate or vanish.
+- [x] Test: the same cursor renders the same data at 1x and 4x. Playback speed must not alter the simulated time of a rendered position. *(Held structurally: what the map draws is a pure function of the cursor and the buffer, with no speed in it.)*
 
 ## Phase 5: FastAPI Contract Mirror
 

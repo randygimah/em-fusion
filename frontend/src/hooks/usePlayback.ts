@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { advance, frameInterval, type PlaybackSpeed, type PlaybackWindow } from "../lib/playback";
+import { advance, frameInterval, type PlaybackSpeed, type PlaybackSpan } from "../lib/playback";
 
 /**
  * The playback transport's state for one hour. spec: op-008.
@@ -17,7 +17,7 @@ import { advance, frameInterval, type PlaybackSpeed, type PlaybackWindow } from 
  * the wall clock as a moment: the cursor starts from the hour's span and only
  * ever moves by intervals (anom-009).
  */
-export const usePlayback = (hour: string | null, span: PlaybackWindow | null) => {
+export const usePlayback = (hour: string | null, span: PlaybackSpan | null) => {
   const [open, setOpen] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState<PlaybackSpeed>(1);

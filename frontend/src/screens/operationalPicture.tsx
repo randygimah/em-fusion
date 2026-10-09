@@ -5,8 +5,10 @@ import { EmLevel } from "../components/em/EmLevel";
 import { EmPlaybackBar } from "../components/em/EmPlaybackBar";
 import { MapView } from "../components/map/MapView";
 import { usePlayback } from "../hooks/usePlayback";
+import { type LoadTracks, useTrackBuffer } from "../hooks/useTrackBuffer";
 import { findingLabel } from "../lib/detectionVocabulary";
 import { NO_PLAYBACK_WINDOW, windowOf } from "../lib/playback";
+import { playbackTracks, trailsAt, zonesAt } from "../lib/trackPlayback";
 import { showingSentence, VIEW_OPTIONS } from "../lib/viewVocabulary";
 import type { EvidenceView } from "../types/evidence";
 import type {
@@ -85,6 +87,10 @@ interface Props {
   // spec: op-005 — how to fetch one hour unfiltered, for the drill-down tables.
   // Optional like the rest; without it View all is disabled with its reason.
   loadUnfiltered?: (runId: number) => Promise<OperationalPictureData>;
+  // spec: map-004 — how to fetch one span of the hour's aircraft positions for
+  // playback. Optional like the rest; without it playback moves the clock and
+  // draws no aircraft.
+  loadTracks?: LoadTracks;
 }
 
 const OperationalPictureScreen = ({
@@ -98,6 +104,7 @@ const OperationalPictureScreen = ({
   selectedView,
   onSelectView,
   loadUnfiltered,
+  loadTracks,
 }: Props) => {
   // A null summary means no detection pass has run on this run, which is not
   // the same as a pass that found nothing (api-012). The panel says so in
@@ -151,6 +158,21 @@ const OperationalPictureScreen = ({
     observer.observe(bar);
     return () => observer.disconnect();
   }, [playback.open]);
+  // With playback open the map is handed the hour at the cursor (map-004):
+  // aircraft from the buffered spans, the zones whose window holds it, and the
+  // trails. Every one is a pure function of the cursor and the buffer.
+  const buffer = useTrackBuffer({
+    load: loadTracks,
+    runId,
+    view: selected,
+    span,
+    cursor: playback.cursor,
+    open: playback.open,
+  });
+  const playingBack = playback.open && span !== null;
+  const mapTracks = playingBack ? playbackTracks(buffer.aircraft, playback.cursor, buffer.loaded) : operationalPicture.aircraftTracks;
+  const mapZones = playingBack ? zonesAt(operationalPicture.interferenceZones, playback.cursor) : operationalPicture.interferenceZones;
+  const mapTrails = playingBack ? trailsAt(buffer.aircraft, playback.cursor) : [];
   // 16 px is the column's gap-4, which the bar brings with it.
   const extraHeight = { "--playback-extra": `${barHeight > 0 ? barHeight + 16 : 0}px` } as CSSProperties;
   return (
@@ -268,8 +290,9 @@ const OperationalPictureScreen = ({
               <MapView
                 cursor={playback.open ? new Date(playback.cursor).toISOString() : null}
                 sensors={operationalPicture.rfSensors}
-                tracks={operationalPicture.aircraftTracks}
-                zones={operationalPicture.interferenceZones}
+                tracks={mapTracks}
+                trails={mapTrails}
+                zones={mapZones}
               />
               {/* The way into playback, over the map's free corner, so the map
                   keeps its height until the bar is actually open (op-008). */}

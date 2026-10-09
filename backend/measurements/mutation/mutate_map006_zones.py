@@ -77,7 +77,11 @@ M: dict[str, tuple[Path, list[tuple[str, str]]]] = {
     ),
     "the disc is not drawn on load": (MAP, [('      map.on("load", drawZones);\n', "")]),
     "the disc is lost on a basemap switch": (MAP, [('      map.on("style.load", drawZones);\n', "")]),
-    "the disc is not updated when the zones change": (MAP, [("      source.setData(data);\n", "")]),
+    # Re-pointed by map-004: `source.setData(data)` now also updates the trails.
+    "the disc is not updated when the zones change": (
+        MAP,
+        [("    const data = zoneDiscs(zonesRef.current);\n    const source = map.getSource(ZONE_SOURCE) as GeoJSONSource | undefined;\n    if (source) {\n      source.setData(data);\n", "    const data = zoneDiscs(zonesRef.current);\n    const source = map.getSource(ZONE_SOURCE) as GeoJSONSource | undefined;\n    if (source) {\n")],
+    ),
     "the disc takes clicks": (
         MAP,
         [
@@ -145,7 +149,8 @@ M: dict[str, tuple[Path, list[tuple[str, str]]]] = {
             )
         ],
     ),
-    "the map gets no zones": (SCREEN, [(" zones={operationalPicture.interferenceZones}", "")]),
+    # Re-pointed by map-004: the screen hands the map `mapZones`.
+    "the map gets no zones": (SCREEN, [("                zones={mapZones}\n", "")]),
 }
 
 VITEST_RAN = re.compile(r"Tests\s+\d+")

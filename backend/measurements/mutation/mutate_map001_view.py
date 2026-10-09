@@ -193,10 +193,11 @@ M: dict[str, tuple[Path, str, str]] = {
         '["Altitude", altitude(track.altitudeFt)],\n          ["Speed", "410 kts"],',
     ),
     "the pop-up drops the band": (MAP, '          ["Band", sensor.signalId],\n', ""),
+    # Re-pointed by map-004: the click moved into the memoised MarkerButton.
     "a marker click never opens a pop-up": (
         MAP,
-        "setSelected(entity.key);",
-        "setSelected(null);",
+        "onSelect(entityKey);",
+        'onSelect("");',
     ),
     "Escape does not close": (
         MAP,
@@ -266,14 +267,16 @@ M: dict[str, tuple[Path, str, str]] = {
         "      maplibre.setWorkerUrl(maplibreWorkerUrl);\n",
         "",
     ),
+    # Re-pointed by map-004: the screen hands the map `mapTracks`.
     "the map gets no aircraft": (
         SCREEN,
-        "tracks={operationalPicture.aircraftTracks}",
-        "tracks={[]}",
+        ": operationalPicture.aircraftTracks;",
+        ": [];",
     ),
     "the placeholder comes back": (
         SCREEN,
-        "<MapView sensors={operationalPicture.rfSensors} tracks={operationalPicture.aircraftTracks} zones={operationalPicture.interferenceZones} />",
+        # Re-pointed by op-008/map-004: the MapView element is multi-line now.
+        "              <MapView\n                cursor={playback.open ? new Date(playback.cursor).toISOString() : null}\n                sensors={operationalPicture.rfSensors}\n                tracks={mapTracks}\n                trails={mapTrails}\n                zones={mapZones}\n              />",
         "<p>The map is not built yet. Receivers and aircraft are listed in the panel below.</p>",
     ),
 }

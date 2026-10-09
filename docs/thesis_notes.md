@@ -3263,6 +3263,53 @@ killed 25 of 26. The remaining survivor, the unclamped seek, is equivalent at th
 range input sanitises its own value to its maximum and is the only caller; the clamp is kept for
 `map-004`, which may seek from elsewhere.
 
+### The map follows the cursor as a pure function of it, and the stored gap decides what is broken
+
+`map-004` was built on 9 October 2026 by handing the existing map different rows rather than giving
+it a second mode. With playback open, the screen computes from the cursor and the buffered spans
+where each aircraft is, whether it is reporting, the trail behind it and which zones are active, and
+hands those to the same map component that draws the picture. Every one of those is a pure function
+with no speed and no frame time in it, which is how the item's sharpest property, the same picture
+at the same cursor at 1× and at 4×, is held structurally rather than tested by animation.
+
+**A hole is shown, never smoothed over.** Reports arrive every ten seconds. Two more than twenty
+seconds apart are not interpolated across, and an aircraft past twenty seconds without a report is
+held where it was and marked *not reporting*, in its accessible name as well as its look. After its
+last report it is held for a minute and then removed, because roughly a hundred aircraft leave the
+box in an hour and holding them all would bury the map, unless a stored gap says its reporting broke.
+
+**A reversal on review, and a lesson about fixtures.** The first build drew a broken trail segment
+only where an aircraft's reports stopped. The user saw grey trails and no red ones, and asked
+whether it was just them. It was not. The continuity rule (`anom-010`) stores a gap by two
+mechanisms: rows that stop, and rows that keep arriving with a frozen position repeating the last
+good fix, which is how the GNSS-degradation scenario stages a fault. On run 480, 17 of the 22 stored
+gaps were frozen, with 10 to 32 reports inside each and one distinct position among them. The map
+drew those aircraft as standing still and then sliding along a solid line to where they resumed. The
+detector's own module documents both mechanisms; the tests were written against a fixture with only
+the first. The fix made the stored gap the authority: reports strictly inside it are set aside, so
+the aircraft holds at its last good fix through the gap and one broken segment joins that fix to its
+resumption. Broken segments went from 24 of the hour's 91 ten-second moments to 69, the first at
+220 s, one step after the earliest gap ends.
+
+**Performance was measured, and the cost was not where it was expected.** In the development build,
+one cursor update under *All* (about 360 aircraft) cost about 34 ms. The pure work was 0.3 ms for
+positions over 518 aircraft and 33,273 reports, and 1.3 ms for trails; nearly all the rest was React
+re-rendering every marker's button and icon on every update, although MapLibre, not React, positions
+a marker. Memoising the button on what it shows brought an update to about 25 ms (90th percentile
+31 to 35 ms). That is still over a 16 ms frame, so under *All* at speed the browser draws fewer
+frames; the cursor stays correct because it is computed from elapsed time, and no redraw throttle
+was added. *(The figures are a development build on one machine, measured by timing synchronous
+updates in a background tab. A production build is expected to be several times faster and has not
+been measured.)*
+
+The mutation pass killed 32 of 35 on its first run. All three survivors were gaps in the tests, not
+equivalences: a merge test that loaded spans in time order, so an unsorted merge passed it; a
+basemap-switch test whose helper fell back to the first load's data once the switch cleared the
+sources, so trails never redrawn still read as drawn; and no test of the fetcher's request, so dropping
+the view passed. Three tests written after the code killed them, and the second run killed 35 of 35. The
+refactor this item made to the map's markers moved code that five older mutants were anchored to;
+they were re-pointed and the `map-001` and `map-006` passes re-run.
+
 ### The Hypotheses screen shows one explanation per conclusion, and waits for the blind scoring
 
 Scoped on 9 October 2026 against the design reference and the store, before any spec item was

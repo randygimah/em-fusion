@@ -22,7 +22,7 @@ export const STEP_MS = 10_000;
  */
 export const MAX_FRAME_MS = 250;
 
-export interface PlaybackWindow {
+export interface PlaybackSpan {
   start: number;
   end: number;
 }
@@ -31,11 +31,11 @@ export interface PlaybackWindow {
 export const frameInterval = (previous: number, now: number): number => Math.min(Math.max(now - previous, 0), MAX_FRAME_MS);
 
 /** Where the cursor is after `elapsedMs` of play at `speed`, held inside the window. */
-export const advance = (cursor: number, elapsedMs: number, speed: number, span: PlaybackWindow): number =>
+export const advance = (cursor: number, elapsedMs: number, speed: number, span: PlaybackSpan): number =>
   Math.min(Math.max(cursor + elapsedMs * speed, span.start), span.end);
 
 /** The window an hour from the index plays over, or null when it records none. */
-export const windowOf = (from: string | null, to: string | null): PlaybackWindow | null => {
+export const windowOf = (from: string | null, to: string | null): PlaybackSpan | null => {
   if (from === null || to === null) return null;
   const start = Date.parse(from);
   const end = Date.parse(to);
@@ -51,7 +51,7 @@ const minutes = (ms: number): string => {
 };
 
 /** How far into the hour the cursor is, against the hour's length. */
-export const elapsedLabel = (cursor: number, span: PlaybackWindow): string =>
+export const elapsedLabel = (cursor: number, span: PlaybackSpan): string =>
   `${minutes(cursor - span.start)} of ${minutes(span.end - span.start)}`;
 
 export const NO_PLAYBACK_WINDOW = "This hour has no recorded window to play back.";

@@ -1196,9 +1196,15 @@ describe("playback", () => {
     await mapReady();
     act(() => lib.instances[0].emit("load"));
 
+    const before = lib.instances[0].addSource.mock.calls.filter((call) => call[0] === "trails").length;
+
     fireEvent.click(screen.getByRole("button", { name: /satellite/i }));
     act(() => lib.instances[0].emit("style.load"));
 
+    // Tightened after the mutation pass: the helper fell back to the first
+    // load's data once the switch cleared the sources, so a trail never
+    // redrawn still read as drawn.
+    expect(lib.instances[0].addSource.mock.calls.filter((call) => call[0] === "trails").length).toBe(before + 1);
     expect(trailSourceData(lib.instances[0])).toHaveLength(2);
   });
 });

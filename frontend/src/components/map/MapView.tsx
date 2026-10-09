@@ -6,10 +6,11 @@ import "maplibre-gl/dist/maplibre-gl.css";
 // the derived address 404s and the map draws nothing. The worker is one
 // self-contained file, so Vite serves (and in a build, emits) it as it is.
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { corroborationLabel } from "../../lib/detectionVocabulary";
 import { cn } from "../../lib/utils";
+import type { Trail } from "../../lib/trackPlayback";
 import type { AircraftTrack, InterferenceZone, RFSensor } from "../../types/operationalPicture";
 
 // The map, and the only module in the app that touches a map library.
@@ -195,6 +196,47 @@ const ZONE_LAYERS: LayerSpecification[] = [
   },
 ];
 
+// ------------------------------------------------------------ the trails
+
+const TRAIL_SOURCE = "trails";
+
+/** One empty list for every render without trails, so the redraw effect is not re-run by a fresh `[]`. */
+const NO_TRAILS: Trail[] = [];
+
+/** A muted line for a reporting trail; the error colour, dashed, across a stored gap (map-004 (4)). */
+const TRAIL_COLOUR = "#8c909f";
+const BROKEN_TRAIL_COLOUR = "#ffb4ab";
+
+/** Each trail segment as a line, flagged broken or not, for the two layers to filter on. */
+const trailLines = (trails: Trail[]) => ({
+  type: "FeatureCollection" as const,
+  features: trails.flatMap((trail) =>
+    trail.segments.map((segment) => ({
+      type: "Feature" as const,
+      properties: { id: trail.id, broken: segment.broken },
+      geometry: { type: "LineString" as const, coordinates: segment.coordinates },
+    })),
+  ),
+});
+
+/** Bound to no handler, like the zones: a trail never takes a click meant for a marker. */
+const TRAIL_LAYERS: LayerSpecification[] = [
+  {
+    id: "trails-line",
+    type: "line",
+    source: TRAIL_SOURCE,
+    filter: ["==", ["get", "broken"], false],
+    paint: { "line-color": TRAIL_COLOUR, "line-width": 1.5, "line-opacity": 0.8 },
+  },
+  {
+    id: "trails-broken",
+    type: "line",
+    source: TRAIL_SOURCE,
+    filter: ["==", ["get", "broken"], true],
+    paint: { "line-color": BROKEN_TRAIL_COLOUR, "line-width": 2, "line-dasharray": [2, 2] },
+  },
+];
+
 // ------------------------------------------------------------ the entities
 
 type Kind = "receiver" | "aircraft" | "zone";
@@ -228,6 +270,8 @@ interface Entity {
   kind: Kind;
   name: string;
   state: string;
+  /** Held during playback without a report (map-004 (2)). */
+  stale?: boolean;
   lat: number;
   lon: number;
   /** The pop-up's rows: payload fields only (map-005). */
@@ -250,7 +294,7 @@ function zoneWindow(zone: InterferenceZone): string {
   return `${day} ${from.slice(11, 19)} – ${end} UTC`;
 }
 
-function entitiesOf(sensors: RFSensor[], tracks: AircraftTrack[], zones: InterferenceZone[]): Entity[] {
+function entitiesOf(sensors: RFSensor[], tracks: MapTrack[], zones: InterferenceZone[]): Entity[] {
   return [
     ...zones.map(
       (zone): Entity => ({
@@ -295,14 +339,17 @@ function entitiesOf(sensors: RFSensor[], tracks: AircraftTrack[], zones: Interfe
       (track): Entity => ({
         key: `aircraft:${track.id}`,
         kind: "aircraft",
-        name: `Aircraft ${track.name}, ${stateWord(track.state)}`,
+        // Held and not reporting during playback (map-004 (2)): said in the
+        // name, not only in the look.
+        name: `Aircraft ${track.name}, ${stateWord(track.state)}${track.stale ? ", not reporting" : ""}`,
         state: track.state,
+        stale: track.stale === true,
         lat: track.lat,
         lon: track.lon,
         fields: [
           ["Aircraft", track.name],
           ["Altitude", altitude(track.altitudeFt)],
-          ["State", stateWord(track.state)],
+          ["State", `${stateWord(track.state)}${track.stale ? " · not reporting" : ""}`],
           ["Position", position(track.lat, track.lon)],
         ],
         rank: ANOMALOUS.has(track.state) ? 2 : 3,
@@ -431,6 +478,53 @@ function Icon({ kind, state }: { kind: Kind; state: string }) {
   );
 }
 
+/**
+ * One marker's button. Memoised on what it shows, because MapLibre positions
+ * the marker and nothing here depends on where it is: during playback every
+ * cursor move re-renders the map, and without this all ~400 aircraft buttons
+ * and their icons re-rendered each time, about 40 ms an update in development
+ * under All (map-004). Now only a marker whose name, look or label changed does.
+ */
+const MarkerButton = memo(function MarkerButton({
+  entityKey,
+  kind,
+  label,
+  name,
+  onSelect,
+  stale,
+  state,
+}: {
+  entityKey: string;
+  kind: Kind;
+  label: string | undefined;
+  name: string;
+  onSelect: (key: string) => void;
+  stale: boolean;
+  state: string;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={name}
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelect(entityKey);
+      }}
+      className={cn("relative block h-6 w-6 cursor-pointer", stale && "opacity-50")}
+    >
+      <Icon
+        kind={kind}
+        state={state}
+      />
+      {label && (
+        <span className="pointer-events-none absolute left-1/2 top-[26px] -translate-x-1/2 whitespace-nowrap border border-[#424754] bg-[#10131a]/90 px-1 font-mono text-[11px] leading-4 text-[#e1e2ec]">
+          {label}
+        </span>
+      )}
+    </button>
+  );
+});
+
 // ------------------------------------------------------------ the pop-up
 
 /** Clearance between the pop-up and its marker's centre: half the 24 px icon and a margin. */
@@ -527,21 +621,33 @@ const count = (n: number, noun: string) => `${n} ${noun}${n === 1 ? "" : "s"}`;
 
 const sameSet = (a: Set<string>, b: Set<string>) => a.size === b.size && [...a].every((item) => b.has(item));
 
+/** A track as the map draws it: during playback it may be held and not reporting (map-004). */
+export type MapTrack = AircraftTrack & { stale?: boolean };
+
 export interface MapViewProps {
   sensors: RFSensor[];
-  tracks: AircraftTrack[];
+  tracks: MapTrack[];
   /** The interference claims the payload placed (map-006). */
   zones?: InterferenceZone[];
   // The playback cursor in simulated time, or null at the end of the hour
-  // (op-008). Handed down now and read by map-004.
+  // (op-008). The screen moves `tracks` and `zones` to it (map-004).
   cursor?: string | null;
+  /** The trails behind the aircraft during playback (map-004); empty otherwise. */
+  trails?: Trail[];
   /** Defaults to the frontend's environment. */
   config?: BasemapConfig | Error;
   /** Defaults to reading the PMTiles header. Rejects when the archive cannot be read. */
   readArchive?: (archive: string) => Promise<void>;
 }
 
-export function MapView({ sensors, tracks, zones = [], config = configFromEnv(), readArchive = readArchiveHeader }: MapViewProps) {
+export function MapView({
+  sensors,
+  tracks,
+  zones = [],
+  trails = NO_TRAILS,
+  config = configFromEnv(),
+  readArchive = readArchiveHeader,
+}: MapViewProps) {
   const settings = config instanceof Error ? null : config;
   const archive = settings?.defaultArchive ?? null;
   const satellite = settings?.satellite ?? null;
@@ -558,6 +664,8 @@ export function MapView({ sensors, tracks, zones = [], config = configFromEnv(),
   entitiesRef.current = entities;
   const zonesRef = useRef(zones);
   zonesRef.current = zones;
+  const trailsRef = useRef(trails);
+  trailsRef.current = trails;
 
   const [status, setStatus] = useState<Status>(archive ? "loading" : "unconfigured");
   const [basemap, setBasemap] = useState<Basemap>("default");
@@ -616,6 +724,20 @@ export function MapView({ sensors, tracks, zones = [], config = configFromEnv(),
     for (const layer of ZONE_LAYERS) map.addLayer(layer);
   };
 
+  /** The trails, into the current style, on the same terms as the discs. */
+  const drawTrails = () => {
+    const map = mapRef.current;
+    if (!map) return;
+    const data = trailLines(trailsRef.current);
+    const source = map.getSource(TRAIL_SOURCE) as GeoJSONSource | undefined;
+    if (source) {
+      source.setData(data);
+      return;
+    }
+    map.addSource(TRAIL_SOURCE, { type: "geojson", data });
+    for (const layer of TRAIL_LAYERS) map.addLayer(layer);
+  };
+
   // biome-ignore lint/correctness/useExhaustiveDependencies: readArchive is a seam for tests; the map is built once per archive.
   useEffect(() => {
     if (!archive) return;
@@ -654,6 +776,9 @@ export function MapView({ sensors, tracks, zones = [], config = configFromEnv(),
       libRef.current = maplibre;
       map.addControl(new maplibre.NavigationControl({ showCompass: false }));
       map.on("moveend", () => relabelRef.current());
+      // Trails first, so the discs and the markers draw over them.
+      map.on("load", drawTrails);
+      map.on("style.load", drawTrails);
       map.on("load", drawZones);
       map.on("style.load", drawZones);
       // The pop-up is placed in screen space, so it follows the camera.
@@ -731,6 +856,13 @@ export function MapView({ sensors, tracks, zones = [], config = configFromEnv(),
     if (status !== "map" || !mapRef.current?.getSource(ZONE_SOURCE)) return;
     drawZones();
   }, [zoneKey, status]);
+
+  // The trails follow the cursor: a new array from the screen on every move.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: drawTrails reads the trails through a ref.
+  useEffect(() => {
+    if (status !== "map" || !mapRef.current?.getSource(TRAIL_SOURCE)) return;
+    drawTrails();
+  }, [trails, status]);
 
   // A pop-up for an entity the payload no longer carries closes (map-005).
   const popup = entities.find((entity) => entity.key === selected) ?? null;
@@ -836,25 +968,15 @@ export function MapView({ sensors, tracks, zones = [], config = configFromEnv(),
           if (!host) return null;
           const label = labelled.get(entity.key);
           return createPortal(
-            <button
-              type="button"
-              aria-label={entity.name}
-              onClick={(event) => {
-                event.stopPropagation();
-                setSelected(entity.key);
-              }}
-              className="relative block h-6 w-6 cursor-pointer"
-            >
-              <Icon
-                kind={entity.kind}
-                state={entity.state}
-              />
-              {label && (
-                <span className="pointer-events-none absolute left-1/2 top-[26px] -translate-x-1/2 whitespace-nowrap border border-[#424754] bg-[#10131a]/90 px-1 font-mono text-[11px] leading-4 text-[#e1e2ec]">
-                  {label}
-                </span>
-              )}
-            </button>,
+            <MarkerButton
+              entityKey={entity.key}
+              kind={entity.kind}
+              label={label}
+              name={entity.name}
+              onSelect={setSelected}
+              stale={entity.stale === true}
+              state={entity.state}
+            />,
             host,
             entity.key,
           );
