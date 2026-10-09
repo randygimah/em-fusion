@@ -583,9 +583,9 @@
       </div>
     </div>
     <p class="caption">
-      The unbuilt stages are specified in detail, not merely intended — 121 numbered capabilities exist
+      The unbuilt stages are specified in detail, not merely intended — 123 numbered capabilities exist
       in the backlog, each with its inputs, outputs and at least one way it must be able to fail.
-      Ninety-eight of them are finished. Several were added along the way because they had never been
+      A hundred and one of them are finished. Several were added along the way because they had never been
       written down at all — one a rule the detection requirements assumed existed, another a question
       two capabilities both referred to as though somebody else was answering it.
     </p>
@@ -9094,6 +9094,242 @@ second pass   <b>5.060000171975998</b></div>
   </section>
 
   <section>
+    <h2>Playing the hour back</h2>
+    <p class="lede">
+      The map no longer shows only the end of an hour. Under it, <em>Play back this hour</em> opens a
+      bar with play, pause, four speeds and a slider, and the map follows: every aircraft moves along
+      its real reported positions with a two-minute trail behind it, an interference area appears when
+      its window opens and goes when it closes, and where an aircraft's reporting broke, the map shows
+      it stop.
+    </p>
+    <p>
+      The clock is the replayed hour's own. Run 480 plays from 12:36:51 to 12:51:51 on 27 June 2022,
+      whatever today's date is, and at sixty times normal speed the fifteen minutes take fifteen
+      seconds. What the map draws at any moment depends on that moment alone, never on how fast the
+      analyst got there, so the same instant looks the same at every speed. Positions arrive from the
+      server five minutes at a time, a little ahead of the clock, and are kept, so scrubbing back costs
+      nothing: three requests cover the whole of run 480.
+    </p>
+    <p>
+      Between two reports ten seconds apart an aircraft is drawn moving smoothly. When reports are more
+      than twenty seconds apart, two missed in a row, it is not drawn flying a line nobody saw it fly.
+      It stays where it was last seen, faded and named <em>not reporting</em>, until it is heard again,
+      and a minute after its last report it is taken to have left. Where the system concluded that an
+      aircraft's reporting broke, its trail shows that stretch as a dashed red segment once it
+      reappears: the map shows the system's conclusion rather than deciding again.
+    </p>
+
+    <h3>A broken track comes in two kinds, and the first version saw only one</h3>
+    <p>
+      An aircraft's reporting can break in two ways, and the system records both. Its reports can stop,
+      leaving silence. Or they can keep arriving every ten seconds while each one repeats the last good
+      position, which is what losing a position fix while keeping contact looks like. Of run 480's 22
+      recorded breaks, 5 are the first kind and 17 the second. Four of the five are the staged incident
+      itself: aircraft near the faulty receiver going silent together from 119 to 429 seconds.
+    </p>
+    <div class="fig">
+      <div class="fig__art">
+        <svg width="640" height="270" viewBox="0 0 640 270" role="img"
+             aria-label="Two aircraft from run 480 over its fifteen minutes. Top: reports every ten seconds until 119 seconds, none until 429 seconds, then reports again; the stored gap covers the silence. Bottom: reports every ten seconds throughout, but from 149 to 269 seconds each one repeats the same frozen position; the stored gap covers the frozen stretch.">
+          <text class="fig__label" x="8" y="40">REPORTS STOP</text>
+          <rect x="151.4" y="50" width="186.0" height="24" rx="3" fill="var(--bad-soft)" stroke="var(--bad)" stroke-dasharray="3 3" />
+          <line x1="80.0" y1="62" x2="620.0" y2="62" stroke="var(--line)" />
+          <circle cx="85.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="91.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="97.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="103.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="109.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="115.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="121.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="127.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="133.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="139.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="145.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="151.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="337.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="343.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="349.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="355.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="361.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="367.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="373.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="379.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="385.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="391.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="397.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="403.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="409.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="415.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="421.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="427.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="433.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="439.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="445.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="451.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="457.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="463.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="469.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="475.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="481.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="487.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="493.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="499.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="505.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="511.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="517.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="523.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="529.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="535.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="541.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="547.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="553.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="559.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="565.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="571.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="577.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="583.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="589.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="595.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="601.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="607.4" cy="62" r="2.2" fill="var(--accent)" />
+          <circle cx="613.4" cy="62" r="2.2" fill="var(--accent)" />
+          <text class="fig__val" x="244.4" y="66" text-anchor="middle" style="fill: var(--bad)">stored gap · no reports</text>
+          <text class="fig__val" x="8" y="94">held, marked not reporting · from 429 s a red dashed segment, 9.5–75 km</text>
+
+          <text class="fig__label" x="8" y="130">POSITION FREEZES</text>
+          <rect x="169.6" y="140" width="71.8" height="24" rx="3" fill="var(--bad-soft)" stroke="var(--bad)" stroke-dasharray="3 3" />
+          <line x1="80.0" y1="152" x2="620.0" y2="152" stroke="var(--line)" />
+          <circle cx="85.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="91.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="97.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="103.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="109.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="115.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="121.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="127.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="133.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="139.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="145.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="151.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="157.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="163.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="169.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="241.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="247.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="253.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="259.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="265.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="271.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="277.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="283.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="289.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="295.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="301.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="307.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="313.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="319.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="325.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="331.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="337.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="343.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="349.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="355.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="361.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="367.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="373.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="379.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="385.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="391.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="397.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="403.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="409.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="415.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="421.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="427.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="433.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="439.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="445.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="451.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="457.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="463.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="469.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="475.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="481.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="487.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="493.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="499.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="505.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="511.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="517.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="523.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="529.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="535.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="541.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="547.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="553.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="559.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="565.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="571.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="577.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="583.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="589.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="595.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="601.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="607.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="613.4" cy="152" r="2.2" fill="var(--accent)" />
+          <circle cx="175.4" cy="152" r="2.2" fill="none" stroke="var(--muted)" stroke-width="1" />
+          <circle cx="181.4" cy="152" r="2.2" fill="none" stroke="var(--muted)" stroke-width="1" />
+          <circle cx="187.4" cy="152" r="2.2" fill="none" stroke="var(--muted)" stroke-width="1" />
+          <circle cx="193.4" cy="152" r="2.2" fill="none" stroke="var(--muted)" stroke-width="1" />
+          <circle cx="199.4" cy="152" r="2.2" fill="none" stroke="var(--muted)" stroke-width="1" />
+          <circle cx="205.4" cy="152" r="2.2" fill="none" stroke="var(--muted)" stroke-width="1" />
+          <circle cx="211.4" cy="152" r="2.2" fill="none" stroke="var(--muted)" stroke-width="1" />
+          <circle cx="217.4" cy="152" r="2.2" fill="none" stroke="var(--muted)" stroke-width="1" />
+          <circle cx="223.4" cy="152" r="2.2" fill="none" stroke="var(--muted)" stroke-width="1" />
+          <circle cx="229.4" cy="152" r="2.2" fill="none" stroke="var(--muted)" stroke-width="1" />
+          <circle cx="235.4" cy="152" r="2.2" fill="none" stroke="var(--muted)" stroke-width="1" />
+          <text class="fig__val" x="8" y="184">reports keep coming, each repeating the last good fix · now held and marked</text>
+
+          <line x1="80.0" y1="209" x2="620.0" y2="209" stroke="var(--muted)" />
+          <line x1="80.0" y1="206" x2="80.0" y2="212" stroke="var(--muted)" /><text class="fig__val" x="80.0" y="226" text-anchor="middle">0</text>
+          <line x1="260.0" y1="206" x2="260.0" y2="212" stroke="var(--muted)" /><text class="fig__val" x="260.0" y="226" text-anchor="middle">5 min</text>
+          <line x1="440.0" y1="206" x2="440.0" y2="212" stroke="var(--muted)" /><text class="fig__val" x="440.0" y="226" text-anchor="middle">10 min</text>
+          <line x1="620.0" y1="206" x2="620.0" y2="212" stroke="var(--muted)" /><text class="fig__val" x="620.0" y="226" text-anchor="end">15 min</text>
+          <circle cx="90" cy="252" r="2.2" fill="var(--accent)" /><text class="fig__val" x="98" y="256">a fresh position</text>
+          <circle cx="290" cy="252" r="2.2" fill="none" stroke="var(--muted)" stroke-width="1" /><text class="fig__val" x="298" y="256">a repeated, frozen position</text>
+          <rect x="520" y="245" width="14" height="12" rx="2" fill="var(--bad-soft)" stroke="var(--bad)" stroke-dasharray="3 3" /><text class="fig__val" x="540" y="256">stored gap</text>
+        </svg>
+      </div>
+    </div>
+    <p class="caption">
+      <b>Figure 5.</b> Two aircraft from run 480, one dot per report. Both lines are drawn from the
+      stored reports and the stored breaks; nothing in the figure is composed. The upper break is one
+      of the four staged silences; the lower is one of the seventeen frozen positions, which run from
+      under two minutes to over twenty.
+    </p>
+    <p>
+      The first version handled only silence. It drew the seventeen frozen aircraft as though they
+      were reporting normally while they stood still for up to five and a half minutes, and drew no red segment
+      for them. It was found by looking: the trails on screen were all grey, and the question was
+      whether that was expected. The fix makes the recorded break the authority rather than the absence
+      of reports, so a frozen stretch is set aside and the aircraft is held and marked through it. Red
+      segments now appear at 69 of the hour's 91 ten-second moments, against 24 before.
+    </p>
+    <div class="panel panel--warn">
+      <p>
+        <b>What moving four hundred aircraft costs.</b> Working out where every aircraft is, and its
+        trail, takes about a millisecond and a half for the whole of run 480. Nearly all of the cost of
+        a step is the map redrawing its markers: about 25 milliseconds with every aircraft shown, after
+        a change that stopped markers which had not changed from being drawn again (it was 34). That is
+        more than one frame, so with everything on screen at high speed the motion steps rather than
+        glides. The positions stay right, because they come from the clock, not from the frame. These
+        figures are from the development build on one machine; the production build is expected to be
+        faster and has not been measured.
+      </p>
+    </div>
+  </section>
+
+  <section>
     <h2>How we know any of this works</h2>
 
     <div class="outcomes">
@@ -9234,15 +9470,15 @@ second pass   <b>5.060000171975998</b></div>
           <tr><td class="key">Sources and adapters</td><td class="n">7</td><td class="n">8</td><td class="why">Real air traffic in and replayable on command; the tracks unsafe to stage an incident on are listed; invented radio readings now reach the store through the same front door; the third source to come</td></tr>
           <tr><td class="key">Database</td><td class="n">11</td><td class="n">11</td><td class="why">Connected, shaped, written to, read back, and fenced off from everything but the one component allowed to touch it — and it now answers the two geographic questions it was chosen for, which is the first work that could not have been done with ordinary storage. It had also never been told to organise itself around which run a record belongs to, so every measurement was reading all twenty million records from the beginning; that is now fixed. <b>Complete.</b> The table an explanation lives in was built before anybody knew what an explanation contained, and has now been brought up to it — three fields renamed rather than translated, two that did not exist added, and the record of whether a claim was checked given a third state so that <em>failed</em> and <em>nobody looked yet</em> stop being the same value — which then turned out to have no writer at all for two of its three values, found by building the first thing that would have needed them. A row now also records which producer was <em>asked</em>, not only which one answered, without which a stand-in and the baseline are the same row twice. And it now refuses to let a re-examination delete an explanation that has already been marked or paid for — decided from the store itself rather than from a list</td></tr>
           <tr><td class="key">Running and tooling</td><td class="n">4</td><td class="n">6</td><td class="why">Containers and commands done, and every measurement now runs through a named command rather than a hand-written one — which is how the hours came to be destroyed. The store is now fenced against the test suite by construction rather than by everyone remembering. And the health signal the container reads now reports whether the store is the shape the code expects, after it answered healthy for a day while the analyst's screen was returning an error. No continuous integration. A development server now serves the screens straight from the working files and redraws on save, so a change can be looked at without rebuilding anything</td></tr>
-          <tr><td class="key">API</td><td class="n">13</td><td class="n">17</td><td class="why">A health check, the picture and the dashboard reading it, plus the two scenario endpoints and the screen reading those — a batch now starts from a button, and only one batch at a time, after several starts in quick succession were found to leave the back end serving nothing at all. And the picture now carries what was <em>found</em>: the receivers with the state each was judged to be in, a count for every rule including the ones that found nothing, and the conclusions oldest first. Three panels had been fed empty answers under a note explaining that no detector existed — true when written, and by then false eight rules over. The hard part was not filling them but making an hour nobody examined look different from a clean one, since both store nothing; and the same work retired a live breach of the project's own rule that the answer key never leaves the evaluation machinery, the screen's heading having been the kind of hour being staged. The picture can now be asked for a particular hour, with a list of what is on offer that carries neither the kind of each hour nor anything the detectors concluded — an unknown hour is refused rather than quietly answered with the newest, which is the failure that would be indistinguishable from the feature working. And one field left the answer entirely: a second health value nothing produced, whose job another field already does. The screen can now also ask <em>why</em>: an account of every conclusion an hour holds, and of every stored package of evidence, with nothing dropped on either side. Every aircraft now carries the state the rules put it in, and the picture can be asked for the exceptions, the ordinary, or everything — filtered on the server, with a count of what was held back and whether anybody examined the hour. Each interference conclusion now also arrives with its place and the radius it was judged over, read from what was stored with it</td></tr>
-          <tr><td class="key">Screens and map</td><td class="n">16</td><td class="n">20</td><td class="why">Three ways in, two of which lead to a screen; both read the real store, and the rail collapses to give the workspace its width back. The picture now states its own terms: any stored hour can be put on it, it says which one and whether that is the newest, it names what the hour is made of, it renders the system's conclusions as sentences rather than as internal names, and it draws the moments those conclusions were reached in the replayed time they happened at. Every band on it passes through one component that refuses anything outside Low, Medium and High — the types already said so, and a type stops applying at the moment an answer arrives over the network. The badge saying the environment is synthetic and replayed is wired to nothing at all, which is what makes it impossible to remove by accident. Beneath it sits the evidence panel, which says why each conclusion was reached and folds away without hiding whether any lacks its account. A switch now chooses between the exceptions, the ordinary and everything, and a panel docked under the map lists receivers, aircraft and conclusions in three tabs, every count on it saying what the switch held back; each tab opens a full table of the whole hour, unfiltered, sortable and searchable, without touching the switch. And the map is built: offline, light, with Europe drawn around the corpus box so it never ends in grey, every receiver and aircraft in the state the rules found, a pop-up of what the server sent and nothing else, and labels that thin themselves rather than pile up. Interference zones are drawn as the area their rule examined, in a colour of their own, and the pop-up opens inside the map and can be moved aside. What it cannot draw yet is the aircraft moving through the hour</td></tr>
+          <tr><td class="key">API</td><td class="n">14</td><td class="n">18</td><td class="why">A health check, the picture and the dashboard reading it, plus the two scenario endpoints and the screen reading those — a batch now starts from a button, and only one batch at a time, after several starts in quick succession were found to leave the back end serving nothing at all. And the picture now carries what was <em>found</em>: the receivers with the state each was judged to be in, a count for every rule including the ones that found nothing, and the conclusions oldest first. Three panels had been fed empty answers under a note explaining that no detector existed — true when written, and by then false eight rules over. The hard part was not filling them but making an hour nobody examined look different from a clean one, since both store nothing; and the same work retired a live breach of the project's own rule that the answer key never leaves the evaluation machinery, the screen's heading having been the kind of hour being staged. The picture can now be asked for a particular hour, with a list of what is on offer that carries neither the kind of each hour nor anything the detectors concluded — an unknown hour is refused rather than quietly answered with the newest, which is the failure that would be indistinguishable from the feature working. And one field left the answer entirely: a second health value nothing produced, whose job another field already does. The screen can now also ask <em>why</em>: an account of every conclusion an hour holds, and of every stored package of evidence, with nothing dropped on either side. Every aircraft now carries the state the rules put it in, and the picture can be asked for the exceptions, the ordinary, or everything — filtered on the server, with a count of what was held back and whether anybody examined the hour. Each interference conclusion now also arrives with its place and the radius it was judged over, read from what was stored with it The hour's aircraft positions can now be asked for five minutes at a time, for playback, and a longer request is refused rather than cut short.</td></tr>
+          <tr><td class="key">Screens and map</td><td class="n">18</td><td class="n">21</td><td class="why">Three ways in, two of which lead to a screen; both read the real store, and the rail collapses to give the workspace its width back. The picture now states its own terms: any stored hour can be put on it, it says which one and whether that is the newest, it names what the hour is made of, it renders the system's conclusions as sentences rather than as internal names, and it draws the moments those conclusions were reached in the replayed time they happened at. Every band on it passes through one component that refuses anything outside Low, Medium and High — the types already said so, and a type stops applying at the moment an answer arrives over the network. The badge saying the environment is synthetic and replayed is wired to nothing at all, which is what makes it impossible to remove by accident. Beneath it sits the evidence panel, which says why each conclusion was reached and folds away without hiding whether any lacks its account. A switch now chooses between the exceptions, the ordinary and everything, and a panel docked under the map lists receivers, aircraft and conclusions in three tabs, every count on it saying what the switch held back; each tab opens a full table of the whole hour, unfiltered, sortable and searchable, without touching the switch. And the map is built: offline, light, with Europe drawn around the corpus box so it never ends in grey, every receiver and aircraft in the state the rules found, a pop-up of what the server sent and nothing else, and labels that thin themselves rather than pile up. Interference zones are drawn as the area their rule examined, in a colour of their own, and the pop-up opens inside the map and can be moved aside. And the hour now plays back: the aircraft move along their reported positions with trails, interference areas appear and clear in their windows, and where reporting broke the map shows it stop. What it cannot draw yet is each receiver's state at the moment on screen</td></tr>
           <tr><td class="key">Scenario generator</td><td class="n">8</td><td class="n">8</td><td class="why">Complete. Receiver positions fixed, an invented hour reproducible from one number, all five kinds of run staging what they should, twenty produced unattended from a single number by one command, the screen that will drive it, disruptions staged only on aircraft that are actually flying, a floor of five affected aircraft per hour so that no hour is unscoreable, and every hour now recording the number it was generated from so a batch can be reproduced rather than remembered</td></tr>
           <tr><td class="key">Anomaly detection</td><td class="n">15</td><td class="n">17</td><td class="why">What normal looks like, and a rule for each side of the picture — the radio and the aircraft. Findings are kept and grouped, and the evidence the final rules read has been settled: grouping alone could not separate a staged hour from a quiet one, so it was replaced by a local rate comparison — measured first, and chosen over turning up the scenario settings. The three answers the system may give are one decision asked in a fixed order; the order itself is now built and enforced, and two of the three tests with it. Marked against the answer key over three hundred regenerated hours in three independently seeded waves: every one of the five kinds of hour decided correctly sixty times out of sixty, no event anywhere given two answers, and — since a blip lasting one reading stopped counting as an event — no false report anywhere at all. The third test, ruled out last time, is worth attempting again. Two things have since been settled that the chapter cannot be written without: how long an incident must run before a rule has the evidence it demands — a property of the rule rather than a measure of how fast the software is, since nothing here notices anything while it is happening — and the other half of the testing, the hours with nothing staged in them, where <b>none of the sixty produces anything an analyst would be shown</b>. That second check turned out to need real care: an empty result is also what a machine that never ran produces, so it is given an account of every detector by name and refuses to grade an hour where one is missing. And how much of what is staged the aircraft side actually sees is now measured on two independently seeded waves rather than on one: 82 per cent of disrupted aircraft found on the navigation arm, 59 on the two suppression arms, with every missing aircraft accounted for and two of the four suspected causes accounting for none of them at all. Three waves rather than one is what makes that reportable: the navigation arm gives 83, 81 and 83 per cent and the suppression arms give 64, 59 and 53, so one is a property of the mechanism and the other varies with which aircraft a wave happened to disrupt — and a single batch would have stated both with the same confidence. And now the results table itself: sixty of sixty on all three kinds of hour that stage something, no false alarm on either kind of silence, nothing anywhere called by the wrong name, and the first delay figures the project has produced — ten seconds on the broken-receiver rules and twenty on interference, which is one sampling interval slower because its claim is that a <em>second</em> receiver went wrong too. And the eight rules are now <b>composed inside the system</b> rather than only inside a measurement script — which is where the order had lived, outside every check the project runs, while each rule individually sat at full coverage. Proved to have changed nothing by re-running the figures of record through it: forty-three lines, one of them different, and that one the stamp recording which settings produced them, which moved because the record gained the quiet hours that "normal" was measured over. Building the screen's half then found that the pass had been storing its <em>evidence</em> and not its <em>conclusions</em>: the two rules at the end of the order handed their answers back and wrote nowhere, which inside one program is invisible and from a screen means they do not exist. And the pass now <b>starts itself</b> when a batch of hours finishes being made — which turned up something sharper than the trigger: the settings every figure above was measured under existed only in a measurement script and a copy in the tests, eleven numbers the system itself did not hold, so anything inside it that ran a detector would have had to invent a third set. Every hour in the store has now been examined by the system itself — three hundred and eighty of them, in six minutes — and the results table came back identical to the one a measurement script had produced in memory, which is two independent routes to the same figures rather than the same figure measured twice. And "normal" is now one written-down list of a hundred quiet hours rather than whatever the store held at the time — every hour re-examined under it, eleven windows moved by seconds, and every figure in the results table unchanged</td></tr>
           <tr><td class="key">Evidence bundles</td><td class="n">3</td><td class="n">3</td><td class="why">Complete. One event becomes one package, with the frequency dimension joined up here because nothing upstream joins it, and with every absence labelled by which of the three kinds it is rather than left as silence. Every statement's citations are then resolved against the store before the package is allowed to exist — which found that one citation in eleven had been pointing at a reconstructed instant rather than a stored reading, in a field that had been written and never read since the findings were first kept. Every package built is now kept, and the store has been checked in both directions: no conclusion without its package, and no package without its conclusion</td></tr>
           <tr><td class="key">AI hypothesis layer</td><td class="n">9</td><td class="n">12</td><td class="why">The shape every explanation must take, and the first thing that produces one. The shape is a constraint on what a model is allowed to emit rather than a description of what it did, so each guarantee is checked on the translated version a model is actually handed as well as on the original. The producer built first has no model in it: it is both the fallback for when a model's answer cannot be trusted and the yardstick the models are measured against. Run over all forty-one real packages it produced forty-one explanations, refused none, and every one of its one hundred and sixty-four citations was found in the package it came from. Since then, the seam a model plugs into — defined before either model exists, so neither one's peculiarities leak into it — and the decision about what a person sees when a model's answer cannot be used: ask again a fixed number of times, then fall back to the mechanical account, and keep a record of why, plus the guard that counts what a run spends and stops it rather than letting it quietly continue. Then the producer the whole project is about: a model, handed the package and constrained so it cannot emit the wrong shape at all. And now the safeguard that constraint cannot be — every claim an explanation rests on is resolved against the package it came from, with citing an explanation the system itself rejected treated as its own kind of failure rather than lumped in with inventing one. Over the forty-one real packages it flagged none of one hundred and sixty-four honest citations, and caught all one hundred and sixty-four deliberate corruptions. And now the first real requests: eight explanations over three packages, read by hand. Every claim in every one of them traced back to its package; reading them found an instruction that had never been written, without which the blind marking would have been decided by citation count alone; and running the trial twice showed the answers do not reproduce word for word, which narrows a claim this project had been making about reproducibility and settles a question about whether asking a model again after a bad answer is a real mechanism. And now the job that asks twenty questions rather than one: it keeps the answers that were thrown away, because those are the only evidence the safeguard ever did anything, and it takes care that a rejected answer is counted once rather than twice and that a mechanical stand-in is never counted as the model's — a mistake that would make the model look better the more often it failed. What remains is choosing the twenty packages, the marking pack itself, and the marking</td></tr>
           <tr><td class="key">Hypothesis screen and feedback</td><td class="n">0</td><td class="n">6</td><td class="why">Specified, unbuilt</td></tr>
           <tr><td class="key">Evaluation</td><td class="n">8</td><td class="n">9</td><td class="why">Scoring instrument written and locked, and amended twice in the open since — once because the sample it described could not exist on the built system, once because asking the model a single time rested on an assumption the first real requests disproved. The twenty packages are chosen from one number and written down; the run has happened and cost eighty-five pence; the per-producer figures are computed for each writer separately and never pooled, because the difference between them <em>is</em> the result — and they have now been produced, which needed the run's own record rebuilt because it stored the spending as one total while the report is per writer; asked three times, the model agreed with itself perfectly on all three things that can be compared mechanically, which corrects a prediction made from three cases, and the writer that was never asked reports blank rather than zero. The pack the marker reads is built, and then rebuilt: correct by every automated check and unusable by a person, missing the one thing — which receiver each finding came from — that the first scored dimension depends on. The marker's pack now also carries a glossary, and the workbook a matching tab, under one rule: an entry may say what a word refers to and never what seeing it would mean, the second being the marker's own job. What is left is the marking itself and the arithmetic over the returned sheets, and that waits on a person rather than on code — and the table of detection figures is now built and measured over all three hundred hours — every rate defined by the population it is counted over, the two recalls kept apart, the two kinds of false alarm never pooled, and a refusal to report either unless the quiet hours passed their own check</td></tr>
-          <tr class="total"><td class="key">Total</td><td class="n">98</td><td class="n">121</td><td class="why">&nbsp;</td></tr>
+          <tr class="total"><td class="key">Total</td><td class="n">101</td><td class="n">123</td><td class="why">&nbsp;</td></tr>
         </tbody>
       </table>
     </div>
@@ -9289,12 +9525,11 @@ second pass   <b>5.060000171975998</b></div>
           attached to a real reference, so a true citation with a false description beside it passes.
           That makes its catch rate a floor on invention rather than a measure of it, and leaves
           misdescription entirely to the human marking.</li>
-        <li><b>One of the three screens does not exist, and the map is a still picture.</b>
-          The main screen now has its map, but it shows each aircraft once, where it last reported;
-          watching them move through the hour, and an incident appear and clear, is later work.
-          Interference zones are drawn for their whole window at once, beside aircraft shown where
-          they last reported, so the pop-up states the window rather than the map implying the two
-          coincide. The scenario screen
+        <li><b>One of the three screens does not exist, and the receivers do not change during
+          playback.</b> The hour can now be played back, with aircraft moving and interference areas
+          appearing and clearing, but each receiver keeps the state it was found in over the whole
+          hour rather than the state it was in at the moment on screen; that is specified and next.
+          The exceptions panel under the map also stays on the whole hour while it plays. The scenario screen
           is wired end to end, with two exceptions it states plainly: its reset and replay controls
           are disabled, and several of its settings have no effect for some scenario types without
           saying so.</li>
@@ -9392,11 +9627,11 @@ second pass   <b>5.060000171975998</b></div>
       <div class="tier">
         <div class="tier__name">Next</div>
         <div class="tier__what">
-          <b>Moving through the hour.</b> The map, the panel of exceptions and the full tables behind
-          it are built, and one switch drives the first two. What the map cannot show yet is time: it
-          draws where everything was in the last few minutes of the hour, so an aircraft's path, and an
-          interference area appearing and then clearing, are not on it. Playing the hour back is
-          next, and it needs the server to serve the hour as a sequence first.
+          <b>Receivers through the hour.</b> Playback moves the aircraft and the interference areas;
+          the receivers still show the state they were found in over the whole hour. Next, each
+          receiver is drawn in the state it was in at the moment on screen, from the same recorded
+          findings, so a receiver that misbehaved for five minutes is seen to misbehave for those five
+          minutes and no others.
         </div>
       </div>
       <div class="tier">

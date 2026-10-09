@@ -9410,6 +9410,13 @@ reporting*, and one broken segment joins that fix to the first report after the 
 together, the only mechanism I had in mind. The real data had a second mechanism, documented in the
 detector's own module, that no fixture exercised. Its fixture now exists.
 
+**Correction, same day.** The table above overstates the frozen case. Measured afterwards, 16 of the 17
+frozen gaps resume within 1 km of the frozen fix (0 to 0.9 km; once 7.6 km), so what the first build
+drew was an aircraft standing still for 100 to 330 s *as though reporting*, unmarked, not a long
+slide. The red segments that show up are mostly the 5 holes: four share the window 119 to 429 s, which
+is run 480's staged incident, and jump 9.5 to 75 km. They were already drawn broken before the fix,
+but only from 430 s, so the first look was probably just before them as well.
+
 ---
 
 | **Composing copy** | Turning a finding type the backend sends verbatim into a sentence an analyst reads. Done on the screen by design, so prose never arrives from a detector — and in one module, because two panels carry the same type. See §148. |

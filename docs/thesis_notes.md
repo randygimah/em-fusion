@@ -3284,8 +3284,11 @@ whether it was just them. It was not. The continuity rule (`anom-010`) stores a 
 mechanisms: rows that stop, and rows that keep arriving with a frozen position repeating the last
 good fix, which is how the GNSS-degradation scenario stages a fault. On run 480, 17 of the 22 stored
 gaps were frozen, with 10 to 32 reports inside each and one distinct position among them. The map
-drew those aircraft as standing still and then sliding along a solid line to where they resumed. The
-detector's own module documents both mechanisms; the tests were written against a fixture with only
+drew those aircraft as reporting normally while standing still for 100 to 330 s, unmarked. (An early
+note said they then slid along a long solid line to where they resumed; measured, 16 of the 17
+resume within 1 km of the frozen fix, so the defect was the missing mark, not the slide.) The five
+holes, four of them the staged incident's 119 to 429 s window, jump 9.5 to 75 km and were already
+drawn broken, but only from 430 s. The detector's own module documents both mechanisms; the tests were written against a fixture with only
 the first. The fix made the stored gap the authority: reports strictly inside it are set aside, so
 the aircraft holds at its last good fix through the gap and one broken segment joins that fix to its
 resumption. Broken segments went from 24 of the hour's 91 ten-second moments to 69, the first at

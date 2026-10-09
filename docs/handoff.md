@@ -286,9 +286,15 @@ None once this handoff is committed.
   for the panel to move instead (`qa.md` §158). The spec was amended after the code.
 - **I built `map-004`'s broken segments for one of the gap rule's two mechanisms.** `anom-010`'s own
   module documents both (rows that stop; rows that keep arriving with a frozen, stale position), and
-  my fixture had only the first. On run 480, 17 of 22 gaps are frozen, so the user saw no red
-  segments. Found in review (`qa.md` §159); the spec was amended, failing tests were committed, then
+  my fixture had only the first. On run 480, 17 of 22 gaps are frozen and were drawn as reporting,
+  unmarked. Found in review (`qa.md` §159); the spec was amended, failing tests were committed, then
   the fix.
+- **I then overstated that defect** in the spec, `qa.md` §159, the thesis notes and this file, as
+  aircraft "sliding along a solid line they never flew". Measured for the progress note, 16 of the 17
+  frozen gaps resume within 1 km (0–0.9 km; once 7.6 km). The defect was the missing mark. The visible
+  red segments are mostly the 5 holes (four are the staged incident, 119–429 s, jumping 9.5–75 km),
+  which already worked from 430 s. Corrected in all four places, appended where the convention
+  requires it.
 - **I ran `biome format --write src` over the whole frontend**, which reformatted about 25 files
   outside the item. I reverted them, then split the remaining diff into minimal hunks and
   reverse-applied the 16 that were formatting only. The frontend is still not in Biome's format;
