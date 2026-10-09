@@ -1102,3 +1102,103 @@ describe("interference zones", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });
+
+describe("playback", () => {
+  // spec: map-004 — the map draws what the cursor determines: aircraft that may
+  // be held and not reporting, and trails whose stored gaps are broken segments.
+  type TrailFeature = { geometry: { type: string; coordinates: number[][] }; properties: { broken: boolean } };
+  const trails = [
+    {
+      id: "opensky-replay:AC-1",
+      segments: [
+        { coordinates: [[7.0, 51.0], [7.0, 51.1]] as [number, number][], broken: false },
+        { coordinates: [[7.0, 51.1], [7.0, 51.3]] as [number, number][], broken: true },
+      ],
+    },
+  ];
+  const trailSourceData = (map: FakeMapInstance): TrailFeature[] => {
+    const source = map.sources.get("trails");
+    const updates = source?.setData.mock.calls ?? [];
+    if (updates.length > 0) return (updates[updates.length - 1][0] as { features: TrailFeature[] }).features;
+    const added = map.addSource.mock.calls.filter((call) => call[0] === "trails");
+    return (added[added.length - 1]?.[1] as { data: { features: TrailFeature[] } } | undefined)?.data.features ?? [];
+  };
+  const trailLayers = (map: FakeMapInstance) =>
+    map.addLayer.mock.calls
+      .map((call) => call[0] as { id: string; type: string; source: string; paint?: Record<string, unknown>; filter?: unknown })
+      .filter((layer) => layer.source === "trails");
+
+  it("names an aircraft that is not reporting as such", async () => {
+    // spec: map-004 (2) — in its accessible name, not only its look.
+    renderMap({ tracks: [{ ...tracks[0], stale: true }, tracks[1]] });
+
+    expect(await screen.findByRole("button", { name: "Aircraft AC-1, interrupted, not reporting" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Aircraft AC-2, nominal" })).toBeInTheDocument();
+  });
+
+  it("draws each trail segment as a line, flagged broken or not", async () => {
+    // spec: map-004 (4)
+    renderMap({ trails });
+    await mapReady();
+    act(() => lib.instances[0].emit("load"));
+
+    const features = trailSourceData(lib.instances[0]);
+    expect(features.map((feature) => feature.geometry.type)).toEqual(["LineString", "LineString"]);
+    expect(features.map((feature) => feature.properties.broken)).toEqual([false, true]);
+    expect(features[1].geometry.coordinates).toEqual([
+      [7.0, 51.1],
+      [7.0, 51.3],
+    ]);
+  });
+
+  it("draws a broken segment dashed, in a colour of its own", async () => {
+    // spec: map-004 (4) — distinct from a nominal trail.
+    renderMap({ trails });
+    await mapReady();
+    act(() => lib.instances[0].emit("load"));
+
+    const layers = trailLayers(lib.instances[0]);
+    expect(layers).toHaveLength(2);
+    const dashed = layers.filter((layer) => layer.paint?.["line-dasharray"] !== undefined);
+    expect(dashed).toHaveLength(1);
+    expect(dashed[0].filter).toBeDefined();
+    const [solid] = layers.filter((layer) => layer !== dashed[0]);
+    expect(String(dashed[0].paint?.["line-color"])).not.toBe(String(solid.paint?.["line-color"]));
+  });
+
+  it("binds nothing to the trails, so they never take a click meant for a marker", async () => {
+    // spec: map-004, map-006's rule for drawn layers.
+    renderMap({ trails });
+    await mapReady();
+    act(() => lib.instances[0].emit("load"));
+
+    const ids = trailLayers(lib.instances[0]).map((layer) => layer.id);
+    expect(ids).toHaveLength(2);
+    expect(lib.instances[0].layerHandlers.filter((id) => ids.includes(id))).toEqual([]);
+  });
+
+  it("updates the trails as the cursor moves, and empties them when playback closes", async () => {
+    // spec: map-004 — closing leaves no playback drawing on the map.
+    const { rerenderWith } = renderMap({ trails });
+    await mapReady();
+    act(() => lib.instances[0].emit("load"));
+
+    rerenderWith({ trails: [{ ...trails[0], segments: [trails[0].segments[0]] }] });
+    expect(trailSourceData(lib.instances[0])).toHaveLength(1);
+
+    rerenderWith({ trails: [] });
+    expect(trailSourceData(lib.instances[0])).toEqual([]);
+  });
+
+  it("redraws the trails after a basemap switch", async () => {
+    // spec: map-004, map-006 — a style switch wipes drawn sources.
+    renderMap({ trails, config: { defaultArchive: ARCHIVE, satellite: SATELLITE } });
+    await mapReady();
+    act(() => lib.instances[0].emit("load"));
+
+    fireEvent.click(screen.getByRole("button", { name: /satellite/i }));
+    act(() => lib.instances[0].emit("style.load"));
+
+    expect(trailSourceData(lib.instances[0])).toHaveLength(2);
+  });
+});
