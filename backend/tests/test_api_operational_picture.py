@@ -47,6 +47,7 @@ from sqlalchemy.pool import NullPool
 from alembic import command
 from app.api.v1.operational_picture import FINAL_WINDOW_SECONDS
 from app.api.v1.schemas import operational_picture as picture_module
+from app.api.v1.schemas import playback as playback_module
 from app.api.v1.schemas.operational_picture import (
     PERSISTED_PRODUCERS,
     AircraftTrack,
@@ -127,6 +128,12 @@ MODELS = {
     # collection.
     "InterferenceZone": getattr(picture_module, "InterferenceZone", None),
     "ZoneCentre": getattr(picture_module, "ZoneCentre", None),
+    # `api-008`. Declared in the same contract and so held by the same parser
+    # check; its own suite compares the fields.
+    "PlaybackWindow": playback_module.PlaybackWindow,
+    "PlaybackAircraft": playback_module.PlaybackAircraft,
+    "PlaybackPosition": playback_module.PlaybackPosition,
+    "PlaybackGap": playback_module.PlaybackGap,
 }
 
 #: The two fields that carried `74.2` and `0.92` before this item, rendered as

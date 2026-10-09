@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping, Sequence
+from datetime import datetime
 from typing import Any
 
 from geoalchemy2 import WKTElement
@@ -704,6 +705,75 @@ def observations_for_run(
             .all()
         )
     return [_observation(row) for row in rows]
+
+
+def track_positions_between(
+    session_factory: sessionmaker[Session],
+    run_id: int,
+    start: datetime,
+    end: datetime,
+) -> list[CanonicalObservation]:
+    """Every aircraft position in one run inside a half-open span. Spec: api-008.
+
+    Ordered by aircraft and then time, so the builder groups without sorting
+    and the order is the database's statement rather than the heap's. No view
+    and no state: what each view admits is decided where the payload is built,
+    over the state it is served with (`api-007`), and a predicate here would be
+    a second definition of it.
+    """
+    with session_factory() as session:
+        rows = (
+            session.execute(
+                text(
+                    "SELECT source_id, source_type, observation_type, timestamp, "
+                    "       ST_Y(location) AS lat, ST_X(location) AS lon, "
+                    "       data_mode, validation_status, provenance, payload "
+                    "FROM observations "
+                    "WHERE scenario_run_id = :run_id "
+                    "  AND observation_type = :observation_type "
+                    "  AND timestamp >= :start AND timestamp < :end "
+                    "ORDER BY payload->>'aircraft_id', timestamp, id"
+                ),
+                {
+                    "run_id": run_id,
+                    "observation_type": ObservationType.TRACK.value,
+                    "start": start,
+                    "end": end,
+                },
+            )
+            .mappings()
+            .all()
+        )
+    return [_observation(row) for row in rows]
+
+
+def track_window(
+    session_factory: sessionmaker[Session], run_id: int
+) -> tuple[datetime, datetime] | None:
+    """The first and last aircraft position a run holds, or None. Spec: api-008.
+
+    Read from the positions rather than from the run record, because playback
+    ends where the data ends: a replay's record holds no window at all
+    (`api-013`), and a generated run's is the hour asked for rather than the
+    reports that arrived.
+    """
+    with session_factory() as session:
+        row = (
+            session.execute(
+                text(
+                    "SELECT min(timestamp) AS first, max(timestamp) AS last "
+                    "FROM observations "
+                    "WHERE scenario_run_id = :run_id "
+                    "  AND observation_type = :observation_type"
+                ),
+                {"run_id": run_id, "observation_type": ObservationType.TRACK.value},
+            )
+            .mappings()
+            .one()
+        )
+    if row["first"] is None:
+        return None
+    return row["first"], row["last"]
 
 
 def _observation(row: RowMapping) -> CanonicalObservation:

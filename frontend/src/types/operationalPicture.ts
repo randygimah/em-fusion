@@ -213,3 +213,45 @@ export interface SelectableHour {
   observedTo: string | null;
   examined: boolean;
 }
+
+// Aircraft positions across one span of one run, for playback (api-008). The
+// screen asks for at most 300 s at a time and buffers ahead of its cursor, so
+// the request rate is not the frame rate (FR-718). `id` and `name` are the
+// picture's own, so a playback track joins the picture's track on `id`.
+//
+// `gaps` is the stored continuity gaps overlapping the span, oldest first, and
+// is null on an hour no pass examined: an empty list means looked and found
+// none, which nobody did.
+export interface PlaybackPosition {
+  time: string;
+  lat: number;
+  lon: number;
+  altitudeFt: number | null;
+}
+
+export interface PlaybackGap {
+  startedAt: string;
+  endedAt: string;
+}
+
+export interface PlaybackAircraft {
+  id: string;
+  name: string;
+  state: TrackState;
+  positions: PlaybackPosition[];
+  gaps: PlaybackGap[] | null;
+}
+
+// The span served is exactly the one asked for, never shortened; the recorded
+// window is the run's first and last position, null when it holds none.
+export interface PlaybackWindow {
+  runId: number;
+  recordedFrom: string | null;
+  recordedTo: string | null;
+  servedFrom: string;
+  servedTo: string;
+  view: ViewSelection;
+  examined: boolean;
+  withheld: number;
+  aircraft: PlaybackAircraft[];
+}

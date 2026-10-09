@@ -39,6 +39,8 @@ with no route to report it through.
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.api.v1.schemas.evidence import EvidenceAccount, build_evidence_account
@@ -48,6 +50,12 @@ from app.api.v1.schemas.operational_picture import (
     ViewSelection,
     build_operational_picture,
 )
+from app.api.v1.schemas.playback import (
+    PlaybackError,
+    PlaybackWindow,
+    build_playback_window,
+    check_span,
+)
 from app.db.bundles import stored_bundles_for_run
 from app.db.findings import findings_for_run, interference_radii_for_run
 from app.db.repository import (
@@ -56,6 +64,8 @@ from app.db.repository import (
     latest_run,
     run_summary,
     selectable_hours,
+    track_positions_between,
+    track_window,
 )
 from app.db.session import SessionFactory, get_sessionmaker
 from app.scenario.layout import load_layout
@@ -178,4 +188,49 @@ def get_evidence(
         run_id=run.id,
         findings=findings_for_run(sessions, run.id),
         bundles=stored_bundles_for_run(sessions, run.id),
+    )
+
+
+@router.get("/operational-picture/tracks", tags=["operational-picture"])
+def get_tracks(
+    sessions: SessionFactory = Depends(get_sessionmaker),
+    run_id: int = Query(alias="run"),
+    start: datetime = Query(alias="from"),
+    end: datetime = Query(alias="to"),
+    view: ViewSelection = Query(default="all"),
+) -> PlaybackWindow:
+    """Every aircraft's positions across one span of one run. spec: api-008.
+
+    **The run is required.** Playback is of one hour, and "the newest span" is
+    not a question the screen asks; an unknown run is a 404 and never another
+    run's tracks (`api-013`).
+
+    **The span is checked before anything is read**, so a refusal costs no
+    query: at most `MAX_SPAN_SECONDS`, forwards, and in zone-aware time. Refused
+    with a 422 naming the bound rather than truncated -- a partial answer is
+    one the client would have to detect.
+
+    A span outside the run's positions is a 200 with no aircraft, not an error:
+    the client buffering ahead of its cursor will ask past the end, and that is
+    a question with an empty answer.
+    """
+    try:
+        check_span(start, end)
+    except PlaybackError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    run = run_summary(sessions, run_id)
+    if run is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"no scenario run {run_id} in the store",
+        )
+    return build_playback_window(
+        run=run,
+        observations=track_positions_between(sessions, run.id, start, end),
+        recorded=track_window(sessions, run.id),
+        start=start,
+        end=end,
+        findings=findings_for_run(sessions, run.id),
+        detection_pass=detection_pass_for_run(sessions, run.id),
+        view=view,
     )

@@ -3190,6 +3190,37 @@ text, because the fixture's altitudes (12,000, 30,000 and 35,000 ft) sort the sa
 one aircraft now flies at 9,000 ft. The panel's own pass (`op-004`) was re-run after the shared formatting
 moved: 20 of 20, one mutant retired because it enabled the *View all* this item enabled.
 
+### Playback reads the hour in five-minute pieces, and a longer request is refused rather than cut short
+
+Playback asks a different question from the picture: not where each aircraft is now, but where each
+was at every moment of the run. Measured on 9 October 2026, a run is fifteen simulated minutes holding
+about 33,000 aircraft positions from about 520 aircraft at an exact ten-second cadence (the median and
+99th-percentile interval between one aircraft's reports are both 10 s), which is about 3 MB as JSON. The
+endpoint (`api-008`) serves one span at a time, and the screen buffers ahead of its cursor, so the
+request rate is set by the span and not by the frame rate (FR-718) and playback stays inside the
+polling decision rather than reopening the case for a push transport.
+
+**The bound is 300 s**, the picture's own final window, so a span of playback and the picture's "now"
+are the same size of thing. On run 480 the first five minutes under *All* is 413 aircraft, 10,974
+positions, 1.13 MB and about 0.45 s; under *Anomalous only* it is 19 aircraft, 472 positions and 50 KB.
+The spec allowed an over-long span to be rejected or truncated with the truncation reported. It is
+rejected: a truncated answer is a partial one that every client has to detect, while a 422 naming the
+bound cannot be misread.
+
+**Three choices were made for consistency with the picture rather than for playback itself.** The
+view switch filters playback as it filters the picture, because otherwise pressing play under
+*Anomalous only* would fill a map showing 19 aircraft with 413. Each aircraft's id, name and state
+come from the picture's own functions, imported rather than restated, so a playback track joins a
+picture track on its id and *interrupted* keeps one definition. And each aircraft carries its stored
+continuity gaps as a join on the findings, never re-detected: a two-minute hole in the reports with
+no stored gap is served as no gap, because the detection pass decided under its recorded settings and
+a request is not entitled to decide again. On an hour no pass examined the gap list is null rather
+than empty, the typed-absence rule applied once more.
+
+*(Recorded as a limitation, not addressed: the backend does not compress responses, so the five-minute
+span under All is 1.13 MB on the wire. Compression would reduce it substantially and belongs to the
+deployment rather than to this item.)*
+
 ### The Hypotheses screen shows one explanation per conclusion, and waits for the blind scoring
 
 Scoped on 9 October 2026 against the design reference and the store, before any spec item was

@@ -595,3 +595,20 @@ def test_an_unexamined_run_serves_null_gaps(
 
     assert body["examined"] is False
     assert {a["gaps"] is None for a in body["aircraft"]} == {True}
+
+
+@pytest.mark.database
+@requires_database
+def test_a_run_with_no_positions_is_served_with_no_recorded_window(
+    picture_database: Engine, monkeypatch: pytest.MonkeyPatch  # noqa: F811
+) -> None:
+    # spec: api-008 -- null, not an invented hour, and not an error. Written
+    # after the implementation, when coverage showed the store's empty branch
+    # untested.
+    _insert_run(picture_database, RUN_ID, completed=True)
+
+    status, body = _get_tracks(picture_database, monkeypatch, **_span(0, 60))
+
+    assert status == 200
+    assert (body["recordedFrom"], body["recordedTo"]) == (None, None)
+    assert body["aircraft"] == []
