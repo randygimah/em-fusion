@@ -8,70 +8,58 @@ Abstraction Layer, detects deviations deterministically, and turns evidence bund
 schema-validated, grounding-checked AI hypotheses for analyst review. Decision support, not
 autonomous decision-making.
 
-This session (8 October 2026) put **interference zones on the map** and fixed the pop-up after review:
-- `api-017`: the picture serves each stored interference claim as a zone, with the radius recorded with
-  it;
-- `map-006`: the map draws the assessed disc, a centre marker, a label and a pop-up;
-- `map-005` amended: the pop-up opens inside the map and can be moved.
-
-The user chose the assessed disc over an evidence footprint or receivers only, and a separate API item
-before the map item. Review then asked for two changes: a zone colour distinct from the markers, and a
-movable pop-up. Every item followed spec → failing tests → code → browser review → `passes: true`,
-committed on `main`.
+This session (9 October 2026) built **`op-005`, the drill-down tables**. The exception panel's
+*View all*, disabled since `op-004`, now opens an overlay holding the open tab's whole collection for
+the hour on screen, always unfiltered. The user chose a full table over the same data (rather than
+retiring the item, since *All* already lists every row in the panel) and an overlay (rather than a
+screen). Spec → failing tests → code → browser review → mutation → `passes: true`, committed on `main`.
 
 ## Current state
 
-Backlog **97 of 121** (95 of 119 at the start; `api-017` and `map-006` were added and built). Tree clean
-once this handoff is committed; `main` in sync with `origin/main`.
+Backlog **98 of 121** (97 at the start). Tree clean once this handoff is committed; `main` in sync
+with `origin/main`.
 
-- Backend: **2134 passed, 99.93% coverage** (5611 statements, 4 missed; 2117 at the start); ruff, Black
-  and mypy clean on what changed.
-- Frontend: **378 passed** (353 at the start); Biome lint and `tsc -b` clean.
+- Backend: untouched this session (**2134 passed, 99.93%** at the last run).
+- Frontend: **408 passed** (378 at the start); Biome lint and `tsc -b` clean.
 - Mutation:
 
   | Log | Result | Covers |
   |---|---|---|
-  | `mutate_map001_view.log` | **47 of 47** (re-run with zones in place) | `map-001`, `map-002`, `map-003`, `map-005` (1)–(2) |
-  | `mutate_map006_zones.log` | **26 of 26** | `map-006` |
-  | `mutate_map005_popup.log` | **10 of 10** | `map-005` (3) |
+  | `mutate_op005_drilldown.log` | **31 of 31 (second run; first 30 of 31)** | `op-005` |
+  | `mutate_op004_panel.log` | **20 of 20** (re-run; one mutant retired, three anchors re-pointed) | `op-004` |
 
-### What zones do now
+### What the drill-down does now
 
-- **Server (`api-017`):**
-  - `interferenceZones` on GET `/api/v1/operational-picture`, one per stored `FUSION-SPATIAL`
-    `possible_interference_zone`.
-  - Each zone's `id` equals its timeline event's id.
-  - `radiusKm` comes from the policy stored with the row (`interference_radii_for_run` in
-    `app/db/findings.py`), null when none was stored, never a default.
-  - `confidence` is a Level; `corroboration` is sent verbatim.
-  - Filtered like events: *Nominal only* withholds them and counts them in
-    `view.suppressed.interferenceZones`. An unexamined run has none.
-  - All 100 stored interference rows carry `confidence`, `corroboration` and the radius setting (checked
-    in the store).
-- **Map (`map-006`):**
-  - A dashed geodesic disc of the assessed radius, with a faint fill, in DESIGN.md's error-container red
-    `#93000a`, a colour no marker uses.
-  - The disc is redrawn on every `style.load` and updated with `setData` when the zones change.
-  - The disc binds no handlers.
-  - The basemap switch passes `diff: false`.
-  - Centre marker named "Interference zone over A and B, Medium confidence".
-  - Label "Possible interference · Medium", ranked above every other label.
-  - The pop-up shows receivers, window (UTC), confidence, the corroboration sentence
-    (`CORROBORATION_COPY` in `detectionVocabulary.ts`) and the centre. It always ends with the sentence
-    that the circle is the area assessed, not an extent. With no radius, there is no circle and the
-    pop-up says so.
-- **Pop-up (`map-005` (3)):**
-  - Opens above its marker, then below, then beside it (right, then left), pulled in from the edges.
-  - Moved by dragging its header or with the arrow keys (16 px).
-  - Keeps its offset from the marker on a pan; at least 40 px stays inside the map.
-  - Resets when closed, reopened or replaced.
+- *View all* opens `EmDrillDown` for the open tab: receivers, aircraft or conclusions.
+- **The hour** is the one the panel's payload names (`scenario.id`), captured on opening; a poll that
+  moves the screen to a newer hour leaves the table on its own. The heading names it:
+  "Run 480 · all 420 aircraft".
+- **The data** comes from GET `/api/v1/operational-picture?run=<hour>&view=all` through
+  `fetchOperationalPicture`, via a `loadUnfiltered` function `App.tsx` hands to the screen and the
+  screen to the panel. Fetched once, not polled. An answer for another hour or under another view is
+  refused as a failure; a failure says so with *Try again* and never shows the panel's rows.
+- **Columns** are the panel's (shared formatting in `components/em/rowFormat.ts`). Default order:
+  out of nominal first, then by identifier; Events oldest first. Every header sorts, a second click
+  reverses, `aria-sort` set; an altitude not reported sorts last both ways.
+- **Find** narrows by receiver/station, aircraft pseudonym, or source/conclusion, case-insensitive,
+  with "n of N shown" and a sentence when nothing matches.
+- **Closing**: Escape (stopped there, so the map's Escape does not also fire) or ×; focus returns to
+  *View all*; the open tab and the view are unchanged.
+- *View all* is disabled with a reason only when there is no hour (no scenario, or the first-paint
+  mock's non-numeric id) or no loader (a screen rendered without one, as in panel tests).
 
 ### Checked in the browser (dev server, `:1234`)
 
-| Hour | Result |
+| Check | Result |
 |---|---|
-| Run 420 | One zone over RF-04 (Eindhoven) and RF-05 (Weeze), Medium, not measurable, centre 51.5262°N 5.7584°E, 60 km. Gone under *Nominal only* (marker and disc), back under *Anomalous only*. |
-| Run 411 | The pop-up opens beside the zone marker when it fits neither above nor below. The user confirmed a real drag and a pan both work. |
+| Run 480, Tracks | "Run 480 · all 420 aircraft" = 17 interrupted + 403 the view hid. |
+| Sort | Altitude descending, *not reported* last. |
+| Find | "a9" → 17 of 420 shown. |
+| Request | `run=480`, `view=all`, on `/api/v1/operational-picture` (checked without printing the URL). Two requests per opening in dev: StrictMode runs the effect twice; the first answer is discarded. |
+| Close | Escape closed it; focus on *View all*; Tracks still open; *Anomalous only* still selected. |
+| Events | "Run 480 · all 1 conclusion", time column sorted ascending. |
+
+The user confirmed it works.
 
 ## Files in flight
 
@@ -81,107 +69,80 @@ None once this handoff is committed.
 
 | Commit | Message |
 |---|---|
-| `0e752cf` | `spec: add api-017, map-006 -- interference zones served from the store and drawn as the disc assessed` |
-| `a5523a6` | `test: add tests for api-017, map-006` |
-| `62fba71` | `feat(api-017, map-006): interference zones served with their recorded radius and drawn as the assessed disc - tests pass` |
-| `ea09d32` | `spec: amend map-005 -- pop-up fits inside the map and can be moved` |
-| `410b7bc` | `test: add tests for map-005 (3) -- pop-up placement and moving` |
-| `b31c8d0` | `feat(map-005): pop-up opens inside the map and can be moved - tests pass` |
+| `3719784` | `spec: amend op-005 -- drill-down tables as an unfiltered overlay over the hour on screen` |
+| `d895044` | `test: add tests for op-005` |
+| `988c349` | `feat(op-005): drill-down tables over the hour on screen, unfiltered - tests pass` |
 
 **New:**
-- `measurements/mutation/mutate_map006_zones.*` and `mutate_map005_popup.*`. Their mutants may make
-  several edits.
+- `frontend/src/components/em/EmDrillDown.tsx`
+- `frontend/src/components/em/rowFormat.ts`, holding the panel's formatters, moved out so both
+  components share them.
+- `frontend/src/test/drillDown.test.tsx` (30 tests)
+- `backend/measurements/mutation/mutate_op005_drilldown.{py,log}`
 
 **Changed:**
-- **Backend:**
-  - `app/db/findings.py` (`interference_radii_for_run`).
-  - `app/api/v1/schemas/operational_picture.py` (`ZoneCentre`, `InterferenceZone`, `Corroboration`,
-    `_zones`, `_event_id`, `_ordered`, `_corroboration`).
-  - `app/api/v1/operational_picture.py` (passes `zone_radii`).
-- **Frontend:**
-  - `types/operationalPicture.ts` and the mock.
-  - `lib/detectionVocabulary.ts` (`CORROBORATION_COPY`).
-  - The screen (passes `zones`).
-  - `components/map/MapView.tsx` (`zoneOutline`, zone source and layers, zone entity, pop-up
-    placement and moving).
-- **Tests:** `test_api_operational_picture.py`, `mapView.test.tsx`, `mapBoundary.test.tsx`;
-  `exceptionPanel.test.tsx` and `viewFilter.test.tsx` (fixtures only).
-- **Measurements:** `mutate_map001_view.py` (one anchor re-pointed).
+- `EmExceptionPanel.tsx`: *View all* is wired; takes `loadUnfiltered`; `PanelData` gains `scenario`.
+- `viewVocabulary.ts`: `VIEW_ALL_REASON` is replaced by `NO_HOUR_TO_DRILL` and `DRILL_DOWN_UNWIRED`,
+  plus the drill-down words.
+- `screens/operationalPicture.tsx`: the `loadUnfiltered` prop.
+- `App.tsx`: the `useCallback` loader.
+- `exceptionPanel.test.tsx`: one op-004 test re-pointed.
+- `mutate_op004_panel.py`: re-pointed, with its log re-run.
 
 **Docs:**
 - `CLAUDE.md` repo map.
-- `implementation.md` Phase 4.
+- `implementation.md` view-filter checklist.
 - `measurements/README.md` (two rows).
-- `qa.md` §155 (the pop-up question, with the fitting-versus-moving distinction in the glossary).
-- `thesis_notes.md`: two subsections, one on zones drawn as the assessed disc (including the colour
-  reversal), one on the pop-up learning the map's edges.
+- `thesis_notes.md`: a new subsection on the drill-down tables.
 
 ## Failed attempts
 
 **My own errors:**
-- **I claimed `app/db/findings.py` could import `app.detection.fusion` at module level.** I checked
-  only direct imports. `fusion` reaches `db.findings` through `rate_excess.findings_near`, so collection
-  failed on a cycle. The import now sits inside the function, with a comment.
-- **I named the window formatter `window`, shadowing the global.** `onThisOrigin` read
-  `window.location` from my function, threw inside the map's start-up `try`, and 37 tests reported
-  "could not start the map". The blanket catch turns any bug into the WebGL message.
-- **I first drew the zone in the anomalous orange,** reasoning that a zone is an anomalous finding. In
-  review it read as part of the orange markers inside it, and the user asked for a different colour.
-  Recorded as a reversal in the thesis notes.
-- **I chose a clamp for a pop-up that fits neither above nor below.** It covered the marker it
-  described (seen on run 411); now it opens beside the marker. The spec was widened after the code.
-- **One mutation run was wasted** by a `sed` anchor that silently did not match. Python replacements
-  that assert a count of 1 replaced it.
-
-**Faults the tests could not see:**
-- **MapLibre's `setStyle` diffs by default.** A successful diff fires no `style.load` and drops sources
-  the new style lacks, so the disc would vanish on a basemap switch. The switch now passes
-  `diff: false`. Found by reading MapLibre's source. **Unverified in a browser:** satellite is not
-  configured locally.
-- **`setPointerCapture` throws for a pointer the browser does not consider active**, which cancelled
-  the drag before its listeners were attached. Now guarded.
-- **The first zone mutation pass left a stale-disc survivor:** a disc never updated when the zones
-  changed. The test double's `getSource` returned nothing, so the update path never ran. The double now
-  keeps its sources until `setStyle`, and a test asserts the disc empties.
+- **The visible sort arrow was part of the header text.** It sat in a span inside the header button,
+  so each header was named "Time ▲". It is now drawn with CSS `content` and the order is announced by
+  `aria-sort`.
+- **A find fixture matched two stations.** "VEN" matched Venlo and also Eind*hoven*; now "VENL".
+- **Five header queries were page-wide.** They found the panel's table behind the dialog as well, and
+  are now scoped to the dialog. This exposed a real property of the build, listed under the open items
+  below.
+- **The first mutation pass left a survivor:** altitudes compared as text. The fixture's 12,000 / 30,000
+  / 35,000 sort the same as text and as numbers. AC-alpha now flies at 9,000 ft and the pass was re-run.
+- **The first watcher on the mutation logs exited at once.** It waited for a line the *previous*
+  `op-004` log already contained.
 
 **Instrument limits:**
-- The automation tool's drag sends no pointer-down, so a real drag could not be done through it. The
-  drag was exercised by dispatching pointer events in the page, and the user confirmed it by hand.
-- The automation tab is hidden, so Chrome runs no animation frames and pan-following could not be
-  watched (the same limit as the frame-rate measurement).
+- The browser tool's ref-based clicks did not register on this page; coordinate clicks did.
 
-**Tests written or changed after implementation (deviations):**
-- The stale-disc test and the stand-in map change.
-- The unrecognised-corroboration refusal test (proved against a mutant).
-- The zone-colour test (written before the colour change, after the zone code).
-- The beside-the-marker test (proved against the old fallback).
-- The `corroboration` added to the existing `_zone` fixture: it lacked a field every stored row has.
-- `interferenceZones: 0` added to ten frontend fixtures. `tsc -b` caught them; Vitest does not
-  type-check.
+**Tests changed after implementation (deviations):**
+- The five header queries scoped to the dialog.
+- The "VENL" fixture.
+- The 9,000 ft altitude.
 
 ## Next step
 
-1. **Offer the progress-note update.** Zones are the conclusion the map exists to show, and run 420 or
-   411 would carry it.
-2. **`op-005`**, the drill-down tables. The panel's *View all* is still disabled waiting on them.
-3. **`map-004`**, playback, still gated on `op-008` / `api-008`. Zones appearing and clearing over time
-   belongs to it.
-4. Then, unchanged: `hyp-*`, and `eval-006` (waits on the second rater, mid-October).
+1. **Offer the progress-note update.** The drill-down is a small addition to the story: a sentence in
+   the screen section, not a figure.
+2. **`map-004`**, playback, still gated on `op-008` / `api-008`. Zones appearing and clearing over time
+   belong to it.
+3. Then, unchanged: `hyp-*`, and `eval-006` (waits on the second rater, mid-October).
 
 Open and unowned:
 
+- **The page behind the drill-down is not inert.** The dialog is `aria-modal`, but a screen reader can
+  still reach the panel's table behind it. Fix it (mark the rest of the screen `inert` while it is open)
+  or record it as a limitation.
+- **The table is not virtualised.** It renders all 420 rows, which was smooth here; a bigger hour has
+  not been tried.
 - **`diff: false` on the basemap switch is unverified in a browser.** Configure satellite (two
   `VITE_SATELLITE_*` variables in `.env.development.local`), switch, and check the disc survives.
-- **Whether "the circle is the area assessed" is read as such** is an evaluation question. A tidy
-  circle invites reading it as a footprint.
-- **The frame-rate figure is one machine and one hour.** Re-measure on slower hardware before
-  claiming it generally.
+- **Whether "the circle is the area assessed" is read as such** is an evaluation question.
+- **The frame-rate figure is one machine and one hour.**
 - **Long pseudonymous aircraft names** (`AC-849585568dda`) make wide labels.
-- **The frontend is not in Biome's format** and nothing checks it (`pnpm lint` is lint only).
+- **The frontend is not in Biome's format**, and nothing checks it (`pnpm lint` is lint only).
 - **"Tracks (13 interrupted)" / orange aircraft on a quiet hour** may read as an alarm.
 - **The evidence panel's sentence for an unexplained conclusion is stale** ("built and not kept").
 - **`detection_metrics.py` still imports `save_findings`**, unused.
 - **"20.7M observations" is stale** in seven places (the store holds 15.5M).
-- **`_corpus.py`'s id ranges are stale**; **`thesis_notes.md` is misfiled from about line 6900**.
+- **`_corpus.py`'s id ranges are stale**, and **`thesis_notes.md` is misfiled from about line 6900**.
 - **A fresh database cannot score batches from the screen** until `BASELINE_QUIET_RUNS` is re-derived
   for it.
