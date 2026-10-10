@@ -264,6 +264,7 @@ def build_pack(
     bundles: Sequence[tuple[int, EvidenceBundle]],
     hypotheses: Mapping[int, Hypothesis],
     seed: int,
+    order: Sequence[int] | None = None,
 ) -> ScoringPack:
     """Render the pack, the blank sheet, and the key held separately.
 
@@ -273,13 +274,27 @@ def build_pack(
     caller reading a stored record off disk hands over what it loaded rather
     than assembling a record around it with two empty fields -- which is the
     hand-written-object hazard `ai-004`'s payload module exists because of.
+
+    `order`, when given, renders exactly those bundles in that order
+    (`eval-011`, the second rater's subset). Labels are keyed on the seed and
+    the bundle alone, so a subset keeps every item id and label of the full
+    pack and the two raters' sheets join on item id.
     """
     held = dict(bundles)
     scored = _scored_generations(generations)
 
     items: list[PackItem] = []
     sections: list[str] = []
-    ordered = sorted(scored)
+    ordered = sorted(scored) if order is None else list(order)
+    repeated = sorted({b for b in ordered if ordered.count(b) > 1})
+    if repeated:
+        raise ConfigurationError(f"the order names bundle(s) {repeated} twice")
+    missing = [b for b in ordered if b not in scored]
+    if missing:
+        raise ConfigurationError(
+            f"the order names bundle(s) {missing}, which the campaign record "
+            "does not hold"
+        )
     for position, bundle_id in enumerate(ordered, start=1):
         arms = scored[bundle_id]
         if len(arms) < 2:
@@ -300,15 +315,15 @@ def build_pack(
         # One draw per bundle, so A on one page has nothing to do with A on
         # the next -- the rubric's own words, and what stops a marker who
         # worked out one package working out all twenty.
-        order = sorted(arms, key=lambda arm: arm.value)
+        arm_order = sorted(arms, key=lambda arm: arm.value)
         # Keyed per bundle from one number, so the whole pack is
         # reproducible from the seed and no bundle's draw depends on the one
         # before it. A string key rather than a tuple: a tuple seed is not
         # accepted, and arithmetic on the two would collide for some pairs.
-        random.Random(f"{seed}:{bundle_id}").shuffle(order)
+        random.Random(f"{seed}:{bundle_id}").shuffle(arm_order)
 
         paired: list[PackItem] = []
-        for label, arm in zip(LABELS, order):
+        for label, arm in zip(LABELS, arm_order):
             row = arms[arm]
             if row not in hypotheses:
                 raise ConfigurationError(
@@ -339,7 +354,7 @@ def build_pack(
 
     return ScoringPack(
         hypotheses_md=(
-            _preamble(len(scored))
+            _preamble(len(ordered))
             + _glossary(
                 [(b, held[b]) for b in ordered if b in held], "\n".join(sections)
             )
@@ -348,7 +363,7 @@ def build_pack(
         score_sheet_csv=_sheet(items),
         arm_key_csv=_key(items),
         items=tuple(items),
-        bundles=len(scored),
+        bundles=len(ordered),
         items_per_bundle=len(LABELS),
     )
 

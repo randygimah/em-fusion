@@ -1,0 +1,34 @@
+sample       scored_sample.json, 20 bundles
+draw         seed 20261010, quota {'gnss-degradation': 5, 'rf-sensor-fault': 3, 'ambiguous-mixed-evidence': 2}
+
+order the second rater reads:
+   1  00280  possible_sensor_fault       rf-sensor-fault
+   2  00250  possible_interference_zone  gnss-degradation
+   3  00289  possible_sensor_fault       ambiguous-mixed-evidence
+   4  00254  possible_interference_zone  gnss-degradation
+   5  00279  possible_sensor_fault       rf-sensor-fault
+   6  00262  possible_interference_zone  gnss-degradation
+   7  00302  possible_sensor_fault       ambiguous-mixed-evidence
+   8  00248  possible_interference_zone  gnss-degradation
+   9  00273  possible_sensor_fault       rf-sensor-fault
+  10  00264  possible_interference_zone  gnss-degradation
+
+packs        10, every one byte-identical to the first rater's apart from its heading
+explanations 20
+values       100 in pass one, 40 in pass two, 
+             140 in all
+             The participant information sheet and the ethics form quote
+             280. Both live outside this repository and must be updated
+             by the author to the figure above.
+
+arm vocabulary in all three files: none
+
+first rater's files, sha256 before = after:
+  hypotheses.md        86042f0a753d133c
+  answer_sheet.md      93a0fee5a92744df
+  score_sheet1.xlsx    eed3b6cf92fb651a
+  score_sheet.csv      afaafb39c0361de6
+  arm_key.csv          b04fbebdbeafbeb9
+  arm_key.xlsx         5cfba5306bcfcc92
+
+written to scoring_pack_rater2/: hypotheses.md, score_sheet2.xlsx, answer_sheet.md

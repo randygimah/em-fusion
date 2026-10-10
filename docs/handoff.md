@@ -42,8 +42,20 @@ pass 22 of 22 on its second run.
 
 ## Current state
 
-Backlog **104 of 124** (97 of 121 at the start; `api-018`, `map-007` and `eval-010` added; all three
-pass). Tree clean once this commit lands; `main` in sync with `origin/main`.
+Backlog **105 of 125** (97 of 121 at the start; `api-018`, `map-007`, `eval-010` and `eval-011`
+added; all four pass). Tree clean once this commit lands; `main` in sync with `origin/main`.
+
+**The first rater (the user) has finished both passes** (`scoring_pack/score_sheet1.xlsx`, not opened
+by me). They took about **three hours** for 40 items against the rubric's 90 minutes. `eval-011` cut the
+second rater's set to **10 packs / 20 items / 140 values** in `scoring_pack_rater2/`:
+- order 00280, 00250, 00289, 00254, 00279, 00262, 00302, 00248, 00273, 00264, kinds alternating;
+- seed 20261010, quota 5 gnss-degradation / 3 rf-sensor-fault / 2 ambiguous-mixed-evidence;
+- every pack byte-identical to the first rater's apart from its heading, so the sheets join on item id;
+- all six first-rater files' checksums unchanged; arm scan clean.
+
+The user's other 20 items are kept as single-rated (rubric partial-coverage rule); κ is over the 20
+double-scored items. `eval-011`'s tests (19) pass natively with `sampling.py` and `pack.py` at 100%; the
+full container suite was not re-run for it.
 
 **Full backend suite: 2,235 passed, coverage 99.93%** (5,834 statements, 4 missed), about 12½ minutes,
 re-run after `map-007`. The per-item figures below predate `eval-010` and `api-018`.
@@ -300,7 +312,11 @@ None once this handoff is committed.
 | `2bdc0b6` | `feat(api-018): receiver states over the hour - tests pass` |
 | `0231b06` | `test: add tests for map-007` |
 | `456adc3` | `feat(map-007): receivers in their state at the playback cursor - tests pass` |
-| *this commit* | `docs: progress note covers receivers through the hour and the answer sheet` (published, version 10) |
+| `98befe2` | `docs: progress note covers receivers through the hour and the answer sheet` (published, version 10) |
+| `2be2c64` | `docs: first rater's scoring time and the proposal to cut the second rater's corpus` |
+| `dc73479` | `spec: add eval-011` (and amends `eval-006`: κ over the double-scored items only) |
+| `f45cce4` | `test: add tests for eval-011` |
+| *this commit* | `feat(eval-011): the second rater's ten packs, drawn and alternating - tests pass`; removes `scoring_pack/score_sheet2.xlsx` (the blank 40-row sheet) |
 
 **New:**
 - `frontend/src/components/em/EmDrillDown.tsx`
@@ -337,7 +353,7 @@ None once this handoff is committed.
 **Docs:**
 - `CLAUDE.md` repo map.
 - `implementation.md` view-filter checklist.
-- `scoring_rubric.md` change log (2026-10-09), `evaluation_harness.md` (the answer sheet), `qa.md` §160
+- `scoring_rubric.md` change log (2026-10-10, the ten-pack set) and (2026-10-09), `evaluation_harness.md` (the answer sheet), `qa.md` §160
   with its correction, `thesis_notes.md` (the answer sheet and the mixed-scenario finding).
 - `measurements/README.md` (two rows).
 - `thesis_notes.md`: a new subsection on the drill-down tables.
@@ -345,6 +361,12 @@ None once this handoff is committed.
 ## Failed attempts
 
 **My own errors:**
+- **`eval-011`: the answer-sheet builder refused the ten-pack set** on the first run, because it
+  requires the sample to equal the pack; the script now passes only the drawn packs' scenario types.
+  Nothing was written on the failed run. **`build_pack`'s inner `order` variable shadowed the new
+  parameter** (mypy caught it); renamed `arm_order`.
+- **While checking the rater-2 pack for stale counts, a grep printed two explanation lines** (aircraft
+  pseudonyms, no arm) into the session. Nothing links them to an arm, and the user's scoring was done.
 - **The visible sort arrow was part of the header text.** It sat in a span inside the header button,
   so each header was named "Time ▲". It is now drawn with CSS `content` and the order is announced by
   `aria-sort`.
@@ -444,16 +466,17 @@ None once this handoff is committed.
 
 ## Next step
 
-**The user is scoring the blind pack now. Do not start the Hypotheses screen until they say scoring is
-done**, and while they score, do not print, open or summarise anything that links an explanation to its
-arm (the arm key, `campaign_arms.csv`, generator columns of the campaign rows).
+**The user's scoring is done (10 October 2026); the Hypotheses screen is unparked.** The second
+rater has not scored: nothing linking an explanation to its arm goes into anything they are handed.
 
-1. **`eval-006` scoring.** The user's pass one is in (`score_sheet1.xlsx`); **pass two now, against
-   `scoring_pack/answer_sheet.md`**. The second rater from mid-October: hand them `hypotheses.md` and
-   `score_sheet2.xlsx` first and `answer_sheet.md` only after their pass one, **never `arm_key.*`**.
-   At analysis: report cause correctness for the five mixed-evidence packs separately, and the user's
-   pass two as unblinded.
-2. **The Hypotheses screen, once the user's scoring is done.** Decided 9 October 2026 (`qa.md` §157):
+1. **`eval-006` scoring.** The second rater from mid-October gets **`scoring_pack_rater2/`**: hand them
+   `hypotheses.md` and `score_sheet2.xlsx` first and `answer_sheet.md` only after their pass one,
+   **never `arm_key.*`**. **Before approaching them, the user updates the participant information
+   sheet and the ethics form (outside the repo) from 280 values / 90 minutes to 140 values and the
+   measured time.** At analysis: κ over the 20 double-scored items with its interval; the user's other
+   20 items single-rated; cause correctness for the mixed-evidence packs separately; the user's pass
+   two as unblinded.
+2. **The Hypotheses screen.** Decided 9 October 2026 (`qa.md` §157):
    - **Option A, one explanation per conclusion.** The analyst's queue is the 20 conclusions that have
      hypotheses, one explanation each, never the campaign's 5–6 hosted samples and 2 template copies.
      Rejected: B (a read-only template tab beside the AI, which invites anchoring on agreement) and

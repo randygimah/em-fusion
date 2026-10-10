@@ -8567,12 +8567,32 @@ fatigue and to scoring by pattern rather than by reading. The presentation order
 because the pack is sorted by run, so it made both worse. *(The near-duplication is the rater's
 reading, not yet a measurement. Record a text-similarity figure here if one is taken.)*
 
-**Proposed response, not yet decided.** The proposal is to give the second rater ten packs instead of
-twenty, drawn by a seeded rule within the pre-registered strata and presented in a seeded mixed
-order. The rubric's existing partial-coverage rule already covers this case: agreement is computed
-over the double-scored subset and the rest is reported separately. The first rater's scores on
-dropped packs are kept as single-rated, not deleted. See `docs/qa.md` §161. *(Record the decision,
-the draw rule and seed, and the rubric change-log entry here once made.)*
+**Decision, 2026-10-10: the second rater scores ten packs, in an alternating order.** The ten are
+drawn by a rule fixed in the backlog before the draw: five gnss-degradation, three rf-sensor-fault and
+two ambiguous-mixed-evidence, seed 20261010. That keeps the pre-registered balance of five
+interference and five fault bundles. The clean sensor-fault case takes the extra fault pack, because
+the mixed-evidence packs' cause correctness is reported separately in any case. The draw is a
+function of the committed sample alone. No score could have informed it, which matters because the
+first rater had seen theirs. The two kinds alternate, so no two look-alike packs are adjacent. Each
+pack is rendered byte-identical to the first rater's apart from its heading, and the build checks
+this, so every second-rater row joins a first-rater row on item id. The drawn order is 00280, 00250,
+00289, 00254, 00279, 00262, 00302, 00248, 00273, 00264.
+
+**The alternative the author proposed, and why it was modified.** The first rater suggested deleting
+the dropped packs from their own scores so that both raters cover the same ten. That would have
+discarded data the pre-registered rubric already has a rule for. Its partial-coverage rule computes κ
+over the double-scored subset and reports the remainder separately, never averaged with a missing
+second score. The first rater's other twenty items are therefore kept as single-rated evidence. This
+is a partial overlap, which `docs/qa.md` Q8 had originally rejected in favour of full
+double-scoring. It is adopted here for a measured reason and recorded in the rubric's change log.
+
+**What it costs, and the conditions on it.** Agreement is now computed over 20 items rather than 40,
+so κ has a wider interval and is reported with it. The arm comparison over 10 paired bundles
+supports a direction rather than an effect size, which the "Small N" threat already said of twenty.
+The scoring load quoted to the participant falls from 280 values to 140, and the quoted time should
+come from the measured figure. Both documents that carry those figures, the information sheet and the
+ethics form, sit outside the repository and must be updated by the author before the second rater is
+approached. *(Record here when they are updated and whether the approver required an amendment.)*
 
 ### Detection latency: defining a delay in a system that has no moment of noticing
 

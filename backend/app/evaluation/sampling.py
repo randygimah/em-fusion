@@ -44,6 +44,7 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass
+from itertools import zip_longest
 from typing import Any, Mapping, Sequence
 
 from app.ai.service import ConfigurationError
@@ -217,4 +218,78 @@ def draw_sample(
     )
 
 
-__all__ = ["PER_KIND", "STRATA", "BundleSample", "SampleEntry", "draw_sample"]
+#: The second rater's ten packs (`eval-011`), declared in the spec before the
+#: draw. A different number from the sample's seed and the pack's label seed,
+#: so knowing one says nothing about the others.
+SUBSET_SEED = 20261010
+
+#: Five interference and five fault, so the pre-registered kind balance holds.
+#: The clean sensor-fault case gets the extra fault pack, because the
+#: mixed-evidence packs' cause correctness is reported separately anyway.
+SUBSET_QUOTA: Mapping[str, int] = {
+    "gnss-degradation": 5,
+    "rf-sensor-fault": 3,
+    "ambiguous-mixed-evidence": 2,
+}
+
+
+def draw_rater_subset(
+    entries: Sequence[Mapping[str, Any]],
+    quota: Mapping[str, int],
+    seed: int,
+) -> tuple[int, ...]:
+    """The second rater's packs, in the order they are read. Spec: eval-011.
+
+    `entries` are the committed sample's own (`bundle_id`, `kind`,
+    `scenario_type`). Nothing else goes in -- no score sheet and no arm key --
+    because the first rater has seen their scores, and a rule that could see
+    them would not be a neutral one.
+
+    The kinds alternate so no two look-alike packs sit side by side: the
+    first rater met them in blocks of ten because the pack is sorted by id.
+    """
+    kind_of = {int(e["bundle_id"]): str(e["kind"]) for e in entries}
+    by_kind: dict[str, list[int]] = {}
+    for scenario_type, k in quota.items():
+        ids = sorted(
+            int(e["bundle_id"]) for e in entries if e["scenario_type"] == scenario_type
+        )
+        if not ids:
+            raise ConfigurationError(
+                f"the quota names {scenario_type!r}, which is not in the sample"
+            )
+        if k > len(ids):
+            raise ConfigurationError(
+                f"the quota asks {k} of {scenario_type!r} and the sample "
+                f"holds {len(ids)}"
+            )
+        for bundle_id in random.Random(f"{seed}:{scenario_type}").sample(ids, k):
+            by_kind.setdefault(kind_of[bundle_id], []).append(bundle_id)
+
+    rng = random.Random(seed)
+    groups = [by_kind[kind] for kind in sorted(by_kind)]
+    for group in groups:
+        rng.shuffle(group)
+    sizes = sorted(len(group) for group in groups)
+    if len(groups) != 2 or sizes[1] - sizes[0] > 1:
+        raise ConfigurationError(
+            f"the quota gives kinds of sizes {sizes}, which cannot alternate: "
+            "some packs of one kind would sit side by side"
+        )
+    lead, follow = groups
+    # The larger kind leads; with equal sizes the seed decides.
+    if len(follow) > len(lead) or (len(follow) == len(lead) and rng.random() < 0.5):
+        lead, follow = follow, lead
+    return tuple(b for pair in zip_longest(lead, follow) for b in pair if b is not None)
+
+
+__all__ = [
+    "PER_KIND",
+    "STRATA",
+    "SUBSET_QUOTA",
+    "SUBSET_SEED",
+    "BundleSample",
+    "SampleEntry",
+    "draw_rater_subset",
+    "draw_sample",
+]

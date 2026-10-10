@@ -34,8 +34,8 @@ operational, and there are no consequences to any judgement you make.
 
 | File | What's in it |
 |---|---|
-| `hypotheses.md` | 20 evidence packs. Under each one, two hypotheses labelled A and B. |
-| `score_sheet.xlsx` | One row per hypothesis. Pick your score from the dropdown in each column; hover a column heading to see that dimension's anchors without leaving the sheet. The **How to score** tab carries all of them in full, and the **Terms** tab carries the glossary. |
+| `hypotheses.md` | 10 evidence packs. Under each one, two hypotheses labelled A and B. |
+| `score_sheet2.xlsx` | One row per hypothesis. Pick your score from the dropdown in each column; hover a column heading to see that dimension's anchors without leaving the sheet. The **How to score** tab carries all of them in full, and the **Terms** tab carries the glossary. |
 
 `hypotheses.md` opens with **Terms used in these packs** — every rule name, conclusion label and
 piece of domain vocabulary you will meet, defined. The same list is a tab in the workbook, so it is
@@ -49,11 +49,12 @@ by the rule that produced them, and every finding is still listed individually i
 the grouping saves you re-reading near-identical lines, it is not a summary, and nothing has been
 left out.
 
-Roughly **40 hypotheses, about 90 minutes**, plus a short calibration round first (below). Do it in
-one or two sittings rather than five — consistency matters more than freshness.
+**20 hypotheses, about an hour and a half to two hours**, plus a short calibration round first
+(below). That estimate is measured, not guessed: the first scorer took about three hours over twice
+as many. Do it in one or two sittings rather than five — consistency matters more than freshness.
 
 You give **five numbers per hypothesis** in the first pass, and two more per hypothesis in a short
-second pass at the end — around 280 entries in total. That sounds worse than it is: most of the time
+second pass at the end — 140 entries in total. That sounds worse than it is: most of the time
 goes on reading, and the scores themselves are quick once the anchors are familiar.
 
 ## How to score
@@ -303,33 +304,39 @@ a single dimension, never across dimensions. Worth pre-empting in the Evaluation
   population instead. The template baseline is generated once, and that is safe for the reason the
   model arm's single generation was not: there is no provider in it. See the change log for why this
   changed.
-- 20 bundles × 2 arms = **40 items**, each scored independently by **both raters** — full
-  double-scoring, no partial overlap. Every reported number is therefore double-scored and there is
-  no unscored remainder to defend. See `docs/qa.md` Q8 for why this beat the larger-corpus,
-  partial-overlap alternative.
+- 20 bundles × 2 arms = **40 items**, all scored by the **first rater**. The **second rater scores
+  ten of the twenty bundles (20 items)**, drawn by a seeded rule within the scenario types (5
+  gnss-degradation, 3 rf-sensor-fault, 2 ambiguous-mixed-evidence; seed 20261010) and presented with
+  the two bundle kinds alternating. Each of those items keeps the id and label the first rater
+  scored it under. Agreement and the double-scored analysis are computed over those **20 items**;
+  the first rater's other 20 are reported as single-rated, under the partial-coverage rule below.
+  This replaced full double-scoring of all 40 after the first rater's measured time; see the change
+  log (2026-10-10). `docs/qa.md` Q8 records why full double-scoring was chosen originally.
 - **Paired within bundle**: both arms are scored against the same evidence, so bundle difficulty
   cancels out of the arm difference.
 
-**Scoring volume per rater**, which is what the participant is actually being asked for and the figure
-quoted to them:
+**Scoring volume for the second rater**, which is what the participant is actually being asked for and
+the figure quoted to them:
 
 ```
-5 dimensions × 40 items   = 200   pass 1, ordinal 1-5
-2 judgements × 40 items   =  80   pass 2, categorical
+5 dimensions × 20 items   = 100   pass 1, ordinal 1-5
+2 judgements × 20 items   =  40   pass 2, categorical
                             ---
-                            280   values from one rater
+                            140   values from the second rater
 ```
 
-Plus 25 discarded values from the five-item calibration round. The 280 figure is stated in the
-participant information sheet in `docs/ethics_form_answers.md` and on the ethics approval form; if the
-corpus size or the dimension count ever changes, those three places change together or the consent is
-no longer informed by the right number.
+The first rater, the author, gave 280 over all 40 items. Plus 25 discarded values from the five-item
+calibration round. The participant figure is stated in the participant information sheet and on the
+ethics approval form; if the corpus size or the dimension count ever changes, those places change
+together or the consent is no longer informed by the right number. Both were written for 280 and
+must be updated to 140.
 
 ## Analysis
 
 - **Reported per arm**: mean and distribution for each of the five dimensions, plus the
   hosted-minus-template difference per dimension. Pass-2 judgements reported as counts.
-- **Inter-rater agreement**: quadratic-weighted Cohen's κ per dimension, over the full corpus.
+- **Inter-rater agreement**: quadratic-weighted Cohen's κ per dimension, over the 20 double-scored
+  items, reported with its confidence interval.
   Quadratic weighting because a 1-vs-5 disagreement matters more than 3-vs-4, and unweighted κ treats
   them identically.
 - **Adjudication rule, fixed in advance**: the two scores are averaged for analysis. Where they differ
@@ -375,3 +382,4 @@ Results describe this prototype on this data, not hypothesis generation in gener
 | 2026-09-28 | Part A: the evidence packs are restructured a **second** time, and the reasoning given for the first restructure is **withdrawn and replaced**. No dimension, anchor, scale, item count or procedure is altered. | **The first rebuild was valid Markdown and still unreadable, and its stated constraint was wrong in direction.** Read by a person, the rebuilt pack was still a wall: fourteen table rows repeating *power_dbm deviated by X dB at its peak* and fourteen repeating *reporting from this aircraft broke during the window* carry one sentence and N values between them, and the sentence is what the eye must re-read. Six known uncertainties differing only in which receiver they named survived exact de-duplication and filled six lines with one fact. The pack now **factors the shared text**: a group states its common sentence once and each row keeps only what differs, gathered under its source; where the wording is byte-identical the group becomes one sentence and a list of sources; uncertainties factor the same way within a kind. Nothing is removed — one pack went from roughly thirty-five lines to fifteen with every value intact, and the change *exposed* two aircraft that had dropped out twice each, invisible among identical lines. **The withdrawn claim.** The previous entry justified the "group but never summarise" constraint on the grounds that a summarising pack would flatter the weaker arm and narrow the measured difference. That is backwards. The template baseline's own citations *are* summaries, so a pack that summarises makes the baseline read as pure restatement and scores it **lower**, widening the gap — while also lowering the model arm for the same reason. The net effect is not predictable in advance, which is a better argument for the constraint than the one given, not a worse one: the pack must not be in that business at all. **The constraint that replaces it is mechanical and tested rather than judged by eye: the pack re-organises values and computes none.** Every measurement rendered must appear verbatim in a finding, an uncertainty, or the bundle's own metadata; a count of items the pack itself lists is the only arithmetic permitted, because a reader could count them and a marker checking "nine aircraft" against the pack needs to. No minimum, maximum, mean, range, ratio or total may be introduced. The same conditions that made the first restructure safe still hold: **no marking has happened**, both raters having scored nothing. |
 | 2026-09-28 | Part A: a **glossary** is added to the pack — a terms section at the head of `hypotheses.md` and a matching tab in the workbook. No dimension, anchor, scale, item count or procedure is altered. | **Added so a scorer in flow does not have to stop and ask.** The packs use `track_rate_excess`, `smoothing constant`, `nominal`, `disc`, `power_dbm` and `corroborate` without defining any of them, and a rater meeting those for the first time either interrupts the session or guesses — the second being worse, because a guess is invisible in the returned sheet. Two placements rather than one: the prose document is where the evidence is read and the workbook is what is open while a score is entered, and a glossary only in the other file is exactly the interruption it exists to remove. **The constraint, which is what makes this safe.** A definition states what a term *denotes* and never what it *implies*. "One aircraft's position reports stopping for longer than the gap the rule allows" is a definition; "…which can indicate interference in the area" is the causal link that *evidence use* exists to test in pass one and *cause correctness* exists to test again in pass two. Handing that over in the reference material would move part of the instrument somewhere nobody would think to look for it — the same failure as a summarising evidence pack, in its most dangerous form, because reasoning in prose does not look like a computation and so does not trip the "computes no new number" guard. It is enforced by a named list of causal connectives that no entry may contain, asserted over every definition rather than over whichever ones a fixture happens to render, and fired at a real violation to prove the guard bites. Only terms actually present in the exported pack are listed, and a citation key with no definition is **refused** rather than quietly omitted, since a missing entry leaves the page looking complete while a marker meets an undefined rule nineteen packs from the end. The same conditions hold as for the two previous presentation changes: **no marking has happened.** |
 | 2026-10-09 | No change to Part A or B; recorded because the instrument promised an artefact that did not exist, and three facts about pass two follow from building it late. An **answer sheet** (`answer_sheet.md`) is added to the scoring pack. | **The promised answer was never built.** Part A says that once pass one is finished the rater is "given the correct answer for each evidence pack". Nothing in the backlog produced it, and the first rater, having finished pass one, found only the arm key. **It is rendered after scoring began, from definitions fixed before the campaign.** The correct answer is one sentence per scenario type, taken from `scn-002`'s definition of that type (the mixed type's carries its words verbatim: *the correct hypothesis is that they cannot be distinguished*), so nothing is judged pack by pack by an author who has by then read every explanation. Each section also states what was staged, copied from the run's record, and whether the pack's conclusion is about the staged incident at all (a staged receiver named and an overlapping window); all twenty are. It names neither label and passed the same arm-vocabulary scan as the marker's other files. No pass-one file was regenerated: every other file in the pack is byte-identical. **The first rater saw the arm key between passes.** It sat in the same folder as the pack. Pass one is unaffected; that rater's pass-two judgements are made knowing the arm, and are reported as such. The second rater must be handed the pack without the key. **On the five mixed-evidence packs the answer rests on evidence the pack does not contain.** Their staged aircraft dropout never reaches the evidence pack, because the sensor-fault verdict stops the aircraft side being consulted (each pack says so in its own uncertainties). Judged strictly, cause correctness on those ten items measures the detection layer's inability to represent *cannot be distinguished* for that scenario, not either arm's reasoning. The answer is not softened after the fact; cause correctness is reported separately for those five packs, and confidence calibration, judged against the pack's own evidence, is unaffected. Both arms face the same answer on each pack, so the paired comparison is not biased by it. |
+| 2026-10-10 | Part A: the second rater scores **10 packs (20 explanations, 140 values)** rather than 20 packs (40, 280), in a mixed order, and the time quoted is measured. Part B: the second rater's ten are a seeded draw within the scenario types; agreement is computed over the 20 double-scored items; the first rater's other 20 are reported as single-rated. No dimension, anchor or scale is altered. | **A change to the method, made after the first rater finished and before the second began, and argued for rather than made quietly.** Three observations from the first rater's completed pass. *Time*: both passes over 40 items took about three hours against the estimate of about 90 minutes. That estimate was written before any pack existed, and the measured figure comes from a rater who already knew the vocabulary, so a newcomer reading the glossary would take longer and tire. *Redundancy*: within each stratum the explanations read as near-duplicates from pack to pack, so twenty packs carry fewer than twenty packs' worth of independent judgement. *Order*: the pack is sorted by bundle id, so all ten interference packs came first and all ten fault packs last. A rater then meets runs of look-alikes, which invites scoring by pattern, and always reads one kind tired. **What was done.** Ten packs are drawn by a rule fixed in `eval-011` before the draw: 5 gnss-degradation, 3 rf-sensor-fault and 2 ambiguous-mixed-evidence, seed 20261010. That keeps the bundle-kind balance at five and five. The function takes the sample and nothing else, so no score could inform it. The two kinds alternate, so no two look-alike packs are adjacent. Every rendered pack is byte-identical to the first rater's apart from its heading, so the two sheets join on item id. **What was not done.** The first rater's scores on the dropped packs are **not deleted**. This document's own partial-coverage rule already covers a rater who scores part of the corpus: κ over the double-scored subset, and the remainder reported separately and never averaged with a missing second score. Full double-scoring was chosen over partial overlap in `docs/qa.md` Q8; this is a partial overlap, adopted for a measured reason and recorded as such. **What it costs.** κ over 20 items has a wide interval and is reported with it. The paired comparison over 10 bundles supports a directional finding, which the "Small N" threat already said of 20. **Consent.** The participant information sheet and the ethics form quoted 280 values and about 90 minutes. Both live outside this repository and must be updated to 140 values and the measured time before the second rater is approached; a lighter load is expected to be a minor amendment, but the approver is told rather than assumed. See `docs/qa.md` 161. |

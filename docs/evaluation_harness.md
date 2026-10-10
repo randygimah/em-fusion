@@ -216,6 +216,17 @@ interference cannot be told apart*) rests on aircraft evidence the pack never co
 sensor-fault verdict stops the aircraft side being consulted, so cause correctness there measures the
 detection layer rather than either arm and is reported separately.
 
+**The second rater scores ten packs, not twenty.** The first rater's two passes over 40 items took
+about three hours against the 90 minutes estimated, the explanations read as near-duplicates within
+each kind, and the pack's id order put all ten of each kind together. So the second rater gets ten
+packs drawn by a rule fixed before the draw (five interference; three sensor-fault and two mixed
+evidence), with the two kinds alternating. The draw sees the sample and nothing else. Every pack is
+byte-identical to the first rater's apart from its heading, so the two sheets join on item id.
+Agreement is computed over the twenty items both raters scored. The first rater's other twenty are
+kept and reported as single-rated, never deleted and never averaged with a missing second score. The
+second rater's three files sit in a folder of their own with no arm key in it, so it can be handed
+over whole.
+
 The blinding is **honestly imperfect and the imperfection is stated**: the template's prose is
 stylistically distinctive and a marker may well recognise it. That residual threat is recorded in the
 Evaluation chapter rather than claimed away. What the four mechanisms prevent is *adding* a
