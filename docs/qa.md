@@ -9584,6 +9584,39 @@ their scoring is done.
 slightly wrong already. A fixed "Hypotheses" heading would fix that without making the heading
 change with the data.
 
+## 164. For the affected area, it would be good to show the heat map from the design on a map, zoomed in on that specific area, so an analyst can see which area, with its lat and lon, is affected.
+
+**Yes to a zoomed-in map of the affected area with its coordinates; no to a heat-map gradient, because
+nothing stored measures how strong the effect is between receivers.** The design's orange blob is
+drawn as a continuous intensity field. The store has no field to draw it from.
+
+**What an affected area is, as stored.** An interference conclusion is reached from the receivers that
+measured noise above their baseline. Its centre is the midpoint of those receivers, and its radius is
+the assessed radius recorded with the claim (`map-006`). There are 7 receivers across a layout under
+250 km wide. Between two receivers nothing is measured.
+
+| What a heat map would be drawn from | Why it misleads |
+|---|---|
+| The receivers' noise excess, smoothed into a gradient | It interpolates a field between at most 7 fixed points. The colour between them would be invented, and it would look like a measurement |
+| The positions where aircraft lost signal | Measured on staged runs and on their matched controls, gap clusters are identical in all eight pairs (`anom-004`). A gap density shows background traffic, not the incident |
+| A blob around the centre | Decoration in the shape of evidence. For an explainability tool, that is the one thing the map must not do |
+
+**What can be drawn honestly, and covers the analyst's need:**
+
+| Element | Backed by |
+|---|---|
+| The map zoomed to the affected area, not the whole corpus | The disc and the named receivers' positions |
+| The assessed radius as a shaded disc: one flat fill, no gradient | The radius recorded with the claim |
+| The centre marked, with its latitude and longitude printed under the map | The conclusion's centre point |
+| The receivers the evidence names, emphasised and coloured by their state | The picture's receiver states |
+| Satellite imagery under it, where configured | The existing basemap switch (`map-001`) |
+
+**Half the conclusions are not areas at all.** A receiver-fault conclusion is a claim about one
+receiver. Its map zooms on that receiver and draws no disc, and a sentence says why, so the missing
+disc is not read as a missing measurement.
+
+**Limits:** the offline basemap goes to zoom 10, so "zoomed in" means about city scale.
+
 ---
 
 | **Composing copy** | Turning a finding type the backend sends verbatim into a sentence an analyst reads. Done on the screen by design, so prose never arrives from a detector — and in one module, because two panels carry the same type. See §148. |
@@ -9607,3 +9640,5 @@ change with the data.
 | **Partial coverage versus a smaller corpus** | Partial coverage keeps every item one rater scored and computes agreement over the double-scored subset only. A smaller corpus deletes items. The rubric pre-registered the first. See §161. |
 | **An unexplained conclusion versus no conclusion** | A conclusion the detection rules reached with no explanation generated for it, against an hour where the rules reached none. Both leave the rail's list empty; only the count tells them apart. See §162. |
 | **A section's name versus its state** | A heading names a region of the screen and stays fixed; the state of what is in it (empty, unexplained, unexamined) belongs in the content under it. See §163. |
+
+| **An assessed area versus a measured field** | An assessed area is a centre and a radius recorded with a claim, drawn as one flat disc; a measured field is an intensity known at every point, which a heat map implies. The store holds the first only: 7 receivers, nothing between them. See §164. |
