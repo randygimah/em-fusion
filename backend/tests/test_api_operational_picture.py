@@ -54,7 +54,6 @@ from app.api.v1.schemas.operational_picture import (
     AircraftTrack,
     DetectionCount,
     DetectionSummary,
-    Hypothesis,
     OperationalPicture,
     PictureError,
     PictureView,
@@ -108,7 +107,6 @@ CONTRACT_PATHS = contract_paths("operationalPicture.ts")
 #: the two to drift while every test still passed.
 MODELS = {
     "Scenario": Scenario,
-    "Hypothesis": Hypothesis,
     "DetectionCount": DetectionCount,
     "DetectionSummary": DetectionSummary,
     "RFSensor": RFSensor,
@@ -307,7 +305,7 @@ def test_a_picture_with_no_run_carries_no_scenario_and_no_tracks() -> None:
     assert picture.aircraftTracks == []
 
 
-@pytest.mark.parametrize("section", ["hypotheses", "timelineEvents"])
+@pytest.mark.parametrize("section", ["timelineEvents"])
 def test_the_sections_with_no_producer_are_empty_rather_than_invented(
     section: str,
 ) -> None:
@@ -317,8 +315,8 @@ def test_the_sections_with_no_producer_are_empty_rather_than_invented(
     an analyst through a system whose argument is that this must not happen.
     `api-012` closed `timelineEvents` by giving it a producer, so it is empty
     here because this picture was handed no findings -- a different fact from
-    the one `api-002` recorded. `hypotheses` is the last section whose emptiness
-    is still a statement about the system.
+    the one `api-002` recorded. `api-019` closed `hypotheses` the same way, and
+    its own suite holds what an empty list there may mean.
 
     `rfSensors` has left this list rather than this rule: the receivers are
     `scn-005`'s layout, configuration the generator itself reads, so serving
@@ -1311,20 +1309,6 @@ def test_the_run_level_health_signal_still_exists_under_its_own_name() -> None:
 
     assert summary is not None
     assert summary.signalIntegrity in {"Low", "Medium", "High"}
-
-
-def test_the_hypotheses_stay_empty() -> None:
-    """Spec: api-012, api-002.
-
-    155 hypothesis rows exist, so the condition that justified the other three
-    empty sections has expired here too. What holds this one is a decision with
-    its own failure cases -- which arm an analyst sees, whether a row whose
-    grounding check FAILED may be shown at all -- and so its own item. Named
-    rather than left silent, because the lesson of `api-002`'s amendment is that
-    a producer-less field is invisible in a backlog.
-    """
-    # spec: api-012, api-002, db-002
-    assert _scored([_fault()]).hypotheses == []
 
 
 def test_the_two_new_unions_match_their_literals_on_both_sides() -> None:

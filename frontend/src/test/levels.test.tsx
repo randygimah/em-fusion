@@ -146,19 +146,29 @@ describe("every level on the screen goes through it", () => {
     expect(errors).toHaveBeenCalled();
   });
 
-  it.each(["confidence", "severity"] as const)("refuses a bad hypothesis %s", (field) => {
+  // api-019 removed the card's severity, which nothing produced; confidence is
+  // the card's one level now.
+  it("refuses a bad hypothesis confidence", () => {
     render(
       <OperationalPictureScreen
         operationalPicture={picture({
           hypotheses: [
             {
-              id: "h1",
-              title: "Possible localised interference",
-              confidence: "High",
-              severity: "Medium",
-              status: "new",
-              evidence: "RF-04",
-              [field]: 74.2 as unknown as Level,
+              id: 41,
+              bundleId: 7,
+              runId: 480,
+              hypothesisTitle: "Possible localised interference",
+              confidence: 74.2 as unknown as Level,
+              status: "New",
+              generator: "hosted",
+              requestedGenerator: "hosted",
+              fellBack: false,
+              anomalyType: "possible_interference_zone",
+              ruleId: "FUSION-SPATIAL",
+              subject: "RF-04",
+              windowStart: "2022-06-27T12:31:00Z",
+              windowEnd: "2022-06-27T12:36:00Z",
+              latestVerdict: null,
             },
           ],
         })}
