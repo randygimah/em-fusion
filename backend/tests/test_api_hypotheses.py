@@ -300,6 +300,22 @@ def test_a_summary_carries_its_bundles_facts_and_its_provenance(
 
 @pytest.mark.database
 @requires_database
+def test_a_summary_names_the_stored_model_or_null(
+    migrated_database: Engine, monkeypatch: pytest.MonkeyPatch, screen: dict[str, int]
+) -> None:
+    # spec: api-004 (amended, qa.md 163) -- the stored model id verbatim, or
+    # null where the template answered, a fallback included.
+    _, body = _get(migrated_database, monkeypatch, "")
+    reviewed, fell_back = body["hypotheses"]
+    _, detail = _get(migrated_database, monkeypatch, f"/{screen['reviewed']}")
+
+    assert isinstance(reviewed["modelId"], str)
+    assert reviewed["modelId"] == detail["modelId"]
+    assert fell_back["modelId"] is None
+
+
+@pytest.mark.database
+@requires_database
 def test_a_summary_carries_the_latest_verdict_or_null(
     migrated_database: Engine, monkeypatch: pytest.MonkeyPatch, screen: dict[str, int]
 ) -> None:

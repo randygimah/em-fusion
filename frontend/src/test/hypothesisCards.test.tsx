@@ -25,6 +25,7 @@ const summary = (over: Partial<HypothesisSummary> = {}): HypothesisSummary => ({
   generator: "hosted",
   requestedGenerator: "hosted",
   fellBack: false,
+  modelId: "gpt-4.1-2025-04-14",
   anomalyType: "possible_interference_zone",
   ruleId: "FUSION-SPATIAL",
   subject: "RF-06, RF-07",
@@ -34,12 +35,18 @@ const summary = (over: Partial<HypothesisSummary> = {}): HypothesisSummary => ({
   ...over,
 });
 
-const FELL_BACK = summary({ id: 42, hypothesisTitle: "Possible receiver fault on RF-01", generator: "template", fellBack: true });
+const FELL_BACK = summary({
+  id: 42,
+  hypothesisTitle: "Possible receiver fault on RF-01",
+  generator: "template",
+  fellBack: true,
+  modelId: null,
+});
 
 const show = (over: Partial<OperationalPicture>) =>
   render(<OperationalPictureScreen operationalPicture={{ ...operationalPictureMock, unexplainedConclusions: 0, ...over }} />);
 
-const rail = () => within(screen.getByRole("heading", { name: /active hypotheses/i }).closest("section") as HTMLElement);
+const rail = () => within(screen.getByRole("heading", { name: "Hypotheses" }).closest("section") as HTMLElement);
 
 const card = (title: string) => rail().getByRole("link", { name: new RegExp(title, "i") });
 
@@ -58,16 +65,18 @@ describe("the rail's cards (op-002)", () => {
     expect(within(card("Possible receiver fault")).getByText("New")).toBeInTheDocument();
   });
 
-  it("names the AI model when the AI model answered", () => {
+  it("names the AI model, and the model by its stored id, when the AI model answered", () => {
+    // qa.md 163 — the stored id verbatim, never a friendly name.
     show({ hypotheses: [summary()] });
 
-    expect(within(card("Possible interference zone")).getByText(/written by the ai model/i)).toBeInTheDocument();
+    expect(within(card("Possible interference zone")).getByText("Written by the AI model, gpt-4.1-2025-04-14")).toBeInTheDocument();
   });
 
   it("names the template when the template was asked", () => {
-    show({ hypotheses: [summary({ generator: "template", requestedGenerator: "template" })] });
+    show({ hypotheses: [summary({ generator: "template", requestedGenerator: "template", modelId: null })] });
 
-    expect(within(card("Possible interference zone")).getByText(/written by the template/i)).toBeInTheDocument();
+    // No model to name: the template has none.
+    expect(within(card("Possible interference zone")).getByText("Written by the template")).toBeInTheDocument();
   });
 
   it("names the local model when the local model was asked and answered", () => {
@@ -85,12 +94,32 @@ describe("the rail's cards (op-002)", () => {
     expect(fallback.textContent).toMatch(/template/i);
     expect(within(card("Possible receiver fault")).queryByText(/written by the ai model/i)).not.toBeInTheDocument();
     expect(within(card("Possible interference zone")).queryByText(/not used/i)).not.toBeInTheDocument();
+    // The fallback's stored row is the template's: it names no model rather
+    // than inventing one.
+    expect(card("Possible receiver fault").textContent).not.toMatch(/gpt/i);
   });
 
   it("does not hide a rejected explanation", () => {
     show({ hypotheses: [summary({ status: "Rejected" })] });
 
     expect(within(card("Possible interference zone")).getByText("Rejected")).toBeInTheDocument();
+  });
+});
+
+describe("the rail's heading (op-002)", () => {
+  it("is Hypotheses, fixed whatever the hour holds", () => {
+    // qa.md 163 — every status is shown, so not "Active"; and a heading that
+    // changed with the data would rename the region per hour.
+    for (const over of [
+      { hypotheses: [summary()] },
+      { hypotheses: [], unexplainedConclusions: 1 },
+      { hypotheses: [], unexplainedConclusions: null },
+    ]) {
+      const { unmount } = show(over);
+      expect(screen.getByRole("heading", { name: "Hypotheses" })).toBeInTheDocument();
+      expect(screen.queryByText(/active hypotheses/i)).not.toBeInTheDocument();
+      unmount();
+    }
   });
 });
 

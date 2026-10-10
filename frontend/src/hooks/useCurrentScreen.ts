@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { type ScreenRoute, screenFromHash } from "../routes";
+import { type Route, routeFromHash } from "../routes";
 
 /**
  * The screen the address bar is asking for. spec: nav-001.
@@ -12,13 +12,14 @@ import { type ScreenRoute, screenFromHash } from "../routes";
  * deployment concern taken on for nothing at three destinations.
  *
  * A router library would do this and more. The more is nested routes, route
- * parameters, loaders and guards, none of which exist here.
+ * parameters, loaders and guards. The one parameter that exists, an
+ * explanation's id on the Hypotheses screen (nav-004), is parsed in routes.ts.
  */
-export const useCurrentScreen = (): ScreenRoute => {
-  const [current, setCurrent] = useState<ScreenRoute>(() => screenFromHash(window.location.hash));
+export const useCurrentScreen = (): Route => {
+  const [current, setCurrent] = useState<Route>(() => routeFromHash(window.location.hash));
 
   useEffect(() => {
-    const update = () => setCurrent(screenFromHash(window.location.hash));
+    const update = () => setCurrent(routeFromHash(window.location.hash));
 
     // Read once on mount as well as on change: the hash may already name a
     // screen when the app starts, which is what makes a link into the

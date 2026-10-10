@@ -106,7 +106,7 @@ const App = () => {
     <div className="flex min-h-screen bg-[#0b0e15]">
       <EmNavRail
         collapsed={railCollapsed}
-        currentId={current.id}
+        currentId={current.screen.id}
         footer={
           <>
             <EmDataModeBadge collapsed={railCollapsed} />
@@ -117,9 +117,9 @@ const App = () => {
         screens={SCREENS}
       />
       <div className="min-w-0 flex-1">
-        {current.id === "operational-picture" && <OperationalPictureRoute />}
-        {current.id === "hypotheses" && <HypothesesScreen />}
-        {current.id === "scenario-control" && <ScenarioControlRoute />}
+        {current.screen.id === "operational-picture" && <OperationalPictureRoute />}
+        {current.screen.id === "hypotheses" && <HypothesesScreen hypothesisId={current.hypothesisId} />}
+        {current.screen.id === "scenario-control" && <ScenarioControlRoute />}
       </div>
     </div>
   );

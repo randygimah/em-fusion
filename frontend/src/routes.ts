@@ -53,5 +53,32 @@ export const SCREENS: ScreenRoute[] = [
 // application rather than as a bad link.
 export const DEFAULT_SCREEN: ScreenRoute = SCREENS[0];
 
-export const screenFromHash = (hash: string): ScreenRoute =>
-  SCREENS.find((screen) => screen.hash === hash) ?? DEFAULT_SCREEN;
+// Where the address bar points: a screen, and on the Hypotheses screen
+// optionally one explanation (nav-004). The id is a parameter of an entry, not
+// a fourth one.
+export interface Route {
+  screen: ScreenRoute;
+  hypothesisId: number | null;
+}
+
+const HYPOTHESES_HASH = "#/hypotheses";
+// A positive integer with no leading zero: anything else is no explanation,
+// never a guessed or truncated one.
+const HYPOTHESIS_ADDRESS = /^#\/hypotheses\/([1-9][0-9]*)$/;
+
+// One explanation's address. Built here, beside the parser, so a card's link
+// and the parser cannot disagree on the shape (nav-004).
+export const hypothesisHash = (id: number): string => `${HYPOTHESES_HASH}/${id}`;
+
+export const routeFromHash = (hash: string): Route => {
+  const exact = SCREENS.find((screen) => screen.hash === hash);
+  if (exact) return { screen: exact, hypothesisId: null };
+  if (hash.startsWith(`${HYPOTHESES_HASH}/`)) {
+    const id = HYPOTHESIS_ADDRESS.exec(hash)?.[1];
+    const hypotheses = SCREENS.find((screen) => screen.hash === HYPOTHESES_HASH) as ScreenRoute;
+    return { screen: hypotheses, hypothesisId: id === undefined ? null : Number(id) };
+  }
+  return { screen: DEFAULT_SCREEN, hypothesisId: null };
+};
+
+export const screenFromHash = (hash: string): ScreenRoute => routeFromHash(hash).screen;

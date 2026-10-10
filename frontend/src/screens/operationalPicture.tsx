@@ -8,10 +8,13 @@ import { usePlayback } from "../hooks/usePlayback";
 import { type LoadReceiverStates, useReceiverStates } from "../hooks/useReceiverStates";
 import { type LoadTracks, useTrackBuffer } from "../hooks/useTrackBuffer";
 import { findingLabel } from "../lib/detectionVocabulary";
+import { provenance, unexplainedSentence } from "../lib/hypothesisVocabulary";
 import { NO_PLAYBACK_WINDOW, windowOf } from "../lib/playback";
 import { receiversAt } from "../lib/receiverPlayback";
 import { playbackTracks, trailsAt, zonesAt } from "../lib/trackPlayback";
+import { cn } from "../lib/utils";
 import { showingSentence, VIEW_OPTIONS } from "../lib/viewVocabulary";
+import { hypothesisHash } from "../routes";
 import type { EvidenceView } from "../types/evidence";
 import type {
   OperationalPicture as OperationalPictureData,
@@ -343,22 +346,33 @@ const OperationalPictureScreen = ({
           <aside className="space-y-4 lg:overflow-y-auto">
             <section className="border border-[#424754] bg-[#1d2027] p-4">
               <h2 className="text-2xl font-semibold text-[#adc6ff]">Active Hypotheses</h2>
-              {operationalPicture.hypotheses.length === 0 ? (
-                <p className="mt-4 text-sm text-[#8c909f]">No active hypotheses</p>
-              ) : (
-                operationalPicture.hypotheses.map((hypothesis) => (
-                  <article key={hypothesis.id}>
-                    <h3 className="mt-4 text-xl font-semibold">{hypothesis.hypothesisTitle}</h3>
-                    {/* Through the one primitive (ui-001), so a confidence
-                        carrying 74.2 never reaches the screen (FR-715, AC-11).
-                        No severity: nothing produces one (api-019). The link,
-                        provenance and status are op-002's. */}
-                    <dl className="mt-4 text-sm">
+              {/* One card per explanation for the hour, whatever its status, each
+                  a link to its own address (op-002, nav-004). Every word comes
+                  from the vocabulary module; a fallback is marked in words and
+                  styled as a warning, never as a neutral label (ai-010). */}
+              {operationalPicture.hypotheses.map((hypothesis) => {
+                const writer = provenance(hypothesis);
+                return (
+                  <a
+                    key={hypothesis.id}
+                    href={hypothesisHash(hypothesis.id)}
+                    className="mt-4 block border border-transparent p-2 hover:border-[#424754] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#adc6ff]"
+                  >
+                    <h3 className="text-xl font-semibold">{hypothesis.hypothesisTitle}</h3>
+                    <dl className="mt-3 text-sm">
+                      {/* Through the one primitive (ui-001), so a confidence
+                          carrying 74.2 never reaches the screen (FR-715). */}
                       <EmLevel label="Confidence" value={hypothesis.confidence} />
                     </dl>
-                  </article>
-                ))
-              )}
+                    <p className="mt-2 font-mono text-xs uppercase text-[#c2c6d6]">{hypothesis.status}</p>
+                    <p className={cn("mt-1 text-xs", writer.degraded ? "text-[#ffb786]" : "text-[#8c909f]")}>{writer.text}</p>
+                  </a>
+                );
+              })}
+              {(() => {
+                const sentence = unexplainedSentence(operationalPicture.unexplainedConclusions, operationalPicture.hypotheses.length);
+                return sentence === null ? null : <p className="mt-4 text-sm text-[#8c909f]">{sentence}</p>;
+              })()}
             </section>
 
             <section aria-label="Detection summary" className="border border-[#424754] bg-[#1d2027] p-4">

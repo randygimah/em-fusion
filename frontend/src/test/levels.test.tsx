@@ -163,6 +163,7 @@ describe("every level on the screen goes through it", () => {
               generator: "hosted",
               requestedGenerator: "hosted",
               fellBack: false,
+              modelId: "gpt-4.1-2025-04-14",
               anomalyType: "possible_interference_zone",
               ruleId: "FUSION-SPATIAL",
               subject: "RF-04",

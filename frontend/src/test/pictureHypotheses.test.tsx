@@ -7,7 +7,7 @@ import type { OperationalPicture } from "../types/operationalPicture";
 
 // spec: api-019 — the picture's hypotheses are the list endpoint's summaries.
 // Only enough of the rail to prove the new shape reaches the screen: each
-// card's title and confidence. The link, provenance, status and the sentence
+// card's title and confidence. Cards are links since op-002. The link, provenance, status and the sentence
 // for unexplained conclusions are op-002's.
 
 const summary = (over: Partial<HypothesisSummary> = {}): HypothesisSummary => ({
@@ -20,6 +20,7 @@ const summary = (over: Partial<HypothesisSummary> = {}): HypothesisSummary => ({
   generator: "hosted",
   requestedGenerator: "hosted",
   fellBack: false,
+  modelId: "gpt-4.1-2025-04-14",
   anomalyType: "possible_interference_zone",
   ruleId: "FUSION-SPATIAL",
   subject: "RF-03, RF-04",
@@ -35,7 +36,7 @@ const picture = (over: Partial<OperationalPicture> = {}): OperationalPicture => 
 });
 
 const rail = () => {
-  const heading = screen.getByRole("heading", { name: /active hypotheses/i });
+  const heading = screen.getByRole("heading", { name: "Hypotheses" });
   return within(heading.closest("section") as HTMLElement);
 };
 
@@ -49,7 +50,7 @@ describe("the rail's explanations (api-019)", () => {
       />,
     );
 
-    const card = (title: string) => within(rail().getByText(title).closest("article") as HTMLElement);
+    const card = (title: string) => within(rail().getByText(title).closest("a") as HTMLElement);
     expect(card("Possible localised interference near RF-03 and RF-04").getByText("High")).toBeInTheDocument();
     expect(card("Possible sensor fault on RF-07").getByText("Low")).toBeInTheDocument();
   });

@@ -95,7 +95,7 @@ describe("polling the operational picture", () => {
 
     expect(await screen.findByText(/degraded/i)).toBeInTheDocument();
     // The named failure case: a 500 must not clear the picture.
-    expect(screen.getByRole("heading", { name: /active hypotheses/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Hypotheses" })).toBeInTheDocument();
   });
 
   it("keeps rendering and reports degraded when the network fails", async () => {
@@ -103,7 +103,7 @@ describe("polling the operational picture", () => {
     render(<App />);
 
     expect(await screen.findByText(/degraded/i)).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /active hypotheses/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Hypotheses" })).toBeInTheDocument();
   });
 
   it("keeps the last good picture when a later poll fails", async () => {
