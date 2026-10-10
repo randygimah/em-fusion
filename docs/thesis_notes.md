@@ -8549,6 +8549,31 @@ are made knowing which arm wrote each explanation and are reported as unblinded;
 are the blind set, provided the key is withheld from what they are handed. Its location beside the
 pack is the proximate cause, and the second rater's copy should be packaged without it.
 
+### The first rater's scoring took twice the stated time, and the corpus carries less independent information than its size
+
+**Measurement, taken 2026-10-10.** The author, as first rater, finished both passes over the full
+corpus (20 packs, 40 items, 280 values) in about **three hours**, against the rubric's estimate of
+about 90 minutes. That figure was an estimate written before any pack existed. It is also a lower
+bound for the second rater: the author already knew the vocabulary, and a newcomer also reads the
+glossary. The time quoted to the participant should therefore be measured, not estimated.
+
+**Observation from the same pass.** Within each stratum the explanations read as near-duplicates
+from pack to pack. Packs 1 to 10 (interference) resemble each other, and so do packs 11 to 20
+(sensor fault). The only systematic difference the rater met in pass two is the answer sheet's
+sentence for the five mixed-evidence packs (16 to 20). Two consequences follow. First, the twenty
+packs carry fewer than twenty packs' worth of independent judgements, so the corpus's effective size
+is smaller than its count. Second, a rater reading ten near-identical items in a row is exposed to
+fatigue and to scoring by pattern rather than by reading. The presentation order grouped the strata
+because the pack is sorted by run, so it made both worse. *(The near-duplication is the rater's
+reading, not yet a measurement. Record a text-similarity figure here if one is taken.)*
+
+**Proposed response, not yet decided.** The proposal is to give the second rater ten packs instead of
+twenty, drawn by a seeded rule within the pre-registered strata and presented in a seeded mixed
+order. The rubric's existing partial-coverage rule already covers this case: agreement is computed
+over the double-scored subset and the rest is reported separately. The first rater's scores on
+dropped packs are kept as single-rated, not deleted. See `docs/qa.md` §161. *(Record the decision,
+the draw rule and seed, and the rubric change-log entry here once made.)*
+
 ### Detection latency: defining a delay in a system that has no moment of noticing
 
 The scope document and the backlog both carried the same definition from the outset — detection

@@ -9466,6 +9466,59 @@ by quoting each scenario type's definition. What still matters is the other poin
 conclusion is not about the staged incident at all (another receiver, another time) must be told
 apart from one that is, and given "nothing was staged here" rather than its run's sentence.
 
+## 161. I took about 3 hours, not the stated 90 minutes. The responses for 1–10 are basically duplicates of each other, and so are 11–20. Only the answer sheet for 15–20 differs. Should we cut the second scorer down to 10 packs, mix the order, and cut the same packs from my responses?
+
+**Yes to fewer packs and a mixed order, but your dropped scores should be set aside, not deleted.**
+The rubric already has a rule for a second rater who covers only part of the corpus. Agreement is
+computed over the packs both raters scored, and the rest is reported separately as single-rated.
+
+**What each part of the proposal does:**
+
+| Proposal | Verdict | Why |
+|---|---|---|
+| Cut 20 packs to 10 | Agree | Your 3 hours is a measurement from someone who already knows the vocabulary. A newcomer reading the glossary would take longer and tire. Near-duplicate packs also mean the 10 dropped packs carry less independent information than their count suggests. |
+| Mix the order | Agree | The pack is sorted by run, so all ten interference packs come first and all ten fault packs last. A rater then scores a block of look-alikes on autopilot, and the fault packs are always read tired. A seeded shuffle spreads both effects. It can differ from the order you saw, because agreement is matched on explanation, not on page position. |
+| Cut the same packs from your responses | Set aside, not delete | The pre-registered partial-coverage rule says: compute κ (agreement) over the double-scored subset and report the remainder separately. Your scores on dropped packs stay as single-rated evidence and a robustness check. |
+
+**A correction on the numbering.** Packs 11–15 are the RF-sensor-fault runs and 16–20 the
+ambiguous-mixed-evidence runs. Pack 15 has the same answer as 11–14. It is 16–20 whose correct
+answer differs ("cannot be distinguished"), while their evidence looks just like 11–15. That is the
+detection-layer gap from §160.
+
+**Which ten must be decided by a rule, before anyone looks at scores.** You have seen your own
+scores, so choosing the packs by hand is not neutral. The safe version is a seeded draw within the
+strata the rubric pre-registered:
+
+| Stratum | Now | Proposed |
+|---|---|---|
+| Interference (GNSS degradation) | 10 | 5 |
+| Fault: RF sensor fault | 5 | 3 |
+| Fault: ambiguous mixed evidence | 5 | 2 |
+| **Packs / items / values** | **20 / 40 / 280** | **10 / 20 / 140** |
+
+Five and five keeps the bundle-kind balance. Within the fault five, the clean RF-sensor-fault case
+gets the extra pack, because the mixed-evidence packs' cause correctness is already reported
+separately and caveated.
+
+**What else has to change with it:**
+
+- **The rubric's change log** gets an entry with the reason. This is a change to the method, not a
+  clarification.
+- **The quoted scoring load (280 values)** has to change wherever it is told to the participant. A
+  smaller load is probably a minor amendment, but whoever approved the ethics form should be told
+  rather than assumed.
+- **The time estimate** should be quoted from your measurement, scaled to the new size, not from the
+  original 90 minutes.
+- **The second rater's files** (`hypotheses.md`, `score_sheet2.xlsx`, `answer_sheet.md`) are
+  re-rendered over the ten packs in the new order. None of your files change.
+
+**Limitations worth recording.**
+
+- 10 packs is a small corpus. κ over 20 items has a wide confidence interval and should be reported
+  with it. The paired comparison still works on 10 pairs, but the finding is directional.
+- The dropped packs could still serve as the calibration round the rubric asks for before scoring,
+  because those items sit outside the scored set.
+
 ---
 
 | **Composing copy** | Turning a finding type the backend sends verbatim into a sentence an analyst reads. Done on the screen by design, so prose never arrives from a detector — and in one module, because two panels carry the same type. See §148. |
@@ -9486,3 +9539,4 @@ apart from one that is, and given "nothing was staged here" rather than its run'
 | **A frozen gap versus a hole** | Two ways a track gap is stored: rows that stop (a hole in the positions) and rows that keep arriving with a stale, repeated position (frozen). Drawing only holes misses the frozen kind. See §159. |
 
 | **An answer sheet versus an arm key** | The answer sheet says what was actually staged in a pack's run, for pass 2 of the blind scoring; the arm key says which generator wrote which explanation. The first is given to raters between passes; the second only after all scoring. See §160. |
+| **Partial coverage versus a smaller corpus** | Partial coverage keeps every item one rater scored and computes agreement over the double-scored subset only. A smaller corpus deletes items. The rubric pre-registered the first. See §161. |
