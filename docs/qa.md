@@ -9552,6 +9552,38 @@ It is invented data reaching the screen for a moment.
 **Worth recording as a limitation:** a first-paint mock that carries a populated explanation briefly
 shows an analyst an explanation that does not exist.
 
+## 163. Instead of saying "written by the AI model", should we specify what AI model for visibility? For runs that have no hypotheses, instead of saying "Active Hypotheses", should it say "No Active Hypotheses"?
+
+**Yes to the model; no to the heading.**
+
+**The model.** Every reviewable AI explanation in the store records the same model id,
+`gpt-4.1-2025-04-14`. "Written by the AI model" hides the one fact an analyst would need to judge or
+report it. The recommendation is the stored id verbatim ("Written by the AI model, gpt-4.1-2025-04-14"),
+not a friendly name: a table of friendly names is a second vocabulary that drifts from the store, and
+the id is what makes the explanation reproducible (db-002).
+
+| Card | What it can name |
+|---|---|
+| AI model answered | The model id it stored |
+| Template asked | No model: the template has none |
+| AI fell back to the template | No model: the stored row is the template's, with no model id |
+
+Two consequences. The card's summary does not carry the model id today (only the detail does), so
+naming it is a contract change to the endpoints item and the cards item. And naming the model reveals
+nothing the card did not already: it names the generator, which is why no rater sees the screen before
+their scoring is done.
+
+**The heading.** Keep it fixed, and let the sentence under it say why the rail is empty.
+
+| Why not | What goes wrong |
+|---|---|
+| A heading names a region | Screen-reader users move between sections by their headings; one renamed per hour reads as a different section |
+| It undoes the distinction just built | The sentence separates three states: conclusions with no explanation (261 hours), no conclusions (199), not examined. "No Active Hypotheses" would say the wrong thing on 261 of them, run 480 included: it has a conclusion, unexplained |
+
+**A related wrinkle.** Cards are shown whatever their status, rejected included, so "Active" is
+slightly wrong already. A fixed "Hypotheses" heading would fix that without making the heading
+change with the data.
+
 ---
 
 | **Composing copy** | Turning a finding type the backend sends verbatim into a sentence an analyst reads. Done on the screen by design, so prose never arrives from a detector — and in one module, because two panels carry the same type. See §148. |
@@ -9574,3 +9606,4 @@ shows an analyst an explanation that does not exist.
 | **An answer sheet versus an arm key** | The answer sheet says what was actually staged in a pack's run, for pass 2 of the blind scoring; the arm key says which generator wrote which explanation. The first is given to raters between passes; the second only after all scoring. See §160. |
 | **Partial coverage versus a smaller corpus** | Partial coverage keeps every item one rater scored and computes agreement over the double-scored subset only. A smaller corpus deletes items. The rubric pre-registered the first. See §161. |
 | **An unexplained conclusion versus no conclusion** | A conclusion the detection rules reached with no explanation generated for it, against an hour where the rules reached none. Both leave the rail's list empty; only the count tells them apart. See §162. |
+| **A section's name versus its state** | A heading names a region of the screen and stays fixed; the state of what is in it (empty, unexplained, unexamined) belongs in the content under it. See §163. |
