@@ -3416,6 +3416,19 @@ in front of a rater before they scored it. **The first rater, the developer, fin
 has not yet scored. They are never shown the screen before their scoring is done, because it would
 put each explanation's arm in front of them.
 
+**The store could not say which explanation was scored, and row order was not a substitute.**
+Measured on 10 October 2026: 155 stored hypotheses over the 20 bundles, five or six asked of the
+hosted arm per bundle. The scored generation, the first of each campaign's three, was recorded only in
+the committed campaign record. The earliest stored row was that generation on **none** of the 20
+bundles, because rows from the trial requests made before the campaign were stored first. Choosing by
+row order would have put the wrong text in front of every analyst while looking correct. Three remedies
+were weighed. Recording each row's position in its campaign was chosen: the campaign writes it from
+now on, and a one-off copy fills it from the committed record for the rows already stored. A flag on
+the reviewed row was rejected because it stores a choice rather than the fact the choice follows
+from. Showing the latest row was rejected because it is usually not the scored text, so a verdict
+could not be read against a blind score. Rows written outside a campaign keep no position, and none is
+guessed for them.
+
 ### Containerisation: a Makefile over Compose, and what the first working `up` exposed
 
 The three services (backend, frontend, and a profiled one-shot pipeline) are driven through a root
