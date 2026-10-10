@@ -29,7 +29,7 @@ const lib = vi.hoisted(() => ({
 }));
 
 interface FakeMapInstance {
-  options: { container: HTMLElement; style: unknown; maxBounds?: unknown };
+  options: { container: HTMLElement; style: unknown; maxBounds?: unknown; bounds?: unknown };
   setStyle: ReturnType<typeof vi.fn>;
   addSource: ReturnType<typeof vi.fn>;
   addLayer: ReturnType<typeof vi.fn>;
@@ -368,6 +368,35 @@ describe("the map", () => {
     renderMap();
     await mapReady();
 
+    expect(lib.instances[0].options.maxBounds).toEqual([
+      [-11, 35],
+      [30, 61],
+    ]);
+  });
+
+  it("opens on the bounds it is handed, inside the same overview", async () => {
+    // spec: hyp-001 (6), qa.md 164 — and the corpus box when handed none.
+    const first = renderMap();
+    await mapReady();
+    expect(lib.instances[0].options.bounds).toEqual([
+      [3, 49],
+      [11, 54],
+    ]);
+    first.unmount();
+    lib.instances.length = 0;
+
+    renderMap({
+      bounds: [
+        [4.89, 50.99],
+        [6.62, 52.07],
+      ],
+    });
+    await mapReady();
+
+    expect(lib.instances[0].options.bounds).toEqual([
+      [4.89, 50.99],
+      [6.62, 52.07],
+    ]);
     expect(lib.instances[0].options.maxBounds).toEqual([
       [-11, 35],
       [30, 61],

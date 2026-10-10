@@ -107,15 +107,15 @@ describe("the navigation shell", () => {
     expect(rail().getByRole("link", { name: /operational picture/i })).toHaveAttribute("aria-current", "page");
   });
 
-  it("says the Hypotheses screen is not built rather than rendering nothing", async () => {
-    // spec: nav-001 (second decision), FR-701 — the rail has three entries
-    // because the specification fixes three, and the third has no screen yet.
-    // An entry leading to a blank page names nothing; this one names the gap.
+  it("leads the Hypotheses entry to its screen rather than to nothing", async () => {
+    // spec: nav-001 (second decision), FR-701, hyp-001 — this said "not built
+    // yet" while the entry had no screen; amended 2026-10-11 when hyp-001
+    // replaced the placeholder. The principle stands: never a blank workspace.
     render(<App />);
 
     goTo(/hypotheses/i);
 
-    expect(await screen.findByText(/not built yet/i)).toBeInTheDocument();
+    expect(await screen.findByRole("navigation", { name: "Explanations" })).toBeInTheDocument();
   });
 
   // Removed 2026-09-13, superseded by api-010 rather than deleted for being

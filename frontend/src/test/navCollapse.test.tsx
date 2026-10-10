@@ -175,7 +175,8 @@ describe("collapsing the navigation rail", () => {
 
     fireEvent.click(rail().getByRole("link", { name: /hypotheses/i }));
 
-    expect(await screen.findByText(/not built yet/i)).toBeInTheDocument();
+    // hyp-001 replaced the placeholder this used to find (2026-10-11).
+    expect(await screen.findByRole("navigation", { name: "Explanations" })).toBeInTheDocument();
     expect(toggle()).toHaveAttribute("aria-expanded", "false");
   });
 });

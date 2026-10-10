@@ -24,12 +24,14 @@ vi.mock("../components/map/MapView", () => ({
     zones = [],
     cursor = null,
     trails = [],
+    bounds,
   }: {
     sensors: { id: string; health?: string; provisional?: boolean }[];
     tracks: { id: string; lat: number; lon: number; stale?: boolean }[];
     zones?: { id: string }[];
     cursor?: string | null;
     trails?: { id: string; segments: { broken: boolean }[] }[];
+    bounds?: unknown;
   }) =>
     createElement(
       "div",
@@ -49,6 +51,8 @@ vi.mock("../components/map/MapView", () => ({
         null,
         `positions: ${tracks.map((track) => `${track.id}@${track.lat.toFixed(4)},${track.lon.toFixed(4)}${track.stale ? " not reporting" : ""}`).join("; ")}`,
       ),
+      // hyp-001 (6): where the map opens, when a screen zooms it.
+      ...(bounds === undefined ? [] : [createElement("p", null, `bounds: ${JSON.stringify(bounds)}`)]),
       createElement(
         "p",
         null,
