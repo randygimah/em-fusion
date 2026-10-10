@@ -7,15 +7,13 @@ test("shows the GNSS degradation operational picture for an analyst", () => {
   render(<App />);
 
   expect(screen.getByRole("heading", { name: /active hypotheses/i })).toBeInTheDocument();
-  expect(screen.getByText(/gnss degradation/i)).toBeInTheDocument();
-  // spec: api-002 — the mock said "Medium Confidence", which is not a value
-  // the contract admits. Confidence is one of Low, Medium, High (FR-715), and
-  // the assertion is scoped to its own term: the same three words are now the
-  // vocabulary of every level on the screen, so a bare text match is ambiguous.
-  expect(screen.getByText("Confidence").parentElement?.querySelector("dd")).toHaveTextContent(
-    "Medium",
-  );
-  expect(screen.getByText(/3 synthetic sources/i)).toBeInTheDocument();
+  // spec: api-019 — first paint is the mock, and the mock carries no
+  // explanation: a made-up card shown before the first poll was an explanation
+  // that does not exist reaching an analyst (qa.md 162). Its confidence and
+  // free-text evidence went with it.
+  expect(screen.getByText(/no active hypotheses/i)).toBeInTheDocument();
+  expect(screen.queryByText(/gnss degradation/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(/3 synthetic sources/i)).not.toBeInTheDocument();
   // spec: api-002 — no longer a score, because it is no longer a number.
   expect(screen.getByText(/anomaly level/i)).toBeInTheDocument();
 });

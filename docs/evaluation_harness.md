@@ -254,6 +254,42 @@ was removed; only the re-reading was. In fact the restructure *exposed* two fact
 the RF deviations split evenly 4/4 across the two sensors, and one aircraft dropped out **twice**
 inside a single window.
 
+## Where the scored explanations are on screen
+
+The campaign generated explanations for the twenty sampled bundles only, so only these twenty runs
+show an explanation on the Operational Picture's rail and in the Hypotheses list. Every other examined
+hour holds conclusions with no explanation (counted as `unexplainedConclusions`), or none at all. The
+explanation shown is the hosted arm's first generation, the text the blind scoring used (`db-012`,
+`api-004`). The pack number is the one in `hypotheses.md` and `answer_sheet.md`.
+
+| Run | Pack | Conclusion | Scenario |
+|---|---|---|---|
+| 102 | 00248 | possible_interference_zone | gnss-degradation |
+| 104 | 00250 | possible_interference_zone | gnss-degradation |
+| 106 | 00252 | possible_interference_zone | gnss-degradation |
+| 107 | 00253 | possible_interference_zone | gnss-degradation |
+| 108 | 00254 | possible_interference_zone | gnss-degradation |
+| 109 | 00255 | possible_interference_zone | gnss-degradation |
+| 110 | 00256 | possible_interference_zone | gnss-degradation |
+| 113 | 00259 | possible_interference_zone | gnss-degradation |
+| 116 | 00262 | possible_interference_zone | gnss-degradation |
+| 118 | 00264 | possible_interference_zone | gnss-degradation |
+| 123 | 00269 | possible_sensor_fault | rf-sensor-fault |
+| 127 | 00273 | possible_sensor_fault | rf-sensor-fault |
+| 133 | 00279 | possible_sensor_fault | rf-sensor-fault |
+| 134 | 00280 | possible_sensor_fault | rf-sensor-fault |
+| 137 | 00284 | possible_sensor_fault | rf-sensor-fault |
+| 161 | 00288 | possible_sensor_fault | ambiguous-mixed-evidence |
+| 162 | 00289 | possible_sensor_fault | ambiguous-mixed-evidence |
+| 168 | 00295 | possible_sensor_fault | ambiguous-mixed-evidence |
+| 172 | 00299 | possible_sensor_fault | ambiguous-mixed-evidence |
+| 175 | 00302 | possible_sensor_fault | ambiguous-mixed-evidence |
+
+Read from the store on 10 October 2026. It is fixed by the committed sample and campaign record, and
+changes only if a new campaign stores explanations at position 1 for other bundles. Pick a run with
+the hour selector, or `?run=<id>` on the picture endpoint. **Not for a rater**: the screen names each
+explanation's generator, so it is never shown to one before their scoring is done.
+
 ## Two things that went wrong in production
 
 Both cost real money or real data, and neither was visible from a green test suite.

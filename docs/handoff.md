@@ -42,8 +42,9 @@ pass 22 of 22 on its second run.
 
 ## Current state
 
-Backlog **107 of 126** (97 of 121 at the start; `api-018`, `map-007`, `eval-010`, `eval-011` and
-`db-012` added). **`db-012` and `api-004` pass**, reviewed by the user: full container suite **2,296 passed, coverage 99.88%** (6,040 statements, 7 missed; the
+Backlog **108 of 127** (97 of 121 at the start; `api-018`, `map-007`, `eval-010`, `eval-011` and
+`db-012`, `api-019` added). **`db-012` and `api-004` pass**; **`api-019` passes**, checked by the user on run 102; the first-paint mock now carries no explanation (full suite 2,305 passed, 99.90%; frontend 498; measured over 460 hours: 20 serve one
+explanation, 261 hold unexplained conclusions, 199 none; the added reads cost 1.7 ms median). Before it, full container suite **2,296 passed, coverage 99.88%** (6,040 statements, 7 missed; the
 uncovered lines are the two-reviewable-rows refusal and two empty-input early returns). The main
 database **is migrated to `0010`** and the ordinal copy has run (80 written; a second run 80
 unchanged). The list endpoint serves exactly the record's 20 scored hosted rows, none fell back, all 70
@@ -324,7 +325,10 @@ None once this handoff is committed.
 | `e17a5b2` | `docs: progress note covers the first marker's pass and the second marker's ten packages` (version 11) |
 | `8be5857` | `spec: add db-012, amend api-004` |
 | `404a5dc` | `test: add tests for db-012, api-004` |
-| *this commit* | `feat(db-012, api-004): campaign position and the hypothesis read endpoints - tests pass`; main DB migrated to `0010` and the ordinal copy run |
+| `2e57ad9` | `feat(db-012, api-004): campaign position and the hypothesis read endpoints - tests pass`; main DB migrated to `0010` and the ordinal copy run |
+| `0818adf` | `spec: add api-019` |
+| `0a106cd` | `test: add tests for api-019` |
+| *this commit* | `feat(api-019): the picture serves the hour's explanations - tests pass`; empties the mock's explanations; the twenty explained runs listed in `evaluation_harness.md` |
 
 **New:**
 - `frontend/src/components/em/EmDrillDown.tsx`
@@ -369,6 +373,16 @@ None once this handoff is committed.
 ## Failed attempts
 
 **My own errors:**
+- **I told the user run 480 has an explanation without checking.** It has none
+  (`unexplainedConclusions: 1`); the twenty reviewable rows sit in runs 102–118 (interference) and
+  123–175 (sensor fault). The user saw the first-paint mock's invented card flash, then the real empty
+  list (`qa.md` §162).
+- **`api-019`: tests changed after the code.** The endpoint test's shared fixture seeds skeletal RF
+  readings the picture's position reader rejects (empty provenance, then a missing payload field), so
+  the test now deletes them once the bundles are stored. The legacy `App.test.tsx` asserted the
+  removed "3 synthetic sources" evidence text and now asserts its absence. Two frontend tests passed
+  before implementation (they asserted preserved behaviour) and were folded or dropped before the
+  test commit.
 - **`api-004`: a test fixture assumed the wrong bundle order**, written before the code: the shared
   `neighbours` fixture's "first" bundle is the fault bundle (the reader sorts by window then subject),
   not the interference one. Four tests failed on that after implementation; the fixture now picks

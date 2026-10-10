@@ -21,7 +21,7 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import Engine
+from sqlalchemy import Engine, text
 from sqlalchemy.orm import sessionmaker
 
 from app.ai.service import GeneratorKind
@@ -254,6 +254,12 @@ def test_the_endpoint_serves_the_pinned_runs_explanations_and_count(
         campaign_ordinal=1,
     )
     record_detection_pass(factory, RUN_ID, policy={"RF-NOISE.threshold_db": "6.0"})
+    # The shared fixture seeds skeletal readings, enough for the bundle writer
+    # to resolve citations against and not for the picture's position reader.
+    # The bundles are stored by now and this test is about them, not readings.
+    with migrated_database.connect() as connection:
+        connection.execute(text("DELETE FROM observations"))
+        connection.commit()
 
     monkeypatch.setenv(
         "DATABASE_URL", migrated_database.url.render_as_string(hide_password=False)

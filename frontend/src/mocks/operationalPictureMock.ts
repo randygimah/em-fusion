@@ -6,16 +6,11 @@ const operationalPicture: OperationalPicture = {
     name: "GNSS Sector A",
     dataMode: "Synthetic RF + Open Data Replay",
   },
-  hypotheses: [
-    {
-      id: "hypothesis-001",
-      title: "Possible localised GNSS degradation / interference",
-      confidence: "Medium",
-      severity: "High",
-      status: "under_review",
-      evidence: "3 Synthetic Sources",
-    },
-  ],
+  // Empty on purpose (api-019): this is the first-paint fallback, and a card
+  // here showed an analyst an explanation that does not exist until the first
+  // poll replaced it (qa.md 162).
+  hypotheses: [],
+  unexplainedConclusions: 0,
   detectionSummary: {
     anomalyLevel: "High",
     signalIntegrity: "Medium",

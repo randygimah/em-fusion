@@ -9519,6 +9519,39 @@ separately and caveated.
 - The dropped packs could still serve as the calibration round the rubric asks for before scoring,
   because those items sit outside the scored set.
 
+## 162. I'm on run 480 but can't see anything. It flashes for a bit and returns to "no active hypothesis", and `hypotheses` is empty.
+
+**The screen is right and my pointer was wrong: run 480 has no explanation.** I said run 480 was one
+of the twenty hours with an explanation without checking. The campaign generated explanations for the
+conclusions of runs 102–175 only:
+
+| Kind | Runs |
+|---|---|
+| Interference | 102, 104, 106, 107, 108, 109, 110, 113, 116, 118 |
+| Sensor fault | 123, 127, 133, 134, 137, 161, 162, 168, 172, 175 |
+
+Run 480's payload says exactly that: `hypotheses: []` and `unexplainedConclusions: 1`, one conclusion
+(the receiver fault on RF-01) that nobody generated an explanation for. Run 102 serves one explanation
+and `unexplainedConclusions: 0`.
+
+**The rail still says "No active hypotheses" on run 480, and that is the gap the count exists for.**
+The payload now carries the count; the rail does not yet say it. That sentence ("1 conclusion this
+hour has no explanation yet") is the next item, the cards' own (`op-002`). Until it lands, the screen
+shows the misleading empty state this measurement was about: 261 of the 460 hours look like this.
+
+**The flash is the first-paint mock, not the server.** Before the first poll returns, the screen shows
+the mock picture, and the mock carries one made-up explanation ("Possible localised GNSS degradation /
+interference"). The real payload then replaces it. The mock had a made-up card before this change too.
+It is invented data reaching the screen for a moment.
+
+| What you saw | What it was |
+|---|---|
+| A card for a moment | The mock's invented explanation, before the first poll |
+| Then "No active hypotheses" | Run 480's real answer: no explanation, one unexplained conclusion |
+
+**Worth recording as a limitation:** a first-paint mock that carries a populated explanation briefly
+shows an analyst an explanation that does not exist.
+
 ---
 
 | **Composing copy** | Turning a finding type the backend sends verbatim into a sentence an analyst reads. Done on the screen by design, so prose never arrives from a detector — and in one module, because two panels carry the same type. See §148. |
@@ -9540,3 +9573,4 @@ separately and caveated.
 
 | **An answer sheet versus an arm key** | The answer sheet says what was actually staged in a pack's run, for pass 2 of the blind scoring; the arm key says which generator wrote which explanation. The first is given to raters between passes; the second only after all scoring. See §160. |
 | **Partial coverage versus a smaller corpus** | Partial coverage keeps every item one rater scored and computes agreement over the double-scored subset only. A smaller corpus deletes items. The rubric pre-registered the first. See §161. |
+| **An unexplained conclusion versus no conclusion** | A conclusion the detection rules reached with no explanation generated for it, against an hour where the rules reached none. Both leave the rail's list empty; only the count tells them apart. See §162. |

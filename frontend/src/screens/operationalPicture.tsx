@@ -348,18 +348,13 @@ const OperationalPictureScreen = ({
               ) : (
                 operationalPicture.hypotheses.map((hypothesis) => (
                   <article key={hypothesis.id}>
-                    <h3 className="mt-4 text-xl font-semibold">{hypothesis.title}</h3>
-                    {/* Both levels through the one primitive (ui-001), which
-                        names these two among its four call sites. Rendered inline
-                        here until this item, so a hypothesis row carrying 74.2
-                        would have put a decimal on screen (FR-715, AC-11). */}
-                    <dl className="mt-4 grid grid-cols-2 gap-4 text-sm">
+                    <h3 className="mt-4 text-xl font-semibold">{hypothesis.hypothesisTitle}</h3>
+                    {/* Through the one primitive (ui-001), so a confidence
+                        carrying 74.2 never reaches the screen (FR-715, AC-11).
+                        No severity: nothing produces one (api-019). The link,
+                        provenance and status are op-002's. */}
+                    <dl className="mt-4 text-sm">
                       <EmLevel label="Confidence" value={hypothesis.confidence} />
-                      <EmLevel label="Severity" value={hypothesis.severity} />
-                      <div className="col-span-2">
-                        <dt className="font-mono uppercase text-[#8c909f]">Evidence</dt>
-                        <dd>{hypothesis.evidence}</dd>
-                      </div>
                     </dl>
                   </article>
                 ))

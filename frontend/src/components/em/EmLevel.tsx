@@ -11,8 +11,8 @@ const ALLOWED: readonly string[] = ["Low", "Medium", "High"];
 /**
  * The one way a level reaches a screen. spec: ui-001, FR-715, AC-11.
  *
- * Four call sites: the anomaly level, signal integrity, and a hypothesis card's
- * confidence and severity.
+ * Three call sites: the anomaly level, signal integrity, and a hypothesis card's
+ * confidence. The card's severity went with api-019: nothing produced it.
  *
  * **The guard is a runtime one, and that is the whole point of the component.**
  * The contract declares `Level` as exactly Low | Medium | High, so TypeScript

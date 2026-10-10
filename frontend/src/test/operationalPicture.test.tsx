@@ -46,8 +46,30 @@ describe("OperationalPictureScreen", () => {
 
   it("renders confidence in the Low, Medium, High vocabulary and nothing else", () => {
     // spec: api-002, ui-001 — the mock carried "Medium Confidence", which is
-    // not a value the contract admits and not one a component can band.
-    renderScreen();
+    // not a value the contract admits and not one a component can band. The
+    // mock carries no explanation since api-019, so this one is supplied.
+    renderScreen({
+      ...operationalPicture,
+      hypotheses: [
+        {
+          id: 1,
+          bundleId: 1,
+          runId: 102,
+          hypothesisTitle: "Possible interference zone",
+          confidence: "Medium",
+          status: "New",
+          generator: "hosted",
+          requestedGenerator: "hosted",
+          fellBack: false,
+          anomalyType: "possible_interference_zone",
+          ruleId: "FUSION-SPATIAL",
+          subject: "RF-06, RF-07",
+          windowStart: "2022-06-27T12:29:00Z",
+          windowEnd: "2022-06-27T12:34:00Z",
+          latestVerdict: null,
+        },
+      ],
+    });
 
     expect(valueFor("Confidence")).toMatch(/^(Low|Medium|High)$/);
   });

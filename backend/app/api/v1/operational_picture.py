@@ -44,6 +44,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.api.v1.schemas.evidence import EvidenceAccount, build_evidence_account
+from app.api.v1.schemas.hypotheses import REVIEWED_ARM
 from app.api.v1.schemas.operational_picture import (
     OperationalPicture,
     SelectableHour,
@@ -59,6 +60,7 @@ from app.api.v1.schemas.playback import (
 from app.api.v1.schemas.receiver_states import ReceiverStates, build_receiver_states
 from app.db.bundles import stored_bundles_for_run
 from app.db.findings import findings_for_run, interference_radii_for_run
+from app.db.hypotheses import hypotheses_at_position, verdicts_for
 from app.db.repository import (
     detection_pass_for_run,
     latest_positions,
@@ -69,6 +71,7 @@ from app.db.repository import (
     track_window,
 )
 from app.db.session import SessionFactory, get_sessionmaker
+from app.evaluation.pack import SCORED_ORDINAL
 from app.scenario.layout import load_layout
 
 router = APIRouter()
@@ -113,6 +116,13 @@ def get_operational_picture(
         return build_operational_picture(
             run=None, observations=[], layout=load_layout(), view=view
         )
+    run_bundles = dict(stored_bundles_for_run(sessions, run.id))
+    rows = hypotheses_at_position(
+        sessions,
+        requested_generator=REVIEWED_ARM,
+        campaign_ordinal=SCORED_ORDINAL,
+        bundle_ids=sorted(run_bundles),
+    )
     return build_operational_picture(
         run=run,
         observations=latest_positions(sessions, run.id, FINAL_WINDOW_SECONDS),
@@ -123,6 +133,10 @@ def get_operational_picture(
         # The radius each interference claim was judged under, from the
         # settings stored with it -- never the detector's current one (`api-017`).
         zone_radii=interference_radii_for_run(sessions, run.id),
+        # The hour's explanations, by `api-004`'s selection (`api-019`).
+        run_bundles=run_bundles,
+        hypothesis_rows=rows,
+        verdicts=verdicts_for(sessions, [row.id for row in rows]),
     )
 
 

@@ -3447,6 +3447,21 @@ refer to the same text by construction and by check. No conclusion lacks a revie
 of the twenty fell back, and every one of their 70 citations re-checks as grounded. Fifty-five hosted
 rows and twenty template rows written before the campaign keep no position.
 
+**The picture serves the hour's explanations in the list's own shape, and counts the ones it does
+not have.** The rail on the Operational Picture is meant to list the hour's explanations, and had
+served an empty list since the contract was first written because nothing produced one. Two choices
+were made. The picture's card shape was replaced by the list endpoint's summary, imported rather
+than redeclared: the old shape carried a severity nothing in the system produces, a free-text
+evidence string, and status words matching none of the stored review states, so keeping it would
+have meant either inventing values or translating between two vocabularies for one thing. And the
+picture now counts the hour's conclusions with no explanation, null when nobody examined the hour,
+because the campaign generated explanations for 20 of the store's conclusions. Measured over the 460
+hours the screen offers on 10 October 2026: 20 serve one explanation, 261 hold between one and three
+conclusions with none, and 199 hold no conclusion at all. Without the count, the rail would say "no
+active hypotheses" on 261 hours that each hold a conclusion, which is the absence-reads-as-nothing
+failure this project has refused at every other boundary. The three added reads cost a median of
+1.7 ms (maximum 27.9 ms) against a picture that takes 110 to 127 ms, on a poll every five seconds.
+
 ### Containerisation: a Makefile over Compose, and what the first working `up` exposed
 
 The three services (backend, frontend, and a profiled one-shot pipeline) are driven through a root

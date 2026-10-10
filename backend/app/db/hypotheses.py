@@ -495,16 +495,26 @@ def hypotheses_at_position(
     *,
     requested_generator: GeneratorKind,
     campaign_ordinal: int,
+    bundle_ids: Sequence[int] | None = None,
 ) -> list[StoredHypothesis]:
-    """Every row asked of one arm at one campaign position, by id. `api-004`."""
+    """Every row asked of one arm at one campaign position, by id. `api-004`.
+
+    `bundle_ids` narrows it to those bundles (`api-019`, one run's); None
+    means every bundle.
+    """
+    narrowed = "" if bundle_ids is None else "AND bundle_id = ANY(:bundles) "
     with session_factory.begin() as session:
         rows = (
             session.execute(
                 text(
                     _SELECT + "WHERE requested_generator = :arm "
-                    "AND campaign_ordinal = :ordinal ORDER BY id"
+                    "AND campaign_ordinal = :ordinal " + narrowed + "ORDER BY id"
                 ),
-                {"arm": requested_generator.value, "ordinal": campaign_ordinal},
+                {
+                    "arm": requested_generator.value,
+                    "ordinal": campaign_ordinal,
+                    "bundles": list(bundle_ids or ()),
+                },
             )
             .mappings()
             .all()

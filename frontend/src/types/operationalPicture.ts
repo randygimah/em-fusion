@@ -1,5 +1,7 @@
 //Types for operational picture data
 
+import type { HypothesisSummary } from "./hypotheses";
+
 // Confidence, severity and any score are Low, Medium or High — never a
 // percentage or a decimal (FR-715, AC-11). Declared once so the three places
 // that carry a level cannot drift into three different vocabularies.
@@ -20,15 +22,6 @@ export interface Scenario {
   id: string;
   name: string;
   dataMode: string;
-}
-
-export interface Hypothesis {
-  id: string;
-  title: string;
-  confidence: Level;
-  severity: Level;
-  status: "new" | "under_review" | "reviewed";
-  evidence: string;
 }
 
 // Whether a producer's output is a conclusion or the working material behind
@@ -148,7 +141,14 @@ export interface InterferenceZone {
 
 export interface OperationalPicture {
   scenario: Scenario | null;
-  hypotheses: Hypothesis[];
+  // The hour's explanations (api-019): the hypotheses list's own summaries,
+  // imported rather than redeclared, so the rail and the Hypotheses screen
+  // cannot disagree about which explanation a conclusion has.
+  hypotheses: HypothesisSummary[];
+  // The hour's conclusions with no explanation to review, or null when no
+  // detection pass examined the hour. Most examined hours have some, so an
+  // empty list alone would read as "nothing concluded".
+  unexplainedConclusions: number | null;
   // null means no detection pass has run on this run, which is not the same as
   // a pass that found nothing (api-012). One absence with one meaning: inside
   // a summary that is present, every value is a reading.

@@ -45,6 +45,7 @@ from typing import Final, Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
+from app.api.v1.schemas.hypotheses import HypothesisSummary, build_hypothesis_list
 from app.dal.models import (
     CanonicalObservation,
     DetectionPass,
@@ -52,6 +53,8 @@ from app.dal.models import (
     SelectableRun,
     TrackPayload,
 )
+from app.db.hypotheses import StoredHypothesis, StoredVerdict
+from app.detection.bundle import EvidenceBundle
 from app.detection.control import REGISTER, Key, Producer, reportable_keys
 from app.detection.findings import DetectionFinding
 from app.detection.fusion import ANOMALY_TYPE as INTERFERENCE_TYPE
@@ -206,17 +209,6 @@ class Scenario(BaseModel):
     id: str
     name: str
     dataMode: str  # noqa: N815 -- mirrors the TypeScript contract
-
-
-class Hypothesis(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    id: str
-    title: str
-    confidence: Level
-    severity: Level
-    status: Literal["new", "under_review", "reviewed"]
-    evidence: str
 
 
 class DetectionCount(BaseModel):
@@ -434,12 +426,14 @@ class OperationalPicture(BaseModel):
     #: Null before the first run exists, so the screen can be developed and
     #: served against an empty database rather than a 500 (`op-001`).
     scenario: Scenario | None
-    #: Still empty, and `api-002`'s amendment records why: 155 rows exist, so
-    #: the condition that justified the other three has expired here too, and
-    #: what holds this one is a decision with its own failure cases -- which
-    #: arm an analyst sees, and whether a row whose grounding check FAILED may
-    #: be shown at all (`db-002`).
-    hypotheses: list[Hypothesis]
+    #: The hour's reviewable explanations (`api-019`), in `api-004`'s own shape
+    #: and selection. Empty on an unexamined run.
+    hypotheses: list[HypothesisSummary]
+    #: This run's stored conclusions with no reviewable explanation, or null
+    #: when no detection pass examined it: most examined hours hold conclusions
+    #: nobody generated an explanation for, and an empty list alone would read
+    #: as "nothing concluded" (`api-019`).
+    unexplainedConclusions: int | None  # noqa: N815 -- mirrors the contract
     #: Null when no detection pass has run on this run (`api-012`,
     #: `anom-015`). Not the same as a pass that found nothing, and the one
     #: distinction `anom-008` exists to protect.
@@ -799,6 +793,9 @@ def build_operational_picture(
     register: Mapping[Key, Producer] = REGISTER,
     view: ViewSelection = "all",
     zone_radii: Mapping[str, float] | None = None,
+    run_bundles: Mapping[int, EvidenceBundle] | None = None,
+    hypothesis_rows: Sequence[StoredHypothesis] = (),
+    verdicts: Mapping[int, list[StoredVerdict]] | None = None,
 ) -> OperationalPicture:
     """Assemble the payload from a run and what has been read for it.
 
@@ -822,6 +819,12 @@ def build_operational_picture(
     `zone_radii` is the radius each interference claim was judged under, keyed
     by event id and read from the store (`api-017`); a claim missing from it is
     served with no radius.
+
+    `run_bundles`, `hypothesis_rows` and `verdicts` are the run's stored
+    bundles by id, stored hypotheses, and their verdicts (`api-019`). The
+    selection is `api-004`'s, applied by its own builder, so the rail and the
+    Hypotheses screen cannot disagree about which explanation a conclusion has.
+    Rows explaining another run's bundles are ignored.
     """
     scenario = (
         None
@@ -877,9 +880,17 @@ def build_operational_picture(
         _zones(findings, zone_radii or {}) if scored else [],
         lambda _zone: _EVENT,
     )
+    bundles = dict(run_bundles or {})
+    explained = build_hypothesis_list(
+        rows=[row for row in hypothesis_rows if row.bundle_id in bundles],
+        bundles=bundles,
+        verdicts=dict(verdicts or {}),
+        bundles_with_hypotheses=bundles.keys(),
+    )
     return OperationalPicture(
         scenario=scenario,
-        hypotheses=[],
+        hypotheses=explained.hypotheses if scored else [],
+        unexplainedConclusions=explained.unreviewableBundles if scored else None,
         detectionSummary=(
             _detection_summary(findings, health, register) if scored else None
         ),
