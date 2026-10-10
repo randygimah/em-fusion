@@ -3411,8 +3411,10 @@ must know the AI layer fell back. No such row exists in the store yet.
 managed by scheduling rather than by code. The screen names the generator of the same forty
 explanations the raters score without that knowledge, and one rater is the developer who would be
 reviewing the screen as it was built. Building it first would have put the arm of every scored item
-in front of a rater before they scored it. *(Record the date scoring completed and the date work on
-the screen resumed, so the ordering can be stated as fact rather than intention.)*
+in front of a rater before they scored it. **The first rater, the developer, finished both passes on
+10 October 2026, and specification of the screen resumed the same day, after it.** The second rater
+has not yet scored. They are never shown the screen before their scoring is done, because it would
+put each explanation's arm in front of them.
 
 ### Containerisation: a Makefile over Compose, and what the first working `up` exposed
 

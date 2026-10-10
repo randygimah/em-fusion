@@ -513,8 +513,8 @@ rater has not scored: nothing linking an explanation to its arm goes into anythi
      Then build from `api-004` and the list.
 3. **While the screen is parked**, the next items touch no hypothesis data:
    - Playback is complete: transport, aircraft, trails, zones and receivers all follow the cursor.
-4. The progress note is current (version 10): receivers through the hour, the answer sheet and the
-   mixed-scenario finding, and the test, coverage and capability figures.
+4. The progress note is current (version 11): the first marker done, the second marker's ten
+   packages, 2,254 backend tests at 99.93% (full container suite re-run after `eval-011`), 105 of 125.
 
 Open and unowned:
 
