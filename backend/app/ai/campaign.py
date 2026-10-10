@@ -516,6 +516,7 @@ def _model_generation(
         bundle_id=bundle_id,
         result=outcome.result,
         requested_generator=arm.arm,
+        campaign_ordinal=ordinal,
     )
     grounding = GroundingStatus.NOT_CHECKED
     if not outcome.fell_back:
@@ -602,6 +603,9 @@ def _baseline_generation(
         bundle_id=bundle_id,
         result=result,
         requested_generator=GeneratorKind.TEMPLATE,
+        # The baseline is asked once, so it is always the first (`db-012`).
+        # A refused attempt keeps no position: it is not what was delivered.
+        campaign_ordinal=1,
     )
     report = grounding.report(result.hypothesis, bundle)
     record_grounding(session_factory, hypothesis_id=row, report=report)

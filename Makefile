@@ -184,7 +184,9 @@ generate: build-pipeline ## Run a scenario batch in a container, into the runnin
 # has its own variable rather than sharing one, so approving the three-bundle
 # pre-flight can never also approve the twenty-bundle campaign, and neither can
 # approve a corpus-wide write. RESCORE_CONFIRM is the fourth: corpus/rescore_baseline.py
-# re-scores every completed run under the pinned baseline (anom-017). The credential
+# re-scores every completed run under the pinned baseline (anom-017). ORDINAL_CONFIRM
+# is the fifth: corpus/backfill_campaign_ordinal.py copies the committed campaign
+# record's positions onto stored hypotheses (db-012). The credential
 # is deliberately NOT forwarded: the script reads
 # backend/.env through the bind mount, following app/replay.py rather than
 # Compose interpolation, which turns an unset host variable into an empty string
@@ -200,6 +202,7 @@ measure: build-backend ## Run a measurement, e.g. make measure SCRIPT=corpus/bun
 		-e CAMPAIGN_CONFIRM="$(CAMPAIGN_CONFIRM)" \
 		-e BACKFILL_CONFIRM="$(BACKFILL_CONFIRM)" \
 		-e RESCORE_CONFIRM="$(RESCORE_CONFIRM)" \
+		-e ORDINAL_CONFIRM="$(ORDINAL_CONFIRM)" \
 		backend python measurements/$(SCRIPT)
 
 ensure-artifacts: ## Generate the demo dataset only if artefacts are missing

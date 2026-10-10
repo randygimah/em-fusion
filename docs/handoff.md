@@ -42,8 +42,12 @@ pass 22 of 22 on its second run.
 
 ## Current state
 
-Backlog **105 of 125** (97 of 121 at the start; `api-018`, `map-007`, `eval-010` and `eval-011`
-added; all four pass). Tree clean once this commit lands; `main` in sync with `origin/main`.
+Backlog **107 of 126** (97 of 121 at the start; `api-018`, `map-007`, `eval-010`, `eval-011` and
+`db-012` added). **`db-012` and `api-004` pass**, reviewed by the user: full container suite **2,296 passed, coverage 99.88%** (6,040 statements, 7 missed; the
+uncovered lines are the two-reviewable-rows refusal and two empty-input early returns). The main
+database **is migrated to `0010`** and the ordinal copy has run (80 written; a second run 80
+unchanged). The list endpoint serves exactly the record's 20 scored hosted rows, none fell back, all 70
+citations grounded on re-check. Tree clean once this commit lands; `main` in sync with `origin/main`.
 
 **The first rater (the user) has finished both passes** (`scoring_pack/score_sheet1.xlsx`, not opened
 by me). They took about **three hours** for 40 items against the rubric's 90 minutes. `eval-011` cut the
@@ -316,7 +320,11 @@ None once this handoff is committed.
 | `2be2c64` | `docs: first rater's scoring time and the proposal to cut the second rater's corpus` |
 | `dc73479` | `spec: add eval-011` (and amends `eval-006`: κ over the double-scored items only) |
 | `f45cce4` | `test: add tests for eval-011` |
-| *this commit* | `feat(eval-011): the second rater's ten packs, drawn and alternating - tests pass`; removes `scoring_pack/score_sheet2.xlsx` (the blank 40-row sheet) |
+| `3ada952` | `feat(eval-011): the second rater's ten packs, drawn and alternating - tests pass`; removes `scoring_pack/score_sheet2.xlsx` (the blank 40-row sheet) |
+| `e17a5b2` | `docs: progress note covers the first marker's pass and the second marker's ten packages` (version 11) |
+| `8be5857` | `spec: add db-012, amend api-004` |
+| `404a5dc` | `test: add tests for db-012, api-004` |
+| *this commit* | `feat(db-012, api-004): campaign position and the hypothesis read endpoints - tests pass`; main DB migrated to `0010` and the ordinal copy run |
 
 **New:**
 - `frontend/src/components/em/EmDrillDown.tsx`
@@ -361,6 +369,11 @@ None once this handoff is committed.
 ## Failed attempts
 
 **My own errors:**
+- **`api-004`: a test fixture assumed the wrong bundle order**, written before the code: the shared
+  `neighbours` fixture's "first" bundle is the fault bundle (the reader sorts by window then subject),
+  not the interference one. Four tests failed on that after implementation; the fixture now picks
+  bundles by kind. **A `db-012` test passed before the column existed**, because any database error
+  satisfied it; it now requires an `IntegrityError`.
 - **`eval-011`: the answer-sheet builder refused the ten-pack set** on the first run, because it
   requires the sample to equal the pack; the script now passes only the drawn packs' scenario types.
   Nothing was written on the failed run. **`build_pack`'s inner `order` variable shadowed the new

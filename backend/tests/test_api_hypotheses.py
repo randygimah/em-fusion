@@ -35,6 +35,7 @@ from app.ai.grounding import CitationVerdict, check
 from app.ai.hypothesis import Confidence
 from app.ai.service import GenerationResult, GeneratorKind
 from app.ai.template import generate
+from app.db.bundles import stored_bundles_for_run
 from app.db.hypotheses import GroundingStatus, ReviewStatus, record_grounding
 from app.main import app
 from tests.conftest import RUN_ID, requires_database
@@ -175,7 +176,13 @@ def screen(
     template row, and a hosted ordinal 1 that fell back to the template.
     `other_run`: only an unnumbered template row, so no reviewable row.
     """
-    first, second = neighbours["first"], neighbours["second"]
+    # By kind, not by position: the reader orders a run's bundles by window
+    # then subject, which puts the fault bundle ("RF-03") first.
+    kind = {
+        bundle.anomaly_type: bundle_id
+        for bundle_id, bundle in stored_bundles_for_run(factory, RUN_ID)
+    }
+    first, second = kind[ZONE.anomaly_type], kind[FAULT.anomaly_type]
     zone_text = generate(ZONE)
     fault_text = generate(FAULT)
     rows = {
@@ -220,7 +227,7 @@ def screen(
             ordinal=1,
         ),
     }
-    return {**neighbours, **rows}
+    return {**neighbours, "first": first, "second": second, **rows}
 
 
 @pytest.mark.database

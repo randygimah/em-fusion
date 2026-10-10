@@ -1,0 +1,17 @@
+record     scored_campaign_record.json, 80 stored generations
+           {1: 40, 2: 20, 3: 20} by ordinal
+
+store before:
+  hosted   no position  55
+  hosted   position  60
+  template no position  20
+  template position  20
+
+written    0
+unchanged  80
+
+store after:
+  hosted   no position  55
+  hosted   position  60
+  template no position  20
+  template position  20

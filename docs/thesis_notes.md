@@ -3429,6 +3429,24 @@ from. Showing the latest row was rejected because it is usually not the scored t
 could not be read against a blind score. Rows written outside a campaign keep no position, and none is
 guessed for them.
 
+**Building it, two things worth recording.** The read endpoints needed the hypothesis module on the
+list of storage modules a route may call. That list was written to make each addition an argued
+decision rather than a prefix match, and it said so of this module in particular; the argument is
+that every statement over hypotheses and verdicts lives there and the route holds none, the same
+shape as the findings and bundle readers already admitted. And one test fixture was wrong after the
+code was written: it assumed a shared fixture stored the interference bundle first, when the reader
+orders a run's bundles by window then subject and puts the fault bundle first. Four tests failed on
+the fixture's assumption, not the code's behaviour, and the fixture now picks each bundle by its
+kind. The detail endpoint re-runs the grounding check on every read, so a citation's verdict on screen
+is computed against the bundle as stored now, and the verdict recorded at generation is served beside
+it rather than reconciled with it.
+
+**Measured against the store on 10 October 2026**, after the copy: the list serves exactly the 20 rows
+the campaign record names as the hosted arm's scored generation, so the screen and the blind scoring
+refer to the same text by construction and by check. No conclusion lacks a reviewable explanation, none
+of the twenty fell back, and every one of their 70 citations re-checks as grounded. Fifty-five hosted
+rows and twenty template rows written before the campaign keep no position.
+
 ### Containerisation: a Makefile over Compose, and what the first working `up` exposed
 
 The three services (backend, frontend, and a profiled one-shot pipeline) are driven through a root

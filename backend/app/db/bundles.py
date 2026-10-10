@@ -514,6 +514,33 @@ def stored_bundles_for_run(
     return [(row["id"], _bundle(row)) for row in rows]
 
 
+def stored_bundles_by_id(
+    session_factory: sessionmaker[Session], bundle_ids: Sequence[int]
+) -> dict[int, EvidenceBundle]:
+    """The named bundles, each by its row id; an unknown id is simply absent.
+
+    `api-004` reads the bundle a hypothesis explains, which may be in any run.
+    """
+    if not bundle_ids:
+        return {}
+    with session_factory.begin() as session:
+        rows = (
+            session.execute(
+                text(
+                    "SELECT id, scenario_run_id, anomaly_type, rule_id, subject, "
+                    "  started_at, ended_at, affected_channels, evidence, "
+                    "  known_uncertainties, superseded, "
+                    "  ST_Y(affected_area) AS lat, ST_X(affected_area) AS lon "
+                    "FROM evidence_bundles WHERE id = ANY(:ids)"
+                ),
+                {"ids": list(bundle_ids)},
+            )
+            .mappings()
+            .all()
+        )
+    return {row["id"]: _bundle(row) for row in rows}
+
+
 def _row(bundle: EvidenceBundle) -> dict[str, object]:
     """One bundle as the insert's parameters."""
     return {
@@ -627,5 +654,6 @@ __all__ = [
     "bundles_for_run",
     "resolve_bundles",
     "save_bundles",
+    "stored_bundles_by_id",
     "stored_bundles_for_run",
 ]

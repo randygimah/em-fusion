@@ -53,8 +53,9 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
-from typing import Any, Mapping
+from typing import TYPE_CHECKING, Any, Mapping, Sequence
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session, sessionmaker
@@ -62,6 +63,9 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.ai.grounding import GroundingReport
 from app.ai.hypothesis import Citation, Hypothesis
 from app.ai.service import GenerationResult, GeneratorKind
+
+if TYPE_CHECKING:
+    from app.ai.campaign import GenerationRecord
 
 
 class HypothesisWriteError(ValueError):
@@ -125,6 +129,10 @@ class StoredHypothesis:
     raw_response: str | None
     status: ReviewStatus
     grounding: GroundingStatus
+    #: Its position in the campaign that wrote it (`db-012`), or None when it
+    #: was not written by a campaign or the position is not known. Never
+    #: inferred from row order.
+    campaign_ordinal: int | None = None
 
     @property
     def fell_back(self) -> bool:
@@ -212,6 +220,7 @@ def save_hypothesis(
     bundle_id: int,
     result: GenerationResult,
     requested_generator: GeneratorKind,
+    campaign_ordinal: int | None = None,
 ) -> int:
     """Store one hypothesis against the bundle it explains, and say which row.
 
@@ -224,6 +233,10 @@ def save_hypothesis(
     row except the ones where an arm fell back -- and those are the only
     rows the column exists for, so a default would be wrong exactly where
     it was relied on.
+
+    `campaign_ordinal` is the row's position in the campaign writing it
+    (`db-012`), and absent means NULL: a row written outside a campaign is
+    not a first generation.
     """
     call = result.call
     model_id = call.model_id if call else None
@@ -246,7 +259,7 @@ def save_hypothesis(
                     "  raw_response, hypothesis_title, confidence, summary, "
                     "  status, supporting_evidence, evidence_against_or_uncertainty, "
                     "  alternative_explanations, recommended_human_action, "
-                    "  grounding_passed"
+                    "  grounding_passed, campaign_ordinal"
                     ") VALUES ("
                     "  :bundle_id, :generator, :requested_generator, :model_id, "
                     "  CAST(:generation_params AS jsonb), :raw_response, "
@@ -254,7 +267,7 @@ def save_hypothesis(
                     "  CAST(:supporting_evidence AS jsonb), "
                     "  CAST(:evidence_against AS jsonb), "
                     "  CAST(:alternatives AS jsonb), :recommended_human_action, "
-                    "  :grounding_passed"
+                    "  :grounding_passed, :campaign_ordinal"
                     ") RETURNING id"
                 ),
                 {
@@ -291,9 +304,21 @@ def save_hypothesis(
                     ),
                     "recommended_human_action": hypothesis.recommended_human_action,
                     "grounding_passed": GroundingStatus.NOT_CHECKED.to_stored(),
+                    "campaign_ordinal": campaign_ordinal,
                 },
             ).scalar_one()
         )
+
+
+_SELECT = (
+    "SELECT id, bundle_id, generator, requested_generator, "
+    "  model_id, generation_params, "
+    "  raw_response, hypothesis_title, confidence, summary, status, "
+    "  supporting_evidence, evidence_against_or_uncertainty, "
+    "  alternative_explanations, recommended_human_action, "
+    "  grounding_passed, campaign_ordinal "
+    "FROM hypotheses "
+)
 
 
 def hypotheses_for_bundle(
@@ -309,15 +334,7 @@ def hypotheses_for_bundle(
     with session_factory.begin() as session:
         rows = (
             session.execute(
-                text(
-                    "SELECT id, bundle_id, generator, requested_generator, "
-                    "  model_id, generation_params, "
-                    "  raw_response, hypothesis_title, confidence, summary, status, "
-                    "  supporting_evidence, evidence_against_or_uncertainty, "
-                    "  alternative_explanations, recommended_human_action, "
-                    "  grounding_passed "
-                    "FROM hypotheses WHERE bundle_id = :bundle ORDER BY id"
-                ),
+                text(_SELECT + "WHERE bundle_id = :bundle ORDER BY id"),
                 {"bundle": bundle_id},
             )
             .mappings()
@@ -350,6 +367,7 @@ def _stored(row: Any) -> StoredHypothesis:
         raw_response=row["raw_response"],
         status=ReviewStatus(row["status"]),
         grounding=GroundingStatus.from_stored(row["grounding_passed"]),
+        campaign_ordinal=row["campaign_ordinal"],
     )
 
 
@@ -398,9 +416,159 @@ def record_grounding(
             )
 
 
+@dataclass(frozen=True, slots=True)
+class OrdinalCopy:
+    """What copying the committed record's positions did, in counts."""
+
+    written: int
+    unchanged: int
+
+
+def record_campaign_ordinals(
+    session_factory: sessionmaker[Session],
+    generations: Sequence[GenerationRecord],
+) -> OrdinalCopy:
+    """Copy each recorded generation's position onto its stored row. `db-012`.
+
+    The record is the authority: an ordinal is copied, never computed. Any
+    row the record disagrees with -- missing, under another bundle, asked of
+    another arm, or already holding another position -- refuses the whole
+    copy, in one transaction, so a half-copied store never exists. Running it
+    twice changes nothing.
+    """
+    written = unchanged = 0
+    with session_factory.begin() as session:
+        for generation in generations:
+            row = session.execute(
+                text(
+                    "SELECT bundle_id, requested_generator, campaign_ordinal "
+                    "FROM hypotheses WHERE id = :id"
+                ),
+                {"id": generation.hypothesis_id},
+            ).one_or_none()
+            if row is None:
+                raise HypothesisWriteError(
+                    f"the record names hypothesis {generation.hypothesis_id}, "
+                    "which is not in the store; nothing was written"
+                )
+            if row.bundle_id != generation.bundle_id:
+                raise HypothesisWriteError(
+                    f"hypothesis {generation.hypothesis_id} explains bundle "
+                    f"{row.bundle_id} and the record says bundle "
+                    f"{generation.bundle_id}; nothing was written"
+                )
+            if row.requested_generator != generation.requested_arm.value:
+                raise HypothesisWriteError(
+                    f"hypothesis {generation.hypothesis_id} was asked of the "
+                    f"{row.requested_generator} arm and the record says "
+                    f"{generation.requested_arm.value}; nothing was written"
+                )
+            if row.campaign_ordinal == generation.ordinal:
+                unchanged += 1
+                continue
+            if row.campaign_ordinal is not None:
+                raise HypothesisWriteError(
+                    f"hypothesis {generation.hypothesis_id} already holds "
+                    f"position {row.campaign_ordinal} and the record says "
+                    f"{generation.ordinal}; it is not overwritten and nothing "
+                    "was written"
+                )
+            session.execute(
+                text("UPDATE hypotheses SET campaign_ordinal = :o WHERE id = :id"),
+                {"o": generation.ordinal, "id": generation.hypothesis_id},
+            )
+            written += 1
+    return OrdinalCopy(written=written, unchanged=unchanged)
+
+
+@dataclass(frozen=True, slots=True)
+class StoredVerdict:
+    """One analyst verdict, as `analyst_feedback` holds it."""
+
+    verdict: str
+    note: str | None
+    created_at: datetime
+
+
+def hypotheses_at_position(
+    session_factory: sessionmaker[Session],
+    *,
+    requested_generator: GeneratorKind,
+    campaign_ordinal: int,
+) -> list[StoredHypothesis]:
+    """Every row asked of one arm at one campaign position, by id. `api-004`."""
+    with session_factory.begin() as session:
+        rows = (
+            session.execute(
+                text(
+                    _SELECT + "WHERE requested_generator = :arm "
+                    "AND campaign_ordinal = :ordinal ORDER BY id"
+                ),
+                {"arm": requested_generator.value, "ordinal": campaign_ordinal},
+            )
+            .mappings()
+            .all()
+        )
+    return [_stored(row) for row in rows]
+
+
+def hypothesis_by_id(
+    session_factory: sessionmaker[Session], hypothesis_id: int
+) -> StoredHypothesis | None:
+    """One stored row, or None. `api-004`."""
+    with session_factory.begin() as session:
+        row = (
+            session.execute(text(_SELECT + "WHERE id = :id"), {"id": hypothesis_id})
+            .mappings()
+            .one_or_none()
+        )
+    return None if row is None else _stored(row)
+
+
+def bundles_with_hypotheses(session_factory: sessionmaker[Session]) -> set[int]:
+    """Every bundle at least one stored hypothesis explains. `api-004`."""
+    with session_factory.begin() as session:
+        return {
+            int(b)
+            for (b,) in session.execute(
+                text("SELECT DISTINCT bundle_id FROM hypotheses")
+            ).all()
+        }
+
+
+def verdicts_for(
+    session_factory: sessionmaker[Session], hypothesis_ids: Sequence[int]
+) -> dict[int, list[StoredVerdict]]:
+    """Each hypothesis's verdicts, oldest first; absent ids map to nothing."""
+    if not hypothesis_ids:
+        return {}
+    with session_factory.begin() as session:
+        rows = session.execute(
+            text(
+                "SELECT hypothesis_id, verdict, note, created_at "
+                "FROM analyst_feedback WHERE hypothesis_id = ANY(:ids) "
+                "ORDER BY created_at, id"
+            ),
+            {"ids": list(hypothesis_ids)},
+        ).all()
+    out: dict[int, list[StoredVerdict]] = {}
+    for row in rows:
+        out.setdefault(int(row.hypothesis_id), []).append(
+            StoredVerdict(verdict=row.verdict, note=row.note, created_at=row.created_at)
+        )
+    return out
+
+
 __all__ = [
     "GroundingStatus",
     "HypothesisWriteError",
+    "OrdinalCopy",
+    "StoredVerdict",
+    "bundles_with_hypotheses",
+    "hypotheses_at_position",
+    "hypothesis_by_id",
+    "record_campaign_ordinals",
+    "verdicts_for",
     "ReviewStatus",
     "StoredHypothesis",
     "check_reproducibility",

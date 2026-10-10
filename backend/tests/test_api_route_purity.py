@@ -63,11 +63,20 @@ STORAGE_PACKAGES = ("sqlalchemy", "geoalchemy2", "psycopg", "alembic")
 #: structural check that neither the route nor its schemas module reaches
 #: `build_bundles`, because `anom-016` keeps the detection pass out of the
 #: request path and the baseline is the reason.
+#:
+#: `app.db.hypotheses` was added 2026-10-10 with `api-004`, the argument this
+#: comment asked for: the hypothesis endpoints read stored hypotheses and their
+#: verdicts, and every statement over `hypotheses` and `analyst_feedback` lives
+#: in that module -- `hypothesis_by_id`, `hypotheses_at_position`,
+#: `verdicts_for` are repository functions of the same shape as
+#: `findings_for_run`. The route holds no SQL, and the three rules below still
+#: apply to it unchanged.
 ALLOWED_STORAGE_MODULES = {
     "app.db.repository",
     "app.db.session",
     "app.db.findings",
     "app.db.bundles",
+    "app.db.hypotheses",
 }
 
 #: Enough of a SQL statement to be a SQL statement. Anchored on a keyword
