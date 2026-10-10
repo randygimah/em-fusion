@@ -3462,6 +3462,20 @@ active hypotheses" on 261 hours that each hold a conclusion, which is the absenc
 failure this project has refused at every other boundary. The three added reads cost a median of
 1.7 ms (maximum 27.9 ms) against a picture that takes 110 to 127 ms, on a poll every five seconds.
 
+**The cards, and two of the user's questions that changed them.** Each explanation on the rail is
+now a card linking to its own address, `#/hypotheses/<id>`: a parameter of the Hypotheses entry
+rather than a fourth one, with a malformed id read as no id, never a guessed one. A card says who
+wrote it in words, and a fallback names both arms and is styled as a warning. Two questions from the
+user, on seeing the first version, changed it (`docs/qa.md` §163). Should the card name the model?
+Yes, by its stored id verbatim ("gpt-4.1-2025-04-14"), not a friendly name, which would be a second
+vocabulary drifting from the record; a fallback names none, because its stored row is the
+template's. Should the heading read "No Active Hypotheses" on an empty hour? No: a heading names a
+region and should not change with the data, and "no hypotheses" says the wrong thing on the 261
+hours that hold an unexplained conclusion. The heading became a fixed "Hypotheses", since cards are
+shown whatever their status and "Active" was already wrong. The mutation pass killed 22 of 22
+mutants on its first run; the badge and heading styling is presentation the tests deliberately do
+not assert.
+
 ### Containerisation: a Makefile over Compose, and what the first working `up` exposed
 
 The three services (backend, frontend, and a profiled one-shot pipeline) are driven through a root

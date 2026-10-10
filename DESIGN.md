@@ -158,7 +158,7 @@ The shape language is **Soft (0.25rem)**. This slight rounding provides a modern
 ## Components
 
 - **Technical Cards:** Background `#111827`, 1px border `#1F2937`. Header areas should have a subtle bottom border and include a "collapse" or "fullscreen" icon.
-- **Status Badges:** Use a "dot + text" format. The dot should have a slight outer glow (5px blur) of its own color to signify "live" status. 
+- **Status Badges:** Use a "dot + text" format. The dot should have a slight outer glow (5px blur) of its own color to signify "live" status. A hypothesis's review status (`op-002`) sets the dot and text in a tinted pill: *New* in the primary tint (`primary-container` at 20%, `primary` text), every other status neutral (`surface-variant`, `on-surface-variant` text).
 - **Data Tables:** Row-based with alternating subtle backgrounds. No vertical lines; only 1px horizontal dividers. Use `data-mono` for all numeric cells, right-aligned.
 - **Buttons:** 
     - *Primary:* Solid `#3B82F6` with white text. 

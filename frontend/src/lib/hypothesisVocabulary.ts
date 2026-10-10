@@ -21,7 +21,12 @@ export const provenance = (summary: HypothesisSummary): { text: string; degraded
         text: `${capitalise(WRITER[summary.requestedGenerator])}'s answer was not used; ${WRITER[summary.generator]}'s is shown instead`,
         degraded: true,
       }
-    : { text: `Written by ${WRITER[summary.generator]}`, degraded: false };
+    : {
+        // The model by its stored id, never a friendly name; none when no model
+        // answered (qa.md 163).
+        text: `Written by ${WRITER[summary.generator]}${summary.modelId === null ? "" : `, ${summary.modelId}`}`,
+        degraded: false,
+      };
 
 /**
  * The sentence under the cards, or null when there is nothing to say: every

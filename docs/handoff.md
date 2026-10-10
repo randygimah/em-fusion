@@ -42,8 +42,8 @@ pass 22 of 22 on its second run.
 
 ## Current state
 
-Backlog **108 of 127** (97 of 121 at the start; `api-018`, `map-007`, `eval-010`, `eval-011` and
-`db-012`, `api-019` added). **`db-012` and `api-004` pass**; **`api-019` passes**, checked by the user on run 102; the first-paint mock now carries no explanation (full suite 2,305 passed, 99.90%; frontend 498; measured over 460 hours: 20 serve one
+Backlog **110 of 128** (97 of 121 at the start; `api-018`, `map-007`, `eval-010`, `eval-011` and
+`db-012`, `api-019` added). **`db-012` and `api-004` pass**; **`api-019` passes**, checked by the user on run 102; the first-paint mock now carries no explanation. **`op-002` and `nav-004` pass** (mutation pass 22 of 22 killed on the first run) (frontend 524 passed; checked in the browser: run 102's card links to `#/hypotheses/76`, which opens Hypotheses marked current and names explanation 76; run 480's rail reads "1 conclusion this hour has no explanation yet"). Amended at the user's request (`qa.md` §163): cards name the model by its stored id ("Written by the AI model, gpt-4.1-2025-04-14", seen on run 102) and the heading is a fixed "Hypotheses"; frontend 525, backend hypothesis/picture tests 172 (full suite 2,305 passed, 99.90%; frontend 498; measured over 460 hours: 20 serve one
 explanation, 261 hold unexplained conclusions, 199 none; the added reads cost 1.7 ms median). Before it, full container suite **2,296 passed, coverage 99.88%** (6,040 statements, 7 missed; the
 uncovered lines are the two-reviewable-rows refusal and two empty-input early returns). The main
 database **is migrated to `0010`** and the ordinal copy has run (80 written; a second run 80
@@ -328,7 +328,12 @@ None once this handoff is committed.
 | `2e57ad9` | `feat(db-012, api-004): campaign position and the hypothesis read endpoints - tests pass`; main DB migrated to `0010` and the ordinal copy run |
 | `0818adf` | `spec: add api-019` |
 | `0a106cd` | `test: add tests for api-019` |
-| *this commit* | `feat(api-019): the picture serves the hour's explanations - tests pass`; empties the mock's explanations; the twenty explained runs listed in `evaluation_harness.md` |
+| `3818195` | `feat(api-019): the picture serves the hour's explanations - tests pass`; empties the mock's explanations; the twenty explained runs listed in `evaluation_harness.md` |
+| `5d2c351` | `spec: amend op-002, add nav-004` |
+| `5ed979b` | `test: add tests for op-002, nav-004` |
+| `0b9f057` | `spec: amend api-004, op-002 -- name the model, heading Hypotheses` |
+| `57c4a0c` | `test: add tests for api-004, op-002 amendments -- the model named, heading Hypotheses` (also swept in the unreviewed op-002/nav-004 code; see Failed attempts) |
+| *this commit* | `feat(op-002, nav-004): the rail's cards and each explanation's address - tests pass`; model id on the summary, heading Hypotheses, NEW badge, Detection Summary heading restyled, mutation pass |
 
 **New:**
 - `frontend/src/components/em/EmDrillDown.tsx`
@@ -373,6 +378,13 @@ None once this handoff is committed.
 ## Failed attempts
 
 **My own errors:**
+- **`57c4a0c` (a `test:` commit) also swept in the unreviewed `op-002`/`nav-004` implementation**,
+  because I staged `frontend/src` whole. Pushed to `main`, so left in place rather than rewritten; the
+  implementation it carries was the one under review, and `passes` stayed false until the `feat:` commit.
+- **`op-002`: two earlier tests changed after the code**, because the item retires what they asserted:
+  `App.test.tsx` expected the bare "No active hypotheses" (now "No conclusions this hour" on the mock's
+  hour), and `pictureHypotheses.test.tsx` looked for an `article` where cards are now links. Three new
+  guard tests passed before implementation and were folded into failing ones before the test commit.
 - **I told the user run 480 has an explanation without checking.** It has none
   (`unexplainedConclusions: 1`); the twenty reviewable rows sit in runs 102–118 (interference) and
   123–175 (sensor fault). The user saw the first-paint mock's invented card flash, then the real empty

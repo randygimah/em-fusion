@@ -92,6 +92,9 @@ class HypothesisSummary(_Frozen):
     generator: GeneratorKind
     requestedGenerator: GeneratorKind  # noqa: N815
     fellBack: bool  # noqa: N815
+    #: The stored model id verbatim, or null where no model answered (the
+    #: template, a fallback included). Never a friendly name (qa.md 163).
+    modelId: str | None  # noqa: N815
     anomalyType: str  # noqa: N815
     ruleId: str  # noqa: N815
     subject: str
@@ -230,6 +233,7 @@ def _summary(
         generator=row.generator,
         requestedGenerator=row.requested_generator,
         fellBack=row.fell_back,
+        modelId=row.model_id,
         anomalyType=bundle.anomaly_type,
         ruleId=bundle.rule_id,
         subject=bundle.subject,

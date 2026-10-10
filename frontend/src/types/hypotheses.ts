@@ -65,6 +65,8 @@ export interface HypothesisSummary {
   generator: Generator;
   requestedGenerator: Generator;
   fellBack: boolean;
+  // The stored model id verbatim, or null where no model answered.
+  modelId: string | null;
   anomalyType: string;
   ruleId: string;
   subject: string;

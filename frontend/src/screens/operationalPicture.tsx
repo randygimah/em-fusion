@@ -345,7 +345,7 @@ const OperationalPictureScreen = ({
 
           <aside className="space-y-4 lg:overflow-y-auto">
             <section className="border border-[#424754] bg-[#1d2027] p-4">
-              <h2 className="text-2xl font-semibold text-[#adc6ff]">Active Hypotheses</h2>
+              <h2 className="text-2xl font-semibold text-[#adc6ff]">Hypotheses</h2>
               {/* One card per explanation for the hour, whatever its status, each
                   a link to its own address (op-002, nav-004). Every word comes
                   from the vocabulary module; a fallback is marked in words and
@@ -364,7 +364,20 @@ const OperationalPictureScreen = ({
                           carrying 74.2 never reaches the screen (FR-715). */}
                       <EmLevel label="Confidence" value={hypothesis.confidence} />
                     </dl>
-                    <p className="mt-2 font-mono text-xs uppercase text-[#c2c6d6]">{hypothesis.status}</p>
+                    {/* DESIGN.md's dot + text, in a tinted pill: New in the primary
+                        tint, every other status neutral (op-002). */}
+                    <p
+                      className={cn(
+                        "mt-2 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-mono text-xs uppercase",
+                        hypothesis.status === "New" ? "bg-[#4d8eff]/20 text-[#adc6ff]" : "bg-[#32353c] text-[#c2c6d6]",
+                      )}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={cn("h-1.5 w-1.5 rounded-full", hypothesis.status === "New" ? "bg-[#adc6ff]" : "bg-[#8c909f]")}
+                      />
+                      {hypothesis.status}
+                    </p>
                     <p className={cn("mt-1 text-xs", writer.degraded ? "text-[#ffb786]" : "text-[#8c909f]")}>{writer.text}</p>
                   </a>
                 );
@@ -376,7 +389,7 @@ const OperationalPictureScreen = ({
             </section>
 
             <section aria-label="Detection summary" className="border border-[#424754] bg-[#1d2027] p-4">
-              <h2 className="font-mono text-sm uppercase tracking-[0.05em] text-[#c2c6d6]">Detection Summary</h2>
+              <h2 className="text-2xl font-semibold text-[#adc6ff]">Detection Summary</h2>
               {detectionSummary === null ? (
                 <p className="mt-4 text-sm text-[#8c909f]">
                   No detection pass has run on this run. Nothing has been examined, which is

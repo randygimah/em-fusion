@@ -1,0 +1,26 @@
+sentinel killed (Tests  2 failed | 106 passed (108)) -- edits reach the tests
+
+a fallback reads as an ordinary card                 KILLED   Tests  1 failed | 107 passed (108)
+the fallback names the wrong arm                     KILLED   Tests  1 failed | 107 passed (108)
+the model id is dropped                              KILLED   Tests  1 failed | 107 passed (108)
+the local model is misnamed                          KILLED   Tests  1 failed | 107 passed (108)
+an unexamined hour reads as zero                     KILLED   Tests  2 failed | 106 passed (108)
+the singular is lost                                 KILLED   Tests  1 failed | 107 passed (108)
+no-conclusions shown under explained cards           KILLED   Tests  1 failed | 107 passed (108)
+a positive count is ignored                          KILLED   Tests  2 failed | 106 passed (108)
+a card links to another id                           KILLED   Tests  1 failed | 107 passed (108)
+the status is dropped                                KILLED   Tests  2 failed | 106 passed (108)
+the provenance is dropped                            KILLED   Tests  4 failed | 104 passed (108)
+the sentence is dropped                              KILLED   Tests  5 failed | 103 passed (108)
+the old heading is back                              KILLED   Tests  18 failed | 90 passed (108)
+a rejected card is hidden                            KILLED   Tests  1 failed | 107 passed (108)
+a leading zero is accepted                           KILLED   Tests  2 failed | 106 passed (108)
+a trailing segment is accepted                       KILLED   Tests  2 failed | 106 passed (108)
+a malformed id goes to another screen                KILLED   Tests  6 failed | 102 passed (108)
+the link is built in another shape                   KILLED   Tests  3 failed | 105 passed (108)
+the screen lookup ignores ids                        KILLED   Tests  1 failed | 107 passed (108)
+the id is not handed to the screen                   KILLED   Tests  1 failed | 107 passed (108)
+the hook is deaf to hash changes                     KILLED   Tests  5 failed | 103 passed (108)
+the placeholder does not name the id                 KILLED   Tests  1 failed | 107 passed (108)
+
+22 of 22 valid mutants killed
