@@ -8,7 +8,7 @@ Abstraction Layer, detects deviations deterministically, and turns evidence bund
 schema-validated, grounding-checked AI hypotheses for analyst review. Decision support, not
 autonomous decision-making.
 
-This session (9–10 October 2026) did four things:
+This session (9–12 October 2026) did five things:
 
 1. **Finished playback.** `api-018` serves each receiver's out-of-nominal intervals through an hour;
    `map-007` draws receivers in their state at the playback cursor.
@@ -23,19 +23,22 @@ This session (9–10 October 2026) did four things:
    - `op-002`: the rail's cards;
    - `nav-004`: each explanation's own address.
 4. **Kept the progress note current** (published versions 10 and 11).
+5. **Built the Hypotheses screen itself** (11–12 October): `hyp-001`–`hyp-003` amended to what is
+   stored, then built, which also finished `ai-010`.
 
 Everything went spec → failing tests → code → user review (→ mutation pass for frontend items) →
 `passes: true`, committed on `main`.
 
 ## Current state
 
-**Backlog 110 of 128.** `main` is in sync with `origin/main`; tree clean once this handoff is
+**Backlog 114 of 128.** `main` is in sync with `origin/main`; tree clean once this handoff is
 committed.
 
 **Suites:**
 - Backend, full container suite: **2,306 passed, 99.90%** (6,045 statements, 6 missed; 15 min 25 s),
   run after the model-id change at a67daf5.
-- Frontend: **525 passed**; Biome lint and `tsc -b` clean.
+- Frontend: **591 passed**; Biome lint and `tsc -b` clean.
+- The backend was not touched after `a67daf5`, so its figure stands.
 
 **The main database is migrated to `0010`** and the ordinal copy has run: 80 positions written from
 the committed campaign record; a second run wrote 0 and left 80 unchanged.
@@ -70,9 +73,29 @@ the committed campaign record; a second run wrote 0 and left 80 unchanged.
   - **The sentence** under the cards: "N conclusion(s) this hour have no explanation yet" / "No
     conclusions this hour" / "This hour has not been examined".
   - **The mock** carries no explanation, so nothing invented flashes before the first poll.
-- **The address.** `#/hypotheses/<id>` opens the Hypotheses placeholder, marked current, naming the
-  explanation. A malformed id is no id, never a guessed one.
+- **The address.** `#/hypotheses/<id>` opens the Hypotheses screen on that explanation, marked
+  current in the rail. A malformed id is no id, never a guessed one.
+- **The screen** (`hyp-001`–`hyp-003`, `ai-010`):
+  - **List:** the 20 reviewable explanations, the open one marked; an empty list counts
+    `unreviewableBundles`.
+  - **Header:** title, status pill (`EmStatusPill`, now shared with the rail), confidence through
+    `EmLevel`, window, run, subject, the receivers the evidence names, and the centre.
+  - **Provenance** in the rail's words.
+  - **Summary, recommended action** and **verdict history** (read-only; empty everywhere today).
+  - **Evidence:** one row per citation (rule chip, finding in words, statement, the re-check's word);
+    a failing citation is shown and marked. The stored check is stated once above, unreconciled.
+  - **Doubts:** two sections, *None recorded* when empty, no category tags.
+  - **Map of the affected area** (`qa.md` §164): zoomed to the disc at the recorded radius and the
+    named receivers, drawn flat with no heat-map gradient, coordinates underneath. A fault gets no
+    disc and a sentence saying why.
+  - **Failure states:** not found (404), a failed load, an answer for another id refused, a slow
+    answer for a stale address dropped, the map's hour failing alone.
+- **Zone matching, measured** against the store on 11 October: all 10 interference explanations
+  matched exactly one zone (receivers, window and centre identical, radius 60 km); all 10 fault
+  explanations had none.
 - **Checked in the browser:**
+  - `#/hypotheses/104` (interference: the disc round RF-04 and RF-05) and `#/hypotheses/148` (fault:
+    RF-05–07, no disc, the sentence), no console errors, at 1456 px;
   - run 102's card → `#/hypotheses/76`;
   - run 480 reads "1 conclusion this hour has no explanation yet";
   - run 123 shows the NEW badge;
@@ -80,7 +103,10 @@ the committed campaign record; a second run wrote 0 and left 80 unchanged.
 - **The twenty runs with an explanation** are listed in `docs/evaluation_harness.md` ("Where the
   scored explanations are on screen"): 102–118 interference, 123–137 sensor fault, 161–175
   mixed evidence.
-- **Mutation:** `mutate_op002_nav004.log`, **22 of 22** on the first run (styling not mutated).
+- **Mutation:**
+  - `mutate_op002_nav004.log`: **22 of 22** on the first run (styling not mutated).
+  - `mutate_hyp001_003.log`: **42 of 42** on the second run, sentinel killed (195 tests in the
+    eight suites run). The first run killed 40 of 42; see Failed attempts.
 
 ### The blind scoring
 
@@ -112,7 +138,7 @@ the committed campaign record; a second run wrote 0 and left 80 unchanged.
 
 Published version 11 (private link in the session record; `docs/progress_note.html` is the master). It
 covers the first marker's pass and the second marker's ten packages. **It says nothing yet about the
-Hypotheses screen work** (`db-012` onward).
+Hypotheses screen** (`db-012` onward), which now shows enough to tell.
 
 ## Files in flight
 
@@ -150,6 +176,10 @@ None. The tree is clean once this handoff is committed.
 | `0b9f057` | `spec: amend api-004, op-002 -- name the model, heading Hypotheses` |
 | `57c4a0c` | `test: add tests for api-004, op-002 amendments` (also carries the op-002/nav-004 code; see Failed attempts) |
 | `a67daf5` | `feat(op-002, nav-004): the rail's cards and each explanation's address - tests pass` |
+| `794b46b` | `docs: handoff for the hypotheses rail and address` |
+| `409bf2b` | `spec: amend hyp-001, hyp-002, hyp-003 -- the screen against what is stored` |
+| `e9baeda` | `test: add tests for hyp-001, hyp-002, hyp-003` |
+| *(this commit)* | `feat(hyp-001, hyp-002, hyp-003, ai-010): the Hypotheses screen - tests pass` |
 
 **New files:**
 - **Backend:**
@@ -171,7 +201,13 @@ None. The tree is clean once this handoff is committed.
   - `lib/hypothesisVocabulary.ts` and `lib/receiverPlayback.ts`;
   - `hooks/useReceiverStates.ts`.
 - **Frontend tests:** `hypothesisCards.test.tsx`, `hypothesisAddress.test.tsx`,
-  `pictureHypotheses.test.tsx`, `receiverPlayback.test.tsx`.
+  `pictureHypotheses.test.tsx`, `receiverPlayback.test.tsx`, `hypothesisScreen.test.tsx`,
+  `hypothesisEvidence.test.tsx`.
+- **The screen (11–12 October):** `lib/affectedArea.ts`, `components/em/EmStatusPill.tsx`,
+  `measurements/mutation/mutate_hyp001_003.{py,log}`; `screens/hypotheses.tsx` rewritten;
+  `lib/api.ts` (`fetchHypotheses`, `fetchHypothesis`, `HypothesisNotFoundError`),
+  `lib/hypothesisVocabulary.ts`, `MapView.tsx` (`bounds`), `App.tsx` (three loaders), the
+  map stand-in in `test/setup.ts`; `qa.md` §164.
 
 **Changed (main ones):**
 - **Store:**
@@ -227,6 +263,22 @@ None. The tree is clean once this handoff is committed.
 - **Two greps/awk ranges printed explanation text into the session** while checking packs. Neither
   linked to an arm.
 
+- **Hypotheses screen tests fixed after the test commit `e9baeda`** (my test errors, not screen
+  defects):
+  - nine map tests queried the map's region before the explanation had loaded;
+  - one bounds test rounded 60 km to 0.539° of latitude (it is 0.53899°) and missed by 0.00001°.
+- **Two premature passes** among the screen tests (the screen imports no mock; the map opens on the
+  corpus by default), folded into failing tests before the test commit.
+- **Layout defects found only in the browser:**
+  - the map column fell below the whole list at 1456 px;
+  - the map's box was 288 px against MapView's own 320 px minimum, so the map covered the sentence
+    under it.
+- **Mutation pass, first run, 40 of 42:**
+  - *a zone holding only some of the conclusion's receivers* and *the conclusion's hour fetched
+    filtered* survived, so two assertions were added;
+  - *the window's end lost* was a malformed mutant that broke compilation, counted as killed for the
+    wrong reason, and was rewritten.
+
 **Carried from earlier sessions, still true:**
 - **Never run `biome format --write` over the frontend**: the tree is not in Biome's format, and a
   wholesale run rewrote about 25 unrelated files once. Format only files you wrote whole.
@@ -236,16 +288,6 @@ None. The tree is clean once this handoff is committed.
 ## Next step
 
 1. **The Hypotheses screen, continued**, spec first, in this order:
-   - **Amend `hyp-001`–`hyp-003`** to the plan decided on 9 October (`qa.md` §157, thesis notes),
-     against the design reference `assets/Design/Hypothesis_analysis_v2/`:
-     - *keep:* title, confidence, status, window, verdict buttons and note, and the disclaimer;
-     - *drop:* the invented sources, uncertainty categories, "Sector A / Zone AZ-402", the satellite
-       heat map, and the live-feed chrome;
-     - *split:* uncertainty and alternatives into two sections;
-     - *add:* summary, recommended action, provenance (the detail half of `ai-010`), a list to choose
-       from, verdict history, a not-found state, and a map of the conclusion through `MapView`.
-     - The data is already served by `GET /api/v1/hypotheses/{id}`, and the address and placeholder
-       exist.
    - **Pin the verdict → status mapping in `api-005`:**
      - confirm → Confirmed;
      - reject → Rejected;
@@ -253,7 +295,8 @@ None. The tree is clean once this handoff is committed.
      - needs more evidence → Under review;
      - Inconclusive stays in the stored set, unused.
 
-     Then `fbk-001`/`fbk-002`, then `hyp-004` (the disclaimer).
+     Then `fbk-001`/`fbk-002` (the verdict buttons and note go in the screen's right column, under
+     the map, as in the design), then `hyp-004` (the disclaimer).
    - **Never show the screen to the second rater before their scoring is done**: it names each
      explanation's generator.
 2. **Second rater (mid-October).**
@@ -266,9 +309,12 @@ None. The tree is clean once this handoff is committed.
      - the user's other 20 items single-rated;
      - mixed-evidence cause correctness reported separately;
      - the user's pass two marked unblinded.
-3. **Offer a progress-note update** once the Hypotheses screen shows something worth telling.
+3. **Offer a progress-note update**: the Hypotheses screen now shows something worth telling.
 
 **Open and unowned:**
+- **Hypotheses screen, seen and not changed:** the zone's label covers the RF-04 marker on
+  `#/hypotheses/104` (the map's own ranking); below 1280 px the map stacks under the alternatives;
+  picking another explanation does not scroll to the top; phone width unchecked.
 - **The fallback warning has only been seen in tests**: none of the 20 reviewable rows fell back.
 - **The mixed-evidence scenario cannot reach its own correct answer** (the sensor-fault verdict ends
   the ladder before aircraft are consulted). Recorded as a limitation; no item addresses it.

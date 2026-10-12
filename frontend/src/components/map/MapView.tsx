@@ -639,6 +639,8 @@ export interface MapViewProps {
   cursor?: string | null;
   /** The trails behind the aircraft during playback (map-004); empty otherwise. */
   trails?: Trail[];
+  /** Where the map opens (hyp-001 (6)); the corpus box when not given. */
+  bounds?: [[number, number], [number, number]];
   /** Defaults to the frontend's environment. */
   config?: BasemapConfig | Error;
   /** Defaults to reading the PMTiles header. Rejects when the archive cannot be read. */
@@ -650,6 +652,7 @@ export function MapView({
   tracks,
   zones = [],
   trails = NO_TRAILS,
+  bounds = CORPUS_BOUNDS,
   config = configFromEnv(),
   readArchive = readArchiveHeader,
 }: MapViewProps) {
@@ -769,7 +772,8 @@ export function MapView({
         map = new maplibre.Map({
           container: container.current,
           style: onThisOrigin(buildDefaultStyle(archive)),
-          bounds: CORPUS_BOUNDS,
+          // Read once: a screen showing other bounds mounts another map.
+          bounds,
           maxBounds: OVERVIEW_BOUNDS,
           attributionControl: { compact: false },
         });

@@ -2,6 +2,7 @@ import { type CSSProperties, useLayoutEffect, useMemo, useRef, useState } from "
 import { EmEvidencePanel } from "../components/em/EmEvidencePanel";
 import { EmExceptionPanel } from "../components/em/EmExceptionPanel";
 import { EmLevel } from "../components/em/EmLevel";
+import { EmStatusPill } from "../components/em/EmStatusPill";
 import { EmPlaybackBar } from "../components/em/EmPlaybackBar";
 import { MapView } from "../components/map/MapView";
 import { usePlayback } from "../hooks/usePlayback";
@@ -364,20 +365,10 @@ const OperationalPictureScreen = ({
                           carrying 74.2 never reaches the screen (FR-715). */}
                       <EmLevel label="Confidence" value={hypothesis.confidence} />
                     </dl>
-                    {/* DESIGN.md's dot + text, in a tinted pill: New in the primary
-                        tint, every other status neutral (op-002). */}
-                    <p
-                      className={cn(
-                        "mt-2 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-mono text-xs uppercase",
-                        hypothesis.status === "New" ? "bg-[#4d8eff]/20 text-[#adc6ff]" : "bg-[#32353c] text-[#c2c6d6]",
-                      )}
-                    >
-                      <span
-                        aria-hidden="true"
-                        className={cn("h-1.5 w-1.5 rounded-full", hypothesis.status === "New" ? "bg-[#adc6ff]" : "bg-[#8c909f]")}
-                      />
-                      {hypothesis.status}
-                    </p>
+                    <EmStatusPill
+                      className="mt-2"
+                      status={hypothesis.status}
+                    />
                     <p className={cn("mt-1 text-xs", writer.degraded ? "text-[#ffb786]" : "text-[#8c909f]")}>{writer.text}</p>
                   </a>
                 );

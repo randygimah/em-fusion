@@ -3476,6 +3476,53 @@ shown whatever their status and "Active" was already wrong. The mutation pass ki
 mutants on its first run; the badge and heading styling is presentation the tests deliberately do
 not assert.
 
+### The affected area is drawn as a flat disc, because nothing measures a gradient
+
+Built on 11 October 2026 (`hyp-001`–`hyp-003`). The design reference shows the affected area as a
+satellite heat map, an orange-to-blue blob zoomed on the incident. The user asked for it back after the
+first draft of the spec dropped it, on the reasonable ground that an analyst needs to see where the
+affected area is (`qa.md` §164). The request was split in two. The *zoomed map of the area with its
+coordinates* was adopted. The *gradient* was rejected.
+
+The reason is what an affected area is in this system. An interference conclusion is reached from the
+receivers whose noise rose above their baseline. Its centre is the midpoint of those receivers, and its
+radius is the assessed radius recorded with the claim. There are seven receivers across a layout under
+250 km wide, and nothing is measured between them. A gradient would interpolate a field between at most
+seven fixed points, so every colour between them would be invented, in the visual form of a measurement.
+Two other sources for it were considered and rejected:
+- **Track discontinuities.** Gap clusters are identical on staged runs and on their seed-matched
+  controls in all eight measured pairs (`anom-004`), so a gap density would show background traffic.
+- **A blob drawn round the centre.** Decoration in the shape of evidence.
+
+For an explainability tool, that is the one thing the map must not do.
+
+What the screen draws instead:
+- the disc at the recorded radius, as a single flat fill;
+- only the receivers the conclusion's evidence names;
+- the centre, with its coordinates printed under the map;
+- the camera fitted to the disc and those receivers.
+
+A receiver-fault conclusion is a claim about one receiver, not an area. It gets no disc, and a sentence
+saying so, so the absence is not read as a missing measurement.
+
+**The join between a conclusion and its zone was measured before it was built.** A zone's id is a
+timeline event's, not a bundle's, so the screen matches on the receivers as a set and the window as
+instants, and treats two matches the same as none. Against the store on 11 October all ten
+interference explanations matched exactly one zone. Receivers, window and centre agreed, and every
+radius was 60 km. All ten receiver-fault explanations correctly had no zone in their hour.
+
+**Deviations.** Two test errors were found after the test commit and fixed before review; neither was
+a defect in the screen.
+- **Nine map tests** queried the map's region before the explanation had loaded, so they could never
+  find it.
+- **One bounds test** rounded 60 km to 0.539° of latitude when it is 0.53899°, so its check missed
+  by a hundred-thousandth of a degree.
+
+Looking at the screen in a browser found two layout defects no test asserts:
+- **The map column** fell below the whole list at 1456 px. The detail was given its own two columns.
+- **The map's box** was 288 px, below the map's own 320 px minimum, so the map covered the sentence
+  under it.
+
 ### Containerisation: a Makefile over Compose, and what the first working `up` exposed
 
 The three services (backend, frontend, and a profiled one-shot pipeline) are driven through a root

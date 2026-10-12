@@ -9,13 +9,20 @@ import { useEvidenceAccount } from "./hooks/useEvidenceAccount";
 import { useOperationalPicture } from "./hooks/useOperationalPicture";
 import { useSelectableHours } from "./hooks/useSelectableHours";
 import { useSystemHealth } from "./hooks/useSystemHealth";
-import { fetchOperationalPicture, fetchReceiverStates, fetchTracks } from "./lib/api";
+import { fetchHypotheses, fetchHypothesis, fetchOperationalPicture, fetchReceiverStates, fetchTracks } from "./lib/api";
 import { DEFAULT_VIEW } from "./lib/viewVocabulary";
 import { SCREENS } from "./routes";
 import HypothesesScreen from "./screens/hypotheses";
 import OperationalPictureScreen from "./screens/operationalPicture";
 import ScenarioControlScreen from "./screens/scenarioControl";
 import type { ViewSelection } from "./types/operationalPicture";
+
+// The Hypotheses screen's reads (spec: hyp-001): the list, the explanation the
+// address names, and the conclusion's hour unfiltered for its map. Module-level,
+// so they are stable across renders and never refetch for that reason.
+const loadHypothesisList = () => fetchHypotheses();
+const loadHypothesis = (id: number) => fetchHypothesis(id);
+const loadConclusionHour = (runId: number) => fetchOperationalPicture("", runId, "all");
 
 // The seam, and the only place that knows where a screen's data comes from
 // (spec: api-003). Both screens fetch; no screen imports a mock itself.
@@ -118,7 +125,14 @@ const App = () => {
       />
       <div className="min-w-0 flex-1">
         {current.screen.id === "operational-picture" && <OperationalPictureRoute />}
-        {current.screen.id === "hypotheses" && <HypothesesScreen hypothesisId={current.hypothesisId} />}
+        {current.screen.id === "hypotheses" && (
+          <HypothesesScreen
+            hypothesisId={current.hypothesisId}
+            loadDetail={loadHypothesis}
+            loadList={loadHypothesisList}
+            loadPicture={loadConclusionHour}
+          />
+        )}
         {current.screen.id === "scenario-control" && <ScenarioControlRoute />}
       </div>
     </div>

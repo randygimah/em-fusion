@@ -1,4 +1,5 @@
 import type { EvidenceAccount } from "../types/evidence";
+import type { HypothesisDetail, HypothesisList } from "../types/hypotheses";
 import type { OperationalPicture, PlaybackWindow, ReceiverStates, SelectableHour, ViewSelection } from "../types/operationalPicture";
 import type { InFlightBatch, ScenarioConfiguration, ScenarioRunRecord } from "../types/scenarioControl";
 
@@ -188,6 +189,49 @@ export const fetchReceiverStates = async (runId: number, baseUrl = "", signal?: 
     throw new Error(`${RECEIVER_STATES_PATH} answered something that is not receiver states`);
   }
   return payload as ReceiverStates;
+};
+
+// -------------------------------------------------------------- hypotheses
+//
+// The Hypotheses screen's reads (spec: api-004, hyp-001). Fetched when the
+// address changes, never polled.
+
+export const HYPOTHESES_PATH = "/api/v1/hypotheses";
+
+/** The store holds no explanation with this id: a state to name, not a failure. */
+export class HypothesisNotFoundError extends Error {
+  id: number;
+  constructor(id: number) {
+    super(`no hypothesis ${id} in the store`);
+    this.name = "HypothesisNotFoundError";
+    this.id = id;
+  }
+}
+
+export const fetchHypotheses = async (baseUrl = "", signal?: AbortSignal): Promise<HypothesisList> => {
+  const response = await fetch(`${baseUrl}${HYPOTHESES_PATH}`, { signal });
+  if (!response.ok) {
+    throw new Error(`${HYPOTHESES_PATH} responded ${response.status}`);
+  }
+  const payload = await response.json();
+  if (!Array.isArray(payload?.hypotheses)) {
+    throw new Error(`${HYPOTHESES_PATH} answered something that is not a list of explanations`);
+  }
+  return payload as HypothesisList;
+};
+
+export const fetchHypothesis = async (id: number, baseUrl = "", signal?: AbortSignal): Promise<HypothesisDetail> => {
+  const path = `${HYPOTHESES_PATH}/${id}`;
+  const response = await fetch(`${baseUrl}${path}`, { signal });
+  if (response.status === 404) throw new HypothesisNotFoundError(id);
+  if (!response.ok) {
+    throw new Error(`${path} responded ${response.status}`);
+  }
+  const payload = await response.json();
+  if (typeof payload?.id !== "number" || !Array.isArray(payload?.supportingEvidence)) {
+    throw new Error(`${path} answered something that is not an explanation`);
+  }
+  return payload as HypothesisDetail;
 };
 
 // ---------------------------------------------------------------- scenario

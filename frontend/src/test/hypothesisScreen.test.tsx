@@ -176,7 +176,8 @@ const show = (hypothesisId: number | null, over: Partial<Loaders> = {}) => {
 
 const list = () => within(screen.getByRole("navigation", { name: "Explanations" }));
 const header = () => within(screen.getByRole("heading", { level: 2 }).closest("header") as HTMLElement);
-const mapRegion = () => within(screen.getByRole("region", { name: "Affected area" }));
+// The region exists once the explanation has loaded, so it is waited for.
+const mapRegion = async () => within(await screen.findByRole("region", { name: "Affected area" }));
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -379,15 +380,15 @@ describe("the affected area on a map (hyp-001 (6), qa.md 164)", () => {
   it("draws an interference conclusion's zone and only the receivers its evidence names, with no aircraft", async () => {
     show(104);
 
-    expect(await mapRegion().findByText("zones: event-77")).toBeInTheDocument();
-    expect(mapRegion().getByText("receivers: RF-04, RF-05")).toBeInTheDocument();
-    expect(mapRegion().getByText("aircraft:")).toBeInTheDocument();
+    expect(await (await mapRegion()).findByText("zones: event-77")).toBeInTheDocument();
+    expect((await mapRegion()).getByText("receivers: RF-04, RF-05")).toBeInTheDocument();
+    expect((await mapRegion()).getByText("aircraft:")).toBeInTheDocument();
   });
 
   it("keeps each receiver's state from the hour's picture", async () => {
     show(104);
 
-    expect(await mapRegion().findByText("receiver states: RF-04 degraded; RF-05 degraded")).toBeInTheDocument();
+    expect(await (await mapRegion()).findByText("receiver states: RF-04 degraded; RF-05 degraded")).toBeInTheDocument();
   });
 
   it("zooms to the area, not the corpus", async () => {
@@ -397,49 +398,49 @@ describe("the affected area on a map (hyp-001 (6), qa.md 164)", () => {
       { lat: 51.45, lon: 5.375 },
       { lat: 51.6, lon: 6.14 },
     ]);
-    expect(await mapRegion().findByText(`bounds: ${JSON.stringify(expected)}`)).toBeInTheDocument();
+    expect(await (await mapRegion()).findByText(`bounds: ${JSON.stringify(expected)}`)).toBeInTheDocument();
   });
 
   it("prints the centre's latitude and longitude under the map", async () => {
     show(104);
 
-    expect(await mapRegion().findByText(/51\.526° N, 5\.758° E/)).toBeInTheDocument();
+    expect(await (await mapRegion()).findByText(/51\.526° N, 5\.758° E/)).toBeInTheDocument();
   });
 
   it("asks for the conclusion's own hour, unfiltered", async () => {
     const loadPicture = vi.fn(() => Promise.resolve(picture()));
     show(104, { loadPicture });
 
-    await mapRegion().findByText("zones: event-77");
+    await (await mapRegion()).findByText("zones: event-77");
     expect(loadPicture).toHaveBeenCalledWith(106);
   });
 
   it("draws no disc for a receiver fault, and says a fault is not an area", async () => {
     show(148);
 
-    expect(await mapRegion().findByText(/a claim about RF-06, not an area, so no area is drawn/i)).toBeInTheDocument();
-    expect(mapRegion().getByText("zones:")).toBeInTheDocument();
-    expect(mapRegion().getByText("receivers: RF-05, RF-06, RF-07")).toBeInTheDocument();
+    expect(await (await mapRegion()).findByText(/a claim about RF-06, not an area, so no area is drawn/i)).toBeInTheDocument();
+    expect((await mapRegion()).getByText("zones:")).toBeInTheDocument();
+    expect((await mapRegion()).getByText("receivers: RF-05, RF-06, RF-07")).toBeInTheDocument();
   });
 
   it("draws no disc, and says why, when the claim recorded no radius", async () => {
     // Failure case: never a default radius.
     show(104, { loadPicture: () => Promise.resolve(picture({ interferenceZones: [{ ...ZONE, radiusKm: null }] })) });
 
-    expect(await mapRegion().findByText(/no radius was recorded with this claim, so no area is drawn/i)).toBeInTheDocument();
+    expect(await (await mapRegion()).findByText(/no radius was recorded with this claim, so no area is drawn/i)).toBeInTheDocument();
   });
 
   it("draws no disc, and says why, when the hour holds no zone matching the conclusion", async () => {
     show(104, { loadPicture: () => Promise.resolve(picture({ interferenceZones: [{ ...ZONE, receivers: ["RF-01", "RF-02"] }] })) });
 
-    expect(await mapRegion().findByText(/this conclusion's area is not on its hour's map, so no area is drawn/i)).toBeInTheDocument();
-    expect(mapRegion().getByText("zones:")).toBeInTheDocument();
+    expect(await (await mapRegion()).findByText(/this conclusion's area is not on its hour's map, so no area is drawn/i)).toBeInTheDocument();
+    expect((await mapRegion()).getByText("zones:")).toBeInTheDocument();
   });
 
   it("says so when the hour's map cannot be loaded, and the rest of the detail still renders", async () => {
     show(104, { loadPicture: () => Promise.reject(new Error("503")) });
 
-    expect(await mapRegion().findByText(/the map of this hour could not be loaded/i)).toBeInTheDocument();
+    expect(await (await mapRegion()).findByText(/the map of this hour could not be loaded/i)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Summary" })).toBeInTheDocument();
     expect(screen.queryByTestId("map-view-stub")).not.toBeInTheDocument();
   });
@@ -450,11 +451,11 @@ describe("placing the affected area (hyp-001 (6))", () => {
 
   it("fits the whole disc at the assessed radius", () => {
     const [[west, south], [east, north]] = affectedAreaBounds(centre, 60, []);
-    // 60 km is 0.539° of latitude, and 0.866° of longitude at 51.5° N.
-    expect(south).toBeLessThanOrEqual(51.526 - 0.539);
-    expect(north).toBeGreaterThanOrEqual(51.526 + 0.539);
-    expect(west).toBeLessThanOrEqual(5.758 - 0.866);
-    expect(east).toBeGreaterThanOrEqual(5.758 + 0.866);
+    // 60 km is 0.5390° of latitude, and 0.866° of longitude at 51.5° N; to four places, rounded down.
+    expect(south).toBeLessThanOrEqual(51.526 - 0.5389);
+    expect(north).toBeGreaterThanOrEqual(51.526 + 0.5389);
+    expect(west).toBeLessThanOrEqual(5.758 - 0.8659);
+    expect(east).toBeGreaterThanOrEqual(5.758 + 0.8659);
     // Zoomed to the area, not padded out to the corpus.
     expect(north - south).toBeLessThan(1.5);
   });
@@ -479,6 +480,8 @@ describe("placing the affected area (hyp-001 (6))", () => {
   it.each([
     ["other receivers", { receivers: ["RF-04", "RF-06"] }],
     ["another window", { startedAt: "2022-06-27T12:24:40Z" }],
+    // Added after the mutation pass: a zone holding only some of the conclusion's receivers.
+    ["only some of its receivers", { receivers: ["RF-04"] }],
   ])("matches no zone with %s", (_, over) => {
     expect(matchZone(conclusion, [{ ...ZONE, ...over }])).toBeNull();
   });
@@ -553,7 +556,11 @@ describe("where the screen's data comes from (hyp-001 input)", () => {
     render(<App />);
 
     expect(await screen.findByRole("heading", { level: 2, name: /interference zone affecting RF-04/i })).toBeInTheDocument();
-    await waitFor(() => expect(fetchMock.mock.calls.some(([path]) => String(path).includes("run=106"))).toBe(true));
+    // The conclusion's hour unfiltered: a filtered view could withhold a receiver the evidence names.
+    // The view assertion was added after the mutation pass.
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.some(([path]) => String(path).includes("run=106") && String(path).includes("view=all"))).toBe(true),
+    );
     // The screen fetches through what the seam hands it: no mock, no network of its own.
     expect(screenSource).not.toMatch(/mocks\//);
     expect(screenSource).not.toMatch(/\bfetch\s*\(/);
