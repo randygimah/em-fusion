@@ -122,9 +122,7 @@ def test_the_verdict_union_is_the_backends_verdict_set() -> None:
     # spec: api-005 -- exactly four, mirrored and parity-checked.
     source = _read(CONTRACT_PATHS)
 
-    assert set(union_members(source, "Verdict")) == {
-        v.value for v in _store().Verdict
-    }
+    assert set(union_members(source, "Verdict")) == {v.value for v in _store().Verdict}
     assert set(MAPPING) == {v.value for v in _store().Verdict}
 
 
@@ -276,9 +274,12 @@ def test_a_verdict_for_an_unknown_row_is_refused_and_writes_nothing(
         store.record_verdict(factory, 999_999, store.Verdict.CONFIRM, None)
 
     with migrated_database.connect() as connection:
-        assert connection.execute(
-            text("SELECT count(*) FROM analyst_feedback")
-        ).scalar_one() == 0
+        assert (
+            connection.execute(
+                text("SELECT count(*) FROM analyst_feedback")
+            ).scalar_one()
+            == 0
+        )
 
 
 @pytest.mark.database

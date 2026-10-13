@@ -3523,6 +3523,40 @@ Looking at the screen in a browser found two layout defects no test asserts:
 - **The map's box** was 288 px, below the map's own 320 px minimum, so the map covered the sentence
   under it.
 
+### A verdict sets the status by the latest verdict, not by a state machine
+
+Decided on 13 October 2026 (`api-005`, `qa.md` §165). The specification gave four verdicts and five
+statuses, and said only that status transitions follow the documented state set. The user fixed the
+mapping, and three further decisions came with it.
+
+| Verdict | Status |
+|---|---|
+| confirm | Confirmed |
+| reject | Rejected |
+| false positive | Rejected, the verdict row keeping *false-positive* |
+| needs more evidence | Under review |
+
+*Inconclusive* stays a stored status that no verdict produces.
+
+- **A false positive is a rejection with its reason kept, not a sixth status.** A sixth status would
+  have meant a schema change for a distinction the feedback row already records.
+- **The status is the mapping of the latest verdict, from any status.** The alternative was a state
+  machine with allowed transitions (for example, no way back out of Confirmed). It was rejected
+  because a confirmed explanation that later looks wrong is exactly the case human review exists
+  for. Refusing the second verdict would leave the status asserting a judgement the analyst has
+  withdrawn. Verdicts are only appended, so the history still records every step.
+- **Only the reviewable row takes a verdict.** The detail endpoint serves any stored row, including
+  trial rows, the later campaign asks and the template baseline. A verdict on one of those would
+  attach to text the blind scoring never saw, so a verdict and a score would no longer be about the
+  same words. Such a verdict is refused with a 409.
+- **The verdict set is held by the store as well as validated at the boundary.** The column had
+  been free text since the first migration, so any writer other than the endpoint could have
+  introduced a fifth spelling the mapping does not know.
+
+**One transaction, tested by making each half fail.** The test installs a database trigger that
+refuses the status update in one case and the feedback insert in the other. Either way neither
+change may persist, whichever order the code writes in.
+
 ### Containerisation: a Makefile over Compose, and what the first working `up` exposed
 
 The three services (backend, frontend, and a profiled one-shot pipeline) are driven through a root

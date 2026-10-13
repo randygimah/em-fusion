@@ -26,8 +26,18 @@ export type CitationGrounding = "grounded" | "unknown" | "superseded";
 // asked arm fell back.
 export type Generator = "template" | "local" | "hosted";
 
+// An analyst's verdict (api-005). The store holds the same four.
+export type Verdict = "confirm" | "reject" | "needs-more-evidence" | "false-positive";
+
+// The body of POST /api/v1/hypotheses/{id}/feedback (api-005). A blank note is
+// stored as none; the reply is the HypothesisDetail as stored.
+export interface VerdictRequest {
+  verdict: Verdict;
+  note: string | null;
+}
+
 export interface AnalystVerdict {
-  verdict: string;
+  verdict: Verdict;
   note: string | null;
   createdAt: string;
 }

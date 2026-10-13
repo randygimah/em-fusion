@@ -87,6 +87,30 @@ class ReviewStatus(str, Enum):
     INCONCLUSIVE = "Inconclusive"
 
 
+class Verdict(str, Enum):
+    """An analyst's verdict on the explanation under review. `api-005`, FR-601.
+
+    Four, and held by the store as well (migration `0011`), so the history
+    never holds a spelling the status mapping does not know.
+    """
+
+    CONFIRM = "confirm"
+    REJECT = "reject"
+    NEEDS_MORE_EVIDENCE = "needs-more-evidence"
+    FALSE_POSITIVE = "false-positive"
+
+
+#: What each verdict does to the status (qa.md 165). A false positive is a
+#: rejection whose reason the feedback row keeps. Nothing maps to
+#: Inconclusive, which stays a stored status with no verdict producing it.
+VERDICT_STATUS: Mapping[Verdict, ReviewStatus] = {
+    Verdict.CONFIRM: ReviewStatus.CONFIRMED,
+    Verdict.REJECT: ReviewStatus.REJECTED,
+    Verdict.FALSE_POSITIVE: ReviewStatus.REJECTED,
+    Verdict.NEEDS_MORE_EVIDENCE: ReviewStatus.UNDER_REVIEW,
+}
+
+
 class GroundingStatus(str, Enum):
     """Whether every claim was checked against the bundle, in three values.
 
@@ -485,7 +509,7 @@ def record_campaign_ordinals(
 class StoredVerdict:
     """One analyst verdict, as `analyst_feedback` holds it."""
 
-    verdict: str
+    verdict: Verdict
     note: str | None
     created_at: datetime
 
@@ -564,12 +588,52 @@ def verdicts_for(
     out: dict[int, list[StoredVerdict]] = {}
     for row in rows:
         out.setdefault(int(row.hypothesis_id), []).append(
-            StoredVerdict(verdict=row.verdict, note=row.note, created_at=row.created_at)
+            StoredVerdict(
+                verdict=Verdict(row.verdict), note=row.note, created_at=row.created_at
+            )
         )
     return out
 
 
+def record_verdict(
+    session_factory: sessionmaker[Session],
+    hypothesis_id: int,
+    verdict: Verdict,
+    note: str | None,
+) -> None:
+    """Append a verdict and set the status it maps to, both or neither. `api-005`.
+
+    The status is always the mapping of the latest verdict, so an analyst may
+    change their mind and the history keeps every step. Whether the row may
+    take a verdict at all (only the reviewable one) is the route's decision.
+    """
+    with session_factory.begin() as session:
+        # `session.connection()` for a typed `rowcount`, as `record_grounding`.
+        updated = (
+            session.connection()
+            .execute(
+                text("UPDATE hypotheses SET status = :status WHERE id = :id"),
+                {"status": VERDICT_STATUS[verdict].value, "id": hypothesis_id},
+            )
+            .rowcount
+        )
+        if updated != 1:
+            raise HypothesisWriteError(
+                f"no hypothesis {hypothesis_id} in the store; nothing was written"
+            )
+        session.execute(
+            text(
+                "INSERT INTO analyst_feedback (hypothesis_id, verdict, note) "
+                "VALUES (:id, :verdict, :note)"
+            ),
+            {"id": hypothesis_id, "verdict": verdict.value, "note": note},
+        )
+
+
 __all__ = [
+    "VERDICT_STATUS",
+    "Verdict",
+    "record_verdict",
     "GroundingStatus",
     "HypothesisWriteError",
     "OrdinalCopy",

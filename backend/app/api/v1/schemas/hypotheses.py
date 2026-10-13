@@ -25,7 +25,7 @@ import re
 from collections.abc import Collection, Sequence
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.ai.grounding import CitationVerdict, check
 from app.ai.hypothesis import Confidence
@@ -35,6 +35,7 @@ from app.db.hypotheses import (
     ReviewStatus,
     StoredHypothesis,
     StoredVerdict,
+    Verdict,
 )
 from app.detection.bundle import EvidenceBundle
 from app.evaluation.pack import SCORED_ORDINAL
@@ -53,7 +54,7 @@ class _Frozen(BaseModel):
 
 
 class AnalystVerdict(_Frozen):
-    verdict: str
+    verdict: Verdict
     note: str | None
     createdAt: datetime  # noqa: N815 -- mirrors the TypeScript contract
 
@@ -130,6 +131,26 @@ class HypothesisDetail(_Frozen):
     bundle: HypothesisBundle
     #: Oldest first; empty, never null.
     verdicts: list[AnalystVerdict]
+
+
+#: The longest note kept, inclusive (api-005).
+NOTE_LIMIT = 2000
+
+
+class VerdictRequest(_Frozen):
+    """The body of `POST /hypotheses/{id}/feedback`. spec: api-005.
+
+    An unrecognised verdict, a missing one or an over-long note is a 422
+    before anything is written. A blank note is no note.
+    """
+
+    verdict: Verdict
+    note: str | None = Field(default=None, max_length=NOTE_LIMIT)
+
+    @field_validator("note")
+    @classmethod
+    def _blank_is_none(cls, note: str | None) -> str | None:
+        return None if note is None or not note.strip() else note
 
 
 def is_reviewable(row: StoredHypothesis) -> bool:
@@ -266,6 +287,8 @@ __all__ = [
     "HypothesisError",
     "HypothesisList",
     "HypothesisSummary",
+    "NOTE_LIMIT",
+    "VerdictRequest",
     "build_hypothesis_detail",
     "build_hypothesis_list",
     "is_reviewable",

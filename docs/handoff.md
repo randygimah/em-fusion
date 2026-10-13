@@ -8,7 +8,7 @@ Abstraction Layer, detects deviations deterministically, and turns evidence bund
 schema-validated, grounding-checked AI hypotheses for analyst review. Decision support, not
 autonomous decision-making.
 
-This session (9–12 October 2026) did five things:
+This session (9–13 October 2026) did six things:
 
 1. **Finished playback.** `api-018` serves each receiver's out-of-nominal intervals through an hour;
    `map-007` draws receivers in their state at the playback cursor.
@@ -25,23 +25,40 @@ This session (9–12 October 2026) did five things:
 4. **Kept the progress note current** (published versions 10 and 11).
 5. **Built the Hypotheses screen itself** (11–12 October): `hyp-001`–`hyp-003` amended to what is
    stored, then built, which also finished `ai-010`.
+6. **Built the verdict endpoint** (13 October): `api-005` amended to pin the verdict → status
+   mapping, then built; the main database migrated to `0011`.
 
 Everything went spec → failing tests → code → user review (→ mutation pass for frontend items) →
 `passes: true`, committed on `main`.
 
 ## Current state
 
-**Backlog 114 of 128.** `main` is in sync with `origin/main`; tree clean once this handoff is
+**Backlog 115 of 128.** `main` is in sync with `origin/main`; tree clean once this handoff is
 committed.
 
 **Suites:**
-- Backend, full container suite: **2,306 passed, 99.90%** (6,045 statements, 6 missed; 15 min 25 s),
-  run after the model-id change at a67daf5.
-- Frontend: **591 passed**; Biome lint and `tsc -b` clean.
-- The backend was not touched after `a67daf5`, so its figure stands.
+- Backend, full container suite: **2,346 passed, 99.90%**, run with `api-005` in place;
+  `test_api_feedback.py` 40 passed again after Black reformatted it.
+- Frontend: **591 passed**; Biome lint and `tsc -b` clean. `types/hypotheses.ts` gained `Verdict` and
+  `VerdictRequest` only.
 
-**The main database is migrated to `0010`** and the ordinal copy has run: 80 positions written from
-the committed campaign record; a second run wrote 0 and left 80 unchanged.
+**The main database is migrated to `0011`** (`/api/v1/health` reports `at-head`). The `0010` ordinal
+copy ran earlier: 80 positions written from the committed campaign record; a second run wrote 0.
+
+### The verdict endpoint (`api-005`)
+
+- `POST /api/v1/hypotheses/{id}/feedback`, body `{verdict, note}`:
+  - confirm → Confirmed; reject → Rejected; false-positive → Rejected (the verdict kept on the row);
+    needs-more-evidence → Under review. Inconclusive stays in the stored set, unused.
+  - The latest verdict sets the status, from any status; verdicts are appended, never replaced.
+  - Only the reviewable row takes one (409 otherwise); unknown id 404; bad verdict or a note over
+    2,000 characters 422; a blank note is stored as null.
+  - The verdict row and the status change are one transaction. The reply is the detail as stored.
+- Migration `0011` adds a CHECK holding the four verdicts in the store.
+- **Checked live against the main database, refusals only:** a bad verdict and a 2,001-character note
+  on 104 (422), id 999999 (404), 105 (a hosted repeat) and 107 (template) (409). Afterwards
+  `analyst_feedback` holds 0 rows and every hypothesis is still New. No real verdict has been
+  recorded; the success path is proved by the tests only.
 
 ### The Hypotheses screen, as far as it goes
 
@@ -142,7 +159,8 @@ Hypotheses screen** (`db-012` onward), which now shows enough to tell.
 
 ## Files in flight
 
-None. The tree is clean once this handoff is committed.
+None. The tree is clean once this handoff is committed (`docs/EM_Fusion_literature_matrix.xlsx` is
+the user's untracked file; leave it).
 
 ## Changed
 
@@ -179,7 +197,12 @@ None. The tree is clean once this handoff is committed.
 | `794b46b` | `docs: handoff for the hypotheses rail and address` |
 | `409bf2b` | `spec: amend hyp-001, hyp-002, hyp-003 -- the screen against what is stored` |
 | `e9baeda` | `test: add tests for hyp-001, hyp-002, hyp-003` |
-| *(this commit)* | `feat(hyp-001, hyp-002, hyp-003, ai-010): the Hypotheses screen - tests pass` |
+| `ccc5b0b` | `feat(hyp-001, hyp-002, hyp-003, ai-010): the Hypotheses screen - tests pass` |
+| `c7af518` | `docs: progress note covers the Hypotheses screen (version 12)` |
+| `9d00d7a` | `docs: qa 165, the next strands of work` |
+| `c4a7b2a` | `spec: amend api-005 -- the verdict-to-status mapping` |
+| `da88dfd` | `test: add tests for api-005` |
+| *(this commit)* | `feat(api-005): the analyst's verdict and the status it sets - tests pass` |
 
 **New files:**
 - **Backend:**
@@ -208,6 +231,9 @@ None. The tree is clean once this handoff is committed.
   `lib/api.ts` (`fetchHypotheses`, `fetchHypothesis`, `HypothesisNotFoundError`),
   `lib/hypothesisVocabulary.ts`, `MapView.tsx` (`bounds`), `App.tsx` (three loaders), the
   map stand-in in `test/setup.ts`; `qa.md` §164.
+- **The verdict (13 October):** `alembic/versions/0011_feedback_verdict_known.py`,
+  `tests/test_api_feedback.py`; `app/db/hypotheses.py` (`Verdict`, `VERDICT_STATUS`,
+  `record_verdict`), the schema's `VerdictRequest`, the route's `post_feedback`; `qa.md` §165.
 
 **Changed (main ones):**
 - **Store:**
@@ -279,6 +305,10 @@ None. The tree is clean once this handoff is committed.
   - *the window's end lost* was a malformed mutant that broke compilation, counted as killed for the
     wrong reason, and was rewritten.
 
+- **`record_verdict` first failed mypy** (`"Result[Any]" has no attribute "rowcount"`) because it
+  executed through the session; it now goes through `session.connection()`, as `record_grounding`
+  already did.
+
 **Carried from earlier sessions, still true:**
 - **Never run `biome format --write` over the frontend**: the tree is not in Biome's format, and a
   wholesale run rewrote about 25 unrelated files once. Format only files you wrote whole.
@@ -288,15 +318,9 @@ None. The tree is clean once this handoff is committed.
 ## Next step
 
 1. **The Hypotheses screen, continued**, spec first, in this order:
-   - **Pin the verdict → status mapping in `api-005`:**
-     - confirm → Confirmed;
-     - reject → Rejected;
-     - false positive → Rejected, with the verdict kept on the feedback row;
-     - needs more evidence → Under review;
-     - Inconclusive stays in the stored set, unused.
-
-     Then `fbk-001`/`fbk-002` (the verdict buttons and note go in the screen's right column, under
-     the map, as in the design), then `hyp-004` (the disclaimer).
+   - `fbk-001`/`fbk-002`: the verdict buttons and note in the screen's right column, under the map,
+     as in the design, posting to `api-005`; then `hyp-004` (the disclaimer).
+   - Recording a real verdict changes the main store; do it only when the user wants one.
    - **Never show the screen to the second rater before their scoring is done**: it names each
      explanation's generator.
 2. **Second rater (mid-October).**
@@ -309,7 +333,8 @@ None. The tree is clean once this handoff is committed.
      - the user's other 20 items single-rated;
      - mixed-evidence cause correctness reported separately;
      - the user's pass two marked unblinded.
-3. **Offer a progress-note update**: the Hypotheses screen now shows something worth telling.
+3. **Progress note**: version 12 (`c7af518`) covers the screen. Offer an update once an analyst can
+   record a verdict from it.
 
 **Open and unowned:**
 - **Hypotheses screen, seen and not changed:** the zone's label covers the RF-04 marker on
