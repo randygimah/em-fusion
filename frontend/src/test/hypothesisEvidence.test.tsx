@@ -67,6 +67,7 @@ const show = (over: Partial<HypothesisDetail> = {}) =>
       loadList={() => Promise.resolve({ hypotheses: [], unreviewableBundles: 0 })}
       loadDetail={() => Promise.resolve(detail(over))}
       loadPicture={() => Promise.resolve(operationalPictureMock)}
+      submitVerdict={() => new Promise(() => {})}
     />,
   );
 

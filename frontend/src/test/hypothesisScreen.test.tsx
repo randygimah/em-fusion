@@ -6,7 +6,7 @@ import { fetchHypotheses, fetchHypothesis, HYPOTHESES_PATH, HypothesisNotFoundEr
 import operationalPictureMock from "../mocks/operationalPictureMock";
 import HypothesesScreen from "../screens/hypotheses";
 import screenSource from "../screens/hypotheses.tsx?raw";
-import type { HypothesisDetail, HypothesisList, HypothesisSummary } from "../types/hypotheses";
+import type { HypothesisDetail, HypothesisList, HypothesisSummary, VerdictRequest } from "../types/hypotheses";
 import type { InterferenceZone, OperationalPicture, RFSensor } from "../types/operationalPicture";
 
 // spec: hyp-001 (amended 2026-10-11) — the Hypotheses screen: the list of
@@ -147,6 +147,7 @@ interface Loaders {
   loadList: () => Promise<HypothesisList>;
   loadDetail: (id: number) => Promise<HypothesisDetail>;
   loadPicture: (runId: number) => Promise<OperationalPicture>;
+  submitVerdict: (id: number, request: VerdictRequest) => Promise<HypothesisDetail>;
 }
 
 const show = (hypothesisId: number | null, over: Partial<Loaders> = {}) => {
@@ -154,6 +155,7 @@ const show = (hypothesisId: number | null, over: Partial<Loaders> = {}) => {
     loadList: () => Promise.resolve(LIST),
     loadDetail: (id) => Promise.resolve(id === 148 ? FAULT : detail()),
     loadPicture: () => Promise.resolve(picture()),
+    submitVerdict: never,
     ...over,
   };
   const view = render(
@@ -312,10 +314,11 @@ describe("the summary, the action and the verdicts (hyp-001 (4), (5))", () => {
     const history = within((await screen.findByRole("heading", { name: "Verdicts" })).parentElement as HTMLElement);
     const items = history.getAllByRole("listitem");
     expect(items).toHaveLength(2);
-    expect(items[0]).toHaveTextContent(/needs-more-evidence/);
+    // In words since fbk-001 (amended 2026-10-13); the stored value was shown raw before.
+    expect(items[0]).toHaveTextContent("Needs more evidence");
     expect(items[0]).toHaveTextContent("Want RF-03's readings.");
     expect(items[0]).toHaveTextContent("09:00:00 UTC");
-    expect(items[1]).toHaveTextContent(/confirm/);
+    expect(items[1]).toHaveTextContent("Confirm");
     expect(history.queryByText(/no verdict recorded yet/i)).not.toBeInTheDocument();
   });
 });
