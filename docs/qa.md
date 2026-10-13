@@ -9617,6 +9617,23 @@ disc is not read as a missing measurement.
 
 **Limits:** the offline basemap goes to zoom 10, so "zoomed in" means about city scale.
 
+## 165. What are the next strands of work?
+
+**Six strands, 14 items, and only one of them is both unblocked and on the thesis's main line: the
+analyst's verdict.** Snapshot on 13 October 2026, backlog 114 of 128.
+
+| Strand | Items | State |
+|---|---|---|
+| The analyst's verdict | `api-005`, `fbk-001`, `fbk-002`, `hyp-004` | Unblocked. Pin what each verdict does to status first |
+| The marking's arithmetic | `eval-006` | Waits on the second rater (mid-October) and the user's ethics-form update |
+| Detection, the third test | `anom-003`, `anom-006`, `op-006` | Unblocked; `anom-003` carries the extensibility prediction |
+| The extensibility measurement | `adp-003` | Unblocked; a thesis figure (files, lines, hours) |
+| The local AI arm | `ai-005`, `ai-006` | Deferred by the phase 9 plan; a scope decision, not a build |
+| Guards and running | `api-009`, `ops-001`, `ops-002` | Unblocked; `api-009` protects the evaluation |
+
+**The trap: an "open" item is not always "next".** Two of the fourteen are deferred by design and
+one waits on a person, so the backlog count overstates what can be built now.
+
 ---
 
 | **Composing copy** | Turning a finding type the backend sends verbatim into a sentence an analyst reads. Done on the screen by design, so prose never arrives from a detector — and in one module, because two panels carry the same type. See §148. |
@@ -9642,3 +9659,5 @@ disc is not read as a missing measurement.
 | **A section's name versus its state** | A heading names a region of the screen and stays fixed; the state of what is in it (empty, unexplained, unexamined) belongs in the content under it. See §163. |
 
 | **An assessed area versus a measured field** | An assessed area is a centre and a radius recorded with a claim, drawn as one flat disc; a measured field is an intensity known at every point, which a heat map implies. The store holds the first only: 7 receivers, nothing between them. See §164. |
+
+| **Open versus next** | An open backlog item has not passed; a next one is open, unblocked and on the line the thesis needs. Deferred and person-gated items are open and not next. See §165. |
