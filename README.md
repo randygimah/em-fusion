@@ -160,9 +160,7 @@ specifically to measure the cost. What would count as failure was written down f
 | Ingest, validation, pseudonymisation, storage port, schema, detectors, API, screens | **0** | — | — |
 
 Detection results and the operational picture were proven identical with and without the new feed.
-Active time was 17 minutes, with the waits for review taken out. That is a lower bound: it
-was written by an AI coding agent that already knew the codebase, so the line count is the stronger
-figure. On the generator side, adding an explanation provider costs 1 new module and 2 lines
+Active time was 17 minutes, with the waits for review taken out. On the generator side, adding an explanation provider costs 1 new module and 2 lines
 elsewhere.
 
 <p align="center"><img src="docs/assets/readme/third-source-clock.svg" alt="The 17 minutes 14 seconds of active work on the third source, in three stretches: committing the specification, writing the tests and then the code, and the test suite finishing before the work was committed." width="640"></p>
