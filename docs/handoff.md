@@ -8,7 +8,7 @@ Abstraction Layer, detects deviations deterministically, and turns evidence bund
 schema-validated, grounding-checked AI hypotheses for analyst review. Decision support, not
 autonomous decision-making.
 
-This session (9–13 October 2026) did six things:
+This session (9–15 October 2026) did seven things:
 
 1. **Finished playback.** `api-018` serves each receiver's out-of-nominal intervals through an hour;
    `map-007` draws receivers in their state at the playback cursor.
@@ -27,20 +27,22 @@ This session (9–13 October 2026) did six things:
    stored, then built, which also finished `ai-010`.
 6. **Built the verdict endpoint** (13 October): `api-005` amended to pin the verdict → status
    mapping, then built; the main database migrated to `0011`.
+7. **Built the verdict card** (13–15 October): `fbk-001`, `fbk-002` and `hyp-004` amended to what
+   `api-005` built, then built as one piece (one card in the design), on the user's agreement.
 
 Everything went spec → failing tests → code → user review (→ mutation pass for frontend items) →
 `passes: true`, committed on `main`.
 
 ## Current state
 
-**Backlog 115 of 128.** `main` is in sync with `origin/main`; tree clean once this handoff is
+**Backlog 118 of 128.** `main` is in sync with `origin/main`; tree clean once this handoff is
 committed.
 
 **Suites:**
 - Backend, full container suite: **2,346 passed, 99.90%**, run with `api-005` in place;
   `test_api_feedback.py` 40 passed again after Black reformatted it.
-- Frontend: **591 passed**; Biome lint and `tsc -b` clean. `types/hypotheses.ts` gained `Verdict` and
-  `VerdictRequest` only.
+- Frontend: **616 passed** (25 new in `hypothesisVerdict.test.tsx`); Biome lint and `tsc -b` clean.
+- The backend was not touched after `api-005`, so its figure stands.
 
 **The main database is migrated to `0011`** (`/api/v1/health` reports `at-head`). The `0010` ordinal
 copy ran earlier: 80 positions written from the committed campaign record; a second run wrote 0.
@@ -57,8 +59,25 @@ copy ran earlier: 80 positions written from the committed campaign record; a sec
 - Migration `0011` adds a CHECK holding the four verdicts in the store.
 - **Checked live against the main database, refusals only:** a bad verdict and a 2,001-character note
   on 104 (422), id 999999 (404), 105 (a hosted repeat) and 107 (template) (409). Afterwards
-  `analyst_feedback` holds 0 rows and every hypothesis is still New. No real verdict has been
-  recorded; the success path is proved by the tests only.
+  `analyst_feedback` held 0 rows and every hypothesis was still New.
+
+### The verdict card (`fbk-001`, `fbk-002`, `hyp-004`)
+
+- **Where:** the Hypotheses screen's right column, under the map. Note box (optional, counted against
+  2,000, never truncated: over the limit the buttons are disabled with a sentence), four buttons
+  (Confirm, Reject, Needs more evidence, False positive), the disclaimer *Decision support only —
+  analyst judgement is final.* under them, on every explanation including those that take no verdict.
+- **Behaviour:** one click, no confirmation step. Buttons disabled while sending. After a verdict the
+  header, the list and the history show **the store's reply** (held per explanation in the screen);
+  a refusal, a network failure or a reply naming another explanation changes nothing but a sentence
+  and keeps the note. A non-reviewable row shows a sentence and no controls. History in words.
+- **Mutation:** `mutate_fbk001_002_hyp004.log`, **30 of 30** on the second run, sentinel killed (91
+  tests in four suites). First run 29 of 31; see Failed attempts.
+- **Checked in the browser** (13 October, no click): the card on `#/hypotheses/104` at 1456 px and
+  the no-verdict sentence on 105; no console errors.
+- **The user tested it in the app (15 October) and recorded the first real verdicts in the main
+  store:** 148 Confirm (with a note) → Confirmed; 96 Needs more evidence (with a note) → Under review.
+  The store now holds 2 feedback rows; statuses New 153, Confirmed 1, Under review 1.
 
 ### The Hypotheses screen, as far as it goes
 
@@ -202,7 +221,10 @@ the user's untracked file; leave it).
 | `9d00d7a` | `docs: qa 165, the next strands of work` |
 | `c4a7b2a` | `spec: amend api-005 -- the verdict-to-status mapping` |
 | `da88dfd` | `test: add tests for api-005` |
-| *(this commit)* | `feat(api-005): the analyst's verdict and the status it sets - tests pass` |
+| `9ebd6b1` | `feat(api-005): the analyst's verdict and the status it sets - tests pass` |
+| `b6f459d` | `spec: amend fbk-001, fbk-002, hyp-004 -- the verdict card` |
+| `27e4d21` | `test: add tests for fbk-001, fbk-002, hyp-004` |
+| *(this commit)* | `feat(fbk-001, fbk-002, hyp-004): the verdict card - tests pass` |
 
 **New files:**
 - **Backend:**
@@ -234,6 +256,12 @@ the user's untracked file; leave it).
 - **The verdict (13 October):** `alembic/versions/0011_feedback_verdict_known.py`,
   `tests/test_api_feedback.py`; `app/db/hypotheses.py` (`Verdict`, `VERDICT_STATUS`,
   `record_verdict`), the schema's `VerdictRequest`, the route's `post_feedback`; `qa.md` §165.
+- **The verdict card (13–15 October):** `test/hypothesisVerdict.test.tsx`,
+  `measurements/mutation/mutate_fbk001_002_hyp004.{py,log}`; `screens/hypotheses.tsx` (`VerdictCard`,
+  replies held per explanation), `lib/api.ts` (`postVerdict`, `VERDICT_NOTE_LIMIT`),
+  `lib/hypothesisVocabulary.ts` (`VERDICT_COPY`, `verdictLabel`, `VERDICT_CARD_COPY`), `App.tsx`
+  (`recordVerdict`); `hypothesisScreen.test.tsx` (history now in words) and
+  `hypothesisEvidence.test.tsx` (the new prop).
 
 **Changed (main ones):**
 - **Store:**
@@ -309,6 +337,18 @@ the user's untracked file; leave it).
   executed through the session; it now goes through `session.connection()`, as `record_grounding`
   already did.
 
+- **Verdict card, mutation first run 29 of 31:**
+  - *a refusal read as success* survived because the refusal tests' bodies failed the reply's shape
+    check anyway. The tests now send an explanation-shaped body; **this edited
+    `hypothesisVerdict.test.tsx` after its test commit `27e4d21`**.
+  - *the card carried to another explanation* (its `key` removed) survived: a new address always
+    shows Loading first, which unmounts the card. The `key` was redundant, so it was deleted and the
+    mutant dropped.
+- **An existing test changed because the item retired what it asserted:** `hypothesisScreen.test.tsx`
+  asserted the stored verdict value raw (`needs-more-evidence`); it now asserts the words.
+- **A transient outage of the action-approval check** blocked every command and edit for one turn on
+  15 October; the work resumed unchanged on the next.
+
 **Carried from earlier sessions, still true:**
 - **Never run `biome format --write` over the frontend**: the tree is not in Biome's format, and a
   wholesale run rewrote about 25 unrelated files once. Format only files you wrote whole.
@@ -318,9 +358,9 @@ the user's untracked file; leave it).
 ## Next step
 
 1. **The Hypotheses screen, continued**, spec first, in this order:
-   - `fbk-001`/`fbk-002`: the verdict buttons and note in the screen's right column, under the map,
-     as in the design, posting to `api-005`; then `hyp-004` (the disclaimer).
-   - Recording a real verdict changes the main store; do it only when the user wants one.
+   - The screen is complete for the backlog. Its open points are below (layout below 1280 px,
+     phone width and keyboard order of the card unchecked).
+   - The main store now holds the user's two real verdicts; record more only when the user wants.
    - **Never show the screen to the second rater before their scoring is done**: it names each
      explanation's generator.
 2. **Second rater (mid-October).**
@@ -333,8 +373,10 @@ the user's untracked file; leave it).
      - the user's other 20 items single-rated;
      - mixed-evidence cause correctness reported separately;
      - the user's pass two marked unblinded.
-3. **Progress note**: version 12 (`c7af518`) covers the screen. Offer an update once an analyst can
-   record a verdict from it.
+3. **Progress note**: version 12 (`c7af518`) says an analyst cannot yet answer an explanation, which
+   is now false. Offer version 13: the verdict card, and the first two verdicts.
+4. **Remaining strands** (`qa.md` §165): `api-009`; `anom-003`/`anom-006`/`op-006`; `adp-003`;
+   decide on `ai-005`/`ai-006`; `ops-001`/`ops-002`.
 
 **Open and unowned:**
 - **Hypotheses screen, seen and not changed:** the zone's label covers the RF-04 marker on

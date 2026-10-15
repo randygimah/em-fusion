@@ -9,12 +9,13 @@ import { useEvidenceAccount } from "./hooks/useEvidenceAccount";
 import { useOperationalPicture } from "./hooks/useOperationalPicture";
 import { useSelectableHours } from "./hooks/useSelectableHours";
 import { useSystemHealth } from "./hooks/useSystemHealth";
-import { fetchHypotheses, fetchHypothesis, fetchOperationalPicture, fetchReceiverStates, fetchTracks } from "./lib/api";
+import { fetchHypotheses, fetchHypothesis, fetchOperationalPicture, fetchReceiverStates, fetchTracks, postVerdict } from "./lib/api";
 import { DEFAULT_VIEW } from "./lib/viewVocabulary";
 import { SCREENS } from "./routes";
 import HypothesesScreen from "./screens/hypotheses";
 import OperationalPictureScreen from "./screens/operationalPicture";
 import ScenarioControlScreen from "./screens/scenarioControl";
+import type { VerdictRequest } from "./types/hypotheses";
 import type { ViewSelection } from "./types/operationalPicture";
 
 // The Hypotheses screen's reads (spec: hyp-001): the list, the explanation the
@@ -23,6 +24,8 @@ import type { ViewSelection } from "./types/operationalPicture";
 const loadHypothesisList = () => fetchHypotheses();
 const loadHypothesis = (id: number) => fetchHypothesis(id);
 const loadConclusionHour = (runId: number) => fetchOperationalPicture("", runId, "all");
+// The analyst's verdict (spec: fbk-001), the screen's one write.
+const recordVerdict = (id: number, request: VerdictRequest) => postVerdict(id, request);
 
 // The seam, and the only place that knows where a screen's data comes from
 // (spec: api-003). Both screens fetch; no screen imports a mock itself.
@@ -131,6 +134,7 @@ const App = () => {
             loadDetail={loadHypothesis}
             loadList={loadHypothesisList}
             loadPicture={loadConclusionHour}
+            submitVerdict={recordVerdict}
           />
         )}
         {current.screen.id === "scenario-control" && <ScenarioControlRoute />}

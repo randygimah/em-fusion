@@ -1,9 +1,10 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { EmButton } from "../components/em/EmButton";
 import { EmLevel } from "../components/em/EmLevel";
 import { EmStatusPill } from "../components/em/EmStatusPill";
 import { MapView } from "../components/map/MapView";
 import { affectedAreaBounds, matchZone } from "../lib/affectedArea";
-import { HypothesisNotFoundError } from "../lib/api";
+import { HypothesisNotFoundError, VERDICT_NOTE_LIMIT } from "../lib/api";
 import { evidenceLabel } from "../lib/detectionVocabulary";
 import {
   CITATION_GROUNDING_COPY,
@@ -13,11 +14,14 @@ import {
   provenance,
   SCREEN_COPY,
   STORED_GROUNDING_COPY,
+  VERDICT_CARD_COPY,
+  VERDICT_COPY,
+  verdictLabel,
   windowLabel,
 } from "../lib/hypothesisVocabulary";
 import { cn } from "../lib/utils";
 import { hypothesisHash } from "../routes";
-import type { HypothesisDetail, HypothesisList } from "../types/hypotheses";
+import type { HypothesisDetail, HypothesisList, ReviewStatus, Verdict, VerdictRequest } from "../types/hypotheses";
 import type { OperationalPicture } from "../types/operationalPicture";
 
 /**
@@ -33,6 +37,9 @@ import type { OperationalPicture } from "../types/operationalPicture";
  * Data arrives through the loaders App.tsx hands down, fetched when the address
  * changes and never polled. It names each explanation's generator, so it must
  * not be shown to the second rater before their scoring is done.
+ *
+ * The verdict card (fbk-001, fbk-002, hyp-004) is the screen's one write. What
+ * it shows afterwards is the store's reply, never a status worked out here.
  */
 
 interface Props {
@@ -40,6 +47,7 @@ interface Props {
   loadList: () => Promise<HypothesisList>;
   loadDetail: (id: number) => Promise<HypothesisDetail>;
   loadPicture: (runId: number) => Promise<OperationalPicture>;
+  submitVerdict: (id: number, request: VerdictRequest) => Promise<HypothesisDetail>;
 }
 
 type Outcome<T> = { state: "loading" } | { state: "ready"; value: T } | { state: "failed"; error: unknown };
@@ -71,7 +79,10 @@ const PANEL = "border border-[#424754] bg-[#1d2027] p-4";
 const HEADING = "font-mono text-xs uppercase tracking-wide text-[#c2c6d6]";
 const NOTE = "text-sm text-[#8c909f]";
 
-const HypothesesScreen = ({ hypothesisId, loadList, loadDetail, loadPicture }: Props) => {
+const HypothesesScreen = ({ hypothesisId, loadList, loadDetail, loadPicture, submitVerdict }: Props) => {
+  // The store's replies to verdicts, by explanation: they replace what was loaded before them.
+  const [replies, setReplies] = useState<Record<number, HypothesisDetail>>({});
+  const recorded = (reply: HypothesisDetail) => setReplies((held) => ({ ...held, [reply.id]: reply }));
   const list = useLoaded("list", loadList);
   const detail = useLoaded(hypothesisId === null ? null : String(hypothesisId), () =>
     loadDetail(hypothesisId as number).then((answer) => {
@@ -90,6 +101,7 @@ const HypothesesScreen = ({ hypothesisId, loadList, loadDetail, loadPicture }: P
         <ExplanationList
           list={list}
           openId={hypothesisId}
+          replies={replies}
         />
         {hypothesisId === null ? (
           <p className={NOTE}>{SCREEN_COPY.choose}</p>
@@ -101,8 +113,10 @@ const HypothesesScreen = ({ hypothesisId, loadList, loadDetail, loadPicture }: P
           </p>
         ) : (
           <Detail
-            detail={detail.value}
+            detail={replies[hypothesisId] ?? detail.value}
+            onRecorded={recorded}
             picture={picture}
+            submitVerdict={submitVerdict}
           />
         )}
       </div>
@@ -110,7 +124,15 @@ const HypothesesScreen = ({ hypothesisId, loadList, loadDetail, loadPicture }: P
   );
 };
 
-const ExplanationList = ({ list, openId }: { list: Outcome<HypothesisList>; openId: number | null }) => (
+const ExplanationList = ({
+  list,
+  openId,
+  replies,
+}: {
+  list: Outcome<HypothesisList>;
+  openId: number | null;
+  replies: Record<number, HypothesisDetail>;
+}) => (
   <nav
     aria-label="Explanations"
     className={cn(PANEL, "self-start")}
@@ -138,7 +160,7 @@ const ExplanationList = ({ list, openId }: { list: Outcome<HypothesisList>; open
             >
               <span className="block text-sm">{hypothesis.hypothesisTitle}</span>
               <span className="mt-1 flex flex-wrap items-center gap-2">
-                <EmStatusPill status={hypothesis.status} />
+                <EmStatusPill status={replies[hypothesis.id]?.status ?? hypothesis.status} />
                 <span className="font-mono text-xs text-[#8c909f]">{windowLabel(hypothesis.windowStart, hypothesis.windowEnd)}</span>
               </span>
             </a>
@@ -167,7 +189,14 @@ const Sentences = ({ sentences }: { sentences: string[] }) =>
     </ul>
   );
 
-const Detail = ({ detail, picture }: { detail: HypothesisDetail; picture: Outcome<OperationalPicture> }) => {
+interface DetailProps {
+  detail: HypothesisDetail;
+  picture: Outcome<OperationalPicture>;
+  submitVerdict: Props["submitVerdict"];
+  onRecorded: (reply: HypothesisDetail) => void;
+}
+
+const Detail = ({ detail, picture, submitVerdict, onRecorded }: DetailProps) => {
   const writer = provenance(detail);
   const { bundle } = detail;
   const centre = centreLabel(bundle.latitude, bundle.longitude);
@@ -261,6 +290,12 @@ const Detail = ({ detail, picture }: { detail: HypothesisDetail; picture: Outcom
           detail={detail}
           picture={picture}
         />
+        {/* No key needed: a new address shows Loading first, so no note or sentence carries over. */}
+        <VerdictCard
+          detail={detail}
+          onRecorded={onRecorded}
+          submitVerdict={submitVerdict}
+        />
         <Section title="Verdicts">
           {detail.verdicts.length === 0 ? (
             <p className={cn(NOTE, "mt-3")}>{SCREEN_COPY.noVerdict}</p>
@@ -268,7 +303,7 @@ const Detail = ({ detail, picture }: { detail: HypothesisDetail; picture: Outcom
             <ol className="mt-3 space-y-2 text-sm">
               {detail.verdicts.map((verdict) => (
                 <li key={verdict.createdAt}>
-                  <span className="font-mono">{verdict.verdict}</span>
+                  <span className="font-semibold">{verdictLabel(verdict.verdict)}</span>
                   {verdict.note !== null && <span className="block">{verdict.note}</span>}
                   <span className="block font-mono text-xs text-[#8c909f]">{instantLabel(verdict.createdAt)}</span>
                 </li>
@@ -278,6 +313,96 @@ const Detail = ({ detail, picture }: { detail: HypothesisDetail; picture: Outcom
         </Section>
       </div>
     </div>
+  );
+};
+
+type Sending = { state: "idle" } | { state: "sending" } | { state: "failed" } | { state: "recorded"; status: ReviewStatus };
+
+/**
+ * fbk-001, fbk-002, hyp-004: four verdicts in one click each, an optional note,
+ * and the decision-support line whatever state the card is in. A refusal
+ * changes nothing on screen but a sentence, and keeps the note.
+ */
+const VerdictCard = ({ detail, submitVerdict, onRecorded }: Omit<DetailProps, "picture">) => {
+  const [note, setNote] = useState("");
+  const [sending, setSending] = useState<Sending>({ state: "idle" });
+  const tooLong = note.length > VERDICT_NOTE_LIMIT;
+  const blocked = sending.state === "sending" || tooLong;
+
+  const send = (verdict: Verdict) => {
+    if (blocked) return;
+    setSending({ state: "sending" });
+    submitVerdict(detail.id, { verdict, note: note.trim() === "" ? null : note })
+      .then((reply) => {
+        if (reply.id !== detail.id) throw new Error(`recorded a verdict on ${detail.id}, answered ${reply.id}`);
+        onRecorded(reply);
+        setNote("");
+        setSending({ state: "recorded", status: reply.status });
+      })
+      .catch(() => setSending({ state: "failed" }));
+  };
+
+  return (
+    <section
+      aria-labelledby="analyst-verdict-heading"
+      className={PANEL}
+    >
+      <h3
+        className={HEADING}
+        id="analyst-verdict-heading"
+      >
+        Analyst verdict
+      </h3>
+      {detail.reviewable ? (
+        <>
+          <label
+            className="mt-3 block text-xs text-[#c2c6d6]"
+            htmlFor="verdict-note"
+          >
+            {VERDICT_CARD_COPY.noteLabel}
+          </label>
+          <textarea
+            className="mt-1 block w-full resize-y border border-[#424754] bg-[#191b23] p-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#adc6ff]"
+            id="verdict-note"
+            onChange={(event) => setNote(event.target.value)}
+            rows={4}
+            value={note}
+          />
+          <p className={cn("mt-1 text-right font-mono text-xs", tooLong ? "text-[#ffb4ab]" : "text-[#8c909f]")}>
+            {VERDICT_CARD_COPY.noteCount(note.length, VERDICT_NOTE_LIMIT)}
+          </p>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            {(Object.keys(VERDICT_COPY) as Verdict[]).map((verdict) => (
+              <EmButton
+                disabled={blocked}
+                key={verdict}
+                onClick={() => send(verdict)}
+                size="sm"
+              >
+                {VERDICT_COPY[verdict]}
+              </EmButton>
+            ))}
+          </div>
+          <p
+            className={cn("mt-3 text-sm", sending.state === "failed" || tooLong ? "text-[#ffb4ab]" : "text-[#c2c6d6]")}
+            role="status"
+          >
+            {tooLong
+              ? VERDICT_CARD_COPY.noteTooLong(VERDICT_NOTE_LIMIT)
+              : sending.state === "sending"
+                ? VERDICT_CARD_COPY.sending
+                : sending.state === "failed"
+                  ? VERDICT_CARD_COPY.notRecorded
+                  : sending.state === "recorded"
+                    ? VERDICT_CARD_COPY.recorded(sending.status)
+                    : null}
+          </p>
+        </>
+      ) : (
+        <p className={cn(NOTE, "mt-3")}>{VERDICT_CARD_COPY.notReviewable}</p>
+      )}
+      <p className="mt-3 border-t border-[#424754] pt-3 text-xs text-[#c2c6d6]">{VERDICT_CARD_COPY.disclaimer}</p>
+    </section>
   );
 };
 

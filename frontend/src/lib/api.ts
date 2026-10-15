@@ -1,5 +1,5 @@
 import type { EvidenceAccount } from "../types/evidence";
-import type { HypothesisDetail, HypothesisList } from "../types/hypotheses";
+import type { HypothesisDetail, HypothesisList, VerdictRequest } from "../types/hypotheses";
 import type { OperationalPicture, PlaybackWindow, ReceiverStates, SelectableHour, ViewSelection } from "../types/operationalPicture";
 import type { InFlightBatch, ScenarioConfiguration, ScenarioRunRecord } from "../types/scenarioControl";
 
@@ -229,6 +229,30 @@ export const fetchHypothesis = async (id: number, baseUrl = "", signal?: AbortSi
   }
   const payload = await response.json();
   if (typeof payload?.id !== "number" || !Array.isArray(payload?.supportingEvidence)) {
+    throw new Error(`${path} answered something that is not an explanation`);
+  }
+  return payload as HypothesisDetail;
+};
+
+/** The longest note the feedback endpoint takes (api-005's NOTE_LIMIT). */
+export const VERDICT_NOTE_LIMIT = 2000;
+
+/**
+ * Record an analyst's verdict (spec: fbk-001, api-005) and return the detail as
+ * stored. Every refusal throws: the screen shows only what the store answered.
+ */
+export const postVerdict = async (id: number, request: VerdictRequest, baseUrl = ""): Promise<HypothesisDetail> => {
+  const path = `${HYPOTHESES_PATH}/${id}/feedback`;
+  const response = await fetch(`${baseUrl}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) {
+    throw new Error(`${path} responded ${response.status}`);
+  }
+  const payload = await response.json();
+  if (typeof payload?.id !== "number" || !Array.isArray(payload?.verdicts)) {
     throw new Error(`${path} answered something that is not an explanation`);
   }
   return payload as HypothesisDetail;

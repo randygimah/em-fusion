@@ -3557,6 +3557,37 @@ mapping, and three further decisions came with it.
 refuses the status update in one case and the feedback insert in the other. Either way neither
 change may persist, whichever order the code writes in.
 
+### A verdict is one click with no confirmation step, and the screen shows only the store's reply
+
+Decided on 13 October 2026 (`fbk-001`, `fbk-002`, `hyp-004`), on the Hypotheses screen's verdict card.
+Two decisions shape it, and both follow from the endpoint's rule that the latest verdict decides.
+
+**No "are you sure?" step.** A confirmation dialog is the usual guard on a consequential button. It
+was rejected because nothing here is irreversible: a mistaken verdict is corrected by recording the
+right one, the status follows the latest, and the history keeps both, so the error stays visible
+rather than being erased. A dialog would add a click to every verdict to protect against a mistake
+that costs one more click to undo, and analysts habituate to confirmation dialogs quickly enough
+that the guard soon stops guarding.
+
+**The screen never computes a status.** After a verdict the header, the list and the history all
+show the detail the store replied with, not a status the screen derives from the verdict it sent. A
+locally computed status is the failure `fbk-001` names: a screen claiming a status the store does
+not hold, which would make the human-in-the-loop claim a property of the browser rather than of the
+record. A refusal or a network failure therefore changes nothing on screen except a sentence, and
+keeps the analyst's note. The alternative, optimistic update with rollback, was rejected as more
+code for a write that answers in milliseconds.
+
+The note is optional and limited to the endpoint's 2,000 characters. Over the limit the buttons are
+disabled with a reason, rather than the box truncating, so an analyst's text is never silently cut.
+The disclaimer "Decision support only — analyst judgement is final" sits in the card itself,
+visible text on every explanation the screen opens, including those that take no verdict.
+
+**First use.** On 15 October 2026 the user recorded two verdicts through the screen, the first in
+the main store: Confirm on a sensor-fault explanation (status Confirmed) and Needs more evidence on
+another (Under review), each with a note. Both statuses are the mapping of their verdict.
+
+*(A mutation pass killed 30 of 30 mutants on its second run; see `measurements/README.md`.)*
+
 ### Containerisation: a Makefile over Compose, and what the first working `up` exposed
 
 The three services (backend, frontend, and a profiled one-shot pipeline) are driven through a root

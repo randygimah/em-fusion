@@ -364,10 +364,12 @@ describe("where the verdict goes (fbk-001 output)", () => {
     expect(JSON.parse(String(init?.body))).toEqual({ verdict: "confirm", note: "seen" });
   });
 
-  it.each([404, 409, 422, 500])("throws on a %s", async (status) => {
+  // The body is shaped like an explanation, so only the status can refuse it
+  // (strengthened after the mutation pass).
+  it.each([404, 409, 422, 500])("throws on a %s, whatever the body", async (status) => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(() => respond(status, { detail: "refused" })),
+      vi.fn(() => respond(status, stored("confirm", "Confirmed"))),
     );
     await expect(postVerdict(104, { verdict: "confirm", note: null })).rejects.toThrow();
   });

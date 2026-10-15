@@ -1,9 +1,9 @@
-import type { CitationGrounding, Generator, HypothesisSummary, StoredGrounding } from "../types/hypotheses";
+import type { CitationGrounding, Generator, HypothesisSummary, ReviewStatus, StoredGrounding, Verdict } from "../types/hypotheses";
 import { clockLabel } from "./playback";
 
 /**
  * Every word the rail's explanation cards and the Hypotheses screen use.
- * spec: op-002, ai-010, hyp-001, hyp-002, hyp-003.
+ * spec: op-002, ai-010, hyp-001, hyp-002, hyp-003, fbk-001, fbk-002, hyp-004.
  *
  * Panels carry no vocabulary of their own (the rule detectionVocabulary.ts
  * follows): the provenance phrases and the rail's sentence are declared once
@@ -80,6 +80,29 @@ export const SCREEN_COPY = {
   notAnArea: (subject: string) => `This conclusion is a claim about ${subject}, not an area, so no area is drawn.`,
   unreviewable: (count: number) =>
     count === 1 ? "1 conclusion has explanations, but none is the one under review." : `${count} conclusions have explanations, but none is the one under review.`,
+};
+
+/** The four verdicts in words, in the design's order (fbk-001): buttons and history alike. */
+export const VERDICT_COPY: Record<Verdict, string> = {
+  confirm: "Confirm",
+  reject: "Reject",
+  "needs-more-evidence": "Needs more evidence",
+  "false-positive": "False positive",
+};
+
+/** A stored verdict in words; one outside the four is named, never shown raw. */
+export const verdictLabel = (verdict: string): string => VERDICT_COPY[verdict as Verdict] ?? "Unrecognised verdict";
+
+/** The verdict card's sentences (fbk-001, fbk-002, hyp-004). */
+export const VERDICT_CARD_COPY = {
+  disclaimer: "Decision support only — analyst judgement is final.",
+  noteLabel: "Note (optional)",
+  noteCount: (length: number, limit: number) => `${length.toLocaleString("en-GB")} / ${limit.toLocaleString("en-GB")} characters`,
+  noteTooLong: (limit: number) => `The note is over ${limit.toLocaleString("en-GB")} characters; shorten it to record a verdict.`,
+  sending: "Recording the verdict.",
+  notRecorded: "The verdict was not recorded. The status shown is the one stored.",
+  recorded: (status: ReviewStatus) => `Verdict recorded. The status is now ${status}.`,
+  notReviewable: "This is not the explanation scored for its conclusion, so it takes no verdict.",
 };
 
 /** A conclusion's window, e.g. 12:09:46–12:14:56 UTC. */
