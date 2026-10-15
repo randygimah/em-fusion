@@ -35,7 +35,7 @@ only ever Low, Medium or High, never a percentage.
 ## How it works
 
 ```mermaid
-flowchart LR
+flowchart TB
   subgraph Sources
     OS["OpenSky hour, replayed<br/>133,634 state vectors"]
     RF["Synthetic radio grid<br/>7 receivers x 8 channels, every 10 s"]
@@ -77,14 +77,24 @@ AI or the screen. Detection runs as one fixed ladder of questions:
 <p align="center"><img src="docs/assets/readme/screen-interference.jpg" alt="The Operational Picture for one stored hour under the anomalous-only view: a 60 km dashed disc of possible interference between Eindhoven and the German border, two receivers deviating, interrupted aircraft, and the zone's pop-up with its receivers, window and Medium confidence." width="860"></p>
 <p align="center"><sub>The Operational Picture, anomalous-only view: an hour with staged interference at two receivers, the zone the rule examined, and its evidence. Captured from the running system on 8 October 2026; the right-hand rail has since gained the hour's explanations.</sub></p>
 
+<p align="center"><img src="docs/assets/readme/screen-all-traffic.jpg" alt="The same map under the all view: several hundred aircraft across the Low Countries and Germany, the seven receivers, and thinned labels." width="860"></p>
+<p align="center"><sub>Under <i>All</i>: every replayed aircraft and the seven receivers, labels thinned so the important ones always show.</sub></p>
+
 <table>
 <tr>
-<td width="62%"><img src="docs/assets/readme/screen-all-traffic.jpg" alt="The same map under the all view: several hundred aircraft across the Low Countries and Germany, the seven receivers, and thinned labels."></td>
-<td><img src="docs/assets/readme/screen-verdict-card.jpg" alt="The Hypotheses screen's right column: the explanation's affected area on a map, then the analyst verdict card with a note box and four buttons: Confirm, Reject, Needs more evidence, False positive."></td>
-</tr>
-<tr>
-<td><sub>The same kind of hour under <i>All</i>: every replayed aircraft, the seven receivers, labels thinned so the important ones always show.</sub></td>
-<td><sub>An explanation's affected area and the analyst's verdict card. The screen shows only what the store recorded.</sub></td>
+<td width="42%"><img src="docs/assets/readme/screen-verdict-card.jpg" alt="The Hypotheses screen's right column: the explanation's affected area on a map, then the analyst verdict card with a note box and four buttons: Confirm, Reject, Needs more evidence, False positive."></td>
+<td>
+
+**The analyst has the last word.** The Hypotheses screen shows one explanation in full: its
+citations re-checked as it is read, its doubts and alternatives, and the area it is about. Below
+that sits the verdict card: confirm, reject, needs more evidence or false positive, with an
+optional note.
+
+Every verdict is kept with its time and note. The latest one sets the explanation's status, and
+the screen only ever shows what the store recorded. There is no "are you sure?" step, because a
+wrong verdict is corrected by recording the right one, and the history keeps both.
+
+</td>
 </tr>
 </table>
 
