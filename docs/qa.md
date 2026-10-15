@@ -9634,6 +9634,32 @@ analyst's verdict.** Snapshot on 13 October 2026, backlog 114 of 128.
 **The trap: an "open" item is not always "next".** Two of the fourteen are deferred by design and
 one waits on a person, so the backlog count overstates what can be built now.
 
+## 166. Whilst we wait for the second scorer, what's the best next implementation?
+
+**The third source adapter (`adp-003`), the extensibility measurement.** Snapshot on 15 October 2026,
+backlog 118 of 128; the analyst's verdict strand from §165 is finished.
+
+| Candidate | What it gives the thesis | Why not first |
+|---|---|---|
+| `adp-003` third adapter | **RQ1's evidence**: a new source through the unchanged DAL, with files touched, lines changed and hours taken | — |
+| `api-009` ground truth never served | Protects the evaluation's validity | Mostly an audit with tests; worth doing, but it answers no research question |
+| `anom-003` z-score detector | A third detection test | Detection is already 60 of 60 on every staged kind; adds a rule, not a finding |
+| `anom-006` coverage-gap rule | — | Parked by measurement (2026-09-17): the corpus cannot support the positive claim |
+| `op-006` timeline strip | A screen element | Presentation only |
+| `ops-002` CI | Quality on push | Tooling, not evidence |
+| `ai-005`, `ai-006` local arm | A third arm | Deferred by the phase 9 plan; a scope decision, not a build |
+
+**Why it is best now.** RQ1 asks whether the Data Abstraction Layer lets a new source in without
+changing what is behind it, and `adp-003` is the only item that measures that. It was deliberately
+left late so the measurement is taken against a finished DAL, and it does not touch anything the
+second rater's scoring depends on.
+
+**The trap: the hours are part of the measurement.** "Hours taken" is one of the three figures, so
+the clock has to start when the work starts, and the spec, test and code commits have to be kept to
+this item alone, or the files-touched and lines-changed counts absorb unrelated changes. Registering
+a new observation type is allowed by the spec; changing the canonical model or a detection rule is a
+reportable negative result, not something to work around quietly.
+
 ---
 
 | **Composing copy** | Turning a finding type the backend sends verbatim into a sentence an analyst reads. Done on the screen by design, so prose never arrives from a detector — and in one module, because two panels carry the same type. See §148. |
@@ -9661,3 +9687,4 @@ one waits on a person, so the backlog count overstates what can be built now.
 | **An assessed area versus a measured field** | An assessed area is a centre and a radius recorded with a claim, drawn as one flat disc; a measured field is an intensity known at every point, which a heat map implies. The store holds the first only: 7 receivers, nothing between them. See §164. |
 
 | **Open versus next** | An open backlog item has not passed; a next one is open, unblocked and on the line the thesis needs. Deferred and person-gated items are open and not next. See §165. |
+| **Extensibility measurement** | What it costs to add a source through the unchanged DAL: files touched, lines changed, hours taken. RQ1 evidence, not a feature. See §166. |
