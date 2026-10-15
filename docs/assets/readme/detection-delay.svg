@@ -78,10 +78,10 @@
 .fig-bg{fill:var(--surface);stroke:var(--line)}</style>
 <rect class="fig-bg" x="-15.5" y="-15.5" width="671" height="269" rx="8"/>
           <rect x="210" y="34" width="38" height="152" fill="var(--muted)" opacity="0.13" />
-          <line x1="248" y1="30" x2="248" y2="190" stroke="var(--accent)" stroke-width="1.5"
+          <line x1="248" y1="34" x2="248" y2="190" stroke="var(--accent)" stroke-width="1.5"
                 stroke-dasharray="4 3" />
           <text class="fig__label" x="8" y="18">nothing can be known faster than the floor</text>
-          <text class="fig__val" x="252" y="26" fill="var(--accent)">10 s floor</text>
+          <text class="fig__val" x="254" y="45" fill="var(--accent)">10 s floor</text>
 
           <text class="fig__val" x="8" y="62">One broken receiver</text>
           <rect x="248" y="50" width="304" height="14" rx="7" fill="var(--signal)" opacity="0.22" />
