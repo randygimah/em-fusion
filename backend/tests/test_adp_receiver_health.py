@@ -376,8 +376,31 @@ def test_nothing_in_the_app_wires_the_feed_in() -> None:
     for path in (BACKEND_ROOT / "app").rglob("*.py"):
         if path.resolve() in new:
             continue
-        source = path.read_text(encoding="utf-8")
-        if "receiver_health" in source or "RECEIVER_HEALTH" in source:
+        # Imports and enum members, not substrings: the picture already has a
+        # `_receiver_health` of its own (the receivers' detected states).
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        modules = {
+            node.module for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)
+        } | {
+            alias.name
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Import)
+            for alias in node.names
+        }
+        members = {
+            node.attr for node in ast.walk(tree) if isinstance(node, ast.Attribute)
+        } | {node.id for node in ast.walk(tree) if isinstance(node, ast.Name)}
+        if (
+            {"app.scenario.receiver_health", "app.adapters.receiver_health"} & modules
+            or {"RECEIVER_HEALTH", "SYNTHETIC_HEALTH", "ReceiverHealthPayload"}
+            & members
+            or any(
+                node.module in {"app.scenario", "app.adapters"}
+                and any(alias.name == "receiver_health" for alias in node.names)
+                for node in ast.walk(tree)
+                if isinstance(node, ast.ImportFrom)
+            )
+        ):
             wired.append(path.relative_to(BACKEND_ROOT).as_posix())
 
     assert wired == ["app/dal/models.py"]
@@ -463,7 +486,8 @@ def test_the_detection_pass_is_identical_with_the_feed(
 @pytest.mark.database
 @requires_database
 def test_the_operational_picture_is_identical_with_the_feed(
-    picture_database: Engine, monkeypatch: pytest.MonkeyPatch
+    picture_database: Engine,  # noqa: F811 -- the imported fixture
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # spec: adp-003 (4) failure case -- any change to the picture; api-020 is
     # the defect this guards against recurring for a third source

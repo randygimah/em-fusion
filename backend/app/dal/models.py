@@ -48,6 +48,7 @@ class SourceType(str, Enum):
 
     OPENSKY = "opensky"
     SYNTHETIC_RF = "synthetic_rf"
+    SYNTHETIC_HEALTH = "synthetic_health"
 
 
 class ObservationType(str, Enum):
@@ -56,6 +57,7 @@ class ObservationType(str, Enum):
 
     TRACK = "track"
     RF = "rf"
+    RECEIVER_HEALTH = "receiver_health"
 
 
 class ValidationStatus(str, Enum):
@@ -139,13 +141,27 @@ class RfPayload(_Frozen):
     baseline_delta_db: float
 
 
-Payload = TrackPayload | RfPayload
+class ReceiverHealthPayload(_Frozen):
+    """One receiver's self-report, once a minute (`adp-003`).
+
+    The third source, kept small on purpose: it exists to measure what adding a
+    source costs, and nothing reads it.
+    """
+
+    sensor_id: str = Field(min_length=1)
+    temperature_c: float
+    supply_voltage_v: float = Field(gt=0.0)
+    uptime_s: float = Field(ge=0.0)
+
+
+Payload = TrackPayload | RfPayload | ReceiverHealthPayload
 
 #: The observation type to payload type mapping, in one place. A third
 #: adapter registers here; nothing else in the DAL changes.
 PAYLOAD_TYPES: dict[ObservationType, type[Payload]] = {
     ObservationType.TRACK: TrackPayload,
     ObservationType.RF: RfPayload,
+    ObservationType.RECEIVER_HEALTH: ReceiverHealthPayload,
 }
 
 
