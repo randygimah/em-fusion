@@ -155,6 +155,8 @@ was written by an AI coding agent that already knew the codebase, so the line co
 figure. On the generator side, adding an explanation provider costs 1 new module and 2 lines
 elsewhere.
 
+<p align="center"><img src="docs/assets/readme/third-source-clock.svg" alt="The measurement clock from 19:11:59 to 21:13:58 UTC: a long wait for agreement, a short wait for review, and three short stretches of active work totalling 17 minutes 14 seconds." width="640"></p>
+
 ### Engineering evidence
 
 - **Spec-driven:** 129 capabilities in [`docs/spec.jsonl`](docs/spec.jsonl), 120 done, each written
