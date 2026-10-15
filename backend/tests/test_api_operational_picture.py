@@ -71,6 +71,7 @@ from app.dal.models import (
     Location,
     ObservationType,
     Provenance,
+    RfPayload,
     ScenarioRunSummary,
     SourceType,
     TrackPayload,
@@ -208,6 +209,36 @@ def _observation(
             on_ground=False,
             position_staleness_s=1.06,
             contact_staleness_s=0.0,
+        ),
+    )
+
+
+def _reading(*, offset_s: int, sensor_id: str = "RF-05") -> CanonicalObservation:
+    """One radio reading, which names a receiver and no aircraft (api-020)."""
+    return CanonicalObservation(
+        source_id="synthetic-rf",
+        source_type=SourceType.SYNTHETIC_RF,
+        observation_type=ObservationType.RF,
+        timestamp=HOUR_START + timedelta(seconds=offset_s),
+        location=Location(lat=51.6024, lon=6.1422),
+        data_mode=DataMode.SYNTHETIC,
+        validation_status=ValidationStatus.VALID,
+        provenance=Provenance(
+            source_id="synthetic-rf",
+            source_type=SourceType.SYNTHETIC_RF,
+            data_mode=DataMode.SYNTHETIC,
+            scenario_run_id=RUN_ID,
+        ),
+        payload=RfPayload(
+            sensor_id=sensor_id,
+            channel_index=3,
+            centre_frequency_mhz=1575.42,
+            band="L1",
+            power_dbm=-101.5,
+            snr_db=12.0,
+            bandwidth_mhz=2.0,
+            signal_type="GNSS",
+            baseline_delta_db=0.4,
         ),
     )
 
@@ -624,6 +655,53 @@ def test_positions_older_than_the_final_window_are_not_served(
     payload = _get(picture_database, monkeypatch)
 
     assert [track["name"] for track in payload["aircraftTracks"]] == ["AC-recent"]
+
+
+@pytest.mark.database
+@requires_database
+def test_radio_readings_are_never_served_as_aircraft(
+    picture_database: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # spec: api-020 -- a reading names no aircraft, so before the fix every
+    # synthetic run's readings collapsed into one nameless "aircraft"
+    _insert_run(picture_database, RUN_ID, completed=True)
+    _save(
+        picture_database,
+        [
+            _observation(aircraft_id="AC-a", offset_s=3600),
+            _observation(aircraft_id="AC-b", offset_s=3590),
+            _reading(offset_s=3595),
+            _reading(offset_s=3605, sensor_id="RF-06"),
+        ],
+    )
+
+    payload = _get(picture_database, monkeypatch)
+
+    assert sorted(track["name"] for track in payload["aircraftTracks"]) == [
+        "AC-a",
+        "AC-b",
+    ]
+
+
+@pytest.mark.database
+@requires_database
+def test_the_final_window_is_measured_from_the_newest_aircraft(
+    picture_database: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # spec: api-020 (2) -- a source writing later than the aircraft must not
+    # move the window off them
+    _insert_run(picture_database, RUN_ID, completed=True)
+    _save(
+        picture_database,
+        [
+            _observation(aircraft_id="AC-a", offset_s=3600),
+            _reading(offset_s=3600 + FINAL_WINDOW_SECONDS + 60),
+        ],
+    )
+
+    payload = _get(picture_database, monkeypatch)
+
+    assert [track["name"] for track in payload["aircraftTracks"]] == ["AC-a"]
 
 
 @pytest.mark.database
