@@ -162,7 +162,8 @@ copy ran earlier: 80 positions written from the committed campaign record; a sec
 - **The measurement** (`measurements/extensibility/adp003_extensibility.{py,log}`, `269c894..75ed33c`):
   2 new app files +112; `models.py` +17 −1; tests +519; **0 protected paths touched**. Clock
   19:11:59–21:13:58 UTC: 2 h 2 min elapsed, 1 h 44 min 45 s waiting for the user (two waits, declared
-  in the script from the transcript), **17 min 14 s active**, of which the suite ran 12 min 14 s.
+  in the script from the transcript), **17 min 14 s active**: about 7 min of it the suite (12 min 14 s from 20:56:40, 5 min 21 s inside
+  the review wait), about 10 min writing.
   Written up in `thesis_notes.md` with its threats.
 
 ### The blind scoring
@@ -326,6 +327,10 @@ the user's untracked file; leave it).
 - **`adp-003`'s tests were proven red only by an `ImportError` at collection.** The structural
   checks (no number invented in the driver, nothing in `app/` importing the feed) have not been shown
   to catch a planted violation; no mutation pass was run (backend item).
+- **I told the user the writing took about 5 minutes** (17 min active minus the suite's 12 min).
+  Wrong: the suite overlapped the review wait by 5 min 21 s, so about 7 min of the active time is the
+  suite and about 10 min is writing. Found while drawing the progress note's timeline; corrected in
+  `measurements/README.md`, `thesis_notes.md` and here.
 - **The first full-suite run for `adp-003` never ran:** I launched `make test-backend-nobuild` from
   `backend/measurements/`, where there is no such target. That cost about a minute of the active
   time.

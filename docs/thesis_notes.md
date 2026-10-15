@@ -7118,7 +7118,9 @@ The hours were counted two ways, on the user's decision before anything was buil
 from 19:11:59 to 21:13:58 UTC: **2 h 2 min elapsed**. Two waits for the user, one for agreement on
 the counting rule and one for review, are taken out, each running from the agent's message that
 asked to the user's reply, read from the session transcript: 1 h 44 min 45 s. That leaves **17 min
-14 s active**, the reported figure, of which 12 min 14 s was the full test suite running.
+14 s active**, the reported figure. The full test suite ran for 12 min 14 s from 20:56:40, but 5 min
+21 s of that fell inside the review wait, so about 7 minutes of the active figure is the suite and
+about 10 minutes is writing and checking.
 
 The threats are recorded with the figure. The adapter was written by an AI agent that already knew
 the codebase, had written the second source's adapter and had the pattern to copy, so the hours are a
