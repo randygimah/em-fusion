@@ -8,7 +8,7 @@ Abstraction Layer, detects deviations deterministically, and turns evidence bund
 schema-validated, grounding-checked AI hypotheses for analyst review. Decision support, not
 autonomous decision-making.
 
-This session (9–15 October 2026) did eight things:
+This session (9–15 October 2026) did nine things:
 
 1. **Finished playback.** `api-018` serves each receiver's out-of-nominal intervals through an hour;
    `map-007` draws receivers in their state at the playback cursor.
@@ -32,6 +32,10 @@ This session (9–15 October 2026) did eight things:
 8. **Built the third source (`adp-003`)**, a receiver health feed, and took RQ1's extensibility
    measurement. Scoping it first found and fixed a phantom aircraft (`api-020`) before the clock
    started.
+9. **Rewrote the README's front half** for anyone opening the repo: a logo (`docs/assets/`), the
+   research questions with where each stands, a Mermaid architecture diagram, three screenshots and
+   seven figures copied from the progress note, and the measured results. Checked rendered on GitHub.
+   It reports **no** blind-marking quality comparison, and must not until both markers are done.
 
 Everything went spec → failing tests → code → user review (→ mutation pass for frontend items) →
 `passes: true`, committed on `main`.
@@ -256,7 +260,9 @@ the user's untracked file; leave it).
 | `f09cc78` | `spec: adp-003 hours reported without the waits for the user` |
 | `6de44da` | `test: add tests for adp-003` |
 | `75ed33c` | `feat(adp-003): a receiver health feed, by registration only - tests pass` |
-| *(this commit)* | `docs: adp-003 extensibility measurement and notes` |
+| `7e69b71` | `docs: adp-003 extensibility measurement and notes` |
+| `bc02fa3` | `docs: progress note v14, the third source and what it cost; correct the suite overlap` |
+| `26706a3`, `781bb1b`, `c86e5a0` | `docs: README overview with logo, results, figures and architecture` and two layout fixes |
 
 **New files:**
 - **Backend:**
@@ -419,8 +425,8 @@ the user's untracked file; leave it).
      - the user's other 20 items single-rated;
      - mixed-evidence cause correctness reported separately;
      - the user's pass two marked unblinded.
-3. **Progress note**: version 13 (`09066cf`) is current. `adp-003` has landed: offer an update
-   (the third source, the measurement and its threats, and the phantom aircraft).
+3. **Progress note**: version 14 (`bc02fa3`) is current, published 15 October. When a figure on it
+   changes, copy it again into `docs/assets/readme/` (the README's figures are copies).
 4. **Remaining strands** (`qa.md` §165): `api-009`; `anom-003`/`anom-006`/`op-006`; decide on
    `ai-005`/`ai-006`; `ops-001`/`ops-002`.
 
