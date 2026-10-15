@@ -7049,6 +7049,45 @@ adapter will be several times larger. The number that carries the claim is the o
 module, and that one does not depend on what the adapter does — which is the whole point of
 measuring it there.
 
+### The second source had already broken a reader outside the abstraction layer
+
+Found on 15 October 2026 while scoping the third adapter (`adp-003`), and fixed as its own item
+(`api-020`) before that adapter's measurement began, so that neither its lines nor its time count
+towards the extensibility figures.
+
+The operational picture's aircraft come from one query: for each aircraft, its newest position in
+the run's final five minutes. The query grouped rows by the payload's aircraft identifier and never
+asked what kind of observation a row was. That was correct while the store held only replayed
+aircraft. The synthetic radio source, the second adapter, writes its readings into the same table
+and the same run, and a reading names a receiver, not an aircraft, so every reading fell into one
+group keyed on a null identifier. The newest of them was then served as an aircraft with an empty
+name and no altitude. It was measured live on five runs (one each), on run 480 sitting exactly on
+the receiver RF-05 and marked nominal. So it was withheld under the default *anomalous only* view
+and drawn underneath a receiver's marker under *all*, and every aircraft count the screen showed
+was one too high. It went unnoticed for the whole of the period in which the radio source existed.
+
+The abstraction layer did its job. The radio source was admitted, validated, given provenance and
+stored without any change to the canonical model, which is the claim the layer exists to make. The
+defect sat one layer further out, in a reader that took "every row in this run is an aircraft" for
+granted. That assumption was true of the first source and silently false from the second onward. The
+lesson for the extensibility claim is that the layer's guarantee covers **getting a source in**. It
+does not cover **what every reader assumes about what is in**, and a store shared across sources makes
+every unfiltered reader a place where the next source can surface. Of the store's readers, the
+playback and detection reads already filtered by observation type; this one did not, and the
+difference was invisible to every test written against a single source's fixtures.
+
+The fix filters the read and also measures the final window from the newest *aircraft* row, not the
+newest row of any kind. On all 460 stored runs those two instants are equal, so the second change
+alters nothing today. It exists because the third source, a receiver health feed, could report
+later than the aircraft and drag the window off them. Live, each synthetic run's aircraft count fell
+by exactly one (run 480: 420 to 419), and no aircraft is served without a name.
+
+This belongs in the RQ1 discussion as a qualification stated in advance of the third adapter's
+figure, not after it. A low files-touched count for the third adapter would show that the layer
+admits a source cheaply. It would not show that nothing downstream mis-reads the new rows, which
+the third adapter's specification therefore asserts separately: the detection pass and the picture
+must be identical with and without its observations present.
+
 ### A test that was too blunt, and the distinction that sharpened it
 
 The suite's purity check began as "no module in the AI package may contain the literal name of a

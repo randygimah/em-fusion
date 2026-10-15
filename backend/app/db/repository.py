@@ -634,6 +634,11 @@ def latest_positions(
     from the wall clock, because a replayed hour from 2022 has no relationship
     to the time now. Rows come back as `CanonicalObservation` -- the same model
     that went in -- so nothing above this line learns a storage type.
+
+    **Tracks only, window included** (`api-020`). Unfiltered, every radio
+    reading -- which names no aircraft -- fell into one null `DISTINCT ON` group
+    and was served as a nameless aircraft on every synthetic run; and a source
+    writing later than the aircraft would have moved the window off them.
     """
     with session_factory.begin() as session:
         rows = (
@@ -641,7 +646,8 @@ def latest_positions(
                 text(
                     "WITH final AS ("
                     "  SELECT max(timestamp) AS ends_at FROM observations "
-                    "  WHERE scenario_run_id = :run_id"
+                    "  WHERE scenario_run_id = :run_id "
+                    "    AND observation_type = :observation_type"
                     ") "
                     "SELECT DISTINCT ON (payload->>'aircraft_id') "
                     "  source_id, source_type, observation_type, timestamp, "
@@ -649,11 +655,16 @@ def latest_positions(
                     "  ST_Y(location) AS lat, ST_X(location) AS lon "
                     "FROM observations, final "
                     "WHERE scenario_run_id = :run_id "
+                    "  AND observation_type = :observation_type "
                     "  AND timestamp > final.ends_at "
                     "      - make_interval(secs => :window_seconds) "
                     "ORDER BY payload->>'aircraft_id', timestamp DESC"
                 ),
-                {"run_id": run_id, "window_seconds": window_seconds},
+                {
+                    "run_id": run_id,
+                    "window_seconds": window_seconds,
+                    "observation_type": ObservationType.TRACK.value,
+                },
             )
             .mappings()
             .all()

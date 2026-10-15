@@ -8,7 +8,7 @@ Abstraction Layer, detects deviations deterministically, and turns evidence bund
 schema-validated, grounding-checked AI hypotheses for analyst review. Decision support, not
 autonomous decision-making.
 
-This session (9–15 October 2026) did seven things:
+This session (9–15 October 2026) did eight things:
 
 1. **Finished playback.** `api-018` serves each receiver's out-of-nominal intervals through an hour;
    `map-007` draws receivers in their state at the playback cursor.
@@ -29,20 +29,21 @@ This session (9–15 October 2026) did seven things:
    mapping, then built; the main database migrated to `0011`.
 7. **Built the verdict card** (13–15 October): `fbk-001`, `fbk-002` and `hyp-004` amended to what
    `api-005` built, then built as one piece (one card in the design), on the user's agreement.
+8. **Started the third source (`adp-003`)** and, scoping it, found and fixed a phantom aircraft
+   (`api-020`) before the measurement began.
 
 Everything went spec → failing tests → code → user review (→ mutation pass for frontend items) →
 `passes: true`, committed on `main`.
 
 ## Current state
 
-**Backlog 118 of 128.** `main` is in sync with `origin/main`; tree clean once this handoff is
+**Backlog 119 of 129.** `main` is in sync with `origin/main`; tree clean once this handoff is
 committed.
 
 **Suites:**
-- Backend, full container suite: **2,346 passed, 99.90%**, run with `api-005` in place;
-  `test_api_feedback.py` 40 passed again after Black reformatted it.
+- Backend, full container suite: **2,348 passed, 99.90%** (6,076 statements, 6 missed; 14 min 29 s),
+  run with `api-020` in place on 15 October.
 - Frontend: **616 passed** (25 new in `hypothesisVerdict.test.tsx`); Biome lint and `tsc -b` clean.
-- The backend was not touched after `api-005`, so its figure stands.
 
 **The main database is migrated to `0011`** (`/api/v1/health` reports `at-head`). The `0010` ordinal
 copy ran earlier: 80 positions written from the committed campaign record; a second run wrote 0.
@@ -144,6 +145,23 @@ copy ran earlier: 80 positions written from the committed campaign record; a sec
   - `mutate_hyp001_003.log`: **42 of 42** on the second run, sentinel killed (195 tests in the
     eight suites run). The first run killed 40 of 42; see Failed attempts.
 
+### The phantom aircraft (`api-020`) and the third source (`adp-003`)
+
+- **Found 15 October while scoping `adp-003`:** `latest_positions` grouped the final window by
+  `payload->>'aircraft_id'` with no type filter, so every synthetic run's radio readings fell into
+  one null group and the newest was served as a nameless aircraft (runs 102, 123, 161, 300, 480: one
+  each; on 480 sitting on RF-05, nominal). Fixed: tracks only, and the window measured from the
+  newest track (equal to the newest row on all 460 runs, so no change today).
+- **Live after the fix:** 480 420→419, 102 428→427, 123 419→418, 161 419→418; none nameless.
+- **`adp-003` is explained and agreed in outline, not specified:** a receiver health feed (each of
+  the seven receivers once a minute: temperature, supply voltage, uptime), seed-derived, blind to the
+  staged incident, read by nothing; detection pass and picture must be identical with and without
+  it; only registration in `app/dal/models.py`. Measurement: files and lines from git between the
+  start commit and the feat commit, and hours.
+- **The clock:** a first clock ran 18:45:35–18:47:34 UTC on 15 October from `00183f0` and was stopped
+  when the phantom was found; the bug fix is outside it. **Restart it, and note the start commit,
+  when `adp-003`'s spec is written.**
+
 ### The blind scoring
 
 - **First rater (the user):** both passes done in `scoring_pack/score_sheet1.xlsx` (not opened by
@@ -224,7 +242,12 @@ the user's untracked file; leave it).
 | `9ebd6b1` | `feat(api-005): the analyst's verdict and the status it sets - tests pass` |
 | `b6f459d` | `spec: amend fbk-001, fbk-002, hyp-004 -- the verdict card` |
 | `27e4d21` | `test: add tests for fbk-001, fbk-002, hyp-004` |
-| *(this commit)* | `feat(fbk-001, fbk-002, hyp-004): the verdict card - tests pass` |
+| `1c3684a` | `feat(fbk-001, fbk-002, hyp-004): the verdict card - tests pass` |
+| `09066cf` | `docs: progress note covers the verdict card and the first two verdicts (version 13)` |
+| `00183f0` | `docs: qa 166, the next implementation while the second scorer works` |
+| `3039ab0` | `spec: add api-020 -- the picture's aircraft are aircraft` |
+| `e05cd56` | `test: add tests for api-020` |
+| *(this commit)* | `fix(api-020): the picture's aircraft are aircraft - tests pass` |
 
 **New files:**
 - **Backend:**
@@ -373,10 +396,12 @@ the user's untracked file; leave it).
      - the user's other 20 items single-rated;
      - mixed-evidence cause correctness reported separately;
      - the user's pass two marked unblinded.
-3. **Progress note**: version 12 (`c7af518`) says an analyst cannot yet answer an explanation, which
-   is now false. Offer version 13: the verdict card, and the first two verdicts.
-4. **Remaining strands** (`qa.md` §165): `api-009`; `anom-003`/`anom-006`/`op-006`; `adp-003`;
-   decide on `ai-005`/`ai-006`; `ops-001`/`ops-002`.
+3. **`adp-003`, the third source** (agreed 15 October, `qa.md` §166): write its spec with the
+   constraints above, restart the clock, then test and code. Keep its commits to that item alone.
+4. **Progress note**: version 13 (`09066cf`) is current. Offer an update when `adp-003` lands (and
+   it should mention the phantom aircraft).
+5. **Remaining strands** (`qa.md` §165): `api-009`; `anom-003`/`anom-006`/`op-006`; decide on
+   `ai-005`/`ai-006`; `ops-001`/`ops-002`.
 
 **Open and unowned:**
 - **Hypotheses screen, seen and not changed:** the zone's label covers the RF-04 marker on
