@@ -1,8 +1,203 @@
-# EM Fusion
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-wordmark-dark.svg">
+    <img src="docs/assets/logo-wordmark-light.svg" alt="EM Fusion" width="420">
+  </picture>
+</p>
 
-EM Fusion is a prototype for AI-assisted electromagnetic situational awareness. Version 1 focuses on a safe decision-support workflow: synthetic/replayed observations, explainable hypotheses, and human analyst validation.
+<p align="center">
+  <b>Explainable electromagnetic situational awareness, with a human making every call.</b><br>
+  Real air traffic and simulated radio receivers, fused into one picture. Deterministic rules
+  decide what is unusual; an AI writes an explanation the analyst can check; the analyst decides.
+</p>
 
-Development is intentionally incremental. See [docs/implementation.md](docs/implementation.md) for the v1 learning checklist and phase-by-phase workflow.
+---
+
+EM Fusion is a research prototype built for an MSc thesis. It replays a real hour of air traffic over the
+Low Countries and western Germany alongside a simulated network of seven radio receivers, stages
+incidents such as GNSS interference or a broken receiver, and asks three things: can such
+different sources share one data model, can rules find what was staged, and can an AI explain what
+the rules found without inventing anything.
+
+**It is decision support, not an autonomous system.** Detection is rule-based and reproducible.
+The AI only explains, and only from a sealed package of evidence the rules assembled. Every
+citation it makes is checked against that package before an analyst sees it, and confidence is
+only ever Low, Medium or High, never a percentage.
+
+## The research questions
+
+| | Question | Where it stands |
+|---|---|---|
+| **RQ1** | Can heterogeneous EM-relevant sources be normalised into one canonical model through a Data Abstraction Layer, and is that **measurably** extensible? | **Answered.** A third source was added late and measured: 2 new files, 1 existing file changed by registration only, nothing behind the abstraction touched. [Results](#rq1--adding-a-source) |
+| **RQ2** | How well do baseline comparison and deterministic anomaly detection find deviations in synthetic RF and replayed movement telemetry? | **Answered** on 300 hours with a known answer key. [Results](#rq2--detection) |
+| **RQ3** | Can a constrained AI layer produce explainable hypotheses without unsupported conclusions, and do they beat a template baseline? | **Built and run; blind marking in progress.** The grounding safeguard is measured; the quality comparison waits on the second marker. [Results](#rq3--explanations) |
+
+## How it works
+
+```mermaid
+flowchart LR
+  subgraph Sources
+    OS["OpenSky hour, replayed<br/>133,634 state vectors"]
+    RF["Synthetic radio grid<br/>7 receivers x 8 channels, every 10 s"]
+    HL["Receiver health feed<br/>third source, RQ1"]
+  end
+  SC["Scenario generator<br/>seeded, five kinds of hour"] --> RF
+  OS --> AD["Adapters<br/>one per source"]
+  RF --> AD
+  HL -.-> AD
+  AD --> DAL["Data Abstraction Layer<br/>validate, stamp provenance, pseudonymise"]
+  DAL --> DB[("PostgreSQL + PostGIS")]
+  DB --> DET["Deterministic detection<br/>baselines, z-scores, spatial clustering,<br/>one decision ladder"]
+  DET --> EVB["Evidence bundles<br/>every citation resolves to a stored row"]
+  EVB --> TPL["Template generator<br/>baseline and fallback"]
+  EVB --> LLM["Hosted LLM<br/>schema-constrained"]
+  TPL --> CHK["Schema validation<br/>+ grounding check"]
+  LLM --> CHK
+  CHK --> API["FastAPI"]
+  API --> UI["Analyst screens<br/>Operational Picture, Hypotheses,<br/>Scenario Control"]
+  UI -- "verdict + note" --> API
+  SC -. "answer key, never shown to the system" .-> EV["Evaluation harness"]
+  DET --> EV
+```
+
+Every number the simulation invents comes from one seed, so any hour regenerates byte for byte. The
+answer key of what was staged is written down at generation time and never reaches a detector, the
+AI or the screen. Detection runs as one fixed ladder of questions:
+
+<p align="center"><img src="docs/assets/readme/decision-ladder.svg" alt="A three-step ladder: is there a radio anomaly at all; is it one receiver only with clean neighbours; are aircraft dropouts unusually frequent nearby. Each yes or no leads to one of four answers." width="640"></p>
+
+<details>
+<summary><b>What a run is made of</b></summary>
+<br>
+<p align="center"><img src="docs/assets/readme/run-anatomy.svg" alt="A quiet run and a staged run side by side: the same real aircraft reports and the same invented radio grid, with a small patch altered in the staged run. The difference between the two is the answer key and nothing else." width="640"></p>
+</details>
+
+## What it looks like
+
+<p align="center"><img src="docs/assets/readme/screen-interference.jpg" alt="The Operational Picture for one stored hour under the anomalous-only view: a 60 km dashed disc of possible interference between Eindhoven and the German border, two receivers deviating, interrupted aircraft, and the zone's pop-up with its receivers, window and Medium confidence." width="860"></p>
+<p align="center"><sub>The Operational Picture, anomalous-only view: an hour with staged interference at two receivers, the zone the rule examined, and its evidence. Captured from the running system on 8 October 2026; the right-hand rail has since gained the hour's explanations.</sub></p>
+
+<table>
+<tr>
+<td width="62%"><img src="docs/assets/readme/screen-all-traffic.jpg" alt="The same map under the all view: several hundred aircraft across the Low Countries and Germany, the seven receivers, and thinned labels."></td>
+<td><img src="docs/assets/readme/screen-verdict-card.jpg" alt="The Hypotheses screen's right column: the explanation's affected area on a map, then the analyst verdict card with a note box and four buttons: Confirm, Reject, Needs more evidence, False positive."></td>
+</tr>
+<tr>
+<td><sub>The same kind of hour under <i>All</i>: every replayed aircraft, the seven receivers, labels thinned so the important ones always show.</sub></td>
+<td><sub>An explanation's affected area and the analyst's verdict card. The screen shows only what the store recorded.</sub></td>
+</tr>
+</table>
+
+## Results
+
+### RQ2 — detection
+
+300 generated hours, 60 of each of five kinds, each scored against the answer key written when it
+was generated. The full rule chain was re-run from the stored readings for this table.
+
+| Kind of hour | Hours | Named correctly | Recall |
+|---|---:|---:|---:|
+| One broken receiver | 60 | 60 | 1.000 |
+| Interference across several receivers | 60 | 60 | 1.000 |
+| Mixed evidence (broken receiver + aircraft dropouts) | 60 | 60 | 1.000 |
+| Quiet baseline: false alarms | 60 | **0** | — |
+| Aircraft coverage gap (no rule can name it): false alarms | 60 | **0** | — |
+
+Precision is 1.000 on both answers the system gives (120 of 120 and 60 of 60). Recall
+depends on what is counted, so it is reported both ways: per hour it is perfect, but per disrupted
+aircraft the rules flag 82% on interference hours and 59% on mixed-evidence hours. The
+median time from incident start to complete evidence is 10 s for a broken receiver and 20 s for
+interference, which needs a second receiver.
+
+<p align="center">
+  <img src="docs/assets/readme/recall-two-ways.svg" alt="Recall counted per hour and per aircraft: interference 1.000 and 0.823, mixed evidence 1.000 and 0.587, aircraft coverage gap no rule and 0.587." width="49%">
+  <img src="docs/assets/readme/detection-delay.svg" alt="Delay per kind of hour: median 10 s for one broken receiver and mixed evidence, 20 s for interference; all between 10 and 90 s." width="49%">
+</p>
+
+**Read with care:** the incidents are synthetic and generated by the same project that detects
+them, so these figures show the machinery is sound, not that it would hold on real interference.
+
+### RQ3 — explanations
+
+Two generators explain the same evidence package: a **template** (mechanical, the baseline and the
+fallback) and a **hosted LLM** (`gpt-4.1-2025-04-14`, schema-constrained, temperature pinned).
+
+| Measurement | Result |
+|---|---|
+| Grounding check on 41 real packages: honest citations wrongly flagged | **0 of 164** |
+| Grounding check: deliberately corrupted citations caught | **164 of 164** |
+| Scored campaign: packages drawn by a fixed seed | 20 |
+| Explanations generated (LLM asked three times per package, plus the template) | 80 |
+| Ungrounded citations found in those 80 | 0 |
+| Campaign cost | £0.85 |
+
+Quality is judged by **blind marking**: two markers score every explanation on a pre-registered
+rubric without knowing which generator wrote it. The first marker has finished; the second is
+under way, so **no quality comparison is reported yet**, by design.
+
+<p align="center"><img src="docs/assets/readme/two-report-cards.svg" alt="Two report cards in series: the rules are graded against the answer key, and the explanations are graded model against template. Rules against model is never graded, because the model sees no readings and detects nothing." width="640"></p>
+
+### RQ1 — adding a source
+
+A third source, a feed of each receiver's temperature, supply voltage and uptime, was added late,
+specifically to measure the cost. What would count as failure was written down first.
+
+| What changed | Files | Lines added | Lines removed |
+|---|---:|---:|---:|
+| New code (generator and adapter) | 2 | 112 | 0 |
+| Existing code: registering the new record type | 1 | 17 | 1 |
+| New tests | 1 | 519 | 0 |
+| Ingest, validation, pseudonymisation, storage port, schema, detectors, API, screens | **0** | — | — |
+
+Detection results and the operational picture were proven identical with and without the new feed.
+Active time was 17 minutes (2 hours elapsed, waits for review removed). That is a lower bound: it
+was written by an AI coding agent that already knew the codebase, so the line count is the stronger
+figure. On the generator side, adding an explanation provider costs 1 new module and 2 lines
+elsewhere.
+
+### Engineering evidence
+
+- **Spec-driven:** 129 capabilities in [`docs/spec.jsonl`](docs/spec.jsonl), 120 done, each written
+  with at least one failure case before its tests, and its tests proven to fail before any code.
+- **Backend:** 2,368 tests, 99.90% line coverage, including live PostGIS tests.
+- **Frontend:** 616 tests; instead of coverage, each screen is proven by **mutation testing**
+  (deliberately broken copies that some test must catch).
+- **Reproducible:** every quoted figure has a script and a committed log in
+  [`backend/measurements/`](backend/measurements/README.md).
+
+## The data
+
+<table>
+<tr>
+<td width="40%"><img src="docs/assets/readme/corpus-box.svg" alt="The corpus box, 49 to 54 degrees north and 3 to 11 degrees east, about 309,000 square kilometres, with Hamburg, Schiphol, Düsseldorf, Cologne, Brussels, Frankfurt and Luxembourg marked."></td>
+<td>
+
+- **Real:** one hour of [OpenSky Network](https://opensky-network.org) state vectors, 27 June 2022
+  12:00 UTC, filtered to 49–54°N, 3–11°E. Not redistributed (OpenSky licence §3(iii)); the repo
+  holds a manifest with checksums and a one-command rebuild.
+- **Pseudonymised at the front door:** aircraft identifiers are replaced with keyed pseudonyms
+  before anything is stored.
+- **Synthetic:** seven receivers at real airports (Schiphol to Köln-Bonn), eight GNSS L1 channels, a reading
+  every 10 s, invented reproducibly from a seed. Five kinds of hour: quiet, broken receiver,
+  interference, aircraft coverage gap, and mixed evidence.
+
+</td>
+</tr>
+</table>
+
+## What it deliberately does not do
+
+- **Detect anything with AI.** The model explains; the rules detect.
+- **Run live.** Replayed and synthetic data only; the frontend polls, with no streaming.
+- **Claim real-world accuracy.** All incidents are simulated (see the caution under RQ2).
+- **Name aircraft coverage gaps.** That rule was attempted twice and closed both times; the gap is
+  reported as a limitation, not a zero.
+
+## Stack
+
+FastAPI, Pydantic, SQLAlchemy and Alembic over PostgreSQL 15 + PostGIS 3.5; React, TypeScript, Vite,
+Tailwind v4 and MapLibre GL with an offline Protomaps basemap; pytest and Vitest; everything in Docker
+Compose. Architecture model in C4 ([`docs/architecture/`](docs/architecture/README.md)).
 
 ## Quick start
 
@@ -40,7 +235,7 @@ both want port 1234, and `localhost` may reach the host one.
 | `make db-test-create` | Create the disposable `test_em_fusion` database with PostGIS. Idempotent; `make test` depends on it |
 | `make lint` / `make type-check` / `make format` | ruff + Biome / mypy / black + ruff |
 | `make check` | All of the above, in the order `backend/Makefile` uses |
-| `make generate` | Run the data pipeline once into `data/` (not yet implemented) |
+| `make generate` | Run a scenario batch in a container, into the running database |
 | `make db-shell` / `make db-reset` | psql into the database / drop its volume and recreate it empty |
 | `make logs` / `make ps` / `make shell` | Follow logs / container status / shell in the backend |
 | `make clean` | Stop the stack and drop its volumes |
@@ -236,7 +431,7 @@ history.
 |---|---|
 | `frontend/` | React + TypeScript + Vite dashboard — the three analyst screens |
 | `backend/` | FastAPI service; routes under `app/api/v1/` |
-| `docs/` | Requirements, spec backlog, architecture model, and thesis notes |
-| `ai/`, `infrastructure/`, `scenarios/` | Reserved, no code yet |
+| `docs/` | Requirements, spec backlog, architecture model, and thesis notes; `docs/assets/` holds the logo and the README's figures |
+| `infrastructure/`, `scenarios/` | Reserved, no code yet |
 
 All new work follows spec → test → code. See [CLAUDE.md](CLAUDE.md) for the workflow and [docs/spec.jsonl](docs/spec.jsonl) for the backlog.

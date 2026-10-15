@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="452" height="384" viewBox="-16 -16 452 384" role="img"
+             aria-label="Map sketch of the corpus bounding box, 49 to 54 degrees north and 3 to 11 degrees east, with seven major airports marked">
+<style>:root{--ground: #f4f6fa;
+    --surface: #ffffff;
+    --surface-2: #e9edf5;
+    --ink: #111620;
+    --ink-2: #39424f;
+    --muted: #67717f;
+    --line: #d5dce6;
+    --line-soft: #e6ebf2;
+
+    --accent: #1f4fa8;
+    --accent-soft: #e3ebfa;
+    --signal: #0b6a7d;
+    --signal-soft: #d9eef4;
+    --ok: #146b52;
+    --ok-soft: #dcefe7;
+    --warn: #8a4b12;
+    --warn-soft: #f8ead9;
+    --bad: #a32b23;
+    --bad-soft: #f8e4e2;
+
+    --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--ground: #0b0e15;
+      --surface: #10131a;
+      --surface-2: #191b23;
+      --ink: #e1e2ec;
+      --ink-2: #c2c6d6;
+      --muted: #8c909f;
+      --line: #2b3140;
+      --line-soft: #1c2029;
+
+      --accent: #adc6ff;
+      --accent-soft: #182545;
+      --signal: #4cd7f6;
+      --signal-soft: #0d2b33;
+      --ok: #6fd3a5;
+      --ok-soft: #0f2a20;
+      --warn: #ffb786;
+      --warn-soft: #33210f;
+      --bad: #ffb4ab;
+      --bad-soft: #351714;}}
+:root[data-theme="dark"]{--ground: #0b0e15;
+    --surface: #10131a;
+    --surface-2: #191b23;
+    --ink: #e1e2ec;
+    --ink-2: #c2c6d6;
+    --muted: #8c909f;
+    --line: #2b3140;
+    --line-soft: #1c2029;
+
+    --accent: #adc6ff;
+    --accent-soft: #182545;
+    --signal: #4cd7f6;
+    --signal-soft: #0d2b33;
+    --ok: #6fd3a5;
+    --ok-soft: #0f2a20;
+    --warn: #ffb786;
+    --warn-soft: #33210f;
+    --bad: #ffb4ab;
+    --bad-soft: #351714;}
+.fig__art{overflow-x: auto; line-height: 0;}
+.fig__art img{display: block; width: 100%; border-radius: 4px; border: 1px solid var(--line);}
+.fig__art svg{display: block;}
+.fig__label{font-family: var(--display);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    fill: var(--muted);}
+.fig__tick{font-family: var(--mono); font-size: 10.5px;}
+.fig__tick:not([fill]){fill: var(--muted);}
+.fig__place{font-family: var(--display); font-size: 11.5px; font-weight: 500; fill: var(--ink-2);}
+.fig__val{font-family: var(--mono); font-size: 11.5px;}
+.fig__val:not([fill]){fill: var(--ink);}
+.fig-bg{fill:var(--surface);stroke:var(--line)}</style>
+<rect class="fig-bg" x="-15.5" y="-15.5" width="451" height="383" rx="8"/>
+          <rect x="60" y="20" width="300" height="300" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5" rx="2" />
+          <g stroke="var(--line)" stroke-width="1" stroke-dasharray="2 4">
+            <line x1="60" y1="140" x2="360" y2="140" />
+            <line x1="60" y1="260" x2="360" y2="260" />
+            <line x1="172.5" y1="20" x2="172.5" y2="320" />
+            <line x1="285" y1="20" x2="285" y2="320" />
+          </g>
+          <g fill="var(--signal)">
+            <circle cx="322" cy="42" r="4" />
+            <circle cx="126" cy="121" r="4" />
+            <circle cx="201" cy="183" r="4" />
+            <circle cx="209" cy="204" r="4" />
+            <circle cx="111" cy="209" r="4" />
+            <circle cx="269" cy="258" r="4" />
+            <circle cx="177" cy="283" r="4" />
+          </g>
+          <g class="fig__place">
+            <text x="314" y="38" text-anchor="end">Hamburg</text>
+            <text x="134" y="118">Schiphol</text>
+            <text x="209" y="180">Düsseldorf</text>
+            <text x="217" y="208">Cologne</text>
+            <text x="103" y="213" text-anchor="end">Brussels</text>
+            <text x="277" y="255">Frankfurt</text>
+            <text x="169" y="287" text-anchor="end">Luxembourg</text>
+          </g>
+          <g class="fig__tick">
+            <text x="56" y="24" text-anchor="end">54°N</text>
+            <text x="56" y="144" text-anchor="end">52°N</text>
+            <text x="56" y="264" text-anchor="end">50°N</text>
+            <text x="60" y="336" text-anchor="middle">3°E</text>
+            <text x="172.5" y="336" text-anchor="middle">6°E</text>
+            <text x="285" y="336" text-anchor="middle">9°E</text>
+            <text x="360" y="336" text-anchor="middle">11°E</text>
+          </g>
+          <text class="fig__label" x="60" y="12">49–54°N, 3–11°E · ≈309,000 km²</text>
+        </svg>

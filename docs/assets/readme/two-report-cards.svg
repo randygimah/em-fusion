@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="672" height="294" viewBox="-16 -16 672 294" role="img"
+             aria-label="The pipeline in five steps: readings, rules, claim, package of evidence, explanation. Report card one covers the rules and the claim, and grades them against the answer key written when the hour was staged, over 300 hours; it is the subject of this section. Report card two covers the package and the explanation, and grades the AI model against the mechanical template on the same package, over 20 packages, with blind marking still to come. The rules and the model are never graded against each other, because the model never sees a reading and never decides whether anything is wrong.">
+<style>:root{--ground: #f4f6fa;
+    --surface: #ffffff;
+    --surface-2: #e9edf5;
+    --ink: #111620;
+    --ink-2: #39424f;
+    --muted: #67717f;
+    --line: #d5dce6;
+    --line-soft: #e6ebf2;
+
+    --accent: #1f4fa8;
+    --accent-soft: #e3ebfa;
+    --signal: #0b6a7d;
+    --signal-soft: #d9eef4;
+    --ok: #146b52;
+    --ok-soft: #dcefe7;
+    --warn: #8a4b12;
+    --warn-soft: #f8ead9;
+    --bad: #a32b23;
+    --bad-soft: #f8e4e2;
+
+    --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--ground: #0b0e15;
+      --surface: #10131a;
+      --surface-2: #191b23;
+      --ink: #e1e2ec;
+      --ink-2: #c2c6d6;
+      --muted: #8c909f;
+      --line: #2b3140;
+      --line-soft: #1c2029;
+
+      --accent: #adc6ff;
+      --accent-soft: #182545;
+      --signal: #4cd7f6;
+      --signal-soft: #0d2b33;
+      --ok: #6fd3a5;
+      --ok-soft: #0f2a20;
+      --warn: #ffb786;
+      --warn-soft: #33210f;
+      --bad: #ffb4ab;
+      --bad-soft: #351714;}}
+:root[data-theme="dark"]{--ground: #0b0e15;
+    --surface: #10131a;
+    --surface-2: #191b23;
+    --ink: #e1e2ec;
+    --ink-2: #c2c6d6;
+    --muted: #8c909f;
+    --line: #2b3140;
+    --line-soft: #1c2029;
+
+    --accent: #adc6ff;
+    --accent-soft: #182545;
+    --signal: #4cd7f6;
+    --signal-soft: #0d2b33;
+    --ok: #6fd3a5;
+    --ok-soft: #0f2a20;
+    --warn: #ffb786;
+    --warn-soft: #33210f;
+    --bad: #ffb4ab;
+    --bad-soft: #351714;}
+.fig__art{overflow-x: auto; line-height: 0;}
+.fig__art img{display: block; width: 100%; border-radius: 4px; border: 1px solid var(--line);}
+.fig__art svg{display: block;}
+.fig__label{font-family: var(--display);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    fill: var(--muted);}
+.fig__tick{font-family: var(--mono); font-size: 10.5px;}
+.fig__tick:not([fill]){fill: var(--muted);}
+.fig__place{font-family: var(--display); font-size: 11.5px; font-weight: 500; fill: var(--ink-2);}
+.fig__val{font-family: var(--mono); font-size: 11.5px;}
+.fig__val:not([fill]){fill: var(--ink);}
+.fig-bg{fill:var(--surface);stroke:var(--line)}</style>
+<rect class="fig-bg" x="-15.5" y="-15.5" width="671" height="293" rx="8"/>
+          <text class="fig__label" x="2" y="16">one detector, then one explainer — two report cards, in series</text>
+
+          <rect x="2" y="34" width="104" height="48" rx="4" fill="var(--surface-2)" stroke="var(--line)" />
+          <text class="fig__place" x="54" y="55" text-anchor="middle">readings</text>
+          <text class="fig__val" x="54" y="72" text-anchor="middle" style="fill:var(--muted)">aircraft, radio</text>
+
+          <rect x="134" y="34" width="104" height="48" rx="4" fill="var(--signal-soft)" stroke="var(--signal)" />
+          <text class="fig__place" x="186" y="55" text-anchor="middle">rules</text>
+          <text class="fig__val" x="186" y="72" text-anchor="middle" style="fill:var(--muted)">the detector</text>
+
+          <rect x="266" y="34" width="104" height="48" rx="4" fill="var(--signal-soft)" stroke="var(--signal)" />
+          <text class="fig__place" x="318" y="55" text-anchor="middle">claim</text>
+          <text class="fig__val" x="318" y="72" text-anchor="middle" style="fill:var(--muted)">what it found</text>
+
+          <rect x="398" y="34" width="104" height="48" rx="4" fill="var(--accent-soft)" stroke="var(--accent)" />
+          <text class="fig__place" x="450" y="55" text-anchor="middle">package</text>
+          <text class="fig__val" x="450" y="72" text-anchor="middle" style="fill:var(--muted)">of evidence</text>
+
+          <rect x="530" y="34" width="104" height="48" rx="4" fill="var(--accent-soft)" stroke="var(--accent)" />
+          <text class="fig__place" x="582" y="55" text-anchor="middle">explanation</text>
+          <text class="fig__val" x="582" y="72" text-anchor="middle" style="fill:var(--muted)">AI or template</text>
+
+          <g stroke="var(--muted)" stroke-width="1.5" fill="none">
+            <line x1="108" y1="58" x2="128" y2="58" />
+            <line x1="240" y1="58" x2="260" y2="58" />
+            <line x1="372" y1="58" x2="392" y2="58" />
+            <line x1="504" y1="58" x2="524" y2="58" />
+          </g>
+          <g fill="var(--muted)">
+            <path d="M126 54 L132 58 L126 62 Z" />
+            <path d="M258 54 L264 58 L258 62 Z" />
+            <path d="M390 54 L396 58 L390 62 Z" />
+            <path d="M522 54 L528 58 L522 62 Z" />
+          </g>
+
+          <path d="M134 92 V100 H370 V92" fill="none" stroke="var(--signal)" stroke-width="1.5" />
+          <text class="fig__val" x="134" y="120" style="fill:var(--signal)">report card 1 · detection</text>
+          <text class="fig__val" x="134" y="138">graded against the answer key</text>
+          <text class="fig__val" x="134" y="156" style="fill:var(--muted)">300 hours · this section</text>
+
+          <path d="M398 92 V100 H634 V92" fill="none" stroke="var(--accent)" stroke-width="1.5" />
+          <text class="fig__val" x="398" y="120" style="fill:var(--accent)">report card 2 · explanation</text>
+          <text class="fig__val" x="398" y="138">model graded against template</text>
+          <text class="fig__val" x="398" y="156" style="fill:var(--muted)">20 packages · one marker done</text>
+
+          <path d="M186 172 V186 H582 V172" fill="none" stroke="var(--bad)" stroke-width="1.5"
+                stroke-dasharray="4 3" />
+          <g stroke="var(--bad)" stroke-width="2">
+            <line x1="376" y1="178" x2="392" y2="194" />
+            <line x1="392" y1="178" x2="376" y2="194" />
+          </g>
+          <text class="fig__val" x="384" y="216" text-anchor="middle" style="fill:var(--bad)">rules against model — never graded</text>
+          <text class="fig__val" x="384" y="234" text-anchor="middle" style="fill:var(--muted)">the model sees no reading and decides nothing,</text>
+          <text class="fig__val" x="384" y="252" text-anchor="middle" style="fill:var(--muted)">so there is no detection of its own to score</text>
+        </svg>

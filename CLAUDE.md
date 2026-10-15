@@ -131,7 +131,8 @@ A contents page for the repo. Use it to find the right file before searching; it
 | `docs/proposal_draft.md` | The submitted proposal. Framing only, not a build reference. |
 | `docs/em_fusion.md` | **Superseded v1 PRD.** History only — never a scope reference. |
 | `DESIGN.md` | Design system spec (tokens in front-matter). Read before writing any styled component; amend it when the build diverges. |
-| `README.md` | Setup and run instructions. Update whenever setup, scripts, scope, or behavior changes. |
+| `README.md` | The repo's front page: overview, research questions, results, screenshots, then setup and run instructions. Update whenever setup, scripts, scope, behavior or a quoted figure changes; it must never report the blind marking's quality comparison before both markers are done. |
+| `docs/assets/` | The logo (`logo.svg`, light and dark wordmarks) and `readme/`: the README's figures, **copies** of `progress_note.html`'s figures and screenshots (published screenshots crop out the model-name line). A figure changed on the note is copied again, not edited here. |
 | `frontend/package.json`, `pnpm-lock.yaml`, `.nvmrc` | Scripts, dependencies, lockfile, pinned Node. |
 | `frontend/biome.json`, `tsconfig*.json` | Biome lint/format; TypeScript project references. |
 | `frontend/vite.config.ts`, `devProxy.ts` | Dev port 1234, `/api` proxy with no path rewrite, Tailwind plugin, Vitest setup. The proxy target comes from `API_PROXY_TARGET` via `devProxy.ts` (`ops-006`) — default `localhost:8000`, `backend:8000` in the container; never `VITE_`-prefixed. |

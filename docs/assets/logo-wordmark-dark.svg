@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="128" viewBox="0 0 240 64" role="img" aria-label="EM Fusion">
+  <title>EM Fusion</title>
+  <rect width="64" height="64" rx="14" fill="#10131a"/>
+  <g fill="none" stroke-linecap="round" stroke-width="2.6">
+    <g stroke="#4cd7f6">
+      <path d="M14 38 A12 12 0 0 1 26 50"/>
+      <path d="M14 28 A22 22 0 0 1 36 50" opacity="0.75"/>
+      <path d="M14 18 A32 32 0 0 1 46 50" opacity="0.5"/>
+    </g>
+    <g stroke="#adc6ff">
+      <path d="M38 50 A12 12 0 0 1 50 38"/>
+      <path d="M28 50 A22 22 0 0 1 50 28" opacity="0.75"/>
+      <path d="M18 50 A32 32 0 0 1 50 18" opacity="0.5"/>
+    </g>
+  </g>
+  <circle cx="14" cy="50" r="3" fill="#4cd7f6"/>
+  <circle cx="50" cy="50" r="3" fill="#adc6ff"/>
+  <circle cx="32" cy="23.5" r="7.5" fill="#ffb786" opacity="0.18"/>
+  <circle cx="32" cy="23.5" r="4" fill="#ffb786"/>
+  <text fill="#e1e2ec" font-family="Archivo, Helvetica Neue, Arial, sans-serif" x="78" y="36" font-size="27" font-weight="700" letter-spacing="-0.5">EM Fusion</text>
+  <text fill="#8c909f" font-family="JetBrains Mono, ui-monospace, Menlo, monospace" x="79" y="52" font-size="7.6">evidence first · analyst decides</text>
+</svg>

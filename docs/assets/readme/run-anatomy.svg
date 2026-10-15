@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="672" height="266" viewBox="-16 -16 672 266" role="img"
+             aria-label="Anatomy of a run. A quiet run has real replayed aircraft reports and an invented radio grid at its noise floor. A staged run is the same two streams with a small patch of the radio grid raised and a few aircraft reports altered.">
+<style>:root{--ground: #f4f6fa;
+    --surface: #ffffff;
+    --surface-2: #e9edf5;
+    --ink: #111620;
+    --ink-2: #39424f;
+    --muted: #67717f;
+    --line: #d5dce6;
+    --line-soft: #e6ebf2;
+
+    --accent: #1f4fa8;
+    --accent-soft: #e3ebfa;
+    --signal: #0b6a7d;
+    --signal-soft: #d9eef4;
+    --ok: #146b52;
+    --ok-soft: #dcefe7;
+    --warn: #8a4b12;
+    --warn-soft: #f8ead9;
+    --bad: #a32b23;
+    --bad-soft: #f8e4e2;
+
+    --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--ground: #0b0e15;
+      --surface: #10131a;
+      --surface-2: #191b23;
+      --ink: #e1e2ec;
+      --ink-2: #c2c6d6;
+      --muted: #8c909f;
+      --line: #2b3140;
+      --line-soft: #1c2029;
+
+      --accent: #adc6ff;
+      --accent-soft: #182545;
+      --signal: #4cd7f6;
+      --signal-soft: #0d2b33;
+      --ok: #6fd3a5;
+      --ok-soft: #0f2a20;
+      --warn: #ffb786;
+      --warn-soft: #33210f;
+      --bad: #ffb4ab;
+      --bad-soft: #351714;}}
+:root[data-theme="dark"]{--ground: #0b0e15;
+    --surface: #10131a;
+    --surface-2: #191b23;
+    --ink: #e1e2ec;
+    --ink-2: #c2c6d6;
+    --muted: #8c909f;
+    --line: #2b3140;
+    --line-soft: #1c2029;
+
+    --accent: #adc6ff;
+    --accent-soft: #182545;
+    --signal: #4cd7f6;
+    --signal-soft: #0d2b33;
+    --ok: #6fd3a5;
+    --ok-soft: #0f2a20;
+    --warn: #ffb786;
+    --warn-soft: #33210f;
+    --bad: #ffb4ab;
+    --bad-soft: #351714;}
+.fig__art{overflow-x: auto; line-height: 0;}
+.fig__art img{display: block; width: 100%; border-radius: 4px; border: 1px solid var(--line);}
+.fig__art svg{display: block;}
+.fig__label{font-family: var(--display);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    fill: var(--muted);}
+.fig__tick{font-family: var(--mono); font-size: 10.5px;}
+.fig__tick:not([fill]){fill: var(--muted);}
+.fig__place{font-family: var(--display); font-size: 11.5px; font-weight: 500; fill: var(--ink-2);}
+.fig__val{font-family: var(--mono); font-size: 11.5px;}
+.fig__val:not([fill]){fill: var(--ink);}
+.fig-bg{fill:var(--surface);stroke:var(--line)}</style>
+<rect class="fig-bg" x="-15.5" y="-15.5" width="671" height="265" rx="8"/>
+          <text class="fig__label" x="20" y="18">Quiet run</text>
+          <rect x="20" y="28" width="270" height="34" rx="3" fill="var(--signal-soft)" stroke="var(--signal)" stroke-width="1" />
+          <text class="fig__val" x="30" y="49">real aircraft reports · 133,134 · untouched</text>
+          <g stroke="var(--line)" stroke-width="1" fill="var(--surface-2)">
+            <rect x="20" y="70" width="270" height="60" rx="3" />
+          </g>
+          <text class="fig__val" x="30" y="94">invented radio grid</text>
+          <text class="fig__tick" x="30" y="114">7 receivers × 8 slices × every 10 s</text>
+          <text class="fig__tick" x="20" y="150">−95 dBm ± a decibel or two</text>
+          <text class="fig__tick" x="20" y="168">nothing injected, anywhere</text>
+
+          <text class="fig__label" x="350" y="18">Staged run · same seed</text>
+          <rect x="350" y="28" width="270" height="34" rx="3" fill="var(--signal-soft)" stroke="var(--signal)" stroke-width="1" />
+          <text class="fig__val" x="360" y="49">real aircraft reports · a few altered</text>
+          <rect x="470" y="30" width="52" height="30" rx="2" fill="var(--warn-soft)" stroke="var(--warn)" stroke-width="1" />
+          <g stroke="var(--line)" stroke-width="1" fill="var(--surface-2)">
+            <rect x="350" y="70" width="270" height="60" rx="3" />
+          </g>
+          <rect x="392" y="78" width="44" height="24" rx="2" fill="var(--warn-soft)" stroke="var(--warn)" stroke-width="1.5" />
+          <text class="fig__val" x="360" y="94">invented radio grid</text>
+          <text class="fig__tick" x="360" y="114">identical everywhere outside the patch</text>
+          <text class="fig__tick" x="350" y="150">60 readings raised, of 5,040</text>
+          <text class="fig__tick" x="350" y="168">4,980 byte-identical to the quiet run</text>
+
+          <line x1="305" y1="28" x2="305" y2="180" stroke="var(--line)" stroke-width="1" stroke-dasharray="3 4" />
+          <text class="fig__label" x="20" y="206">The difference between the two is the answer key — and nothing else</text>
+          <text class="fig__tick" x="20" y="224">measured on a fifteen-minute run, seed 20220627</text>
+        </svg>

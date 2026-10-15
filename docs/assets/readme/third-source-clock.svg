@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="672" height="202" viewBox="-16 -16 672 202" role="img"
+             aria-label="The measurement clock from 19:11:59 to 21:13:58 UTC. A long dashed stretch of 1 hour 39 minutes waiting for agreement, a short dashed stretch of 5 minutes waiting for review, and three short solid stretches of active work totalling 17 minutes 14 seconds. The test suite ran for 12 minutes, partly during the review wait.">
+<style>:root{--ground: #f4f6fa;
+    --surface: #ffffff;
+    --surface-2: #e9edf5;
+    --ink: #111620;
+    --ink-2: #39424f;
+    --muted: #67717f;
+    --line: #d5dce6;
+    --line-soft: #e6ebf2;
+
+    --accent: #1f4fa8;
+    --accent-soft: #e3ebfa;
+    --signal: #0b6a7d;
+    --signal-soft: #d9eef4;
+    --ok: #146b52;
+    --ok-soft: #dcefe7;
+    --warn: #8a4b12;
+    --warn-soft: #f8ead9;
+    --bad: #a32b23;
+    --bad-soft: #f8e4e2;
+
+    --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--ground: #0b0e15;
+      --surface: #10131a;
+      --surface-2: #191b23;
+      --ink: #e1e2ec;
+      --ink-2: #c2c6d6;
+      --muted: #8c909f;
+      --line: #2b3140;
+      --line-soft: #1c2029;
+
+      --accent: #adc6ff;
+      --accent-soft: #182545;
+      --signal: #4cd7f6;
+      --signal-soft: #0d2b33;
+      --ok: #6fd3a5;
+      --ok-soft: #0f2a20;
+      --warn: #ffb786;
+      --warn-soft: #33210f;
+      --bad: #ffb4ab;
+      --bad-soft: #351714;}}
+:root[data-theme="dark"]{--ground: #0b0e15;
+    --surface: #10131a;
+    --surface-2: #191b23;
+    --ink: #e1e2ec;
+    --ink-2: #c2c6d6;
+    --muted: #8c909f;
+    --line: #2b3140;
+    --line-soft: #1c2029;
+
+    --accent: #adc6ff;
+    --accent-soft: #182545;
+    --signal: #4cd7f6;
+    --signal-soft: #0d2b33;
+    --ok: #6fd3a5;
+    --ok-soft: #0f2a20;
+    --warn: #ffb786;
+    --warn-soft: #33210f;
+    --bad: #ffb4ab;
+    --bad-soft: #351714;}
+.fig__art{overflow-x: auto; line-height: 0;}
+.fig__art img{display: block; width: 100%; border-radius: 4px; border: 1px solid var(--line);}
+.fig__art svg{display: block;}
+.fig__label{font-family: var(--display);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    fill: var(--muted);}
+.fig__tick{font-family: var(--mono); font-size: 10.5px;}
+.fig__tick:not([fill]){fill: var(--muted);}
+.fig__place{font-family: var(--display); font-size: 11.5px; font-weight: 500; fill: var(--ink-2);}
+.fig__val{font-family: var(--mono); font-size: 11.5px;}
+.fig__val:not([fill]){fill: var(--ink);}
+.fig-bg{fill:var(--surface);stroke:var(--line)}</style>
+<rect class="fig-bg" x="-15.5" y="-15.5" width="671" height="201" rx="8"/>
+          <text class="fig__label" x="20" y="24">The clock, 19:11:59 to 21:13:58 UTC</text>
+          <rect x="20.0" y="40" width="3" height="30" rx="1" fill="var(--ok-soft)" stroke="var(--ok)" stroke-width="1.2" />
+          <rect x="22.3" y="40" width="488.9" height="30" rx="3" fill="none" stroke="var(--line)" stroke-width="1.2" stroke-dasharray="3 3" />
+          <rect x="511.2" y="40" width="27.099999999999966" height="30" rx="2" fill="var(--ok-soft)" stroke="var(--ok)" stroke-width="1.2" />
+          <rect x="538.3" y="40" width="26.300000000000068" height="30" rx="2" fill="none" stroke="var(--line)" stroke-width="1.2" stroke-dasharray="3 3" />
+          <rect x="564.6" y="40" width="55.39999999999998" height="30" rx="2" fill="var(--ok-soft)" stroke="var(--ok)" stroke-width="1.2" />
+          <text class="fig__val" x="266.75" y="60" text-anchor="middle">waiting for agreement on how to count · 1 h 39 min</text>
+          <rect x="534.9" y="78" width="60.200000000000045" height="7" rx="2" fill="var(--line)" />
+          <text class="fig__val" x="595.1" y="100" text-anchor="end">test suite, 12 min</text>
+          <line x1="551.45" y1="40" x2="551.45" y2="32" stroke="var(--line)" stroke-width="1" />
+          <text class="fig__val" x="551.45" y="28" text-anchor="middle">review</text>
+          <text class="fig__val" x="20" y="124">19:12</text>
+          <text class="fig__val" x="620" y="124" text-anchor="end">21:14</text>
+          <text class="fig__val" x="20" y="152">solid: active, 17 min 14 s · dashed: waiting for a reply, 1 h 44 min 45 s</text>
+        </svg>
