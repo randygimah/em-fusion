@@ -7088,6 +7088,61 @@ admits a source cheaply. It would not show that nothing downstream mis-reads the
 the third adapter's specification therefore asserts separately: the detection pass and the picture
 must be identical with and without its observations present.
 
+### The third source cost one registration and seventeen minutes, and the minutes are the weaker figure
+
+The extensibility research question was answered on 15 October 2026 by adding a third source, built
+small on purpose so that the cost measured is the cost of adding a source rather than of the source
+itself. Each of the seven receivers reports its temperature, supply voltage and uptime once a minute
+of simulated time. The numbers come from the run's seed, and nothing reads them. The design
+constraints were fixed in the specification before any code was written, together with what would
+count as a negative result: a feed that needed the canonical model changed beyond registration, or
+the intake path, the store's schema or a detector changed, would have been reported as the abstraction
+failing.
+
+Read from git between the clock-start commit and the finished commit:
+
+| | Files | Lines added | Lines removed |
+|---|---|---|---|
+| New application files (the generator and the adapter) | 2 | 112 | 0 |
+| Existing application files changed | 1 | 17 | 1 |
+| New test file | 1 | 519 | 0 |
+| Protected paths changed (intake, validation, pseudonymisation, storage port, schema, detectors, API, screens) | 0 | | |
+
+The one existing file is the canonical model, and the change there is registration only: a source
+type, an observation type, a four-field payload class, and its place in the payload union and the
+type-to-payload mapping. The removed line is the union widening. The store took the new records with
+no migration, pseudonymisation needed no entry, and two tests against a live database show the
+detection pass and the operational picture identical with and without the feed on the same run.
+
+The hours were counted two ways, on the user's decision before anything was built. The clock ran
+from 19:11:59 to 21:13:58 UTC: **2 h 2 min elapsed**. Two waits for the user, one for agreement on
+the counting rule and one for review, are taken out, each running from the agent's message that
+asked to the user's reply, read from the session transcript: 1 h 44 min 45 s. That leaves **17 min
+14 s active**, the reported figure, of which 12 min 14 s was the full test suite running.
+
+The threats are recorded with the figure. The adapter was written by an AI agent that already knew
+the codebase, had written the second source's adapter and had the pattern to copy, so the hours are a
+lower bound for that setup and say nothing about a developer meeting the code for the first time. The
+specification was drafted before the clock started, in the conversation that agreed the feed, so
+design time is not in the figure. The waits are declared by hand from timestamps that are not in the
+repository. The line count is the more robust half of the result: it does not depend on who typed it,
+and it is the number the abstraction actually controls. The time figure should be quoted, if at all,
+beside the line count and never alone.
+
+The figure also has to be read with the defect found while scoping it (the subsection above). The
+second source had broken a reader outside the abstraction layer, and that fix was deliberately taken
+before the clock started. Counting it would charge the third source for the second's damage, but
+leaving it out without saying so would overstate the claim: the layer made admitting a source cheap,
+and it did not make every reader safe. The third source's test that the picture is unchanged is the
+guard against that recurring.
+
+Two process deviations, both recorded in the handoff. The tests were proven red only by the import
+failing, because the modules did not yet exist, so the structural checks (the adapter invents no
+numbers, nothing in the application imports the feed) have not been shown to catch a planted
+violation. And the not-wired-in test was edited after its test commit: it first searched for the
+string `receiver_health` and caught an unrelated private function of that name in the picture code,
+so it now reads imports and enum members instead.
+
 ### A test that was too blunt, and the distinction that sharpened it
 
 The suite's purity check began as "no module in the AI package may contain the literal name of a

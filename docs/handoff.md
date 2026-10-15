@@ -29,20 +29,21 @@ This session (9–15 October 2026) did eight things:
    mapping, then built; the main database migrated to `0011`.
 7. **Built the verdict card** (13–15 October): `fbk-001`, `fbk-002` and `hyp-004` amended to what
    `api-005` built, then built as one piece (one card in the design), on the user's agreement.
-8. **Started the third source (`adp-003`)** and, scoping it, found and fixed a phantom aircraft
-   (`api-020`) before the measurement began.
+8. **Built the third source (`adp-003`)**, a receiver health feed, and took RQ1's extensibility
+   measurement. Scoping it first found and fixed a phantom aircraft (`api-020`) before the clock
+   started.
 
 Everything went spec → failing tests → code → user review (→ mutation pass for frontend items) →
 `passes: true`, committed on `main`.
 
 ## Current state
 
-**Backlog 119 of 129.** `main` is in sync with `origin/main`; tree clean once this handoff is
+**Backlog 120 of 129.** `main` is in sync with `origin/main`; tree clean once this handoff is
 committed.
 
 **Suites:**
-- Backend, full container suite: **2,348 passed, 99.90%** (6,076 statements, 6 missed; 14 min 29 s),
-  run with `api-020` in place on 15 October.
+- Backend, full container suite: **2,368 passed, 99.90%** (6,107 statements, 6 missed; 12 min 14 s),
+  run with `adp-003` in place on 15 October; the three new `adp-003` files are at 100%.
 - Frontend: **616 passed** (25 new in `hypothesisVerdict.test.tsx`); Biome lint and `tsc -b` clean.
 
 **The main database is migrated to `0011`** (`/api/v1/health` reports `at-head`). The `0010` ordinal
@@ -153,14 +154,16 @@ copy ran earlier: 80 positions written from the committed campaign record; a sec
   each; on 480 sitting on RF-05, nominal). Fixed: tracks only, and the window measured from the
   newest track (equal to the newest row on all 460 runs, so no change today).
 - **Live after the fix:** 480 420→419, 102 428→427, 123 419→418, 161 419→418; none nameless.
-- **`adp-003` is explained and agreed in outline, not specified:** a receiver health feed (each of
-  the seven receivers once a minute: temperature, supply voltage, uptime), seed-derived, blind to the
-  staged incident, read by nothing; detection pass and picture must be identical with and without
-  it; only registration in `app/dal/models.py`. Measurement: files and lines from git between the
-  start commit and the feat commit, and hours.
-- **The clock:** a first clock ran 18:45:35–18:47:34 UTC on 15 October from `00183f0` and was stopped
-  when the phantom was found; the bug fix is outside it. **Restart it, and note the start commit,
-  when `adp-003`'s spec is written.**
+- **`adp-003` is done** (`75ed33c`). `app/scenario/receiver_health.py` (`emit_health(layout, seed,
+  start, duration_seconds)`, one report per receiver per 60 s) and `app/adapters/receiver_health.py`
+  (`emit_run`, keyword-only after the layout), registered in `app/dal/models.py` only
+  (`SYNTHETIC_HEALTH`, `RECEIVER_HEALTH`, `ReceiverHealthPayload`). Wired into nothing: no stored run
+  has health reports and the main store is untouched.
+- **The measurement** (`measurements/extensibility/adp003_extensibility.{py,log}`, `269c894..75ed33c`):
+  2 new app files +112; `models.py` +17 −1; tests +519; **0 protected paths touched**. Clock
+  19:11:59–21:13:58 UTC: 2 h 2 min elapsed, 1 h 44 min 45 s waiting for the user (two waits, declared
+  in the script from the transcript), **17 min 14 s active**, of which the suite ran 12 min 14 s.
+  Written up in `thesis_notes.md` with its threats.
 
 ### The blind scoring
 
@@ -247,7 +250,12 @@ the user's untracked file; leave it).
 | `00183f0` | `docs: qa 166, the next implementation while the second scorer works` |
 | `3039ab0` | `spec: add api-020 -- the picture's aircraft are aircraft` |
 | `e05cd56` | `test: add tests for api-020` |
-| *(this commit)* | `fix(api-020): the picture's aircraft are aircraft - tests pass` |
+| `269c894` | `fix(api-020): the picture's aircraft are aircraft - tests pass` |
+| `66b1c00` | `spec: amend adp-003 -- a receiver health feed, and what must stay unchanged` |
+| `f09cc78` | `spec: adp-003 hours reported without the waits for the user` |
+| `6de44da` | `test: add tests for adp-003` |
+| `75ed33c` | `feat(adp-003): a receiver health feed, by registration only - tests pass` |
+| *(this commit)* | `docs: adp-003 extensibility measurement and notes` |
 
 **New files:**
 - **Backend:**
@@ -311,6 +319,16 @@ the user's untracked file; leave it).
 ## Failed attempts
 
 **My own errors:**
+- **`adp-003`'s tests were edited after `6de44da`, inside `75ed33c`.** First, the not-wired-in test
+  searched for the substring `receiver_health` and hit the picture's unrelated `_receiver_health`, so
+  it now reads imports and enum members. Second, a lint fix (`# noqa: F811` on the imported fixture):
+  `make lint | tail` hid the failure behind the pipe and the test commit went ahead.
+- **`adp-003`'s tests were proven red only by an `ImportError` at collection.** The structural
+  checks (no number invented in the driver, nothing in `app/` importing the feed) have not been shown
+  to catch a planted violation; no mutation pass was run (backend item).
+- **The first full-suite run for `adp-003` never ran:** I launched `make test-backend-nobuild` from
+  `backend/measurements/`, where there is no such target. That cost about a minute of the active
+  time.
 - **`57c4a0c`, a `test:` commit, also carries the unreviewed `op-002`/`nav-004` code**, because I
   staged `frontend/src` whole. It was pushed, so I left it rather than rewriting `main`. `passes`
   stayed false until `a67daf5`.
@@ -396,11 +414,9 @@ the user's untracked file; leave it).
      - the user's other 20 items single-rated;
      - mixed-evidence cause correctness reported separately;
      - the user's pass two marked unblinded.
-3. **`adp-003`, the third source** (agreed 15 October, `qa.md` §166): write its spec with the
-   constraints above, restart the clock, then test and code. Keep its commits to that item alone.
-4. **Progress note**: version 13 (`09066cf`) is current. Offer an update when `adp-003` lands (and
-   it should mention the phantom aircraft).
-5. **Remaining strands** (`qa.md` §165): `api-009`; `anom-003`/`anom-006`/`op-006`; decide on
+3. **Progress note**: version 13 (`09066cf`) is current. `adp-003` has landed: offer an update
+   (the third source, the measurement and its threats, and the phantom aircraft).
+4. **Remaining strands** (`qa.md` §165): `api-009`; `anom-003`/`anom-006`/`op-006`; decide on
    `ai-005`/`ai-006`; `ops-001`/`ops-002`.
 
 **Open and unowned:**

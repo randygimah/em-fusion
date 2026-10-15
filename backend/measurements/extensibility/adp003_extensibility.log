@@ -1,0 +1,22 @@
+adp-003 extensibility, 269c894..75ed33c
+kind     area       +    -  file
+new      app       42    0  backend/app/adapters/receiver_health.py
+existing app       17    1  backend/app/dal/models.py
+new      app       70    0  backend/app/scenario/receiver_health.py
+new      tests    519    0  backend/tests/test_adp_receiver_health.py
+existing docs       1    1  docs/spec.jsonl
+
+files, lines added, lines removed
+  existing app      1 files  +17    -1
+  existing docs     1 files  +1     -1
+  new      app      2 files  +112   -0
+  new      tests    1 files  +519   -0
+
+constraint (3), protected paths touched: none
+
+clock 19:11:59 to 21:13:58 UTC on 2026-10-15
+  wait 19:12:27-20:51:51  agreement on how the hours are counted
+  wait 20:57:21-21:02:42  review of the implementation
+elapsed  2:01:59  (2.03 h)
+waiting  1:44:45
+active   0:17:14  (0.29 h)  <- the figure

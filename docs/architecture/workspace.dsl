@@ -37,7 +37,7 @@ workspace "EM Fusion" "Explainable electromagnetic situational awareness: a huma
 
                 rfAdapter = component "RF Adapter" "Adapter 2. Synthesises the full sensor x channel x interval grid." "Python" "Adapter Seam"
 
-                thirdAdapter = component "Third Source Adapter" "Late extensibility demonstration (RQ1)." "Python" "Adapter Seam,Planned"
+                thirdAdapter = component "Receiver Health Adapter" "Adapter 3. A seeded receiver health feed, read by nothing and wired into no run; the extensibility measurement (RQ1)." "Python" "Adapter Seam"
 
                 dal = component "Data Abstraction Layer" "Maps any source to the canonical model; validates, quarantines, attaches provenance." "Python, Pydantic" "Seam"
 
