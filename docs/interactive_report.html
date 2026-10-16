@@ -1,0 +1,1544 @@
+<title>EM Fusion Interactive Report</title>
+<meta name="description" content="EM Fusion's three research questions, worked through with interactive figures: the data model, rule-based detection, scenario generation, evidence packages, the two explanation generators and the evaluation maths.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: an instrument log. Sticky contents rail on the left, one reading column; figures span the column and carry their own controls and readouts. */
+:root {
+  --bg: #f3f5f9;
+  --surface: #ffffff;
+  --surface-2: #eaeef5;
+  --ink: #10141c;
+  --ink-2: #353d4b;
+  --muted: #5f6878;
+  --faint: #8b93a3;
+  --line: #d6dce6;
+  --signal: #0a7590;
+  --signal-soft: #dcf0f5;
+  --accent: #3653b8;
+  --accent-soft: #e4e9fa;
+  --fuse: #b45514;
+  --fuse-soft: #fbeadc;
+  --ok: #157052;
+  --ok-soft: #dcefe6;
+  --warn: #946100;
+  --warn-soft: #f8edd3;
+  --bad: #b02a22;
+  --bad-soft: #f8e3e1;
+  --grid: #e3e8f0;
+  --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Sans 3", "Segoe UI", -apple-system, Helvetica, Arial, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b0e15; --surface: #10131a; --surface-2: #181c26; --ink: #e2e5ee; --ink-2: #c3c8d6; --muted: #9298a8; --faint: #687083;
+    --line: #262c3a; --signal: #4cd7f6; --signal-soft: #0f2a33; --accent: #adc6ff; --accent-soft: #1a2240; --fuse: #ffb786; --fuse-soft: #33210f;
+    --ok: #5fd1a3; --ok-soft: #10291f; --warn: #f2c35b; --warn-soft: #30260d; --bad: #ff8a80; --bad-soft: #351513; --grid: #1c2130;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b0e15; --surface: #10131a; --surface-2: #181c26; --ink: #e2e5ee; --ink-2: #c3c8d6; --muted: #9298a8; --faint: #687083;
+  --line: #262c3a; --signal: #4cd7f6; --signal-soft: #0f2a33; --accent: #adc6ff; --accent-soft: #1a2240; --fuse: #ffb786; --fuse-soft: #33210f;
+  --ok: #5fd1a3; --ok-soft: #10291f; --warn: #f2c35b; --warn-soft: #30260d; --bad: #ff8a80; --bad-soft: #351513; --grid: #1c2130;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 400 17px/1.62 var(--body); }
+a { color: var(--accent); text-underline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+
+.masthead { background: var(--surface); border-bottom: 1px solid var(--line); }
+.mh { max-width: 1240px; margin: 0 auto; padding-block: 38px 32px; padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 20px; }
+.brand { display: flex; align-items: center; gap: 12px; font: 600 12px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+h1 { margin: 0; font: 800 clamp(36px, 6vw, 64px)/1 var(--display); font-stretch: 78%; letter-spacing: -.02em; text-wrap: balance; max-width: 16ch; }
+h1 em { font-style: normal; color: var(--signal); }
+.dek { margin: 0; max-width: 64ch; font-size: 19.5px; line-height: 1.5; color: var(--ink-2); }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 22px; font: 500 12px/1.4 var(--mono); color: var(--muted); }
+.meta b { color: var(--ink); font-weight: 600; }
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.tile { padding: 16px 18px; border-left: 1px solid var(--line); min-width: 0; }
+.tile:first-child { border-left: 0; }
+.tile .k { font: 600 10.5px/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.tile .v { margin-top: 6px; font: 700 32px/1 var(--display); font-stretch: 85%; font-variant-numeric: tabular-nums; }
+.tile .v small { font-size: 16px; color: var(--muted); font-weight: 600; }
+.tile .n { margin-top: 6px; font-size: 13.5px; color: var(--muted); line-height: 1.4; }
+.tile .rq { display: inline-block; margin-top: 8px; font: 600 10.5px/1 var(--mono); color: var(--signal); letter-spacing: .06em; }
+
+.shell { max-width: 1240px; margin: 0 auto; padding-block: 34px 80px; padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px)); display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; }
+.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 18px); align-self: start; font-size: 14px; max-height: calc(100vh - 36px); overflow-y: auto; }
+.toc p { margin: 0 0 10px; font: 600 11px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a { display: grid; grid-template-columns: 26px 1fr; padding: 5px 8px; border-radius: 6px; color: var(--muted); text-decoration: none; line-height: 1.3; }
+.toc a::before { content: counter(toc, decimal-leading-zero); font: 500 11px/1.5 var(--mono); color: var(--faint); }
+.toc a:hover, .toc a.on { background: var(--signal-soft); color: var(--ink); }
+.toc .rqs { margin-top: 18px; display: grid; gap: 6px; font-size: 12.5px; color: var(--muted); }
+.toc .rqs b { font-family: var(--mono); color: var(--signal); font-weight: 600; }
+
+main { min-width: 0; }
+section { margin-bottom: 72px; scroll-margin-top: 20px; }
+.eyebrow { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; font: 600 11.5px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--signal); }
+.eyebrow .tag { padding: 3px 7px; border-radius: 4px; background: var(--accent-soft); color: var(--accent); letter-spacing: .06em; }
+h2 { margin: 10px 0 18px; font: 750 clamp(27px, 3.4vw, 37px)/1.08 var(--display); font-stretch: 82%; letter-spacing: -.01em; text-wrap: balance; max-width: 26ch; }
+h3 { margin: 34px 0 10px; font: 700 21px/1.25 var(--display); font-stretch: 90%; text-wrap: balance; }
+p, .prose li { max-width: 68ch; }
+p { margin: 0 0 14px; }
+.prose ul, .prose ol { padding-left: 22px; margin: 0 0 16px; display: grid; gap: 6px; }
+.lede { font-size: 19px; line-height: 1.58; }
+code, .mono { font-family: var(--mono); font-size: .84em; }
+code { background: var(--surface-2); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+.muted { color: var(--muted); }
+
+.rqgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 22px 0 10px; }
+.rqc { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; min-width: 0; display: grid; gap: 6px; align-content: start; }
+.rqc .id { font: 600 11px/1 var(--mono); color: var(--signal); letter-spacing: .08em; }
+.rqc h4 { margin: 2px 0 0; font: 700 17px/1.3 var(--display); font-stretch: 92%; }
+.rqc p { margin: 0; font-size: 14.5px; color: var(--muted); line-height: 1.5; }
+.pill { justify-self: start; display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 999px; font: 600 11px/1 var(--mono); letter-spacing: .03em; }
+.pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.pill.ok { background: var(--ok-soft); color: var(--ok); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.bad { background: var(--bad-soft); color: var(--bad); }
+.pill.info { background: var(--signal-soft); color: var(--signal); }
+.pill.off { background: var(--surface-2); color: var(--muted); }
+
+figure { margin: 26px 0 30px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.fh { padding: 16px 20px 0; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px 20px; }
+.fh h4 { margin: 4px 0 0; font: 700 17.5px/1.3 var(--display); font-stretch: 92%; max-width: 54ch; }
+.fnum { font: 600 11px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+.fnum.live { color: var(--signal); }
+.controls { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end; padding: 14px 20px 0; }
+.fh .controls { padding: 0; }
+.ctl { display: grid; gap: 5px; min-width: 0; }
+.ctl > span { font: 600 10.5px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.ctl > span b { color: var(--ink); font-weight: 600; letter-spacing: 0; }
+.ctl.wide { flex: 1 1 220px; }
+select, input[type="number"], .btn { height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface-2); color: var(--ink); font: 500 13px/1 var(--mono); }
+input[type="number"] { width: 140px; }
+.btn { cursor: pointer; padding: 0 12px; }
+.btn:hover { border-color: var(--signal); }
+.btn[aria-pressed="true"] { background: var(--signal); border-color: var(--signal); color: var(--surface); }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+input[type="range"] { width: 100%; accent-color: var(--signal); }
+.plot { padding: 12px 12px 4px; overflow-x: auto; }
+.plot svg { display: block; width: 100%; height: auto; min-width: 520px; }
+.plot.small svg { min-width: 0; }
+svg text { font-family: var(--mono); }
+figcaption { padding: 12px 20px 16px; border-top: 1px solid var(--line); font-size: 14px; line-height: 1.55; color: var(--muted); }
+figcaption b { color: var(--ink); }
+.readout { display: flex; flex-wrap: wrap; gap: 8px 26px; padding: 12px 20px; border-top: 1px solid var(--line); background: var(--surface-2); font: 500 12.5px/1.45 var(--mono); color: var(--muted); }
+.readout b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.readout .hi { color: var(--signal); }
+.split { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); border-top: 1px solid var(--line); margin-top: 14px; }
+.split > div { min-width: 0; padding: 14px 18px; }
+.split > div + div { border-left: 1px solid var(--line); }
+.split.even { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.check div { overflow-wrap: anywhere; }
+
+.callout { border-left: 3px solid var(--fuse); background: var(--surface); border-radius: 0 10px 10px 0; padding: 14px 18px; margin: 20px 0; max-width: 74ch; }
+.callout p:last-child { margin-bottom: 0; }
+.callout .eyebrow { color: var(--fuse); margin-bottom: 8px; }
+.math { margin: 18px 0 20px; padding: 18px 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; display: grid; gap: 14px; }
+.math p, .math dl { max-width: 74ch; }
+.math math { font-size: 1.2em; }
+.math p { margin: 0; font-size: 15px; color: var(--muted); }
+.math dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; font-size: 15px; color: var(--muted); }
+.math dt { font-family: var(--mono); color: var(--ink); font-size: 13.5px; }
+.math dd { margin: 0; }
+
+.tw { overflow-x: auto; margin: 18px 0 26px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+th, td { text-align: left; padding: 9px 13px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 600 10.5px/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td .sub { display: block; margin-top: 3px; font-size: 13px; color: var(--muted); line-height: 1.45; }
+td.mono { font-family: var(--mono); font-size: 12.5px; }
+.diag { background: var(--ok-soft); color: var(--ok); font-weight: 700; }
+.zero { color: var(--faint); }
+
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 18px 0; }
+.two > div { min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+.two h4 { margin: 0 0 6px; font: 700 16.5px/1.3 var(--display); font-stretch: 92%; }
+.two p, .two li { font-size: 15px; color: var(--ink-2); margin: 0; }
+.two ul { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 5px; }
+
+pre.mermaid { margin: 0; padding: 18px; background: var(--surface); overflow-x: auto; text-align: center; }
+pre.json { margin: 0; padding: 14px 16px; background: var(--surface-2); border-radius: 8px; font: 12.5px/1.55 var(--mono); overflow-x: auto; white-space: pre; color: var(--ink-2); max-height: 420px; }
+pre.json .k { color: var(--accent); }
+pre.json .s { color: var(--signal); }
+pre.json .n { color: var(--fuse); }
+pre.json .chg { background: var(--warn-soft); border-radius: 3px; }
+
+.steps { display: grid; gap: 8px; }
+.step { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.step .no { font: 700 13px/1 var(--mono); color: var(--faint); }
+.step .q { font-size: 14.5px; line-height: 1.4; }
+.step .q small { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+.step.fire { border-color: var(--signal); background: var(--signal-soft); }
+.step.skip { opacity: .55; }
+.verdict { padding: 12px 14px; border-radius: 8px; background: var(--surface-2); font-size: 15px; line-height: 1.5; }
+.verdict b { display: block; font: 700 17px/1.3 var(--display); font-stretch: 90%; margin-bottom: 2px; }
+.stat { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: baseline; padding-bottom: 8px; border-bottom: 1px solid var(--line); font-size: 14px; }
+.stat span { color: var(--muted); }
+.stat b { font: 600 15px/1 var(--mono); font-variant-numeric: tabular-nums; }
+.stack { display: grid; gap: 10px; align-content: start; }
+
+.pipe { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--line); margin-top: 14px; }
+.pipe > div { min-width: 0; padding: 14px 16px; border-left: 1px solid var(--line); }
+.pipe > div:first-child { border-left: 0; }
+.pipe h5 { margin: 0 0 8px; font: 600 10.5px/1.2 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.field { display: grid; gap: 4px; margin-bottom: 8px; }
+.field label { font: 500 11.5px/1 var(--mono); color: var(--muted); }
+.field input, .field select { width: 100%; height: 30px; padding: 0 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface-2); color: var(--ink); font: 500 12.5px/1 var(--mono); }
+.check { font: 500 12.5px/1.45 var(--mono); display: grid; gap: 4px; }
+.check .pass { color: var(--ok); }
+.check .fail { color: var(--bad); }
+
+.bundle { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); border-top: 1px solid var(--line); margin-top: 14px; }
+.bundle > div { min-width: 0; padding: 14px 16px; }
+.bundle > div + div { border-left: 1px solid var(--line); }
+.item { display: block; width: 100%; text-align: left; padding: 9px 11px; margin-bottom: 6px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--ink); cursor: pointer; font: 500 13px/1.4 var(--body); }
+.item:hover { border-color: var(--signal); }
+.item[aria-pressed="true"] { border-color: var(--signal); background: var(--signal-soft); }
+.item .rid { font: 600 11.5px/1 var(--mono); color: var(--accent); }
+.item .kind { float: right; font: 600 10px/1 var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.compartment { font: 600 10.5px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); margin: 12px 0 8px; }
+.compartment:first-child { margin-top: 0; }
+
+.cite { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr); gap: 8px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.cite:last-child { border-bottom: 0; }
+.cite select { width: 100%; }
+.res { font: 600 12px/1.4 var(--mono); }
+.res small { display: block; font-weight: 500; color: var(--muted); }
+.res.g { color: var(--ok); } .res.u { color: var(--bad); } .res.s { color: var(--warn); }
+
+.kgrid { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px; }
+.kgrid .col { display: grid; gap: 4px; text-align: center; font: 500 11px/1 var(--mono); color: var(--muted); }
+.kgrid select { width: 100%; padding: 0 2px; text-align: center; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 0 20px 10px; font: 500 12px/1.3 var(--mono); color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.badge { display: inline-flex; gap: 6px; align-items: center; font: 600 11px/1 var(--mono); padding: 5px 8px; border-radius: 6px; }
+.badge.ok { background: var(--ok-soft); color: var(--ok); }
+.badge.bad { background: var(--bad-soft); color: var(--bad); }
+
+footer { border-top: 1px solid var(--line); padding-top: 22px; font-size: 14px; color: var(--muted); }
+footer p { max-width: 80ch; }
+
+@media (max-width: 1020px) {
+  .shell { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .toc { position: static; margin-bottom: 30px; max-height: none; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+}
+@media (max-width: 760px) {
+  .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tile:nth-child(3) { border-left: 0; }
+  .tile:nth-child(n+3) { border-top: 1px solid var(--line); }
+  .rqgrid, .two, .split, .split.even, .bundle { grid-template-columns: minmax(0, 1fr); }
+  .split > div + div, .bundle > div + div { border-left: 0; border-top: 1px solid var(--line); }
+  .pipe { grid-template-columns: minmax(0, 1fr); }
+  .pipe > div { border-left: 0; border-top: 1px solid var(--line); }
+  .pipe > div:first-child { border-top: 0; }
+  .cite { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .cite .res { grid-column: 1 / -1; }
+  .kgrid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  body { font-size: 16.5px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+</style>
+
+<header class="masthead">
+  <div class="mh">
+    <div class="brand">
+      <svg width="34" height="34" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#10131a"/><g fill="none" stroke-linecap="round" stroke-width="2.6"><g stroke="#4cd7f6"><path d="M14 38 A12 12 0 0 1 26 50"/><path d="M14 28 A22 22 0 0 1 36 50" opacity=".75"/><path d="M14 18 A32 32 0 0 1 46 50" opacity=".5"/></g><g stroke="#adc6ff"><path d="M38 50 A12 12 0 0 1 50 38"/><path d="M28 50 A22 22 0 0 1 50 28" opacity=".75"/><path d="M18 50 A32 32 0 0 1 50 18" opacity=".5"/></g></g><circle cx="14" cy="50" r="3" fill="#4cd7f6"/><circle cx="50" cy="50" r="3" fill="#adc6ff"/><circle cx="32" cy="23.5" r="4" fill="#ffb786"/></svg>
+      EM Fusion · interactive report
+    </div>
+    <h1>Three questions, <em>worked through</em></h1>
+    <p class="dek">EM Fusion fuses real air traffic and simulated radio receivers into one picture. Written rules decide what is unusual, an AI writes an explanation that is checked against the evidence, and a person makes the call. This report covers what was built to answer each of the project's three research questions, and lets you work the machinery yourself.</p>
+    <div class="meta">
+      <span>Corpus <b>300 runs · 60 of each of 5 kinds</b></span>
+      <span>Real data <b>OpenSky, 27 June 2022, 12:00 UTC</b></span>
+      <span>Detector <b>rules only, no learned model</b></span>
+      <span>Explainer <b>template + gpt-4.1-2025-04-14</b></span>
+      <span>Written <b>October 2026</b></span>
+    </div>
+    <div class="tiles" role="list">
+      <div class="tile" role="listitem"><div class="k">Staged runs named correctly</div><div class="v">180<small> / 180</small></div><div class="n">broken receiver, interference, mixed evidence</div><span class="rq">RQ2</span></div>
+      <div class="tile" role="listitem"><div class="k">False alarms</div><div class="v">0<small> / 120</small></div><div class="n">quiet runs and coverage-gap runs</div><span class="rq">RQ2</span></div>
+      <div class="tile" role="listitem"><div class="k">Corrupted citations caught</div><div class="v">164<small> / 164</small></div><div class="n">with 0 of 164 honest ones wrongly flagged</div><span class="rq">RQ3</span></div>
+      <div class="tile" role="listitem"><div class="k">Code touched to add a source</div><div class="v">17<small> lines</small></div><div class="n">in one existing file; nothing behind the data layer changed</div><span class="rq">RQ1</span></div>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <nav class="toc" aria-label="Contents">
+    <p>Contents</p>
+    <ol>
+      <li><a href="#why">Why this project</a></li>
+      <li><a href="#architecture">Architecture</a></li>
+      <li><a href="#data">Data and the box</a></li>
+      <li><a href="#dal">The data layer</a></li>
+      <li><a href="#receiver">What a receiver reports</a></li>
+      <li><a href="#scenarios">Staging incidents</a></li>
+      <li><a href="#baseline">Normal, and departures</a></li>
+      <li><a href="#ladder">Rules and the ladder</a></li>
+      <li><a href="#noml">Why not Isolation Forest</a></li>
+      <li><a href="#bundles">Evidence packages</a></li>
+      <li><a href="#generators">Two generators</a></li>
+      <li><a href="#grounding">The grounding check</a></li>
+      <li><a href="#evaluation">The evaluation harness</a></li>
+      <li><a href="#results">Results by question</a></li>
+      <li><a href="#limits">Limits and next steps</a></li>
+    </ol>
+    <div class="rqs">
+      <div><b>RQ1</b> one data model, measurably extensible</div>
+      <div><b>RQ2</b> rules against a known answer key</div>
+      <div><b>RQ3</b> explanations without invention</div>
+    </div>
+  </nav>
+
+  <main class="prose">
+
+<section id="why">
+  <div class="eyebrow">01 · Motivation</div>
+  <h2>Why build this at all</h2>
+  <p class="lede">The radio spectrum is crowded. Aircraft broadcast their positions, satellites send navigation signals down, and receivers on the ground measure how much energy is arriving. Someone watching all of that has to answer a question that sounds simple: is something wrong here, and if so, what?</p>
+  <p>The hard cases look alike from a distance. An aircraft whose reported position stops moving may have its navigation jammed, or a ground station may simply have missed some messages. A receiver reporting loud noise may be hearing real interference, or it may be broken. Telling these apart is a judgement, made under time pressure with incomplete evidence.</p>
+  <p>AI models are fluent at writing explanations, and that is the danger. A model can produce a confident, well-written account that rests on nothing it was shown. So the project asks whether you can get the benefit of an AI explanation while making it <strong>impossible to cite evidence that does not exist</strong>, and whether the result is any better than a plain mechanical summary of the same evidence.</p>
+  <div class="callout">
+    <div class="eyebrow">The design stance</div>
+    <p><strong>Decision support, not autonomous decision-making.</strong> The rules decide what is unusual. The AI only explains, and only from a sealed package of evidence the rules put together. A person confirms, rejects or asks for more. Confidence is always Low, Medium or High, never a percentage, because a number like 0.87 suggests a precision the method does not have.</p>
+  </div>
+  <div class="rqgrid">
+    <div class="rqc"><span class="id">RQ1 · DATA</span><h4>Can different sources share one data model?</h4><p>Real aircraft reports and invented radio readings go through one data layer. Is it extensible in a way you can measure, not just claim?</p><span class="pill ok">Answered</span></div>
+    <div class="rqc"><span class="id">RQ2 · DETECTION</span><h4>Do written rules find what was staged?</h4><p>Baseline comparison and deterministic rules, scored against an answer key written when each incident was staged.</p><span class="pill ok">Answered on 300 runs</span></div>
+    <div class="rqc"><span class="id">RQ3 · EXPLANATION</span><h4>Can an AI explain without inventing?</h4><p>A constrained model and a template baseline explain the same evidence. Citations are checked automatically; quality is marked blind by two people.</p><span class="pill warn">Built; blind marking in progress</span></div>
+  </div>
+</section>
+
+<section id="architecture">
+  <div class="eyebrow">02 · System</div>
+  <h2>The architecture, from source to analyst</h2>
+  <p>Data flows one way, through stages that each do one job. Every source goes through its own adapter into one data layer, which checks it, stamps where it came from, and hides aircraft identities before anything is stored. Detection runs over the stored readings. Its findings are packaged as evidence, explained twice, checked, and shown on three screens.</p>
+  <figure>
+    <div class="fh"><div><div class="fnum">Figure 1</div><h4>From replayed and invented data to the analyst's verdict</h4></div></div>
+<pre class="mermaid">
+flowchart TB
+  subgraph Sources
+    OS["OpenSky hour, replayed<br/>133,134 aircraft reports"]
+    RF["Synthetic radio grid<br/>7 receivers × 8 channels, every 10 s"]
+    HL["Receiver health feed<br/>third source, RQ1"]
+  end
+  SC["Scenario generator<br/>seeded, five kinds of run"] --> RF
+  OS --> AD["Adapters<br/>one per source"]
+  RF --> AD
+  HL -.-> AD
+  AD --> DAL["Data Abstraction Layer<br/>validate · stamp provenance · pseudonymise"]
+  DAL --> DB[("PostgreSQL + PostGIS")]
+  DB --> DET["Deterministic detection<br/>baselines · thresholds · spatial rules<br/>one decision ladder"]
+  DET --> EVB["Evidence packages<br/>every citation resolves to a stored row"]
+  EVB --> TPL["Template generator<br/>baseline and fallback"]
+  EVB --> LLM["Hosted model<br/>schema-constrained"]
+  TPL --> CHK["Schema check<br/>+ grounding check"]
+  LLM --> CHK
+  CHK --> UI["Three screens<br/>Operational Picture · Hypotheses · Scenario Control"]
+  UI -- "verdict + note" --> DB
+  SC -. "answer key, never shown to the system" .-> EV["Evaluation harness"]
+  DET --> EV
+</pre>
+    <figcaption>The dashed line from the generator is the answer key. It is written to the run record when the incident is staged and is read only by the evaluation harness, never by a detector, the AI or a screen. The receiver health feed is dashed because it exists to measure the cost of adding a source and is wired into tests only.</figcaption>
+  </figure>
+
+  <h3>The decisions behind it</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Decision</th><th>Chosen</th><th>Why</th><th>Accepted cost</th></tr></thead>
+    <tbody>
+      <tr><td>Detection</td><td>Written rules: thresholds, baselines, spatial grouping</td><td>Reproducible, auditable, and every conclusion names the rule that made it, which the citation check depends on. See section 09.</td><td>Only finds the shapes someone wrote a rule for.</td></tr>
+      <tr><td>Storage</td><td>PostgreSQL 15 + PostGIS 3.5</td><td>Distance and clustering questions are spatial. Distances use geography (metres on the globe); clustering uses an equal-area European projection.</td><td>A real database to run, migrate and back up.</td></tr>
+      <tr><td>Schema changes</td><td>Eleven Alembic revisions written by hand</td><td>Auto-generation does not understand PostGIS geometry columns and would produce revisions nobody had read.</td><td>Slower to write.</td></tr>
+      <tr><td>API</td><td>FastAPI + Pydantic, no SQL in handlers</td><td>Typed responses, checked against the frontend's contract types from the backend test suite.</td><td>Two copies of each shape to keep in step, enforced by a test.</td></tr>
+      <tr><td>Transport</td><td>The browser polls every 5 s</td><td>A detection pass is batch work; nothing changes faster than a poll can see.</td><td>No push updates.</td></tr>
+      <tr><td>Map</td><td>MapLibre with an offline Protomaps basemap</td><td>No account, no token, no hosted dependency. The hosted model is the one running cost.</td><td>A 92 MB download, checked against 775 pinned checksums.</td></tr>
+      <tr><td>Explainer</td><td>Template first, then one hosted model</td><td>The template is both the fallback and the yardstick the model is compared against.</td><td>A local model arm was withdrawn from scoring.</td></tr>
+      <tr><td>Model</td><td><code>gpt-4.1-2025-04-14</code>, temperature 0</td><td>Chosen for schema-constrained output and honouring temperature. Dated, because an alias could change mid-study.</td><td>Answers still vary slightly in their prose (section 11).</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="data">
+  <div class="eyebrow">03 · Data <span class="tag">RQ1 · RQ2</span></div>
+  <h2>Two kinds of data, inside one box</h2>
+  <p>The project uses one real source and one invented one, chosen so their weaknesses cancel. Real aircraft data is messy in honest ways, but nobody knows the truth about it. Invented radio data comes with a perfect answer key, but it is only as realistic as its generator.</p>
+  <div class="two">
+    <div><h4>Real: one hour of aircraft reports</h4><ul>
+      <li>OpenSky Network state vectors, 27 June 2022, 12:00–13:00 UTC.</li>
+      <li>133,134 positioned reports from 948 aircraft, one every 10 s per aircraft.</li>
+      <li>Not redistributed (licence §3(iii)). The repository holds a manifest with checksums and a one-command rebuild.</li>
+      <li>Aircraft identities are replaced with keyed pseudonyms before anything is stored.</li>
+    </ul></div>
+    <div><h4>Invented: a network of seven receivers</h4><ul>
+      <li>Seven receivers at real airports, Schiphol to Köln-Bonn.</li>
+      <li>Eight 2 MHz channels around the GNSS L1 frequency, 1575.42 MHz.</li>
+      <li>One reading per receiver per channel every 10 s: 5,040 readings in a 15-minute run.</li>
+      <li>Every number comes from one seed, so any run regenerates byte for byte.</li>
+    </ul></div>
+  </div>
+  <p>A box was drawn around the region and everything outside it discarded: 49–54°N, 3–11°E, about 555 km by 556 km. The same box constrains which aircraft enter, which map tiles are needed, and where every staged incident can be placed.</p>
+  <figure>
+    <div class="fh">
+      <div><div class="fnum live">Figure 2 · interactive</div><h4>The corpus box and the receiver network</h4></div>
+      <div class="controls">
+        <label class="ctl wide"><span>Ring radius <b id="mapR">70</b> km</span><input id="mapRadius" type="range" min="20" max="120" step="1" value="70"></label>
+      </div>
+    </div>
+    <div class="plot small"><svg id="mapSvg" viewBox="0 0 560 560" role="img" aria-label="Map of the corpus box with seven receivers"></svg></div>
+    <div class="readout" id="mapReadout"></div>
+    <figcaption>Click a receiver to see which others sit inside the ring around it. <b>70 km</b> is how far the broken-receiver rule looks for neighbours; <b>60 km</b> is the default reach of a staged interference zone. Every receiver has at least one neighbour within 70 km, so the rule can always ask whether a neighbour heard the same thing. The projection is equirectangular, scaled at 51.5°N, so the rings are approximate. Distances in the readout are great-circle distances, the same formula the generator uses.</figcaption>
+  </figure>
+  <p>Choosing the box took a correction. The plan was to choose a region by how well it was covered, so that a staged reporting gap would stand out against real ones. All eight candidate regions came back above 99.97% coverage, so that measure could not choose between them. The decision moved to what the system would actually do: how many distinct 20 km patches carry enough traffic for a staged incident to have witnesses. The chosen box offers 263 such sites against a need of 150. Moving its western edge from 5°E to 3°E brought in Schiphol and Brussels, which an aggregate statistic had not flagged as missing.</p>
+</section>
+
+<section id="dal">
+  <div class="eyebrow">04 · Data Abstraction Layer <span class="tag">RQ1</span></div>
+  <h2>One shape for every source</h2>
+  <p>An aircraft report and a radio reading have almost nothing in common. One has a callsign, an altitude and a heading; the other has a channel, a power level and a signal-to-noise ratio. The data layer gives them one outer shape, a <strong>canonical observation</strong>: where it came from, when, where, whether it is real or invented, whether it passed validation, and then a payload whose type depends on the source.</p>
+  <p>Every adapter hands its records to a single entry point, which does four things in order: check each record, set aside anything invalid with its reason, stamp provenance, and replace aircraft identities with pseudonyms. A rejected record is never silently dropped; it is kept with the field and the reason, and the counts of accepted and quarantined records commit together.</p>
+  <figure>
+    <div class="fh">
+      <div><div class="fnum live">Figure 3 · try it</div><h4>Push a record through the data layer</h4></div>
+      <div class="seg" role="group" aria-label="Source" id="dalSources"></div>
+    </div>
+    <div class="pipe">
+      <div><h5>1 · Source record</h5><div id="dalFields"></div></div>
+      <div><h5>2 · Validation</h5><div class="check" id="dalChecks"></div></div>
+      <div><h5>3 · Pseudonymise</h5><div class="check" id="dalPseudo"></div></div>
+      <div><h5>4 · Stored as</h5><div id="dalVerdict"></div></div>
+    </div>
+    <div style="padding: 0 16px 16px"><pre class="json" id="dalOut" aria-live="polite"></pre></div>
+    <figcaption>Edit any field. Set a latitude above 90, clear the receiver name or make a voltage negative, and the record is quarantined with the field and the reason instead of stored. Pseudonyms here use the real method, a keyed HMAC-SHA256 with the field name mixed in so a callsign and an address never collide, truncated to 12 hex characters. The key is a demonstration key, <code>demo-key-not-the-real-seed</code>. The real key is a secret: an aircraft address is only 24 bits, so anyone holding the key could reverse every pseudonym by trying them all.</figcaption>
+  </figure>
+  <h3>What “measurably extensible” means</h3>
+  <p>Any architecture diagram can claim to be extensible. To make the claim testable, a third source was added late, on purpose, after writing down what would count as failure: a change to ingest, validation, pseudonymisation, the storage port, the database schema, the detectors, the API or the screens. The new source is a health feed from each receiver: temperature, supply voltage and uptime, once a minute. It is the third tab in Figure 3. Section 14 gives the measured cost.</p>
+</section>
+
+<section id="receiver">
+  <div class="eyebrow">05 · Radio basics</div>
+  <h2>What one receiver actually reports</h2>
+  <p>A receiver here is a meter, not an ear. It decodes nothing; it measures how much radio energy arrives and reports it as a number. Rather than one figure for everything, it splits its range into eight narrow channels and reports eight numbers. That split is what everything else depends on.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Measurement</th><th>Unit</th><th>Quiet value</th><th>What moves it</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Power</strong></td><td class="mono">dBm</td><td class="mono">−95.00</td><td>Energy arriving on the channel. Interference raises it. This is the reading the rules watch, upwards.</td></tr>
+      <tr><td><strong>Signal-to-noise ratio</strong></td><td class="mono">dB</td><td class="mono">20.00</td><td>How far a signal would stand above the floor. The same event that raises power lowers it, so it is watched downwards.</td></tr>
+      <tr><td><strong>Baseline delta</strong></td><td class="mono">dB</td><td class="mono">≈ 0</td><td>How far this reading sits from nominal. In a quiet run it is the noise itself.</td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>dBm</strong> is decibels relative to one milliwatt. −95 dBm is about 0.3 picowatts. Each +10 dB is ten times the power and +3 dB roughly doubles it, so the default staged rise of 8 dB means about 6.3 times the energy. The eight channels are 2 MHz wide and centred from 1567.42 to 1581.42 MHz. Channel 4 sits on 1575.42 MHz, the GPS L1 frequency, with four channels below it and three above.</p>
+  <div class="two">
+    <div><h4>Neighbours in frequency</h4><p>One channel loud and its neighbours on the same receiver quiet is physically odd for a real transmitter. It points at the instrument.</p></div>
+    <div><h4>Neighbours in distance</h4><p>One receiver loud and the receivers within 70 km quiet points the same way. Several nearby receivers loud together points at something real in the world.</p></div>
+  </div>
+  <p>Those two questions, asked along two axes, are the core of the radio rules. They need no radio physics beyond four facts: rising noise raises power and lowers signal-to-noise; real emitters spread; interference has a location; and every receiver has its own normal.</p>
+</section>
+
+<section id="scenarios">
+  <div class="eyebrow">06 · Scenario generation <span class="tag">RQ2</span></div>
+  <h2>Staging incidents with a known answer</h2>
+  <p>Real interference with trustworthy labels is not available, and without labels you cannot tell whether a detector works. So the project stages its own incidents and writes down, at the moment of staging, exactly what it did. That record is the answer key.</p>
+  <p>There are five kinds of run. They are not a list of things that can go wrong. They are chosen so the system has to tell them apart.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Kind of run</th><th>Radio side</th><th>Aircraft side</th><th>The right answer</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Quiet baseline</strong></td><td>Floor only</td><td>Untouched</td><td>Silence. Any finding is a false alarm.</td></tr>
+      <tr><td><strong>One broken receiver</strong></td><td>One receiver only</td><td>Untouched</td><td>That receiver is broken.</td></tr>
+      <tr><td><strong>Interference</strong></td><td>Raised in a zone</td><td>Positions stop advancing, same zone</td><td>Something is interfering.</td></tr>
+      <tr><td><strong>Aircraft coverage gap</strong></td><td>Floor only</td><td>Reports stop, in a zone</td><td>A data-source problem. No built rule names it, so the system must stay silent.</td></tr>
+      <tr><td><strong>Mixed evidence</strong></td><td>One receiver only</td><td>Reports stop, same place</td><td>That receiver is broken, undisturbed by the aircraft loss.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>One number decides everything</h3>
+  <p>A run is described by its kind, its settings and one seed. Every invented number is derived from the seed plus the identity of what it applies to: this receiver, this channel, this 10-second step. It is not drawn from a sequence. So adding an incident cannot move a reading the incident does not touch. A staged run and its quiet twin agree everywhere outside the incident, and the answer key is exactly the difference between them.</p>
+  <div class="math">
+    <math display="block"><mrow><mi>u</mi><mo>=</mo><mfrac><mrow><mo>⌊</mo><mtext>BLAKE2b</mtext><msub><mrow><mo>(</mo><mtext>seed</mtext><mo>␟</mo><msub><mi>k</mi><mn>1</mn></msub><mo>␟</mo><mi>…</mi><mo>)</mo></mrow><mrow><mn>128</mn><mtext> bit</mtext></mrow></msub><mo>/</mo><msup><mn>2</mn><mn>75</mn></msup><mo>⌋</mo></mrow><msup><mn>2</mn><mn>53</mn></msup></mfrac></mrow></math>
+    <math display="block"><mrow><mi>g</mi><mo>=</mo><msqrt><mrow><mo>−</mo><mn>2</mn><mi>ln</mi><mo>(</mo><mn>1</mn><mo>−</mo><msub><mi>u</mi><mi>a</mi></msub><mo>)</mo></mrow></msqrt><mi>cos</mi><mo>(</mo><mn>2</mn><mi>π</mi><msub><mi>u</mi><mi>b</mi></msub><mo>)</mo></mrow></math>
+    <math display="block"><mrow><msub><mi>P</mi><mtext>dBm</mtext></msub><mo>=</mo><mo>−</mo><mn>95</mn><mo>+</mo><mn>1.5</mn><mo>·</mo><msub><mi>g</mi><mtext>noise</mtext></msub><mo>+</mo><mrow><mo>[</mo><mtext>cell staged</mtext><mo>]</mo></mrow><mo>·</mo><mi>E</mi><mo>·</mo><mi>max</mi><mo>(</mo><mn>1</mn><mo>+</mo><mn>0.25</mn><mo>·</mo><msub><mi>g</mi><mtext>injection</mtext></msub><mo>,</mo><mn>0</mn><mo>)</mo></mrow></math>
+    <dl>
+      <dt>u</dt><dd>A uniform number in [0, 1): the top 53 bits of a 16-byte BLAKE2b hash of the seed and the keys, joined by a separator character.</dd>
+      <dt>g</dt><dd>A standard normal number made from two uniforms by the Box–Muller transform.</dd>
+      <dt>E</dt><dd>The staged elevation, 8 dB by default. It varies by about a quarter from cell to cell, because a perfectly flat rise is not what interference looks like.</dd>
+      <dt>SNR</dt><dd>20 dB minus the same deviation, rounded to 0.01 dB so the last bits of the maths library can never reach the stored value.</dd>
+    </dl>
+  </div>
+  <figure>
+    <div class="fh">
+      <div><div class="fnum live">Figure 4 · interactive · the real generator</div><h4>Pick a seed and a kind of run, and see exactly what it stages</h4></div>
+      <span id="seedCheck" class="badge"></span>
+    </div>
+    <div class="controls">
+      <label class="ctl"><span>Seed</span><input id="seed" type="number" min="0" max="2147483647" value="42"></label>
+      <label class="ctl"><span>Kind of run</span><select id="kind">
+        <option value="normal-baseline">Quiet baseline</option>
+        <option value="rf-sensor-fault">One broken receiver</option>
+        <option value="gnss-degradation" selected>Interference</option>
+        <option value="aircraft-coverage-gap">Aircraft coverage gap</option>
+        <option value="ambiguous-mixed-evidence">Mixed evidence</option>
+      </select></label>
+      <label class="ctl"><span>Spectral extent</span><select id="extent"><option value="narrowband">Narrow: channel 4 only</option><option value="broadband">Broad: all eight</option></select></label>
+      <label class="ctl"><span>Elevation <b id="elevL">8.0</b> dB</span><input id="elev" type="range" min="1" max="16" step="0.5" value="8"></label>
+      <label class="ctl"><span>Zone radius <b id="zoneL">60</b> km</span><input id="zone" type="range" min="20" max="120" step="1" value="60"></label>
+      <button class="btn" id="seedRandom" type="button">Random seed</button>
+    </div>
+    <div class="controls">
+      <label class="ctl wide"><span>Simulated time <b id="tickL"></b></span><input id="tick" type="range" min="0" max="89" step="1" value="20"></label>
+    </div>
+    <div class="split">
+      <div><div class="plot small" style="padding:0"><svg id="gridSvg" viewBox="0 0 420 300" role="img" aria-label="Grid of seven receivers by eight channels"></svg></div></div>
+      <div><div class="plot small" style="padding:0"><svg id="specSvg" viewBox="0 0 360 300" role="img" aria-label="One receiver's eight channels"></svg></div></div>
+    </div>
+    <div class="readout" id="seedReadout"></div>
+    <figcaption>The left grid is every reading at one 10-second step: seven receivers by eight channels, coloured by how far each sits from −95 dBm. Click a row to show that receiver's spectrum on the right. The incident runs from 120 s to 420 s into the 900 s run. This page runs the generator's own derivation, with BLAKE2b written out in the page, and the badge checks it against values computed by the Python generator. A matching badge means the readings shown are the readings the system stores for that seed. The aircraft side of each run uses the real recorded hour, which this page does not carry, so it is described rather than drawn.</figcaption>
+  </figure>
+  <div class="tw"><table>
+    <thead><tr><th>Setting</th><th>Default</th><th>What it changes</th></tr></thead>
+    <tbody>
+      <tr><td>Noise floor</td><td class="mono">−95 dBm</td><td>What a receiver reports when nothing is transmitting.</td></tr>
+      <tr><td>Noise spread</td><td class="mono">1.5 dB</td><td>How much each reading wobbles around the floor.</td></tr>
+      <tr><td>Incident start and length</td><td class="mono">120 s, 300 s</td><td>Quiet time on both sides, so a detector has a before and an after.</td></tr>
+      <tr><td>Zone radius</td><td class="mono">60 km</td><td>Inside the band [55.7, 85.7) km where a zone always reaches some receivers and not all.</td></tr>
+      <tr><td>Elevation</td><td class="mono">8 dB</td><td>How far the floor rises on an affected cell.</td></tr>
+      <tr><td>Aircraft affected</td><td class="mono">8%, at least 5</td><td>Only aircraft in flight. Before the floor of five, 11 of 40 staged runs affected no aircraft at all.</td></tr>
+    </tbody>
+  </table></div>
+  <p>The two aircraft disruptions are deliberately different shapes. In an interference run the aircraft keep transmitting but their reported position stops advancing, which is what jammed navigation looks like. In a coverage-gap or mixed run the reports stop arriving at all. A rule that only knew one shape would be blind to the other.</p>
+</section>
+
+<section id="baseline">
+  <div class="eyebrow">07 · Baseline comparison <span class="tag">RQ2</span></div>
+  <h2>What normal looks like, and noticing a departure</h2>
+  <p>You cannot call a reading abnormal until you can say what normal is. So the first detection step is a measurement. Over a hundred declared quiet runs, the system works out the average and spread of power for every receiver and channel separately: 56 baselines, each from 9,000 readings. The receivers' normals are never pooled, because a fault on one channel would otherwise be averaged against the seven quiet channels beside it.</p>
+  <div class="math">
+    <math display="block"><mrow><msub><mi>μ</mi><mrow><mi>r</mi><mo>,</mo><mi>c</mi></mrow></msub><mo>=</mo><mfrac><mn>1</mn><mi>n</mi></mfrac><munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><msub><mi>x</mi><mi>i</mi></msub></mrow></math>
+    <math display="block"><mrow><msub><mi>σ</mi><mrow><mi>r</mi><mo>,</mo><mi>c</mi></mrow></msub><mo>=</mo><msqrt><mrow><mfrac><mn>1</mn><mrow><mi>n</mi><mo>−</mo><mn>1</mn></mrow></mfrac><mo>∑</mo><msup><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mi>μ</mi><mo>)</mo></mrow><mn>2</mn></msup></mrow></msqrt></mrow></math>
+    <math display="block"><mrow><mtext>deviation</mtext><mo>=</mo><mi>x</mi><mo>−</mo><msub><mi>μ</mi><mrow><mi>r</mi><mo>,</mo><mi>c</mi></mrow></msub></mrow></math>
+    <p>Measured: typical power −95.00 dBm and a spread of 1.50 dB. The quietest and noisiest of the 56 baselines sit only 0.177 dB apart, so on quiet data the careful per-channel version and a lazy per-receiver version give the same answer. The separation only matters once one channel misbehaves, which quiet data never contains. So the checks for it are built from staged readings.</p>
+  </div>
+  <p>The rule is then simple. A reading more than <strong>6 dB above its own baseline</strong> is a deviation, graded Low from 6 dB, Medium from 10 dB and High from 15 dB. Consecutive deviating readings on one receiver and channel form an <strong>episode</strong>. An episode must last at least 10 s, meaning two readings in a row, or it is recorded as too brief rather than as an event.</p>
+  <figure>
+    <div class="fh">
+      <div><div class="fnum live">Figure 5 · interactive · same seed as Figure 4</div><h4>One receiver and channel across the run, against its threshold</h4></div>
+      <div class="controls">
+        <label class="ctl"><span>Receiver</span><select id="tsSensor"></select></label>
+        <label class="ctl"><span>Channel</span><select id="tsChan"></select></label>
+      </div>
+    </div>
+    <div class="controls">
+      <label class="ctl wide"><span>Threshold <b id="thrL">6.0</b> dB above baseline</span><input id="thr" type="range" min="2" max="14" step="0.5" value="6"></label>
+      <label class="ctl"><span>Minimum episode</span><select id="minEp"><option value="1">10 s (2 readings)</option><option value="0">none (1 reading)</option></select></label>
+    </div>
+    <div class="plot"><svg id="tsSvg" viewBox="0 0 760 300" role="img" aria-label="Time series of one cell's deviation"></svg></div>
+    <div class="readout" id="tsReadout"></div>
+    <figcaption>Each dot is one stored reading, 90 in a 15-minute run, plotted as its distance from −95 dBm. The shaded block is the staged window if this cell is affected. Bars along the bottom are episodes: solid when counted, hollow when too brief. <b>Delay</b> is how much of the incident had to pass before the evidence was complete. A counted episode needs its second reading, so 10 s is the fastest possible answer. Try a threshold of 3 dB on a quiet cell to see why the line sits where it does.</figcaption>
+  </figure>
+  <h3>Why 6 dB and two readings: the arithmetic</h3>
+  <p>Quiet noise is close to normally distributed with a spread of 1.5 dB, so the chance that a quiet reading crosses the line is a tail area of the bell curve. A staged reading rises by about 8 dB with its own extra wobble. One threshold separates the two curves, and the minimum episode length removes the rare quiet spike.</p>
+  <div class="math">
+    <math display="block"><mrow><msub><mi>p</mi><mtext>quiet</mtext></msub><mo>=</mo><mn>1</mn><mo>−</mo><mi>Φ</mi><mo>(</mo><mfrac><mi>T</mi><mi>σ</mi></mfrac><mo>)</mo></mrow></math>
+    <math display="block"><mrow><msub><mi>p</mi><mtext>staged</mtext></msub><mo>=</mo><mn>1</mn><mo>−</mo><mi>Φ</mi><mo>(</mo><mfrac><mrow><mi>T</mi><mo>−</mo><mi>E</mi></mrow><msqrt><mrow><msup><mrow><mo>(</mo><mn>0.25</mn><mi>E</mi><mo>)</mo></mrow><mn>2</mn></msup><mo>+</mo><msup><mi>σ</mi><mn>2</mn></msup></mrow></msqrt></mfrac><mo>)</mo></mrow></math>
+    <math display="block"><mrow><msub><mi>p</mi><mtext>two in a row</mtext></msub><mo>≈</mo><msubsup><mi>p</mi><mtext>quiet</mtext><mn>2</mn></msubsup></mrow></math>
+    <p>Φ is the standard normal cumulative distribution. A run has 5,040 readings and 4,984 adjacent pairs, so a per-reading chance multiplies into a per-run expectation.</p>
+  </div>
+  <figure>
+    <div class="fh"><div><div class="fnum live">Figure 6 · interactive</div><h4>Quiet readings against staged readings, and where the line falls</h4></div></div>
+    <div class="controls">
+      <label class="ctl wide"><span>Threshold T <b id="gT">6.0</b> dB</span><input id="gThr" type="range" min="1" max="14" step="0.25" value="6"></label>
+      <label class="ctl wide"><span>Noise spread σ <b id="gS">1.50</b> dB</span><input id="gSig" type="range" min="0.5" max="3.5" step="0.05" value="1.5"></label>
+      <label class="ctl wide"><span>Staged elevation E <b id="gE">8.0</b> dB</span><input id="gElev" type="range" min="2" max="16" step="0.5" value="8"></label>
+    </div>
+    <div class="plot"><svg id="gaussSvg" viewBox="0 0 760 280" role="img" aria-label="Two normal distributions and a threshold"></svg></div>
+    <div class="readout" id="gaussReadout"></div>
+    <figcaption>Grey is a quiet reading's deviation; teal is a staged reading's. The shaded tails are the two probabilities above. At the settings of record, one quiet run in about seven would show a single-reading spike, and two spikes in a row would happen about once in 200,000 runs. That is why the minimum episode removed every false alarm in the corpus (17 before, 0 after) without losing a real catch. This is the normal-curve prediction, not a measurement; the measured counts are the ones quoted.</figcaption>
+  </figure>
+  <div class="callout">
+    <div class="eyebrow">The one fact most decisions descend from</div>
+    <p>The radio evidence is very strong and the aircraft evidence is weak: 8 dB against a wobble of 1.5 dB, more than five spreads, versus a Youden's J of about 0.3 for aircraft dropouts, where 0 is a coin flip. So the strong signal is never made to wait for, or be overruled by, the weak one.</p>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="eyebrow">08 · Detection rules <span class="tag">RQ2</span></div>
+  <h2>Eight rules, and one decision asked in a fixed order</h2>
+  <p>Below the conclusions sit the raw detectors: radio deviation, aircraft position gaps, gap clusters and gap rates. Their output is raw material and is never reported on its own. A quiet run holds about 15 aircraft dropouts, because real traffic is messy. A conclusion comes only from the <strong>ladder</strong>: one question asked three times in a declared order, where the first answer to claim an event wins and no later test is offered it.</p>
+  <figure>
+    <div class="fh">
+      <div><div class="fnum live">Figure 7 · try it</div><h4>Raise receivers, and watch the ladder decide</h4></div>
+      <div class="seg" role="group" aria-label="Presets" id="ladderPresets"></div>
+    </div>
+    <div class="split">
+      <div><div class="plot small" style="padding:0"><svg id="ladMap" viewBox="0 0 400 380" role="img" aria-label="Receiver map, click to raise a receiver"></svg></div></div>
+      <div class="stack">
+        <div class="steps" id="ladSteps"></div>
+        <div class="verdict" id="ladVerdict"></div>
+      </div>
+    </div>
+    <div class="controls" style="border-top:1px solid var(--line); padding-bottom: 14px; margin-top: 4px">
+      <label class="ctl wide"><span>Aircraft dropouts in the 60 km disc, during the window <b id="dinL">4</b></span><input id="din" type="range" min="0" max="20" value="4"></label>
+      <label class="ctl wide"><span>… in the rest of the run <b id="doutL">3</b></span><input id="dout" type="range" min="0" max="20" value="3"></label>
+    </div>
+    <div class="readout" id="ladReadout"></div>
+    <figcaption>Click a receiver on the map to raise or lower its noise floor. Each raised receiver with no raised receiver within 70 km is a lone fault. Raised receivers within 70 km of each other form one zone. This figure simplifies the real rules, which also check the channels next door, the time windows and the episode lengths, but the order and the outcomes are the system's. The sliders feed the rate comparison that sets an interference zone's confidence; it never decides whether the zone exists.</figcaption>
+  </figure>
+  <div class="math">
+    <math display="block"><mrow><mtext>ratio</mtext><mo>=</mo><mfrac><mrow><mfrac><msub><mi>n</mi><mtext>during</mtext></msub><msub><mi>t</mi><mtext>during</mtext></msub></mfrac><mo>+</mo><mfrac><mn>1</mn><msub><mi>t</mi><mtext>run</mtext></msub></mfrac></mrow><mrow><mfrac><msub><mi>n</mi><mtext>outside</mtext></msub><msub><mi>t</mi><mtext>outside</mtext></msub></mfrac><mo>+</mo><mfrac><mn>1</mn><msub><mi>t</mi><mtext>run</mtext></msub></mfrac></mrow></mfrac></mrow></math>
+    <math display="block"><mrow><mtext>High if ratio</mtext><mo>≥</mo><mn>1.58</mn><mo>,</mo><mtext> else Medium</mtext></mrow></math>
+    <p>A place compared against itself: were aircraft dropouts more frequent inside the disc during the window than they normally are in that same disc? The 1/t<sub>run</sub> term adds one dropout spread over the whole run to both sides, so an empty reference period does not produce an infinite ratio. If either side holds no dropouts at all, the comparison is reported as <em>could not be measured</em> and the confidence stays Medium. 1.58 was chosen on one batch and scored on another. As a gate it would have cost 14 of 40 true reports and rejected nothing, so it only sets confidence.</p>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th>Step</th><th>Question</th><th>Answer</th><th>State</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td>One receiver off normal, every neighbour within 70 km within 2 dB of normal?</td><td>That receiver is broken</td><td><span class="pill ok">Built · 60/60</span></td></tr>
+      <tr><td class="num">2</td><td>Aircraft dropouts with no radio anomaly nearby?</td><td>We are not hearing aircraft here</td><td><span class="pill off">Attempted twice, closed</span></td></tr>
+      <tr><td class="num">3</td><td>Several receivers off normal together in one place?</td><td>Something is interfering</td><td><span class="pill ok">Built · 60/60</span></td></tr>
+    </tbody>
+  </table></div>
+  <p>Step 2 failed in the worst direction. On a held-out block it caught 3 of 20 coverage-gap runs against an agreed minimum of 5, and falsely alarmed on 6 of 20 interference runs. Because it sits above the interference test, a wrong answer there would take the event before the interference test was offered it. A coverage gap has no place in the data, only stale positions, so the fix belongs in the generator rather than the detector. Until then the coverage-gap runs test silence, and every false-alarm rate is quoted as covering two of the three answers.</p>
+</section>
+
+<section id="noml">
+  <div class="eyebrow">09 · Design choice <span class="tag">RQ2 · RQ3</span></div>
+  <h2>Why rules, and not Isolation Forest</h2>
+  <p>SignalWatch, a sister project, detects RF anomalies with an <strong>Isolation Forest</strong>. That model asks how few random cuts it takes to separate a reading from the rest. An unusual reading is cut off quickly, so the average number of cuts across many random trees becomes an anomaly score.</p>
+  <div class="math">
+    <math display="block"><mrow><mi>s</mi><mo>(</mo><mi>x</mi><mo>,</mo><mi>n</mi><mo>)</mo><mo>=</mo><msup><mn>2</mn><mrow><mo>−</mo><mfrac><mrow><mi>E</mi><mo>[</mo><mi>h</mi><mo>(</mo><mi>x</mi><mo>)</mo><mo>]</mo></mrow><mrow><mi>c</mi><mo>(</mo><mi>n</mi><mo>)</mo></mrow></mfrac></mrow></msup></mrow></math>
+    <math display="block"><mrow><mi>c</mi><mo>(</mo><mi>n</mi><mo>)</mo><mo>=</mo><mn>2</mn><mi>H</mi><mo>(</mo><mi>n</mi><mo>−</mo><mn>1</mn><mo>)</mo><mo>−</mo><mfrac><mrow><mn>2</mn><mo>(</mo><mi>n</mi><mo>−</mo><mn>1</mn><mo>)</mo></mrow><mi>n</mi></mfrac></mrow></math>
+    <p>h(x) is the number of cuts that isolate x, E[h(x)] its average over the trees, and c(n) the average for a typical point in n readings. A score near 1 is isolated almost at once; 0.5 is ordinary.</p>
+  </div>
+  <p>It is a good tool for SignalWatch's problem: thirteen inputs, faults that show up as combinations of moderate changes, and no labels. EM Fusion's problem has a different shape, and the scope excludes learned detectors on purpose.</p>
+  <div class="tw"><table>
+    <thead><tr><th>What EM Fusion needs</th><th>Written rules</th><th>Isolation Forest</th></tr></thead>
+    <tbody>
+      <tr><td><strong>A named conclusion</strong>: broken receiver or interference, not just “unusual”</td><td>Each rule's answer is its name. The ladder picks one.</td><td>Gives one score with no kind. SignalWatch adds hand-written rules after the forest to name the cause anyway.</td></tr>
+      <tr><td><strong>Citations a checker can look up</strong></td><td>Every finding names its rule, its type and the exact readings it read.</td><td>The reason is “the forest”. Its explanations are sensitivity estimates, not stored rows.</td></tr>
+      <tr><td><strong>A clean test of the explainer</strong></td><td>The only learned part of the system is the explainer, so RQ3 measures the explainer alone.</td><td>A second learned part would mix two sources of error in every explanation.</td></tr>
+      <tr><td><strong>Byte-for-byte reproducibility</strong></td><td>Twelve settings of record, in one module, pinned by a test.</td><td>Also needs a random seed, a contamination setting and a training set, and its score is relative to that set.</td></tr>
+      <tr><td><strong>Enough signal</strong></td><td>8 dB against 1.5 dB: a threshold separates staged from quiet almost perfectly (Figure 6).</td><td>Its strength, finding subtle combinations, is not needed on the radio side. On the weak aircraft side the limit is in the data, and a model cannot add signal that is not there.</td></tr>
+      <tr><td><strong>Spatial reasoning</strong></td><td>Distances and neighbours are explicit (70 km, 60 km), in PostGIS.</td><td>Would need location turned into features, and the neighbour logic becomes implicit.</td></tr>
+    </tbody>
+  </table></div>
+  <p>The cost is real: rules only find the shapes someone wrote a rule for, and the coverage-gap rule shows how hard writing one can be. A learned detector is the obvious future work for messier real data, run beside the rules rather than in place of them, so its suggestions could still be cited.</p>
+</section>
+
+<section id="bundles">
+  <div class="eyebrow">10 · Evidence packages <span class="tag">RQ3</span></div>
+  <h2>The sealed package an explainer receives</h2>
+  <p>Detection produces findings; an explainer needs an account. The bridge is a package: one event, everything known about it, and everything not known, each absence labelled with the kind of absence it is. It is the only thing either generator ever sees.</p>
+  <p>That is a safety boundary, not tidiness. Checking whether a generated citation is real has no practical answer against twenty million stored readings. Against one package of a few dozen statements it is a list lookup. The package follows the event, not the hour, so an hour that breaks two receivers produces two packages.</p>
+  <figure>
+    <div class="fh">
+      <div><div class="fnum live">Figure 8 · explore</div><h4>Inside one package: a possible interference zone on channel 4</h4></div>
+      <label class="ctl"><span>Rejected compartment</span><select id="bunRej"><option value="0">Empty, as in the corpus</option><option value="1">With a set-aside claim</option></select></label>
+    </div>
+    <div class="bundle">
+      <div id="bunList"></div>
+      <div id="bunDetail" aria-live="polite"></div>
+    </div>
+    <figcaption>A real package from the development batch used to build the AI layer, with values as recorded in that trial's log. That batch is not part of any reported figure. Its 34 evidence items are grouped by rule and finding type, which is the pair a citation must name. Aircraft names are pseudonyms, and no aircraft position reaches a package at all. Note the rate comparison: 4 dropouts during and none outside gives a ratio of 11.79, but the reference period was empty, so the package says <em>could not be measured</em>. In 41 of the 60 reported interference zones, the aircraft side could not be measured.</figcaption>
+  </figure>
+  <div class="tw"><table>
+    <thead><tr><th>Absence label</th><th>Means</th><th>Example</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">not_applicable</td><td>Never asked, by design</td><td>A lone broken receiver never reaches the rule that weighs aircraft evidence.</td></tr>
+      <tr><td class="mono">not_measurable</td><td>Asked, with no basis to answer</td><td>No dropouts at all in the comparison period.</td></tr>
+      <tr><td class="mono">measured_negative</td><td>Looked at, found nothing that counts</td><td>A one-reading spike, seen and deliberately not called an event.</td></tr>
+    </tbody>
+  </table></div>
+  <p>Mixing up the first two is the dangerous mistake. Leave the aircraft side out of a broken-receiver package and it reads as <em>we tried and could not tell</em>, which claims an uncertainty the system does not have. Every citation in a package was also looked up: over 24 real packages, 91 of 1,021 cited readings pointed at a moment when nothing was recorded. All 91 were the reconstructed start of a frozen position, and the fix added the two reports the rule actually read.</p>
+</section>
+
+<section id="generators">
+  <div class="eyebrow">11 · Explanation <span class="tag">RQ3</span></div>
+  <h2>Two generators, one shape</h2>
+  <p>Both generators return the same shape, fixed before either was built, so a screen can show any explanation without knowing which produced it and the study can compare them at all.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Field</th><th>Rule</th><th>Enforced when</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">hypothesis_title</td><td>Not blank</td><td>When the answer arrives</td></tr>
+      <tr><td class="mono">confidence</td><td>Exactly Low, Medium or High. A number cannot fit.</td><td>While the model writes</td></tr>
+      <tr><td class="mono">summary</td><td>Not blank</td><td>When the answer arrives</td></tr>
+      <tr><td class="mono">supporting_evidence</td><td>At least one citation: rule id, finding type, statement</td><td>Shape while writing; “at least one” on arrival</td></tr>
+      <tr><td class="mono">evidence_against_or_uncertainty</td><td>May be empty. “Nothing speaks against this” can be true.</td><td>While the model writes</td></tr>
+      <tr><td class="mono">alternative_explanations</td><td>At least one. “Nothing else could explain this” almost never is.</td><td>Shape while writing; “at least one” on arrival</td></tr>
+      <tr><td class="mono">recommended_human_action</td><td>Not blank, something a person can do</td><td>When the answer arrives</td></tr>
+    </tbody>
+  </table></div>
+  <p>The provider's strict mode enforces structure and the three-word confidence while the words are chosen, but it drops the two rules about quantity, <code>minItems</code> and <code>minLength</code>. Those are still enforced, as a refusal when the answer arrives. So an empty citation list is an ordinary rejection, and a confidence of “Certain” would be a rare, serious one. The system counts them apart.</p>
+  <div class="two">
+    <div><h4>The template generator</h4><ul>
+      <li>Writes the explanation by rule from the package. No model, no network: a test walks every module it can reach and refuses any network client.</li>
+      <li>Copies every cited word from the package, so it cannot cite something absent.</li>
+      <li>Inherits the rule's confidence, never recalculates it.</li>
+      <li>One citation per kind of evidence, not per finding.</li>
+      <li>Its alternatives are the claims the ladder set aside.</li>
+      <li><strong>Two permanent jobs:</strong> the fallback when the model's answer cannot be used, and the yardstick the model is measured against.</li>
+    </ul></div>
+    <div><h4>The hosted model</h4><ul>
+      <li><code>gpt-4.1-2025-04-14</code>, temperature 0, schema-constrained. Undated aliases are refused.</li>
+      <li>Nine binding rules: the package is the only source; copy rule and finding names exactly; never cite a rejected claim; three-word confidence; at least one real alternative; an unmeasured thing is not contrary evidence; names are pseudonyms; actions a person can take; plain writing.</li>
+      <li>Every stored explanation carries a fingerprint of the exact instruction text.</li>
+      <li>Asked three times per package; the first answer is scored, fixed in advance.</li>
+      <li>An unusable answer is retried, then the template answers, and the record says so.</li>
+    </ul></div>
+  </div>
+  <p>One finding changed a claim. With identical inputs, four of five repeated pairs differed: titles and summaries matched word for word, but the alternatives and recommended actions varied, and once the set of cited evidence changed. So “pin the version and anyone reproduces these answers” is not true. What reproduces is the method: the same package, instructions and version, giving answers of the same shape making the same claims.</p>
+</section>
+
+<section id="grounding">
+  <div class="eyebrow">12 · Safeguard <span class="tag">RQ3</span></div>
+  <h2>Checking what it says against what it was shown</h2>
+  <p>A well-formed answer can still rest on a receiver nobody mentioned, or a rule that never ran. So before anyone sees an explanation, each citation is looked up in the package it came from. The check gives three answers, not two, because one failure is a trap an honest design created: the package carries the claims the ladder set aside, so a model can write real alternatives. Citing one of those as <em>support</em> uses a real name, and a check that only confirmed names exist would pass it.</p>
+  <figure>
+    <div class="fh">
+      <div><div class="fnum live">Figure 9 · try it</div><h4>Write the citations, and run the check</h4></div>
+      <label class="ctl"><span>Package holds a set-aside claim</span><select id="grRej"><option value="1">Yes: broken receiver, set aside</option><option value="0">No</option></select></label>
+    </div>
+    <div class="split even">
+      <div><div class="compartment">Package evidence · may be cited</div><div id="grPkg" class="check"></div></div>
+      <div><div class="compartment">Set aside by the ladder · never citable as support</div><div id="grRejList" class="check"></div></div>
+    </div>
+    <div style="padding: 4px 18px 10px; border-top: 1px solid var(--line)"><div class="compartment" style="margin-top:12px">The explanation's citations</div><div id="grCites"></div></div>
+    <div class="readout" id="grReadout"></div>
+    <figcaption>Change the rule or finding type of any citation. <b>Grounded</b> means the pair is in the package's evidence. <b>Not in the package</b> means it names nothing there, with a note when it nearly matched. A difference only in capitals is still refused, because quietly repairing a model's output would flatter the very figure being measured. <b>Cites a set-aside claim</b> is its own failure: a misreading of the document, rarer and worse than invention. An answer with any failing citation never reaches the analyst. It is stored with its failure, the model is asked again, and if that fails too the template answers, with a record of why.</figcaption>
+  </figure>
+  <p>How do you check the checker? Give it input whose right answer is known. The template copies every citation from the package, so anything flagged on its work is a fault in the check. The two pieces of code are kept from sharing the logic that names a finding, so a shared bug cannot make them agree. On 41 real packages it flagged <strong>0 of 164</strong> honest citations. Damaging each real explanation four different ways, it caught <strong>164 of 164</strong>. What it cannot do is judge whether the sentence beside a valid citation is true. That is what the human marking is for, and the two claims are kept apart.</p>
+</section>
+
+<section id="evaluation">
+  <div class="eyebrow">13 · Evaluation harness <span class="tag">RQ2 · RQ3</span></div>
+  <h2>Two report cards, never one contest</h2>
+  <p>A table of catch rates from a project with an AI model in it invites one reading: AI against rules, which detects better? That contest does not exist. The rules are the only detector. The model comes after them, sees no readings, and decides nothing. So there are two report cards. The first grades the rules against the answer key. The second grades the model's explanations against the template's, written from the same package, by markers who do not know which is which.</p>
+  <h3>Report card one: counting</h3>
+  <p>Every figure is a count over a named population, never a bare percentage, because two of the denominators are easily confused. <strong>Recall</strong> is counted over what was staged: did we miss anything? <strong>Precision</strong> is counted over what was claimed: can we believe it when it speaks? They are different sets of runs.</p>
+  <div class="math">
+    <math display="block"><mrow><mtext>recall</mtext><mo>=</mo><mfrac><mtext>runs of kind K named K</mtext><mtext>runs of kind K</mtext></mfrac></mrow></math>
+    <math display="block"><mrow><mtext>precision</mtext><mo>=</mo><mfrac><mtext>runs called A that really were A</mtext><mtext>runs called A</mtext></mfrac></mrow></math>
+    <math display="block"><mrow><msub><mi>F</mi><mn>1</mn></msub><mo>=</mo><mfrac><mrow><mn>2</mn><mi>P</mi><mi>R</mi></mrow><mrow><mi>P</mi><mo>+</mo><mi>R</mi></mrow></mfrac></mrow></math>
+  </div>
+  <figure>
+    <div class="fh"><div><div class="fnum live">Figure 10 · try it</div><h4>Four runs, and what one wrong answer costs</h4></div></div>
+    <div style="padding: 10px 20px 4px"><div class="tw" style="margin:0"><table id="toyTable"><thead><tr><th>Run</th><th>Staged</th><th>System said</th></tr></thead><tbody></tbody></table></div></div>
+    <div class="readout" id="toyReadout"></div>
+    <figcaption>Change what the system said on any run. One misreported run is a miss for the kind it really was and a false alarm for the kind it was called, so it costs twice. Scoring the whole thing as one decision with several answers makes both halves of the error count.</figcaption>
+  </figure>
+  <p>On the corpus itself every run lands on the diagonal: nothing was ever called by the wrong name.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Staged ↓ · said →</th><th class="num">receiver broken</th><th class="num">interfering</th><th class="num">not hearing aircraft</th><th class="num">silence</th></tr></thead>
+    <tbody>
+      <tr><td>One broken receiver</td><td class="num diag">60</td><td class="num zero">·</td><td class="num zero">·</td><td class="num zero">·</td></tr>
+      <tr><td>Mixed evidence</td><td class="num diag">60</td><td class="num zero">·</td><td class="num zero">·</td><td class="num zero">·</td></tr>
+      <tr><td>Interference</td><td class="num zero">·</td><td class="num diag">60</td><td class="num zero">·</td><td class="num zero">·</td></tr>
+      <tr><td>Quiet baseline</td><td class="num zero">·</td><td class="num zero">·</td><td class="num zero">·</td><td class="num diag">60</td></tr>
+      <tr><td>Aircraft coverage gap</td><td class="num zero">·</td><td class="num zero">·</td><td class="num zero">·</td><td class="num diag">60</td></tr>
+    </tbody>
+  </table></div>
+  <p>The third column is empty because no rule can give that answer. That is the coverage gap, shown as a column instead of a footnote. The F1 of the broken-receiver answer is withheld: two kinds of run produce it, so there is no single kind its recall could come from.</p>
+  <h3>The same runs, two recalls</h3>
+  <figure>
+    <div class="fh"><div><div class="fnum">Figure 11</div><h4>Recall counted per run against recall counted per disrupted aircraft</h4></div></div>
+    <div class="plot"><svg id="recallSvg" viewBox="0 0 760 250" role="img" aria-label="Recall per run and per aircraft for three kinds of run"></svg></div>
+    <figcaption>Every staged run was named correctly, but between one disrupted aircraft in six and two in five were never flagged. Both are right: the announced answer rests on the radio evidence and needs no aircraft. Frozen positions (interference) are easier to see than aircraft that simply stop being heard. The per-aircraft figure is the one result here that carries information from outside the generator, because the tracks are real. Of the 900 staged aircraft, 599 were flagged and all 301 misses are accounted for: 136 on the ground, 132 below the staleness threshold, 33 without a fresh enough contact.</figcaption>
+  </figure>
+  <div class="tw"><table>
+    <thead><tr><th>Kind of run</th><th class="num">Runs</th><th class="num">Median delay</th><th class="num">Fastest</th><th class="num">Slowest</th></tr></thead>
+    <tbody>
+      <tr><td>One broken receiver</td><td class="num">60</td><td class="num">10 s</td><td class="num">10 s</td><td class="num">90 s</td></tr>
+      <tr><td>Mixed evidence</td><td class="num">60</td><td class="num">10 s</td><td class="num">10 s</td><td class="num">90 s</td></tr>
+      <tr><td>Interference</td><td class="num">60</td><td class="num">20 s</td><td class="num">10 s</td><td class="num">90 s</td></tr>
+    </tbody>
+  </table></div>
+  <p>Delay is simulated time, not processing speed: detection is batch work with no moment of noticing. The broken-receiver medians sit exactly on the 10 s floor the minimum episode sets. Interference is one sampling step slower because it needs a second receiver's evidence to be complete.</p>
+
+  <h3>Report card two: blind marking</h3>
+  <p>An explanation has no single right sentence, so it is marked three ways: an automatic shape check, the automatic grounding check above, and two human markers working blind on a rubric registered before any marking began.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Dimension</th><th>A 1 means</th><th>A 5 means</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Evidence use</strong></td><td>Repeats the findings back or ignores them</td><td>Reasons from these specific findings and connects them</td></tr>
+      <tr><td><strong>Uncertainty</strong></td><td>None stated, or boilerplate</td><td>Names specific uncertainties and what each does to the conclusion</td></tr>
+      <tr><td><strong>Alternatives</strong></td><td>None, or restatements</td><td>Real competitors, with what evidence would tell them apart</td></tr>
+      <tr><td><strong>Actionability</strong></td><td>“Investigate further”</td><td>A specific next step an analyst could take now</td></tr>
+      <tr><td><strong>Overall usefulness</strong></td><td>Would waste time or mislead</td><td>Would meaningfully speed up correct triage</td></tr>
+    </tbody>
+  </table></div>
+  <p>Twenty packages, drawn by a fixed seed (10 interference, 10 broken receiver), times two generators gives 40 items. The first marker scores all 40; the second scores 20 items from ten of the packages. Both generators are scored on the same package, so how hard a package is cancels out of the difference. Agreement is measured with <strong>quadratically weighted Cohen's κ</strong>, chosen because a 1-against-5 disagreement matters more than 3-against-4.</p>
+  <div class="math">
+    <math display="block"><mrow><msub><mi>κ</mi><mi>w</mi></msub><mo>=</mo><mn>1</mn><mo>−</mo><mfrac><mrow><msub><mo>∑</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow></msub><msub><mi>w</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><msub><mi>O</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub></mrow><mrow><msub><mo>∑</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow></msub><msub><mi>w</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><msub><mi>E</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub></mrow></mfrac></mrow></math>
+    <math display="block"><mrow><msub><mi>w</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo>=</mo><mfrac><msup><mrow><mo>(</mo><mi>i</mi><mo>−</mo><mi>j</mi><mo>)</mo></mrow><mn>2</mn></msup><msup><mrow><mo>(</mo><mi>k</mi><mo>−</mo><mn>1</mn><mo>)</mo></mrow><mn>2</mn></msup></mfrac></mrow></math>
+    <dl>
+      <dt>O<sub>ij</sub></dt><dd>How many items marker A scored i and marker B scored j.</dd>
+      <dt>E<sub>ij</sub></dt><dd>The count expected by chance: A's share of i times B's share of j, times the number of items.</dd>
+      <dt>w<sub>ij</sub></dt><dd>The penalty for that disagreement, 0 on the diagonal and 1 at opposite corners. k = 5 points.</dd>
+      <dt>κ = 1</dt><dd>Perfect agreement. 0 is no better than chance.</dd>
+    </dl>
+  </div>
+  <figure>
+    <div class="fh"><div><div class="fnum live">Figure 12 · try it · example scores, not study data</div><h4>Two markers, ten items, one dimension</h4></div>
+      <div class="seg" role="group" aria-label="Examples" id="kPresets"></div></div>
+    <div style="padding: 14px 20px 0"><div class="kgrid" id="kGrid"></div></div>
+    <div class="split">
+      <div><div class="plot small" style="padding:0"><svg id="kSvg" viewBox="0 0 300 300" role="img" aria-label="Agreement matrix"></svg></div></div>
+      <div class="stack" id="kStats"></div>
+    </div>
+    <figcaption>Each column is an item; set marker A's score on top and marker B's below. The matrix shows where the pairs fall, shaded by their penalty. These are made-up scores to show the arithmetic. The study's agreement has not been computed, because the second marker has not finished. Where two scores differ by 2 or more the item is flagged and discussed, with κ reported on the scores from before the discussion, a rule fixed in advance.</figcaption>
+  </figure>
+</section>
+
+<section id="results">
+  <div class="eyebrow">14 · Results</div>
+  <h2>What each question has, so far</h2>
+  <h3>RQ1 · adding a source <span class="pill ok">Answered</span></h3>
+  <p>The receiver health feed was added after the failure conditions were written down, and measured from git, not from memory.</p>
+  <div class="tw"><table>
+    <thead><tr><th>What changed</th><th class="num">Files</th><th class="num">Lines added</th><th class="num">Lines removed</th></tr></thead>
+    <tbody>
+      <tr><td>New code: the feed's generator and its adapter</td><td class="num">2</td><td class="num">112</td><td class="num">0</td></tr>
+      <tr><td>Existing code: registering the new record type</td><td class="num">1</td><td class="num">17</td><td class="num">1</td></tr>
+      <tr><td>New tests</td><td class="num">1</td><td class="num">519</td><td class="num">0</td></tr>
+      <tr><td>Ingest, validation, pseudonymisation, storage port, schema, detectors, API, screens</td><td class="num"><b>0</b></td><td class="num">—</td><td class="num">—</td></tr>
+    </tbody>
+  </table></div>
+  <p>No database migration was needed. Detection results and the operational picture were proven identical with and without the feed. Active time was 17 minutes 14 seconds with the waits for review taken out; about seven of those minutes were the test suite running. The minutes are the weaker figure: the work was done by someone who knew the code, so they measure registration cost, not how long a newcomer would take.</p>
+  <h3>RQ2 · detection <span class="pill ok">Answered on 300 runs</span></h3>
+  <div class="tw"><table>
+    <thead><tr><th>Measure</th><th>Result</th><th>Population</th></tr></thead>
+    <tbody>
+      <tr><td>Recall per run</td><td class="mono">1.000 · 1.000 · 1.000</td><td>60 broken-receiver, 60 interference, 60 mixed runs</td></tr>
+      <tr><td>Precision</td><td class="mono">120/120 · 60/60</td><td>runs called “receiver broken” · runs called “interfering”</td></tr>
+      <tr><td>F1, interference</td><td class="mono">1.000</td><td>the one answer produced by one kind of run</td></tr>
+      <tr><td>False alarms</td><td class="mono">0/60 · 0/60</td><td>quiet runs · coverage-gap runs, never pooled</td></tr>
+      <tr><td>Recall per disrupted aircraft</td><td class="mono">0.823 · 0.587</td><td>interference · mixed evidence</td></tr>
+      <tr><td>Median delay</td><td class="mono">10 s · 20 s</td><td>broken receiver · interference</td></tr>
+    </tbody>
+  </table></div>
+  <p>A perfect score is a weaker result than it looks. It shows the machinery is wired correctly and consistent with itself, not that it would detect real interference. The radio data is invented by the same project, the staged rise sits well above the threshold by construction, and the corpus holds no near-misses.</p>
+  <h3>RQ3 · explanations <span class="pill warn">Built; blind marking in progress</span></h3>
+  <div class="tw"><table>
+    <thead><tr><th>Measurement</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>Honest citations wrongly flagged, 41 real packages</td><td class="mono">0 of 164</td></tr>
+      <tr><td>Deliberately corrupted citations caught</td><td class="mono">164 of 164</td></tr>
+      <tr><td>Scored campaign: packages drawn by a fixed seed</td><td class="mono">20</td></tr>
+      <tr><td>Explanations generated: three from the model per package, plus the template</td><td class="mono">80</td></tr>
+      <tr><td>Ungrounded citations found in those 80</td><td class="mono">0</td></tr>
+      <tr><td>Campaign cost</td><td class="mono">£0.85</td></tr>
+    </tbody>
+  </table></div>
+  <p>The quality comparison waits for the second marker, by design. No figure comparing the two generators is reported until both markers are done.</p>
+</section>
+
+<section id="limits">
+  <div class="eyebrow">15 · Honesty</div>
+  <h2>Limits, and what comes next</h2>
+  <ul>
+    <li><strong>Synthetic radio data.</strong> The receivers, the noise and the incidents are generated by this project. The figures prove the machinery against its own generator.</li>
+    <li><strong>One recorded hour.</strong> Runs in a batch replay overlapping stretches of the same hour, so they are not independent samples of the sky. A second archive hour would fix it; the generator cannot.</li>
+    <li><strong>One answer has no rule.</strong> Coverage gaps cannot be named; every false-alarm rate covers two of three answers.</li>
+    <li><strong>Weak aircraft corroboration.</strong> In 41 of 60 interference zones the aircraft side could not be measured. This is radio evidence with an occasional corroborating note, not two sources agreeing.</li>
+    <li><strong>Grounding checks names, not truth.</strong> A model can cite a real finding and say something false about it.</li>
+    <li><strong>Imperfect blinding and small numbers.</strong> The template's style is recognisable, the author is one marker, and 20 packages support a direction, not a precise effect size.</li>
+    <li><strong>Not live.</strong> Replayed and synthetic data only, polled every 5 s.</li>
+  </ul>
+  <p>Next: finish the blind marking and compute agreement; then report the generator comparison per dimension. Beyond the thesis: near-threshold incidents, a coverage gap that has a place, and a learned detector run beside the rules.</p>
+  <footer>
+    <p>The longer story, with every decision and correction along the way, is the progress note, <a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">EM Fusion in Plain English</a>. Source: <a href="https://github.com/randygimah/em-fusion">github.com/randygimah/em-fusion</a> (private). Every figure quoted here has a script and a committed log in the repository's measurements folder. OpenSky data: Schäfer et al., “Bringing up OpenSky”, IPSN 2014; used under the OpenSky licence and not redistributed.</p>
+  </footer>
+</section>
+
+  </main>
+</div>
+
+<script>
+// BLAKE2b (RFC 7693), 16-byte digest, no key: the generator's seeding in the browser.
+const B2_IV = [0x6a09e667f3bcc908n, 0xbb67ae8584caa73bn, 0x3c6ef372fe94f82bn, 0xa54ff53a5f1d36f1n,
+  0x510e527fade682d1n, 0x9b05688c2b3e6c1fn, 0x1f83d9abfb41bd6bn, 0x5be0cd19137e2179n];
+const B2_SIGMA = [
+  [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],[14,10,4,8,9,15,13,6,1,12,0,2,11,7,5,3],
+  [11,8,12,0,5,2,15,13,10,14,3,6,7,1,9,4],[7,9,3,1,13,12,11,14,2,6,5,10,4,0,15,8],
+  [9,0,5,7,2,4,10,15,14,1,11,12,6,8,3,13],[2,12,6,10,0,11,8,3,4,13,7,5,15,14,1,9],
+  [12,5,1,15,14,13,4,10,0,7,6,3,9,2,8,11],[13,11,7,14,12,1,3,9,5,0,15,4,8,6,2,10],
+  [6,15,14,9,11,3,0,8,12,2,13,7,1,4,10,5],[10,2,8,4,7,6,1,5,15,11,9,14,3,12,13,0]];
+const M64 = (1n << 64n) - 1n;
+const rotr = (x, n) => ((x >> n) | (x << (64n - n))) & M64;
+function blake2b16(bytes) {
+  const h = B2_IV.slice();
+  h[0] ^= 0x01010000n ^ 16n;
+  const blocks = Math.max(1, Math.ceil(bytes.length / 128));
+  for (let b = 0; b < blocks; b++) {
+    const last = b === blocks - 1;
+    const m = new Array(16).fill(0n);
+    for (let i = 0; i < 128; i++) {
+      const at = b * 128 + i;
+      if (at < bytes.length) m[i >> 3] |= BigInt(bytes[at]) << BigInt(8 * (i & 7));
+    }
+    const v = [...h, ...B2_IV];
+    v[12] ^= BigInt(last ? bytes.length : (b + 1) * 128) & M64;
+    if (last) v[14] ^= M64;
+    const G = (a, bb, c, d, x, y) => {
+      v[a] = (v[a] + v[bb] + x) & M64; v[d] = rotr(v[d] ^ v[a], 32n);
+      v[c] = (v[c] + v[d]) & M64; v[bb] = rotr(v[bb] ^ v[c], 24n);
+      v[a] = (v[a] + v[bb] + y) & M64; v[d] = rotr(v[d] ^ v[a], 16n);
+      v[c] = (v[c] + v[d]) & M64; v[bb] = rotr(v[bb] ^ v[c], 63n);
+    };
+    for (let r = 0; r < 12; r++) {
+      const s = B2_SIGMA[r % 10];
+      G(0,4,8,12,m[s[0]],m[s[1]]); G(1,5,9,13,m[s[2]],m[s[3]]);
+      G(2,6,10,14,m[s[4]],m[s[5]]); G(3,7,11,15,m[s[6]],m[s[7]]);
+      G(0,5,10,15,m[s[8]],m[s[9]]); G(1,6,11,12,m[s[10]],m[s[11]]);
+      G(2,7,8,13,m[s[12]],m[s[13]]); G(3,4,9,14,m[s[14]],m[s[15]]);
+    }
+    for (let i = 0; i < 8; i++) h[i] ^= v[i] ^ v[i + 8];
+  }
+  let out = 0n;  // first 16 bytes, big-endian, as int.from_bytes(..., "big")
+  for (let i = 0; i < 16; i++) out = (out << 8n) | ((h[i >> 3] >> BigInt(8 * (i & 7))) & 0xffn);
+  return out;
+}
+const ENC = new TextEncoder();
+const memo = new Map();
+function deriveUnit(seed, ...keys) {
+  const text = [String(seed), ...keys.map(String)].join("\x1f");
+  let u = memo.get(text);
+  if (u === undefined) { u = Number(blake2b16(ENC.encode(text)) >> 75n) / 2 ** 53; if (memo.size > 60000) memo.clear(); memo.set(text, u); }
+  return u;
+}
+function deriveGaussian(seed, ...keys) {
+  const first = 1 - deriveUnit(seed, ...keys, "gauss-a");
+  const second = deriveUnit(seed, ...keys, "gauss-b");
+  return Math.sqrt(-2 * Math.log(first)) * Math.cos(2 * Math.PI * second);
+}
+
+// The shipped layout (rf_layout.json).
+const SENSORS = [
+  { id: "RF-01", name: "Schiphol", lat: 52.3105, lon: 4.7683 },
+  { id: "RF-02", name: "Rotterdam", lat: 51.9569, lon: 4.4375 },
+  { id: "RF-03", name: "Lelystad", lat: 52.4603, lon: 5.5272 },
+  { id: "RF-04", name: "Eindhoven", lat: 51.45, lon: 5.3745 },
+  { id: "RF-05", name: "Weeze", lat: 51.6024, lon: 6.1422 },
+  { id: "RF-06", name: "Düsseldorf", lat: 51.2895, lon: 6.7668 },
+  { id: "RF-07", name: "Köln-Bonn", lat: 50.8659, lon: 7.1427 }];
+const FREQS = [1567.42, 1569.42, 1571.42, 1573.42, 1575.42, 1577.42, 1579.42, 1581.42];
+const L1 = 4, TICKS = 90, INTERVAL = 10, INC_START = 12, INC_END = 42;
+const R_EARTH = 6371.0088;
+function gcKm(a, b) {
+  const r = Math.PI / 180, p1 = a.lat * r, p2 = b.lat * r, dp = p2 - p1, dl = (b.lon - a.lon) * r;
+  const h = Math.sin(dp / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2;
+  return 2 * R_EARTH * Math.asin(Math.sqrt(h));
+}
+const byId = Object.fromEntries(SENSORS.map(s => [s.id, s]));
+const neighbours = (id, radius) => SENSORS.filter(s => s.id !== id && gcKm(byId[id], s) <= radius).map(s => s.id);
+const round2 = x => Number(x.toFixed(2));
+
+function planIncident(seed, kind, extent, radius, elev) {
+  if (!["gnss-degradation", "rf-sensor-fault", "ambiguous-mixed-evidence"].includes(kind)) return null;
+  const ids = SENSORS.map(s => s.id).sort();
+  const centre = ids[Math.min(Math.floor(deriveUnit(seed, "incident", "centre") * ids.length), ids.length - 1)];
+  const sensors = kind === "gnss-degradation" ? [centre, ...neighbours(centre, radius)].sort() : [centre];
+  const channels = extent === "broadband" ? FREQS.map((_, i) => i) : [L1];
+  return { centre, sensors, channels, elev };
+}
+function deviation(seed, sensor, ch, tick, inc) {
+  let inj = 0;
+  if (inc && inc.sensors.includes(sensor) && inc.channels.includes(ch) && tick >= INC_START && tick < INC_END) {
+    inj = inc.elev * Math.max(1 + 0.25 * deriveGaussian(seed, sensor, ch, tick, "injection"), 0);
+  }
+  return round2(1.5 * deriveGaussian(seed, sensor, ch, tick, "noise") + inj);
+}
+const power = d => round2(-95 + d);
+
+// Self-check against values computed by the Python generator (seed 42, interference, narrow, 8 dB, 60 km).
+const SELF_OK = (() => {
+  try {
+    if (deriveUnit(42, "a", 1) !== 0.16617712959027375) return false;
+    if (deriveGaussian(42, "RF-01", 4, 0, "noise") !== -1.5071363809114913) return false;
+    const inc = planIncident(42, "gnss-degradation", "narrowband", 60, 8);
+    if (inc.sensors.join() !== "RF-04,RF-05") return false;
+    const want = [["RF-01", 0, 0, -96.44], ["RF-04", 4, 11, -94.38], ["RF-04", 4, 20, -87.94], ["RF-05", 4, 20, -84.56], ["RF-04", 4, 42, -92.08]];
+    return want.every(([s, c, t, p]) => power(deviation(42, s, c, t, inc)) === p);
+  } catch (e) { return false; }
+})();
+
+// Small SVG helpers.
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs = {}, parent, text) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (text !== undefined) e.textContent = text;
+  if (parent) parent.appendChild(e);
+  return e;
+}
+const clear = svg => { while (svg.firstChild) svg.removeChild(svg.firstChild); return svg; };
+const $ = id => document.getElementById(id);
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+function devColour(d) {
+  // Deviation from −95 dBm onto the theme: quiet is surface-2, rising through signal to fuse.
+  if (d >= 15) return css("--bad");
+  if (d >= 10) return css("--fuse");
+  if (d >= 6) return css("--warn");
+  return null;
+}
+
+// ---- Figure 2: map ----
+const BOX = { latMin: 49, latMax: 54, lonMin: 3, lonMax: 11 };
+const KX = Math.cos(51.5 * Math.PI / 180);
+function projector(w, pad) {
+  const scale = (w - 2 * pad) / ((BOX.lonMax - BOX.lonMin) * KX);
+  return {
+    scale, kmPx: scale / 111.2,
+    x: lon => pad + (lon - BOX.lonMin) * KX * scale,
+    y: lat => pad + (BOX.latMax - lat) * scale,
+    h: (BOX.latMax - BOX.latMin) * scale + 2 * pad
+  };
+}
+const CITIES = [["Hamburg", 53.55, 9.99], ["Bremen", 53.08, 8.80], ["Hannover", 52.37, 9.73], ["Brussels", 50.85, 4.35], ["Frankfurt", 50.11, 8.68], ["Luxembourg", 49.61, 6.13], ["Münster", 51.96, 7.63]];
+let mapSel = "RF-04";
+function drawMap() {
+  const svg = clear($("mapSvg")), P = projector(560, 46), R = +$("mapRadius").value;
+  $("mapR").textContent = R;
+  el("rect", { x: P.x(3), y: P.y(54), width: P.x(11) - P.x(3), height: P.y(49) - P.y(54), fill: css("--surface-2"), stroke: css("--line") }, svg);
+  for (let lat = 49; lat <= 54; lat++) {
+    el("line", { x1: P.x(3), x2: P.x(11), y1: P.y(lat), y2: P.y(lat), stroke: css("--grid") }, svg);
+    el("text", { x: P.x(3) - 6, y: P.y(lat) + 4, "text-anchor": "end", "font-size": 10, fill: css("--muted") }, svg, lat + "°N");
+  }
+  for (let lon = 3; lon <= 11; lon++) {
+    el("line", { y1: P.y(54), y2: P.y(49), x1: P.x(lon), x2: P.x(lon), stroke: css("--grid") }, svg);
+    el("text", { x: P.x(lon), y: P.y(49) + 16, "text-anchor": "middle", "font-size": 10, fill: css("--muted") }, svg, lon + "°E");
+  }
+  el("text", { x: P.x(3) + 4, y: P.y(54) - 8, "font-size": 10.5, fill: css("--muted") }, svg, "49–54°N, 3–11°E · ≈555 × 556 km");
+  el("text", { x: P.x(3.6), y: P.y(53.6), "font-size": 11, fill: css("--faint"), "font-style": "italic" }, svg, "North Sea");
+  for (const [n, lat, lon] of CITIES) {
+    el("circle", { cx: P.x(lon), cy: P.y(lat), r: 2.2, fill: css("--faint") }, svg);
+    el("text", { x: P.x(lon) + 5, y: P.y(lat) + 3.5, "font-size": 10, fill: css("--faint") }, svg, n);
+  }
+  const sel = byId[mapSel];
+  el("circle", { cx: P.x(sel.lon), cy: P.y(sel.lat), r: R * P.kmPx, fill: css("--signal-soft"), "fill-opacity": .6, stroke: css("--signal"), "stroke-dasharray": "5 4" }, svg);
+  const inside = neighbours(mapSel, R);
+  for (const s of SENSORS) {
+    const g = el("g", { tabindex: 0, role: "button", "aria-label": `${s.id} ${s.name}`, style: "cursor:pointer" }, svg);
+    const on = s.id === mapSel, near = inside.includes(s.id);
+    el("circle", { cx: P.x(s.lon), cy: P.y(s.lat), r: on ? 7 : 5.5, fill: on ? css("--fuse") : near ? css("--signal") : css("--surface"), stroke: on ? css("--fuse") : css("--signal"), "stroke-width": 2 }, g);
+    const left = ["RF-01", "RF-02", "RF-04"].includes(s.id), lx = P.x(s.lon) + (left ? -10 : 10), anchor = left ? "end" : "start";
+    el("text", { x: lx, y: P.y(s.lat) - 3, "text-anchor": anchor, "font-size": 11, "font-weight": 600, fill: css("--ink") }, g, s.id);
+    el("text", { x: lx, y: P.y(s.lat) + 9, "text-anchor": anchor, "font-size": 9.5, fill: css("--muted") }, g, s.name);
+    const pick = () => { mapSel = s.id; drawMap(); };
+    g.addEventListener("click", pick);
+    g.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
+  }
+  const d = SENSORS.filter(s => s.id !== mapSel).map(s => [s.id, gcKm(sel, s)]).sort((a, b) => a[1] - b[1]);
+  $("mapReadout").innerHTML = `<span>Selected <b class="hi">${sel.id} ${sel.name}</b></span><span>Within ${R} km <b>${inside.length ? inside.join(", ") : "none"}</b></span><span>Nearest <b>${d.slice(0, 3).map(([i, k]) => `${i} ${k.toFixed(1)} km`).join(" · ")}</b></span>`;
+}
+$("mapRadius").addEventListener("input", drawMap);
+
+// ---- Figure 3: DAL ----
+const DEMO_KEY = "demo-key-not-the-real-seed";
+async function hmacHex(key, msg) {
+  try {
+    const k = await crypto.subtle.importKey("raw", ENC.encode(key), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    const sig = new Uint8Array(await crypto.subtle.sign("HMAC", k, ENC.encode(msg)));
+    return [...sig].map(b => b.toString(16).padStart(2, "0")).join("");
+  } catch (e) { return null; }
+}
+const DAL_SOURCES = {
+  opensky: {
+    label: "OpenSky track", sourceId: "opensky-replay", sourceType: "opensky", obsType: "track", mode: "replayed",
+    fields: [["icao24", "text", "000001"], ["callsign", "text", "TEST123 "], ["lat", "number", "51.4416"], ["lon", "number", "5.4697"], ["baroaltitude", "number", "10668"], ["velocity", "number", "231.4"], ["heading", "number", "84.2"], ["onground", "bool", "false"], ["time", "number", "1656331200"], ["lastposupdate", "number", "1656331197"], ["lastcontact", "number", "1656331199"]]
+  },
+  rf: {
+    label: "Synthetic RF", sourceId: "synthetic-rf", sourceType: "synthetic_rf", obsType: "rf", mode: "synthetic",
+    fields: [["sensor_id", "text", "RF-04"], ["channel_index", "number", "4"], ["centre_frequency_mhz", "number", "1575.42"], ["power_dbm", "number", "-87.94"], ["snr_db", "number", "12.94"], ["bandwidth_mhz", "number", "2.0"], ["lat", "number", "51.45"], ["lon", "number", "5.3745"]]
+  },
+  health: {
+    label: "Receiver health (third source)", sourceId: "synthetic-health", sourceType: "synthetic_health", obsType: "receiver_health", mode: "synthetic",
+    fields: [["sensor_id", "text", "RF-04"], ["temperature_c", "number", "34.81"], ["supply_voltage_v", "number", "12.03"], ["uptime_s", "number", "41532"], ["lat", "number", "51.45"], ["lon", "number", "5.3745"]]
+  }
+};
+let dalSrc = "opensky";
+function renderDalFields() {
+  const src = DAL_SOURCES[dalSrc], box = $("dalFields");
+  box.innerHTML = "";
+  for (const [name, type, val] of src.fields) {
+    const f = document.createElement("div"); f.className = "field";
+    const id = `dal-${dalSrc}-${name}`;
+    f.innerHTML = `<label for="${id}">${name}</label>`;
+    let input;
+    if (type === "bool") { input = document.createElement("select"); input.innerHTML = `<option>false</option><option>true</option>`; }
+    else { input = document.createElement("input"); input.type = "text"; input.inputMode = type === "number" ? "decimal" : "text"; }
+    input.id = id; input.value = val; input.dataset.name = name; input.dataset.type = type;
+    input.addEventListener("input", runDal);
+    f.appendChild(input); box.appendChild(f);
+  }
+  runDal();
+}
+function readDal() {
+  const out = {};
+  for (const i of $("dalFields").querySelectorAll("[data-name]")) {
+    const t = i.dataset.type, raw = i.value;
+    out[i.dataset.name] = t === "number" ? (raw.trim() === "" || isNaN(+raw) ? raw : +raw) : t === "bool" ? raw === "true" : raw;
+  }
+  return out;
+}
+const isNum = v => typeof v === "number" && isFinite(v);
+async function runDal() {
+  const src = DAL_SOURCES[dalSrc], r = readDal(), checks = [];
+  const need = (ok, field, why) => checks.push({ ok, field, why });
+  need(isNum(r.lat) && r.lat >= -90 && r.lat <= 90, "location.lat", "between −90 and 90");
+  need(isNum(r.lon) && r.lon >= -180 && r.lon <= 180, "location.lon", "between −180 and 180");
+  let payload = {}, timestamp = "2022-06-27T12:00:00+00:00";
+  if (dalSrc === "opensky") {
+    need(String(r.icao24 || "").trim().length > 0, "payload.aircraft_id", "an aircraft address is required");
+    need(isNum(r.time), "timestamp", "a number of seconds");
+    need(isNum(r.lastposupdate) && isNum(r.lastcontact), "payload.*_staleness_s", "numbers");
+    if (isNum(r.time)) timestamp = new Date(r.time * 1000).toISOString().replace(".000Z", "+00:00");
+    payload = { aircraft_id: "…", flight_id: "…", altitude_m: isNum(r.baroaltitude) ? r.baroaltitude : null, velocity_ms: isNum(r.velocity) ? r.velocity : null, heading_deg: isNum(r.heading) ? r.heading : null, vertical_rate_ms: null, on_ground: r.onground, position_staleness_s: isNum(r.time) && isNum(r.lastposupdate) ? r.time - r.lastposupdate : null, contact_staleness_s: isNum(r.time) && isNum(r.lastcontact) ? r.time - r.lastcontact : null };
+  } else if (dalSrc === "rf") {
+    need(String(r.sensor_id || "").length >= 1, "payload.sensor_id", "at least 1 character");
+    need(Number.isInteger(r.channel_index) && r.channel_index >= 0, "payload.channel_index", "a whole number ≥ 0");
+    need(isNum(r.centre_frequency_mhz) && r.centre_frequency_mhz > 0, "payload.centre_frequency_mhz", "greater than 0");
+    need(isNum(r.power_dbm), "payload.power_dbm", "a number");
+    need(isNum(r.snr_db), "payload.snr_db", "a number");
+    need(isNum(r.bandwidth_mhz) && r.bandwidth_mhz > 0, "payload.bandwidth_mhz", "greater than 0");
+    payload = { sensor_id: r.sensor_id, channel_index: r.channel_index, centre_frequency_mhz: r.centre_frequency_mhz, band: "GNSS-L1", power_dbm: r.power_dbm, snr_db: r.snr_db, bandwidth_mhz: r.bandwidth_mhz, signal_type: "noise", baseline_delta_db: isNum(r.power_dbm) ? round2(r.power_dbm + 95) : null };
+  } else {
+    need(String(r.sensor_id || "").length >= 1, "payload.sensor_id", "at least 1 character");
+    need(isNum(r.temperature_c), "payload.temperature_c", "a number");
+    need(isNum(r.supply_voltage_v) && r.supply_voltage_v > 0, "payload.supply_voltage_v", "greater than 0");
+    need(isNum(r.uptime_s) && r.uptime_s >= 0, "payload.uptime_s", "0 or more");
+    payload = { sensor_id: r.sensor_id, temperature_c: r.temperature_c, supply_voltage_v: r.supply_voltage_v, uptime_s: r.uptime_s };
+  }
+  const failed = checks.find(c => !c.ok);
+  $("dalChecks").innerHTML = checks.map(c => `<div class="${c.ok ? "pass" : "fail"}">${c.ok ? "✓" : "✗"} ${c.field}${c.ok ? "" : ` <span class="muted">— ${c.why}</span>`}</div>`).join("");
+  let pseudoHtml = `<div class="muted">No identifier in this source. The rules for identifiers have no entry for it, so nothing is replaced.</div>`;
+  if (dalSrc === "opensky") {
+    const norm = v => String(v ?? "").trim().toLowerCase();
+    const [a, f] = await Promise.all([hmacHex(DEMO_KEY, "icao24:" + norm(r.icao24)), hmacHex(DEMO_KEY, "callsign:" + norm(r.callsign))]);
+    if (dalSrc !== "opensky") return;
+    const ac = norm(r.icao24) && a ? "AC-" + a.slice(0, 12) : null, fl = norm(r.callsign) && f ? "FL-" + f.slice(0, 12) : null;
+    payload.aircraft_id = ac; payload.flight_id = fl;
+    pseudoHtml = a ? `<div>icao24 → <b class="pass">${ac ?? "none"}</b></div><div>callsign → <b class="pass">${fl ?? "none"}</b></div><div class="muted">Trimmed and lower-cased first, so padded callsigns are one flight. The raw values are never stored.</div>` : `<div class="muted">This browser refused the hashing API, so no pseudonym is shown.</div>`;
+  }
+  $("dalPseudo").innerHTML = pseudoHtml;
+  const obs = failed ? {
+    quarantine: { source_id: src.sourceId, field: failed.field, reason: failed.why, data_mode: src.mode, scenario_run_id: 41 }
+  } : {
+    source_id: src.sourceId, source_type: src.sourceType, observation_type: src.obsType, timestamp,
+    location: { lat: r.lat, lon: r.lon }, data_mode: src.mode, validation_status: "valid",
+    provenance: { source_id: src.sourceId, source_type: src.sourceType, data_mode: src.mode, scenario_run_id: 41 },
+    payload
+  };
+  $("dalVerdict").innerHTML = failed
+    ? `<span class="pill bad">Quarantined</span><p class="muted" style="font-size:13.5px;margin:8px 0 0">Kept with its reason, counted, never silently dropped.</p>`
+    : `<span class="pill ok">Canonical observation</span><p class="muted" style="font-size:13.5px;margin:8px 0 0">Same outer shape for every source; only the payload differs.</p>`;
+  $("dalOut").innerHTML = highlight(JSON.stringify(obs, null, 2));
+}
+function highlight(json) {
+  return json.replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/("(?:[^"\\]|\\.)*")(\s*:)?|\b(-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)\b|\b(true|false|null)\b/g, (m, s, colon, n, lit) =>
+      s ? (colon ? `<span class="k">${s}</span>${colon}` : `<span class="s">${s}</span>`) : n ? `<span class="n">${n}</span>` : `<span class="n">${lit}</span>`);
+}
+(() => {
+  const seg = $("dalSources");
+  for (const [key, src] of Object.entries(DAL_SOURCES)) {
+    const b = document.createElement("button"); b.className = "btn"; b.type = "button"; b.textContent = src.label;
+    b.setAttribute("aria-pressed", key === dalSrc);
+    b.addEventListener("click", () => { dalSrc = key; seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); renderDalFields(); });
+    seg.appendChild(b);
+  }
+})();
+
+// ---- Figure 4: seed lab ----
+let specSensor = null;
+function seedState() {
+  let seed = Math.floor(+$("seed").value);
+  if (!Number.isFinite(seed) || seed < 0) seed = 0;
+  if (seed > 2147483647) seed = 2147483647;
+  const kind = $("kind").value, extent = $("extent").value, elev = +$("elev").value, radius = +$("zone").value, tick = +$("tick").value;
+  return { seed, kind, extent, elev, radius, tick, inc: planIncident(seed, kind, extent, radius, elev) };
+}
+const clock = t => { const s = t * INTERVAL; return `12:${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`; };
+function drawSeedLab() {
+  const S = seedState();
+  $("elevL").textContent = S.elev.toFixed(1); $("zoneL").textContent = S.radius;
+  $("tickL").textContent = `${S.tick * 10} s · ${clock(S.tick)}${S.tick >= INC_START && S.tick < INC_END ? " · inside the incident window" : ""}`;
+  const badge = $("seedCheck");
+  badge.className = "badge " + (SELF_OK ? "ok" : "bad");
+  badge.textContent = SELF_OK ? "✓ matches the Python generator" : "✗ does not match the Python generator";
+  if (!specSensor) specSensor = S.inc ? S.inc.centre : "RF-01";
+  const svg = clear($("gridSvg")), x0 = 64, y0 = 30, cw = 42, ch = 34;
+  FREQS.forEach((f, c) => el("text", { x: x0 + c * cw + cw / 2, y: y0 - 8, "text-anchor": "middle", "font-size": 10, fill: c === L1 ? css("--signal") : css("--muted"), "font-weight": c === L1 ? 700 : 400 }, svg, "ch" + c));
+  SENSORS.forEach((s, r) => {
+    const g = el("g", { style: "cursor:pointer", tabindex: 0, role: "button", "aria-label": `Show ${s.id} spectrum` }, svg);
+    el("text", { x: x0 - 8, y: y0 + r * ch + ch / 2 + 4, "text-anchor": "end", "font-size": 11, "font-weight": s.id === specSensor ? 700 : 500, fill: s.id === specSensor ? css("--ink") : css("--muted") }, g, s.id);
+    FREQS.forEach((f, c) => {
+      const d = deviation(S.seed, s.id, c, S.tick, S.inc);
+      const col = devColour(d);
+      el("rect", { x: x0 + c * cw + 1, y: y0 + r * ch + 1, width: cw - 2, height: ch - 2, rx: 3, fill: col || css("--surface-2"), stroke: s.id === specSensor ? css("--ink-2") : "none", "stroke-width": s.id === specSensor ? 1 : 0 }, g);
+      el("text", { x: x0 + c * cw + cw / 2, y: y0 + r * ch + ch / 2 + 4, "text-anchor": "middle", "font-size": 9.5, fill: col ? css("--surface") : css("--ink-2") }, g, (d > 0 ? "+" : "") + d.toFixed(1));
+    });
+    const pick = () => { specSensor = s.id; drawSeedLab(); };
+    g.addEventListener("click", pick);
+    g.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
+  });
+  const ly = y0 + 7 * ch + 18;
+  [["< +6 dB", css("--surface-2")], ["≥ 6 Low", css("--warn")], ["≥ 10 Medium", css("--fuse")], ["≥ 15 High", css("--bad")]].forEach(([t, c], i) => {
+    el("rect", { x: x0 + i * 88, y: ly - 9, width: 10, height: 10, rx: 2, fill: c, stroke: css("--line") }, svg);
+    el("text", { x: x0 + i * 88 + 15, y: ly, "font-size": 10, fill: css("--muted") }, svg, t);
+  });
+  // spectrum of one receiver
+  const sp = clear($("specSvg")), sx = 44, sy = 24, sw = 300, sh = 220, top = 20, bot = -6;
+  const Y = v => sy + (top - v) / (top - bot) * sh;
+  el("text", { x: sx, y: 14, "font-size": 11, "font-weight": 600, fill: css("--ink") }, sp, `${specSensor} ${byId[specSensor].name} · ${clock(S.tick)}`);
+  [-5, 0, 5, 10, 15, 20].forEach(v => {
+    el("line", { x1: sx, x2: sx + sw, y1: Y(v), y2: Y(v), stroke: css("--grid") }, sp);
+    el("text", { x: sx - 6, y: Y(v) + 3.5, "text-anchor": "end", "font-size": 9.5, fill: css("--muted") }, sp, (v > 0 ? "+" : "") + v);
+  });
+  el("line", { x1: sx, x2: sx + sw, y1: Y(6), y2: Y(6), stroke: css("--fuse"), "stroke-dasharray": "4 3" }, sp);
+  el("text", { x: sx + sw, y: Y(6) - 4, "text-anchor": "end", "font-size": 9.5, fill: css("--fuse") }, sp, "threshold +6 dB");
+  const bw = sw / 8;
+  FREQS.forEach((f, c) => {
+    const d = deviation(S.seed, specSensor, c, S.tick, S.inc), col = devColour(d) || css("--signal");
+    const yTop = Y(Math.max(d, bot)), y0b = Y(0);
+    el("rect", { x: sx + c * bw + 4, y: Math.min(yTop, y0b), width: bw - 8, height: Math.max(1, Math.abs(y0b - yTop)), rx: 2, fill: col, opacity: d >= 6 ? 1 : .55 }, sp);
+    el("text", { x: sx + c * bw + bw / 2, y: sy + sh + 14, "text-anchor": "middle", "font-size": 9.5, "font-weight": c === L1 ? 700 : 400, fill: c === L1 ? css("--signal") : css("--muted") }, sp, c === L1 ? "L1" : (f - 1575.42 > 0 ? "+" : "") + (f - 1575.42).toFixed(0));
+  });
+  el("text", { x: sx + sw / 2, y: sy + sh + 30, "text-anchor": "middle", "font-size": 9.5, fill: css("--muted") }, sp, "MHz from L1 (1575.42) · bars: dB from −95 dBm");
+  const inc = S.inc, kindTxt = {
+    "normal-baseline": "Nothing staged. The answer key says so explicitly: an absent record and a record saying nothing are different claims.",
+    "rf-sensor-fault": "One receiver only. Its neighbours stay at the floor, so step 1 of the ladder should name it.",
+    "gnss-degradation": "The centre receiver and every receiver within the zone radius. Aircraft in the same zone have their positions frozen.",
+    "aircraft-coverage-gap": "No radio change at all. At least five airborne aircraft stop being heard, which no built rule names.",
+    "ambiguous-mixed-evidence": "Identical radio staging to a broken receiver, plus at least five aircraft no longer heard in the same place."
+  }[S.kind];
+  $("seedReadout").innerHTML = `<span>Centre <b class="hi">${inc ? inc.centre : "—"}</b></span><span>Affected receivers <b>${inc ? inc.sensors.join(", ") : "none"}</b></span><span>Channels <b>${inc ? (inc.channels.length === 8 ? "all 8" : "ch4 · 1575.42 MHz") : "—"}</b></span><span>Window <b>${inc ? "12:02:00–12:07:00" : "—"}</b></span><span style="flex-basis:100%">${kindTxt}</span>`;
+  drawSeries();
+}
+["elev", "tick"].forEach(id => $(id).addEventListener("input", drawSeedLab));
+// A new seed or staging recentres the spectrum on the new incident; time and elevation keep the receiver picked.
+["seed", "kind", "extent", "zone"].forEach(id => $(id).addEventListener("input", () => { specSensor = null; drawSeedLab(); }));
+$("seedRandom").addEventListener("click", () => { $("seed").value = Math.floor(Math.random() * 2147483647); specSensor = null; drawSeedLab(); });
+
+// ---- Figure 5: time series ----
+(() => {
+  const s = $("tsSensor"), c = $("tsChan");
+  SENSORS.forEach(x => s.add(new Option(`${x.id} ${x.name}`, x.id)));
+  FREQS.forEach((f, i) => c.add(new Option(`ch${i} · ${f}`, i)));
+  c.value = L1;
+  s.addEventListener("input", () => { tsPinned = true; drawSeries(); });
+  ["tsChan", "thr", "minEp"].forEach(id => $(id).addEventListener("input", drawSeries));
+})();
+let tsPinned = false;
+function episodes(devs, thr, minTicks) {
+  const eps = []; let start = null;
+  devs.forEach((d, t) => {
+    if (d > thr) { if (start === null) start = t; }
+    else if (start !== null) { eps.push([start, t - 1]); start = null; }
+  });
+  if (start !== null) eps.push([start, devs.length - 1]);
+  return eps.map(([a, b]) => ({ a, b, counted: b - a >= minTicks }));
+}
+function drawSeries() {
+  const S = seedState();
+  if (!tsPinned && S.inc) $("tsSensor").value = S.inc.centre;
+  const sensor = $("tsSensor").value, ch = +$("tsChan").value, thr = +$("thr").value, minTicks = +$("minEp").value;
+  $("thrL").textContent = thr.toFixed(1);
+  const devs = Array.from({ length: TICKS }, (_, t) => deviation(S.seed, sensor, ch, t, S.inc));
+  const touched = S.inc && S.inc.sensors.includes(sensor) && S.inc.channels.includes(ch);
+  const svg = clear($("tsSvg")), x0 = 52, y0 = 16, w = 690, h = 220, lo = -6, hi = 20;
+  const X = t => x0 + t / (TICKS - 1) * w, Y = v => y0 + (hi - v) / (hi - lo) * h;
+  if (touched) el("rect", { x: X(INC_START) - 3, y: y0, width: X(INC_END - 1) - X(INC_START) + 6, height: h, fill: css("--fuse-soft") }, svg);
+  for (let v = -5; v <= 20; v += 5) {
+    el("line", { x1: x0, x2: x0 + w, y1: Y(v), y2: Y(v), stroke: css("--grid") }, svg);
+    el("text", { x: x0 - 6, y: Y(v) + 3.5, "text-anchor": "end", "font-size": 10, fill: css("--muted") }, svg, (v > 0 ? "+" : "") + v + " dB");
+  }
+  for (let s = 0; s <= 900; s += 120) el("text", { x: X(Math.min(s / 10, 89)), y: y0 + h + 16, "text-anchor": "middle", "font-size": 10, fill: css("--muted") }, svg, `${s} s`);
+  [[10, "Medium"], [15, "High"]].forEach(([v, n]) => {
+    el("line", { x1: x0, x2: x0 + w, y1: Y(v), y2: Y(v), stroke: css("--faint"), "stroke-dasharray": "2 4" }, svg);
+    el("text", { x: x0 + w - 2, y: Y(v) - 4, "text-anchor": "end", "font-size": 9.5, fill: css("--faint") }, svg, n);
+  });
+  el("line", { x1: x0, x2: x0 + w, y1: Y(thr), y2: Y(thr), stroke: css("--fuse"), "stroke-width": 1.5 }, svg);
+  el("text", { x: x0 + 4, y: Y(thr) - 5, "font-size": 10, fill: css("--fuse") }, svg, `threshold +${thr} dB`);
+  el("polyline", { points: devs.map((d, t) => `${X(t)},${Y(Math.max(lo, Math.min(hi, d)))}`).join(" "), fill: "none", stroke: css("--signal"), "stroke-width": 1, opacity: .5 }, svg);
+  devs.forEach((d, t) => el("circle", { cx: X(t), cy: Y(Math.max(lo, Math.min(hi, d))), r: 2.8, fill: d > thr ? css("--fuse") : css("--signal") }, svg));
+  const eps = episodes(devs, thr, minTicks);
+  eps.forEach(e => el("rect", { x: X(e.a) - 3, y: y0 + h - 10, width: Math.max(6, X(e.b) - X(e.a) + 6), height: 7, rx: 2, fill: e.counted ? css("--fuse") : "none", stroke: css("--fuse") }, svg));
+  const counted = eps.filter(e => e.counted), brief = eps.length - counted.length;
+  const peak = Math.max(...devs), sev = peak >= 15 ? "High" : peak >= 10 ? "Medium" : peak > thr ? "Low" : "—";
+  const inWin = counted.filter(e => e.b >= INC_START && e.a < INC_END);
+  let delay = "—";
+  if (touched && inWin.length) delay = `${(Math.max(inWin[0].a, INC_START) + minTicks - INC_START) * INTERVAL} s`;
+  else if (touched) delay = "not detected on this cell";
+  $("tsReadout").innerHTML = `<span>Cell <b class="hi">${sensor} ch${ch}</b> ${touched ? "<b>staged</b>" : "not staged"}</span><span>Peak <b>${peak > 0 ? "+" : ""}${peak.toFixed(2)} dB</b></span><span>Severity <b>${counted.length ? sev : "—"}</b></span><span>Episodes counted <b>${counted.length}</b></span><span>Too brief <b>${brief}</b></span><span>Delay <b>${delay}</b></span>`;
+}
+
+// ---- Figure 6: two normal curves ----
+// Upper tail of the standard normal, 1 − Φ(z), from Abramowitz–Stegun 7.1.26 written as erfc,
+// so tiny tails keep their relative precision instead of vanishing in 1 − (almost 1).
+function tail(z) {
+  if (z < 0) return 1 - tail(-z);
+  const t = 1 / (1 + 0.3275911 * z / Math.SQRT2);
+  return 0.5 * t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429)))) * Math.exp(-z * z / 2);
+}
+const fmtP = p => p >= 0.01 ? (p * 100).toFixed(1) + "%" : p.toExponential(2).replace("e-", " × 10⁻").replace(/⁻(\d+)/, (m, d) => "⁻" + [...d].map(x => "⁰¹²³⁴⁵⁶⁷⁸⁹"[x]).join(""));
+function drawGauss() {
+  const T = +$("gThr").value, s = +$("gSig").value, E = +$("gElev").value, sd2 = Math.hypot(0.25 * E, s);
+  $("gT").textContent = T.toFixed(1); $("gS").textContent = s.toFixed(2); $("gE").textContent = E.toFixed(1);
+  const svg = clear($("gaussSvg")), x0 = 40, y0 = 14, w = 700, h = 220, lo = -8, hi = 22;
+  const X = v => x0 + (v - lo) / (hi - lo) * w;
+  const pdf = (v, m, sd) => Math.exp(-0.5 * ((v - m) / sd) ** 2) / (sd * Math.sqrt(2 * Math.PI));
+  const peak = Math.max(pdf(0, 0, s), pdf(E, E, sd2)), Y = p => y0 + h - p / peak * (h - 10);
+  for (let v = -5; v <= 20; v += 5) {
+    el("line", { x1: X(v), x2: X(v), y1: y0, y2: y0 + h, stroke: css("--grid") }, svg);
+    el("text", { x: X(v), y: y0 + h + 16, "text-anchor": "middle", "font-size": 10, fill: css("--muted") }, svg, (v > 0 ? "+" : "") + v + " dB");
+  }
+  const curve = (m, sd, from, to) => { const pts = []; for (let v = from; v <= to + 1e-9; v += 0.1) pts.push(`${X(v)},${Y(pdf(v, m, sd))}`); return pts; };
+  const area = (m, sd, col, op) => { const p = curve(m, sd, Math.max(T, lo), hi); if (p.length) el("polygon", { points: `${X(Math.max(T, lo))},${Y(0)} ${p.join(" ")} ${X(hi)},${Y(0)}`, fill: col, opacity: op }, svg); };
+  area(E, sd2, css("--signal"), .25); area(0, s, css("--fuse"), .9);
+  el("polyline", { points: curve(0, s, lo, hi).join(" "), fill: "none", stroke: css("--muted"), "stroke-width": 2 }, svg);
+  el("polyline", { points: curve(E, sd2, lo, hi).join(" "), fill: "none", stroke: css("--signal"), "stroke-width": 2 }, svg);
+  el("line", { x1: X(T), x2: X(T), y1: y0, y2: y0 + h, stroke: css("--fuse"), "stroke-width": 2 }, svg);
+  el("text", { x: X(T) + 5, y: y0 + 12, "font-size": 10.5, fill: css("--fuse") }, svg, `T = +${T} dB`);
+  el("text", { x: X(0), y: Y(pdf(0, 0, s)) - 6, "text-anchor": "middle", "font-size": 10.5, fill: css("--muted") }, svg, "quiet");
+  el("text", { x: X(E), y: Y(pdf(E, E, sd2)) - 6, "text-anchor": "middle", "font-size": 10.5, fill: css("--signal") }, svg, "staged");
+  el("line", { x1: x0, x2: x0 + w, y1: Y(0), y2: Y(0), stroke: css("--line") }, svg);
+  const pq = tail(T / s), ps = tail((T - E) / sd2), perRun = 5040 * pq, anyRun = 1 - Math.pow(1 - pq, 5040), pairs = 4984 * pq * pq;
+  $("gaussReadout").innerHTML = `<span>Quiet reading above T <b>${fmtP(pq)}</b></span><span>Single spikes per quiet run <b>${perRun < 0.001 ? perRun.toExponential(1) : perRun.toFixed(3)}</b> (runs with one: <b>${fmtP(anyRun)}</b>)</span><span>Two in a row per quiet run <b>${fmtP(pairs)}</b>${pairs > 0 && pairs < 0.5 ? ` · about 1 in <b>${Math.round(1 / pairs).toLocaleString("en-GB")}</b> runs` : ""}</span><span class="hi">Staged reading above T <b>${fmtP(ps)}</b></span>`;
+}
+["gThr", "gSig", "gElev"].forEach(id => $(id).addEventListener("input", drawGauss));
+
+// ---- Figure 7: ladder ----
+let raised = new Set(["RF-04", "RF-05"]);
+const LADDER_PRESETS = [
+  ["Quiet", []], ["Broken receiver", ["RF-06"]], ["Interference", ["RF-04", "RF-05"]], ["Two lone faults", ["RF-01", "RF-07"]], ["Wide zone", ["RF-05", "RF-06", "RF-07"]]];
+function components(ids) {
+  const left = new Set(ids), groups = [];
+  while (left.size) {
+    const first = left.values().next().value, g = [first]; left.delete(first);
+    for (let i = 0; i < g.length; i++) for (const o of [...left]) if (gcKm(byId[g[i]], byId[o]) <= 70) { g.push(o); left.delete(o); }
+    groups.push(g.sort());
+  }
+  return groups;
+}
+function drawLadder() {
+  const svg = clear($("ladMap")), P = { x: lon => 40 + (lon - 4.4) * KX * 150, y: lat => 62 + (52.5 - lat) * 150 };
+  const kmPx = 150 / 111.2;
+  el("text", { x: 10, y: 18, "font-size": 10.5, fill: css("--muted") }, svg, "click a receiver to raise or lower it");
+  const groups = components([...raised]);
+  for (const g of groups) if (g.length > 1) for (const id of g) el("circle", { cx: P.x(byId[id].lon), cy: P.y(byId[id].lat), r: 60 * kmPx, fill: css("--fuse-soft"), opacity: .55 }, svg);
+  for (const a of SENSORS) for (const b of SENSORS) if (a.id < b.id && gcKm(a, b) <= 70) el("line", { x1: P.x(a.lon), y1: P.y(a.lat), x2: P.x(b.lon), y2: P.y(b.lat), stroke: css("--faint"), "stroke-width": 1.5, "stroke-dasharray": "3 3" }, svg);
+  for (const s of SENSORS) {
+    const on = raised.has(s.id);
+    const g = el("g", { tabindex: 0, role: "button", "aria-pressed": on, "aria-label": `${s.id} ${on ? "raised" : "normal"}`, style: "cursor:pointer" }, svg);
+    el("circle", { cx: P.x(s.lon), cy: P.y(s.lat), r: 11, fill: on ? css("--fuse") : css("--surface"), stroke: on ? css("--fuse") : css("--signal"), "stroke-width": 2 }, g);
+    el("text", { x: P.x(s.lon), y: P.y(s.lat) + 3.5, "text-anchor": "middle", "font-size": 9, "font-weight": 700, fill: on ? css("--surface") : css("--signal") }, g, s.id.slice(3));
+    el("text", { x: P.x(s.lon) + 15, y: P.y(s.lat) + 4, "font-size": 10, fill: css("--muted") }, g, s.name);
+    const flip = () => { raised.has(s.id) ? raised.delete(s.id) : raised.add(s.id); drawLadder(); };
+    g.addEventListener("click", flip);
+    g.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(); } });
+  }
+  el("text", { x: 10, y: 372, "font-size": 9.5, fill: css("--faint") }, svg, "dashed lines: receivers within 70 km of each other");
+  const faults = groups.filter(g => g.length === 1).map(g => g[0]), zones = groups.filter(g => g.length > 1);
+  const din = +$("din").value, dout = +$("dout").value;
+  $("dinL").textContent = din; $("doutL").textContent = dout;
+  const ratio = (din / 300 + 1 / 900) / (dout / 600 + 1 / 900);
+  const measurable = din > 0 && dout > 0;
+  const conf = measurable && ratio >= 1.58 ? "High" : "Medium";
+  const corr = !measurable ? "could not be measured" : ratio >= 1.58 ? "corroborated" : "measured, not corroborated";
+  const step = (n, q, sub, state) => `<div class="step ${state}"><span class="no">${n}</span><span class="q">${q}<small>${sub}</small></span>${state === "fire" ? '<span class="pill info">claims</span>' : state === "skip" ? '<span class="pill off">not built</span>' : '<span class="pill off">no claim</span>'}</div>`;
+  $("ladSteps").innerHTML =
+    step(1, "One receiver off normal, neighbours within 70 km normal?", faults.length ? `Claims ${faults.join(", ")}` : "No lone receiver", faults.length ? "fire" : "") +
+    step(2, "Aircraft dropouts with no radio anomaly nearby?", "Never offered an event: the rule was closed", "skip") +
+    step(3, "Several nearby receivers off normal together?", zones.length ? `Claims ${zones.map(z => z.join("+")).join("; ")}` : "No zone", zones.length ? "fire" : "");
+  const lines = [];
+  for (const f of faults) lines.push(`<b>That receiver is broken: ${f} ${byId[f].name}</b>Confidence is the rule's own. The aircraft side is <em>not applicable</em>: never asked, by design.`);
+  for (const z of zones) lines.push(`<b>Something is interfering: ${z.join(", ")}</b>Confidence <b style="display:inline;font:inherit;font-weight:700">${conf}</b>. Aircraft side ${corr}.`);
+  $("ladVerdict").innerHTML = lines.length ? lines.join("<hr style='border:0;border-top:1px solid var(--line);margin:10px 0'>") : "<b>Silence</b>Nothing to report, and every detector says it looked. A quiet run must produce exactly this.";
+  $("ladReadout").innerHTML = `<span>Rate during <b>${(din / 5).toFixed(2)}/min</b></span><span>Rate outside <b>${(dout / 10).toFixed(2)}/min</b></span><span>Smoothed ratio <b class="hi">${ratio.toFixed(2)}</b></span><span>Corroboration <b>${corr}</b></span><span>Zone confidence <b>${zones.length ? conf : "—"}</b></span>`;
+}
+(() => {
+  const seg = $("ladderPresets");
+  for (const [n, ids] of LADDER_PRESETS) {
+    const b = document.createElement("button"); b.className = "btn"; b.type = "button"; b.textContent = n;
+    b.addEventListener("click", () => { raised = new Set(ids); drawLadder(); });
+    seg.appendChild(b);
+  }
+  ["din", "dout"].forEach(id => $(id).addEventListener("input", drawLadder));
+})();
+
+// ---- Figure 8: bundle ----
+const BUNDLE = {
+  head: { anomaly_type: "possible_interference_zone", rule_id: "FUSION-SPATIAL", subject: "RF-05, RF-06, RF-07", affected_channels: [4], affected_area: "zone centre, from the receiver layout (never an aircraft position)", evidence_items: 34 },
+  groups: [
+    { rid: "RF-NOISE", ft: "rf_noise_deviation", kind: "cites readings", title: "Power deviations on channel 4 at three receivers", body: "RF-05, RF-06 and RF-07 each held medium-severity episodes on channel 4, peaking at 14.5 dB above baseline. Each item cites the exact readings by receiver, channel and timestamp, and every one resolves to exactly one stored row.", refs: ["{sensor_id: RF-06, channel_index: 4, timestamp: …}", "metric: power_dbm · peak_deviation · severity · duration_s"] },
+    { rid: "TRACK-GAP", ft: "track_continuity_gap", kind: "cites reports", title: "Aircraft reporting gaps in the same window", body: "Several aircraft broke continuity inside the zone during the window. Each cites the two reports either side of the gap, by pseudonym and time. No aircraft position is carried.", refs: ["{aircraft_id: AC-<pseudonym>, at: …}", "shape: frozen position or not heard"] },
+    { rid: "TRACK-GAP", ft: "track_rate_excess", kind: "judgement", title: "Dropout rate in a 60 km disc, during against outside", body: "4 dropouts during the window and 0 outside it. Smoothed ratio 11.79. Because the reference period was empty, the ratio compares one observed rate with an assumption, so the package labels it not measurable and the confidence stays Medium.", refs: ["radius_km: 60 · during: 4 · outside: 0 · ratio: 11.79", "same rule id as the gaps above, different finding type"] },
+    { rid: "FUSION-SPATIAL", ft: "possible_interference_zone", kind: "judgement", title: "The conclusion: a possible interference zone", body: "Several nearby receivers off normal together on one channel. Confidence Medium. A judgement has no stored row, so it declares itself one, and a judgement that carried citations would be refused.", refs: ["sensors: RF-05, RF-06, RF-07 · radius_km · corroboration · confidence: medium"] }
+  ],
+  uncertainties: [
+    { kind: "not_measurable", text: "The local dropout rate outside the window could not be measured, so the aircraft side neither supports nor contradicts the radio findings." },
+    { kind: "measured_negative", text: "Some short deviations on RF-05, RF-06 and RF-07 were seen but not called events, being under the 10 s minimum." }
+  ],
+  rejected: { rid: "SENSOR-FAULT", ft: "possible_sensor_fault", title: "A broken receiver at RF-06, set aside", body: "Shown only when the toggle is on: in the corpus the ladder never set a claim aside, so no real package carries one. If it did, it would sit here, outside the evidence, and citing it as support would be a failure of its own kind." }
+};
+let bunSel = 0;
+function drawBundle() {
+  const rej = $("bunRej").value === "1";
+  const items = [...BUNDLE.groups.map((g, i) => ({ ...g, i })), ...BUNDLE.uncertainties.map((u, j) => ({ unc: u, i: 100 + j })), ...(rej ? [{ ...BUNDLE.rejected, i: 200, rejected: true }] : [])];
+  if (!items.find(x => x.i === bunSel)) bunSel = 0;
+  const btn = x => `<button class="item" type="button" data-i="${x.i}" aria-pressed="${x.i === bunSel}">${x.unc ? `<span class="kind">${x.unc.kind}</span><span class="rid">uncertainty</span><br>${x.unc.text.slice(0, 62)}…` : `<span class="kind">${x.rejected ? "not citable" : x.kind}</span><span class="rid">${x.rid} / ${x.ft}</span><br>${x.title}`}</button>`;
+  $("bunList").innerHTML = `<div class="compartment">Evidence · ${BUNDLE.head.evidence_items} items in 4 groups</div>${items.filter(x => x.i < 100).map(btn).join("")}<div class="compartment">Known uncertainties</div>${items.filter(x => x.i >= 100 && x.i < 200).map(btn).join("")}<div class="compartment">Set aside by the ladder</div>${rej ? items.filter(x => x.i === 200).map(btn).join("") : '<p class="muted" style="font-size:13.5px">Empty. Across the corpus the ladder never set a competing claim aside.</p>'}`;
+  const s = items.find(x => x.i === bunSel);
+  $("bunDetail").innerHTML = s.unc
+    ? `<div class="compartment">${s.unc.kind}</div><p style="font-size:15px">${s.unc.text}</p><p class="muted" style="font-size:13.5px">Every absence carries its kind, so an explainer cannot read “never asked” as “tried and could not tell”.</p>`
+    : `<div class="compartment">${s.rejected ? "set aside · context only" : s.kind}</div><p style="font-size:15px;margin-bottom:8px"><b>${s.title}</b></p><p style="font-size:15px">${s.body}</p>${s.refs ? `<pre class="json">${s.refs.join("\n")}</pre>` : ""}<p class="muted" style="font-size:13px;margin-top:10px">Package: ${BUNDLE.head.anomaly_type} · ${BUNDLE.head.rule_id} · ${BUNDLE.head.subject} · channel ${BUNDLE.head.affected_channels.join(",")}</p>`;
+  $("bunList").querySelectorAll(".item").forEach(b => b.addEventListener("click", () => { bunSel = +b.dataset.i; drawBundle(); }));
+}
+$("bunRej").addEventListener("input", drawBundle);
+
+// ---- Figure 9: grounding ----
+const PKG = [["RF-NOISE", "rf_noise_deviation"], ["TRACK-GAP", "track_continuity_gap"], ["TRACK-GAP", "track_rate_excess"], ["FUSION-SPATIAL", "possible_interference_zone"]];
+const REJ = [["SENSOR-FAULT", "possible_sensor_fault"]];
+const RULES = ["RF-NOISE", "rf-noise", "TRACK-GAP", "TRACK-CLUSTER", "FUSION-SPATIAL", "SENSOR-FAULT"];
+const TYPES = ["rf_noise_deviation", "track_continuity_gap", "track_rate_excess", "track_gap_cluster", "possible_interference_zone", "possible_sensor_fault"];
+let cites = [["RF-NOISE", "rf_noise_deviation"], ["TRACK-GAP", "track_rate_excess"], ["SENSOR-FAULT", "possible_sensor_fault"], ["rf-noise", "rf_noise_deviation"]];
+function ground([r, t], rej) {
+  if (PKG.some(([a, b]) => a === r && b === t)) return { c: "g", w: "Grounded", n: "in the package's evidence" };
+  if (rej && REJ.some(([a, b]) => a === r && b === t)) return { c: "s", w: "Cites a set-aside claim", n: "a misreading: rejected claims are context, never support" };
+  const ci = PKG.find(([a, b]) => a.toLowerCase() === r.toLowerCase() && b.toLowerCase() === t.toLowerCase());
+  if (ci) return { c: "u", w: "Not in the package", n: `nearly: differs only in case from ${ci[0]}/${ci[1]}` };
+  if (PKG.some(([a]) => a === r)) return { c: "u", w: "Not in the package", n: `nearly: ${r} is present, but under another finding type` };
+  return { c: "u", w: "Not in the package", n: "names nothing the explainer was shown" };
+}
+function drawGrounding() {
+  const rej = $("grRej").value === "1";
+  $("grPkg").innerHTML = PKG.map(([a, b]) => `<div class="pass">${a} / ${b}</div>`).join("");
+  $("grRejList").innerHTML = rej ? REJ.map(([a, b]) => `<div style="color:var(--warn)">${a} / ${b}</div>`).join("") : `<div class="muted">empty</div>`;
+  const box = $("grCites"); box.innerHTML = "";
+  const tally = { g: 0, u: 0, s: 0 };
+  cites.forEach((c, i) => {
+    const row = document.createElement("div"); row.className = "cite";
+    const mk = (opts, val, k) => { const s = document.createElement("select"); s.id = `gr-${i}-${k}`; s.setAttribute("aria-label", `Citation ${i + 1} ${k === 0 ? "rule" : "finding type"}`); opts.forEach(o => s.add(new Option(o, o))); s.value = val; s.addEventListener("input", () => { cites[i][k] = s.value; drawGrounding(); }); return s; };
+    const r = ground(c, rej); tally[r.c]++;
+    row.append(mk(RULES, c[0], 0), mk(TYPES, c[1], 1));
+    const res = document.createElement("div"); res.className = "res " + r.c; res.innerHTML = `${r.w}<small>${r.n}</small>`;
+    row.appendChild(res); box.appendChild(row);
+  });
+  $("grReadout").innerHTML = `<span>Grounded <b>${tally.g}</b></span><span>Not in the package <b>${tally.u}</b></span><span>Cites a set-aside claim <b>${tally.s}</b></span><span>What happens <b class="hi">${tally.u + tally.s ? "refused: stored as failed, asked again, then the template answers" : "delivered as written"}</b></span>`;
+}
+$("grRej").addEventListener("input", drawGrounding);
+
+// ---- Figure 10: toy precision/recall ----
+const TOY = [["Run 1", "interference"], ["Run 2", "interference"], ["Run 3", "coverage gap"], ["Run 4", "coverage gap"]];
+let toySaid = ["interfering", "interfering", "interfering", "silence"];
+function drawToy() {
+  const tb = $("toyTable").querySelector("tbody"); tb.innerHTML = "";
+  TOY.forEach(([n, st], i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${n}</td><td>${st}</td>`;
+    const td = document.createElement("td"), s = document.createElement("select");
+    s.id = `toy-${i}`; s.setAttribute("aria-label", `${n}: system said`);
+    ["interfering", "silence"].forEach(o => s.add(new Option(o, o))); s.value = toySaid[i];
+    s.addEventListener("input", () => { toySaid[i] = s.value; drawToy(); });
+    td.appendChild(s); tr.appendChild(td); tb.appendChild(tr);
+  });
+  const staged = TOY.map(t => t[1] === "interference"), said = toySaid.map(s => s === "interfering");
+  const tp = staged.filter((s, i) => s && said[i]).length, nStaged = staged.filter(Boolean).length, nSaid = said.filter(Boolean).length;
+  const gaps = TOY.filter(t => t[1] === "coverage gap").length, fa = TOY.filter((t, i) => t[1] === "coverage gap" && said[i]).length;
+  const R = tp / nStaged, P = nSaid ? tp / nSaid : null, F = P === null || P + R === 0 ? null : 2 * P * R / (P + R);
+  $("toyReadout").innerHTML = `<span>Recall of interference <b class="hi">${tp} / ${nStaged}</b> = ${R.toFixed(3)}</span><span>Precision of “interfering” <b class="hi">${tp} / ${nSaid}</b>${P === null ? " — never said, so not measured, not zero" : " = " + P.toFixed(3)}</span><span>F1 <b>${F === null ? "—" : F.toFixed(3)}</b></span><span>False alarms on coverage-gap runs <b>${fa} / ${gaps}</b></span>`;
+}
+
+// ---- Figure 11: two recalls ----
+function drawRecall() {
+  const svg = clear($("recallSvg")), rows = [["Interference", 1, 0.823, "frozen positions"], ["Mixed evidence", 1, 0.587, "not heard"], ["Aircraft coverage gap", null, 0.587, "not heard"]];
+  const x0 = 190, w = 520, X = v => x0 + v * w;
+  [0, 0.25, 0.5, 0.75, 1].forEach(v => {
+    el("line", { x1: X(v), x2: X(v), y1: 20, y2: 205, stroke: css("--grid") }, svg);
+    el("text", { x: X(v), y: 222, "text-anchor": "middle", "font-size": 10, fill: css("--muted") }, svg, v.toFixed(2));
+  });
+  rows.forEach(([n, run, ac, how], i) => {
+    const y = 30 + i * 62;
+    el("text", { x: x0 - 12, y: y + 14, "text-anchor": "end", "font-size": 11.5, "font-weight": 600, fill: css("--ink") }, svg, n);
+    el("text", { x: x0 - 12, y: y + 29, "text-anchor": "end", "font-size": 10, fill: css("--muted") }, svg, how);
+    if (run === null) el("text", { x: X(0) + 6, y: y + 12, "font-size": 10, fill: css("--faint") }, svg, "per run: no rule announces this kind");
+    else { el("rect", { x: X(0), y: y + 2, width: X(run) - X(0), height: 14, rx: 2, fill: css("--accent") }, svg); el("text", { x: X(run) - 6, y: y + 13, "text-anchor": "end", "font-size": 10, fill: css("--surface"), "font-weight": 600 }, svg, "per run " + run.toFixed(3)); }
+    el("rect", { x: X(0), y: y + 20, width: X(ac) - X(0), height: 14, rx: 2, fill: css("--signal") }, svg);
+    el("text", { x: X(ac) + 6, y: y + 31, "font-size": 10, fill: css("--ink-2"), "font-weight": 600 }, svg, "per aircraft " + ac.toFixed(3));
+  });
+  el("text", { x: x0, y: 242, "font-size": 10, fill: css("--muted") }, svg, "recall, 60 runs per kind · 900 staged aircraft in all");
+}
+
+// ---- Figure 12: weighted kappa ----
+const K_PRESETS = {
+  "Close": [[4, 3, 5, 2, 4, 3, 5, 1, 2, 4], [4, 3, 4, 2, 5, 3, 5, 2, 2, 4]],
+  "Off by one": [[4, 3, 5, 2, 4, 3, 5, 1, 2, 4], [5, 4, 4, 3, 5, 2, 4, 2, 3, 5]],
+  "Opposed": [[4, 3, 5, 2, 4, 3, 5, 1, 2, 4], [2, 3, 1, 4, 2, 3, 1, 5, 4, 2]]
+};
+let kA = K_PRESETS["Off by one"][0].slice(), kB = K_PRESETS["Off by one"][1].slice();
+function kappa(a, b, k = 5) {
+  const n = a.length, O = Array.from({ length: k }, () => Array(k).fill(0));
+  a.forEach((x, i) => O[x - 1][b[i] - 1]++);
+  const ra = O.map(r => r.reduce((s, v) => s + v, 0)), cb = O[0].map((_, j) => O.reduce((s, r) => s + r[j], 0));
+  let num = 0, den = 0;
+  for (let i = 0; i < k; i++) for (let j = 0; j < k; j++) { const w = (i - j) ** 2 / (k - 1) ** 2; num += w * O[i][j]; den += w * ra[i] * cb[j] / n; }
+  return { O, kw: den === 0 ? null : 1 - num / den, exact: a.filter((x, i) => x === b[i]).length, flagged: a.filter((x, i) => Math.abs(x - b[i]) >= 2).length };
+}
+function drawKappa() {
+  const grid = $("kGrid"); grid.innerHTML = "";
+  kA.forEach((v, i) => {
+    const col = document.createElement("div"); col.className = "col";
+    const mk = (arr, who) => { const s = document.createElement("select"); s.id = `k-${who}-${i}`; s.setAttribute("aria-label", `Item ${i + 1}, marker ${who}`); [1, 2, 3, 4, 5].forEach(o => s.add(new Option(o, o))); s.value = arr[i]; s.addEventListener("input", () => { arr[i] = +s.value; drawKappa(); }); return s; };
+    col.append(Object.assign(document.createElement("span"), { textContent: "item " + (i + 1) }), mk(kA, "A"), mk(kB, "B"));
+    grid.appendChild(col);
+  });
+  const r = kappa(kA, kB), svg = clear($("kSvg")), x0 = 46, y0 = 20, c = 46;
+  for (let i = 0; i < 5; i++) for (let j = 0; j < 5; j++) {
+    const w = (i - j) ** 2 / 16;
+    el("rect", { x: x0 + j * c + 1, y: y0 + i * c + 1, width: c - 2, height: c - 2, rx: 3, fill: w === 0 ? css("--ok-soft") : css("--bad-soft"), "fill-opacity": w === 0 ? 1 : 0.25 + 0.75 * w, stroke: css("--line") }, svg);
+    if (r.O[i][j]) el("text", { x: x0 + j * c + c / 2, y: y0 + i * c + c / 2 + 5, "text-anchor": "middle", "font-size": 14, "font-weight": 700, fill: css("--ink") }, svg, r.O[i][j]);
+  }
+  for (let i = 0; i < 5; i++) {
+    el("text", { x: x0 - 8, y: y0 + i * c + c / 2 + 4, "text-anchor": "end", "font-size": 11, fill: css("--muted") }, svg, i + 1);
+    el("text", { x: x0 + i * c + c / 2, y: y0 + 5 * c + 15, "text-anchor": "middle", "font-size": 11, fill: css("--muted") }, svg, i + 1);
+  }
+  el("text", { x: 10, y: y0 + 2.5 * c, "font-size": 10.5, fill: css("--muted"), transform: `rotate(-90 14 ${y0 + 2.5 * c})`, "text-anchor": "middle" }, svg, "marker A");
+  el("text", { x: x0 + 2.5 * c, y: y0 + 5 * c + 32, "text-anchor": "middle", "font-size": 10.5, fill: css("--muted") }, svg, "marker B");
+  const kw = r.kw, read = kw === null ? "undefined: no spread to compare" : kw >= 0.8 ? "strong" : kw >= 0.6 ? "substantial" : kw >= 0.4 ? "moderate" : kw >= 0.2 ? "fair" : kw >= 0 ? "slight" : "worse than chance";
+  $("kStats").innerHTML = `<div class="stat"><span>Exact agreement</span><b>${r.exact} / 10</b></div><div class="stat"><span>Quadratic-weighted κ</span><b>${kw === null ? "—" : kw.toFixed(3)}</b></div><div class="stat"><span>Common reading of that value</span><b>${read}</b></div><div class="stat"><span>Items flagged (differ by ≥ 2)</span><b>${r.flagged}</b></div><p class="muted" style="font-size:13.5px;margin:0">Raw agreement counts a 3-against-4 as a miss and a 1-against-5 as no worse. The weights make the second cost sixteen times the first.</p>`;
+}
+(() => {
+  const seg = $("kPresets");
+  for (const n of Object.keys(K_PRESETS)) {
+    const b = document.createElement("button"); b.className = "btn"; b.type = "button"; b.textContent = n;
+    b.addEventListener("click", () => { kA = K_PRESETS[n][0].slice(); kB = K_PRESETS[n][1].slice(); drawKappa(); });
+    seg.appendChild(b);
+  }
+})();
+
+// ---- contents highlight ----
+(() => {
+  const links = [...document.querySelectorAll(".toc a")];
+  if (!("IntersectionObserver" in window)) return;
+  const io = new IntersectionObserver(es => es.forEach(e => {
+    if (e.isIntersecting) links.forEach(a => a.classList.toggle("on", a.getAttribute("href") === "#" + e.target.id));
+  }), { rootMargin: "-20% 0px -70% 0px" });
+  document.querySelectorAll("main section").forEach(s => io.observe(s));
+})();
+
+function drawAll() { drawMap(); drawSeedLab(); drawGauss(); drawLadder(); drawBundle(); drawGrounding(); drawToy(); drawRecall(); drawKappa(); }
+renderDalFields();
+drawAll();
+// Theme changes repaint the SVGs, whose colours are read from the tokens.
+try { matchMedia("(prefers-color-scheme: dark)").addEventListener("change", drawAll); } catch (e) {}
+try { new MutationObserver(drawAll).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] }); } catch (e) {}
+</script>

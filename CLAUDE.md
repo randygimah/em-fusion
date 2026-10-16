@@ -125,6 +125,7 @@ A contents page for the repo. Use it to find the right file before searching; it
 | `docs/thesis_notes.md` | **Write to it continuously.** Dissertation skeleton and evidence base. See Thesis Notes below. |
 | `docs/qa.md` | **Write to it continuously.** Running Q&A on concepts. Explanatory, not authoritative. See Concepts Q&A below. |
 | `docs/progress_note.html` | **The progress note's master copy.** Edit this, then publish it. See Progress Note below. |
+| `docs/interactive_report.html` | **The interactive report's master copy**: the three research questions worked through with live figures, written for readers who will not run the app. Its seed figure runs the generator's own BLAKE2b seeding and checks itself against values from the Python generator; regenerate those five values if `seeding.py` or the emitter changes. Never reports the blind marking's quality comparison before both markers are done, and is not shown to the second rater before their scoring is done. Edit this, then publish it. |
 | `docs/scoring_rubric.md` | **Pre-registered — do not edit after the campaign starts.** Blind hypothesis-scoring instrument. Read before `eval-004`/`eval-006`. Changes go in its change log with a reason. |
 | `docs/architecture/workspace.dsl` | The C4 model, source of truth for every architecture diagram. Update it whenever a container, component, or external dependency is added or removed. |
 | `docs/architecture/README.md` | How to view/validate/export the model (`structurizr local` on port 9090). |
@@ -303,7 +304,7 @@ In the same turn as the explanation. An entry written later is reconstructed fro
 
 ## Progress Note
 
-The progress note **EM Fusion in Plain English** — mastered at `docs/progress_note.html`, published on demand, **no URL tracked here** — is the third leg of the write-up material, and the only one written for someone outside the project. `thesis_notes.md` holds the reasoning and the rejected alternatives; `qa.md` explains what a decision *means*; the progress note tells the **story**, in plain English, with figures. Between them they are the raw material the dissertation is assembled from, which is why the note is kept current rather than reconstructed at write-up time.
+The progress note **EM Fusion in Plain English** — mastered at `docs/progress_note.html`, published at the URL listed under Published pages below — is the third leg of the write-up material, and the only one written for someone outside the project. `thesis_notes.md` holds the reasoning and the rejected alternatives; `qa.md` explains what a decision *means*; the progress note tells the **story**, in plain English, with figures. Between them they are the raw material the dissertation is assembled from, which is why the note is kept current rather than reconstructed at write-up time.
 
 ### What goes in
 
@@ -325,7 +326,16 @@ No spec IDs, no file paths, no function names, no commit hashes. A reader who ha
 
 ### How to update
 
-**Edit `docs/progress_note.html` — the master; a published page is a rendering of it.** Publish on demand and do not track a standing URL: a published artifact belongs to one account, so a fresh publish per session or account is intended. Keep the `<title>` and 📡 favicon stable. If a published page is ever ahead of the repo, read it back (`action: "read"`) and commit that before editing further.
+**Edit `docs/progress_note.html` — the master; a published page is a rendering of it.** Republish to the URL under Published pages so the link stays stable. A published artifact belongs to the account that published it, so from another account a fresh publish is intended, and the listed URL is updated to match. Keep the `<title>` and 📡 favicon stable. If a published page is ever ahead of the repo, read it back (`action: "read"`) and commit that before editing further.
+
+### Published pages
+
+Both pages are renderings of a master file in `docs/`, private to the claude.ai account that published them until shared from the page's Share menu. Edit the master, commit, then republish to the same URL (pass it as `url` from a new conversation).
+
+| Page | Master | URL |
+|---|---|---|
+| EM Fusion in Plain English (progress note) | `docs/progress_note.html` | https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq |
+| EM Fusion Interactive Report | `docs/interactive_report.html` | https://claude.ai/artifact/EWBjmeDNmZzAVK6FaMFXph |
 
 ## Handoff
 
