@@ -14,6 +14,8 @@ disagree, `em_fusion_v2.md` wins and this file is wrong and must be corrected.
 `Low | Medium | High`. Never a percentage, never a decimal. This holds in the AI output schema, in
 the database, in API responses, and on every screen.
 
+**Amendments, 30 October 2026.** The local model arm and continuous integration were descoped. Their requirements keep their IDs, struck through and marked *Descoped*, so traceability is not broken; requirements that described behaviour depending on them are reworded and marked *Reworded*. Reasons are recorded in `thesis_notes.md`, "Descoping the local model arm and continuous integration".
+
 ---
 
 ## 1. Personas
@@ -64,8 +66,8 @@ the database, in API responses, and on every screen.
   that no push infrastructure has to be built, operated, or defended.
 - **US-E5** — As an engineer, I want the whole system to run under Docker Compose, so that it can be
   demonstrated on one machine with no cloud account.
-- **US-E6** — As an engineer, I want CI to run tests and lint on both halves of the stack, so that
-  quality checks are part of delivery rather than a pre-submission scramble.
+- **US-E6** — ~~As an engineer, I want CI to run tests and lint on both halves of the stack, so that
+  quality checks are part of delivery rather than a pre-submission scramble.~~ **Descoped 2026-10-30** with continuous integration.
 - **US-E7** — As an engineer, I want one command surface at the repo root to build, run, seed, and
   test the whole stack in containers, so that no per-service incantations have to be remembered.
 
@@ -75,9 +77,10 @@ the database, in API responses, and on every screen.
   that hypotheses cannot be based on invented evidence.
 - **US-R2** — As a researcher, I want batch runs with exported metrics, so that detection performance
   has statistical weight instead of one data point per scenario.
-- **US-R3** — As a researcher, I want template, hosted-AI, and local-AI hypotheses stored with a
-  generator flag and model ID, so that the hosted-vs-template blind comparison is queryable and any
-  fallback to the local or template generator is visible in the data rather than inferred.
+- **US-R3** — As a researcher, I want template and hosted-AI hypotheses stored with a generator flag
+  and model ID, so that the hosted-vs-template blind comparison is queryable and any fallback to the
+  template generator is visible in the data rather than inferred. *(Reworded 2026-10-30: the local arm
+  was descoped.)*
 - **US-R4** — As a researcher, I want raw model responses persisted verbatim, so that results stay
   defensible after a hosted model is retired.
 - **US-R5** — As a researcher, I want a correct non-detection on a normal-baseline run treated as a
@@ -148,13 +151,13 @@ the database, in API responses, and on every screen.
 | FR-502 | A template generator shall produce a schema-valid hypothesis from a bundle with no model involved. It is both the correctness fallback and the evaluation baseline. |
 | FR-503 | All generators shall sit behind one provider-agnostic service interface (`evidence_bundle -> validated hypothesis`), with provider, model ID, and generation parameters supplied by config. |
 | FR-504 | A hosted generator shall use the provider's native JSON-schema-constrained output, making structurally invalid output unrepresentable at generation time. |
-| FR-505 | A local generator shall enforce the same schema via a compiled grammar. |
+| FR-505 | ~~A local generator shall enforce the same schema via a compiled grammar.~~ **Descoped 2026-10-30** with the local model arm. |
 | FR-506 | Generation parameters shall be frozen and identical across arms (temperature 0, fixed seed, fixed max tokens). |
 | FR-507 | A dated model ID shall be pinned, never a moving alias, and recorded per hypothesis. |
 | FR-508 | Every hypothesis shall persist `generator`, `model_id`, `generation_params`, and verbatim `raw_response`. |
-| FR-509 | Availability fallback: if the hosted arm is unreachable, generation shall fall through to the local arm without an error state reaching the analyst. |
+| FR-509 | ~~Availability fallback: if the hosted arm is unreachable, generation shall fall through to the local arm without an error state reaching the analyst.~~ **Descoped 2026-10-30** with the local model arm. An unreachable hosted provider is now handled as NFR-103 states. |
 | FR-510 | Correctness fallback: schema or grounding failure after bounded retry shall fall through to the template generator. Retries shall have an explicit ceiling with no unbounded recursion. |
-| FR-511 | The two fallbacks shall be separate code paths and shall be described separately in the write-up. |
+| FR-511 | The correctness fallback and the handling of an unreachable provider shall be separate code paths, and shall be described separately in the write-up. *(Reworded 2026-10-30: with the local arm descoped there is one fallback, and an unreachable provider is not a reason to use it.)* |
 | FR-512 | An automated grounding check shall verify that every supporting-evidence item traces back to the bundle. Ungrounded hypotheses shall be flagged or rejected, and the catch rate logged per arm. |
 | FR-513 | A run-level call budget shall abort a run when exceeded, independent of any provider-console spend cap. |
 | FR-514 | Per-call token and cost logging shall be in place from the first model call. |
@@ -228,7 +231,7 @@ the database, in API responses, and on every screen.
 
 | ID | Requirement |
 |---|---|
-| FR-1001 | A batch runner shall execute 20–30 randomised runs per scenario type from parameters and seeds. |
+| FR-1001 | A batch runner shall execute at least 20 randomised runs per scenario type from parameters and seeds. *(Reworded 2026-10-30: the evaluation corpus holds 60 runs per type, above the original 20–30.)* |
 | FR-1002 | The harness shall compute precision, recall, F1, false positive rate, false negative rate, and detection latency in simulated time. |
 | FR-1003 | The harness shall export results to CSV and JSON. |
 | FR-1004 | The harness shall generate hypotheses from the hosted and template generators over a stratified sample of identical bundles, and export them anonymised, identically formatted, and in randomised within-bundle order for blind rubric scoring, with the arm key held separately. The local generator is not blind-scored. |
@@ -240,8 +243,8 @@ the database, in API responses, and on every screen.
 | ID | Requirement |
 |---|---|
 | FR-1101 | Docker Compose shall run frontend, backend, and database together on one machine. |
-| FR-1102 | The local model server shall run on the host and be reached as a Compose config value (`host.docker.internal`), never as a Compose service. |
-| FR-1103 | CI shall run backend tests, frontend tests and build, lint on both halves, and a basic dependency audit. |
+| FR-1102 | ~~The local model server shall run on the host and be reached as a Compose config value (`host.docker.internal`), never as a Compose service.~~ **Descoped 2026-10-30** with the local model arm. |
+| FR-1103 | ~~CI shall run backend tests, frontend tests and build, lint on both halves, and a basic dependency audit.~~ **Descoped 2026-10-30** with continuous integration. The suites run in containers through the root `Makefile` (FR-1104). |
 | FR-1104 | A root `Makefile` shall wrap the Compose stack as the single command surface: `generate` (run a scenario batch), `demo` (generate then bring the stack up), `build`, `test` (backend and frontend suites in containers), `up`, and `down`. `backend/Makefile` is retained for local venv work; the root Makefile is the containerised surface. |
 
 ---
@@ -254,9 +257,9 @@ the database, in API responses, and on every screen.
 |---|---|
 | NFR-101 | Replay mode shall be the default. No demo shall depend on a live data API. |
 | NFR-102 | The backend shall handle missing or malformed data by quarantining, never by crashing. |
-| NFR-103 | The AI layer shall degrade in two steps — hosted unreachable to local, schema/grounding failure to template — without an error state reaching the analyst. |
-| NFR-104 | Both fallback paths shall be deliberately exercised and tested, not assumed. |
-| NFR-105 | The whole system shall demonstrate offline: no network, no API key, no third-party account. |
+| NFR-103 | The AI layer shall degrade in one step: a schema or grounding failure falls back to the template generator without an error state reaching the analyst. An unreachable hosted provider produces no hypothesis; the attempt is counted against the run's call budget, and the conclusion is shown to the analyst as unexplained. *(Reworded 2026-10-30: the hosted-to-local step was descoped with the local arm.)* |
+| NFR-104 | The fallback path and the handling of an unreachable provider shall both be deliberately exercised and tested, not assumed. *(Reworded 2026-10-30.)* |
+| NFR-105 | Everything except the hosted generator shall run offline: no network, no API key, no third-party account. Offline, hypotheses come from the template generator. *(Reworded 2026-10-30: the whole system ran offline only through the descoped local arm.)* |
 
 ### NFR-2xx — Explainability
 
@@ -283,7 +286,7 @@ the database, in API responses, and on every screen.
 | NFR-401 | Secrets shall live in environment variables and never be committed, including in fixtures. |
 | NFR-402 | All incoming data shall be validated at the DAL boundary. |
 | NFR-403 | CORS shall be restricted. |
-| NFR-404 | A basic dependency audit shall run in CI. No further security tooling in v1. |
+| NFR-404 | ~~A basic dependency audit shall run in CI. No further security tooling in v1.~~ **Descoped 2026-10-30** with continuous integration. |
 | NFR-405 | No real aircraft identifier shall leave the local machine — in particular in an evidence bundle sent to the hosted AI provider — nor appear in any thesis screenshot or published figure. OpenSky Data License Agreement §3(i) and §3(iii). *(Added 2026-08-13; see `docs/qa.md` §22.)* |
 
 ### NFR-5xx — Performance
@@ -300,7 +303,7 @@ the database, in API responses, and on every screen.
 |---|---|
 | NFR-601 | Every evaluation result shall be regenerable from scenario type + parameters + seed for the deterministic pipeline. |
 | NFR-602 | Hosted-arm results shall remain defensible after model retirement through persisted `model_id`, `generation_params`, and `raw_response`. |
-| NFR-603 | The local arm shall remain fully regenerable indefinitely. |
+| NFR-603 | ~~The local arm shall remain fully regenerable indefinitely.~~ **Descoped 2026-10-30** with the local model arm. |
 | NFR-604 | No detector, API response, or analyst-visible surface shall have access to a run's injected ground truth while that run is scorable. A detector able to see the answer invalidates every metric computed from the run. |
 | NFR-605 | The population a detection baseline is measured over shall be a declared constant, not whatever the store happens to hold. A baseline that moves with the corpus means two runs of the same code over the same hour disagree, with nothing but the recorded policy to say why. *(Added 2026-10-06; see `measurements/corpus/backfill_bundles.log`.)* |
 
@@ -322,6 +325,7 @@ Classified data                         Bayesian hypothesis updating
 Production / cloud deployment           Kubernetes / Terraform
 Role-based access control               Data lakehouse substrate (Iceberg / Trino / object storage)
 Audit logging                           Security scanning beyond a basic dependency audit
+Local model arm (descoped 2026-10-30)   Continuous integration (descoped 2026-10-30)
 ```
 
 Screens beyond the three named in FR-701 are out of scope. Drill-down tables are views over the same
@@ -341,13 +345,13 @@ The v1 build is accepted when this flow demonstrably works end to end, unassiste
 | AC-04 | The anomaly engine stays quiet on a normal-baseline run. | FR-308 |
 | AC-05 | An evidence bundle is built in which every item traces to a stored anomaly or observation. | FR-401–FR-403 |
 | AC-06 | The AI layer generates a hypothesis that passes schema validation and the grounding check, or the template fallback fires and is recorded and displayed as such. | FR-501–FR-512, FR-713 |
-| AC-07 | With the network off and no API key, the full pipeline still produces hypotheses via the local arm. | NFR-103, NFR-105 |
+| AC-07 | With the network off and no API key, the pipeline runs end to end and hypotheses are produced by the template generator. *(Reworded 2026-10-30: originally via the descoped local arm.)* | NFR-103, NFR-105 |
 | AC-08 | The analyst sees anomalous items highlighted on the map, switches the view to All to compare them against nominal traffic, opens the hypothesis, and reads traced evidence, uncertainty, and alternatives. | FR-704–FR-708, FR-711, FR-716, FR-809 |
 | AC-08b | The analyst plays back the run's aircraft movement on the map, scrubs to the anomaly window, and sees where track continuity broke. | FR-717, FR-718, FR-810 |
 | AC-09 | The analyst submits a verdict, hypothesis status changes, and the decision is persisted and survives a reload. | FR-601–FR-604 |
-| AC-10 | The evaluation harness replays 20–30 runs per scenario type and exports precision, recall, F1, FPR, FNR, latency, and grounding statistics. | FR-1001–FR-1005 |
+| AC-10 | The evaluation harness replays at least 20 runs per scenario type and exports precision, recall, F1, FPR, FNR, latency, and grounding statistics. *(Reworded 2026-10-30: originally 20–30.)* | FR-1001–FR-1005 |
 | AC-11 | No percentage or decimal confidence, severity, or score appears anywhere in the UI. | FR-715, NFR-203 |
-| AC-12 | The whole system runs via Docker Compose from `make demo` on a clean machine, and CI runs tests and lint on both halves. | FR-1101–FR-1104 |
+| AC-12 | The whole system runs via Docker Compose from `make demo` on a clean machine, and `make test` runs both suites in containers. *(Reworded 2026-10-30: the CI half was descoped.)* | FR-1101, FR-1104 |
 | AC-13 | An analyst selects a stored hour on the Operational Picture, is shown that hour's detection output, and can tell from the screen that it is pinned rather than following the newest; no element of that screen names the selected hour's scenario type. | FR-719, FR-811, FR-207 |
 | AC-14 | An analyst reads a conclusion on the Operational Picture, opens the evidence behind it, and sees which receivers deviated together, over what window, how far above their own normal, whether the aircraft side corroborated, and what the system looked at and could not judge. A conclusion the store holds no evidence for is named as such rather than omitted. | FR-720, FR-812, FR-907, FR-401–FR-404, FR-711 |
 | AC-15 | An analyst on the Operational Picture sees only the exceptional rows by default, switches the view to All to compare them against nominal traffic, reads the conclusions in the Events tab, and opens the evidence behind one of them. No tab shows an empty table where it could state what it found instead. | FR-708, FR-709, FR-716, FR-721, FR-809, FR-813 |

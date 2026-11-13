@@ -9660,6 +9660,48 @@ this item alone, or the files-touched and lines-changed counts absorb unrelated 
 a new observation type is allowed by the spec; changing the canonical model or a detection rule is a
 reportable negative result, not something to work around quietly.
 
+## 167. I believe the requirements and methodology is 1200 and covers functional and non-functional requirements; ethical and safety boundaries; design-science / prototype-based research approach; evaluation methodology?
+
+**Yes on the scope and the budget, with three corrections the repository forces.** The chapter is
+1,200 words and covers those four things. Answered 30 October 2026, with the literature review drafted
+and the chapter not yet started.
+
+| Section | Words | Draws on |
+|---|---|---|
+| Research approach (design science) | ~250 | Hevner et al. (2004); Peffers et al. (2007); Venable, Pries-Heje and Baskerville (2016) |
+| Requirements | ~300 | `requirements.md` (personas, FR, NFR, AC, traceability), `spec.jsonl` |
+| Evaluation methodology | ~450 | `research_scope.md`, `scoring_rubric.md` Part B, `evaluation_harness.md`, `thesis_notes.md` Methodology |
+| Ethical, legal and safety boundaries | ~200 | `requirements.md` NFR-3xx and NFR-405, `thesis_notes.md` "the evaluation is human-participant research after all", proposal TOR 9 |
+
+**Correction 1: a requirements chapter is not the requirements document.** `requirements.md` holds
+111 functional requirements, 32 non-functional ones and 15 acceptance criteria, traced to 129 spec
+items. None of that fits in 300 words. The chapter summarises by group, says how requirements were
+derived and traced, and puts the full list in an appendix.
+
+**Correction 2: the baseline still promises things the build does not do.** At 30 October nine spec
+items are open, and four of them sit under requirements a reader will take as met:
+
+| Open item | Requirement it leaves unmet | What it is |
+|---|---|---|
+| `ai-005`, `ai-006` | NFR-103, NFR-105, NFR-603, AC-07 | The local model arm and the hosted-to-local fallback, never built |
+| `api-009` | NFR-604 | Ground truth never served outside the harness: designed in, but not proved by its own item |
+| `ops-001`, `ops-002` | AC-12 | Compose full stack and CI not accepted |
+| `anom-006` | FR for the coverage-gap rule | Parked by measurement; the corpus cannot support the positive claim |
+
+Each needs a decision before the chapter is written: *descoped* (the requirement is amended, with a
+reason and a date) or *unmet* (reported as such in Evaluation). Leaving them as written makes the
+chapter claim a requirements baseline that the Evaluation chapter contradicts.
+
+**Correction 3: the evaluation is artificial, not naturalistic.** In design-science terms
+(Venable, Pries-Heje and Baskerville, 2016) staged scenarios with a known answer key are an
+*artificial* evaluation; a task study with analysts would have been *naturalistic*. With the task study
+withdrawn, the chapter should say which kind of evaluation this is rather than leave it implied.
+
+**Trap: `api-009` is a threat to validity, not a tidy-up.** The methodology will say ground truth is
+kept from the detectors, which is what makes every detection figure meaningful (`thesis_notes.md`,
+"Ground truth is generator-side only"). Until its own spec item passes, that claim rests on design
+rather than a test, and the thesis should either close it first or say so.
+
 ---
 
 | **Composing copy** | Turning a finding type the backend sends verbatim into a sentence an analyst reads. Done on the screen by design, so prose never arrives from a detector — and in one module, because two panels carry the same type. See §148. |
@@ -9688,3 +9730,6 @@ reportable negative result, not something to work around quietly.
 
 | **Open versus next** | An open backlog item has not passed; a next one is open, unblocked and on the line the thesis needs. Deferred and person-gated items are open and not next. See §165. |
 | **Extensibility measurement** | What it costs to add a source through the unchanged DAL: files touched, lines changed, hours taken. RQ1 evidence, not a feature. See §166. |
+
+| **Artificial versus naturalistic evaluation** | Design-science terms (Venable, Pries-Heje and Baskerville, 2016): artificial evaluation tests an artefact in controlled conditions, such as staged scenarios with an answer key; naturalistic evaluation tests it with real users on real problems. EM Fusion's evaluation is artificial; the withdrawn task study was the naturalistic part. See §167. |
+| **Descoped versus unmet** | A descoped requirement is amended with a reason and a date, so the baseline no longer asks for it; an unmet one still stands and is reported as not achieved. The local model arm is one or the other, and the thesis must say which. See §167. |

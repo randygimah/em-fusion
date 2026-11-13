@@ -11,11 +11,9 @@ workspace "EM Fusion" "Explainable electromagnetic situational awareness: a huma
 
         analyst = person "Analyst" "Judges hypotheses and records a verdict. The terminal node of every decision path." "Human"
 
-        openSky = softwareSystem "Archived OpenSky Corpus" "One hour of ADS-B state vectors, committed as Parquet and replayed." "External,Data"
+        openSky = softwareSystem "Archived OpenSky Corpus" "One hour of ADS-B state vectors, archived locally as Parquet and replayed; rebuilt from a checksummed recipe, never redistributed." "External,Data"
 
-        hostedAi = softwareSystem "Hosted AI Provider" "Frontier LLM with schema-constrained output. The primary generation arm." "External,AI"
-
-        localModel = softwareSystem "Local Model Server" "Open-weight model on the host. Availability fallback only; absent from L1 and L2 by design." "External,AI,Fallback"
+        hostedAi = softwareSystem "Hosted AI Provider" "Frontier LLM with schema-constrained output. The only model arm." "External,AI"
 
         emFusion = softwareSystem "EM Fusion" "Fuses replayed telemetry and synthetic RF, detects deviations deterministically, and turns evidence into validated hypotheses." {
 
@@ -45,7 +43,7 @@ workspace "EM Fusion" "Explainable electromagnetic situational awareness: a huma
 
                 baselineEngine = component "Baseline Engine" "Rolling averages, per sensor per channel." "Python"
 
-                anomalyEngine = component "Anomaly Detection Engine" "Deterministic only: thresholds, z-score, spatial clustering, frequency adjacency." "Python"
+                anomalyEngine = component "Anomaly Detection Engine" "Deterministic only: thresholds against per-channel baselines, spatial clustering, frequency adjacency, one decision ladder." "Python"
 
                 bundleBuilder = component "Evidence Bundle Builder" "Groups anomalies on time, space, and frequency; attaches lineage and uncertainties." "Python"
 
@@ -53,9 +51,7 @@ workspace "EM Fusion" "Explainable electromagnetic situational awareness: a huma
 
                 templateGenerator = component "Template Generator" "Deterministic. Correctness fallback and evaluation baseline." "Python" "Generator"
 
-                hostedGenerator = component "Hosted Generator" "Primary arm. Native JSON-schema-constrained output." "Python" "Generator"
-
-                localGenerator = component "Local Generator" "Availability fallback. Same schema, enforced by GBNF grammar." "Python" "Generator,Fallback"
+                hostedGenerator = component "Hosted Generator" "The model arm. Native JSON-schema-constrained output." "Python" "Generator"
 
                 schemaValidation = component "Schema Validation" "Pydantic gate. Confidence is Low/Medium/High by construction." "Python, Pydantic" "Guard"
 
@@ -92,11 +88,9 @@ workspace "EM Fusion" "Explainable electromagnetic situational awareness: a huma
         # --- Hypothesis layer ---------------------------------------------
 
         bundleBuilder -> hypothesisService "Submits a bundle — evidence only, never the scenario type"
-        hypothesisService -> hostedGenerator "Primary path"
-        hypothesisService -> localGenerator "Availability fallback — hosted unreachable"
+        hypothesisService -> hostedGenerator "Model path; an unreachable provider is counted and skipped, leaving the conclusion unexplained"
         hypothesisService -> templateGenerator "Correctness fallback — schema or grounding failure after bounded retry"
         hostedGenerator -> hostedAi "Schema-constrained generation" "HTTPS, dated model ID"
-        localGenerator -> localModel "Grammar-constrained generation" "HTTP via host.docker.internal"
         hypothesisService -> schemaValidation "Submits generated output"
         schemaValidation -> groundingCheck "Passes parsed hypotheses"
         groundingCheck -> repositories "Persists the hypothesis with generator, model_id, params, and raw_response"
@@ -140,10 +134,6 @@ workspace "EM Fusion" "Explainable electromagnetic situational awareness: a huma
                         containerInstance harness
                     }
                 }
-
-                ollama = deploymentNode "Model Server" "Outside Compose: Docker Desktop on macOS does not pass Metal through. A config value, not a service." "Ollama, native host process" {
-                    softwareSystemInstance localModel
-                }
             }
         }
     }
@@ -152,13 +142,11 @@ workspace "EM Fusion" "Explainable electromagnetic situational awareness: a huma
 
         systemContext emFusion "L1_SystemContext" "Level 1 — the analyst is the terminal node. EM Fusion is decision support, not autonomous decision-making. The hosted AI provider is the only system EM Fusion depends on over a network." {
             include *
-            exclude localModel
             autoLayout lr
         }
 
-        container emFusion "L2_Containers" "Level 2 — the polling edge from dashboard to API is deliberate: there is no push channel. The local model server is excluded here; it is a fallback internal to the hypothesis service, shown at L3." {
+        container emFusion "L2_Containers" "Level 2 — the polling edge from dashboard to API is deliberate: there is no push channel." {
             include *
-            exclude localModel
             autoLayout lr
         }
 
@@ -167,7 +155,7 @@ workspace "EM Fusion" "Explainable electromagnetic situational awareness: a huma
             autoLayout lr
         }
 
-        deployment emFusion "Local Docker Compose" "Deployment" "What comes up with `make demo`, and what deliberately does not." {
+        deployment emFusion "Local Docker Compose" "Deployment" "What comes up with `make demo`: every container EM Fusion runs. The hosted AI provider is the one external dependency." {
             include *
             autoLayout lr
         }

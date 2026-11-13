@@ -553,10 +553,39 @@ constrained to "an independent second rater," unnamed, with no comment on how th
 stated as limitations in the Evaluation chapter rather than argued away.
 
 The form answers, participant information sheet, consent form and recruitment text are drafted in
-`docs/ethics_form_answers.md`; the conceptual correction is `docs/qa.md` §46. *(Record here the date
-the form was signed off by the supervisor, and whether one colleague or two were ultimately recruited
-— the latter would move the agreement statistic from Cohen's κ to a pairwise or Fleiss form and
-requires a change-log entry against the pre-registered rubric.)*
+`docs/ethics_form_answers.md`; the conceptual correction is `docs/qa.md` §46. The form was signed off on 28 September 2026, and every
+answer on it was approved. One colleague was recruited as the second rater, so the agreement statistic
+remains Cohen's κ as pre-registered. *(The second rater's load was cut from 280 values to 140 on 10 October,
+after sign-off. Record here whether the approver was told of the reduction, and when.)*
+
+### Descoping the local model arm and continuous integration
+
+Two capabilities in the requirements baseline were dropped on 30 October 2026, and both are recorded
+as descoped rather than unmet, so that the Evaluation chapter does not report what was built against a
+baseline that still asks for more.
+
+**The local model arm.** The baseline specified three generators: template, hosted and local. The
+local arm was first withdrawn from the scored comparison (see "Scored arms" above) and is now dropped
+from the system altogether. The requirements that depended on it are FR-505 (a grammar-constrained
+local generator), FR-509 and NFR-103 (the hosted-to-local availability fallback), FR-1102 (the host
+model server), NFR-105 (offline demonstration with hypotheses), NFR-603 (the local arm regenerable
+indefinitely) and AC-07. Its spec items `ai-005` and `ai-006` were never built. What the system does
+instead when the hosted provider cannot be reached becomes the specified behaviour: the attempt is
+counted against the run's budget and skipped, no hypothesis is produced for that conclusion, and the
+screen names the conclusion as unexplained. The correctness fallback to the template generator is
+unaffected, because it was always a separate path. *(Record the reason for dropping the arm here.)*
+
+The C4 model (`docs/architecture/workspace.dsl`) was brought into line on 10 November 2026: the local
+model server, the local generator, their two relationships and the host-process deployment node were
+removed, and the hosted path's relationship now says what an unreachable provider leads to. Three other
+descriptions had drifted from the build and were corrected at the same time: the OpenSky corpus is
+archived locally and never committed, the anomaly engine has no z-score detector (`anom-003` is open),
+and the deployment view no longer has anything outside Compose.
+
+**Continuous integration.** FR-1103, NFR-404, user story US-E6 and the CI half of AC-12 asked for a
+pipeline running both test suites, lint and a dependency audit, as spec item `ops-002`. It was not
+built. *(Record the reason here, and say whether the dependency audit in NFR-404 is run by hand
+instead or dropped with the pipeline.)*
 
 ### Model selection: a conventional chat model, because the reproducibility claim rests on temperature
 

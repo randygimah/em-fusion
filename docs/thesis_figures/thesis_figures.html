@@ -1,0 +1,550 @@
+<title>EM Fusion Thesis Figures</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+<style>
+/* Layout: a print room. Each figure or table sits on its own white sheet, captioned the way it will appear in the thesis; a register of every planned item follows. Single light look on purpose: these are print figures. */
+:root {
+  --desk: #ecebe7;
+  --sheet: #ffffff;
+  --ink: #161616;
+  --ink-2: #3c3c3a;
+  --muted: #6c6b66;
+  --rule: #d8d6d0;
+  --rule-strong: #1f1f1f;
+  --mark: #2f4a6d;
+  --mark-soft: #e5ebf3;
+  --ok: #2c5e3f; --ok-soft: #e1ede4;
+  --draft: #7a5410; --draft-soft: #f6ecd8;
+  --wait: #5a4f78; --wait-soft: #ebe7f4;
+  --sans: "Source Sans 3", "Segoe UI", Arial, sans-serif;
+  --serif: "Source Serif 4", "Times New Roman", Times, serif;
+  /* The one font for everything that goes into the thesis: figures, tables, captions. Change it here to match the template. */
+  --thesis: Arial, "Helvetica Neue", Helvetica, sans-serif;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { background: var(--desk); }
+body { color: var(--ink); font: 400 16px/1.55 var(--sans); }
+.wrap { max-width: 980px; margin: 0 auto; padding-inline: 16px; padding-block: 40px 80px; display: grid; gap: 36px; }
+header { display: grid; gap: 10px; }
+.kicker { font: 600 12px/1 var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+h1 { margin: 0; font: 600 clamp(30px, 5vw, 42px)/1.1 var(--serif); letter-spacing: -.01em; text-wrap: balance; }
+.dek { margin: 0; max-width: 66ch; color: var(--ink-2); font-size: 17px; }
+.stats { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 14px; color: var(--muted); }
+.stats b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+.conv { background: var(--sheet); border: 1px solid var(--rule); padding: 18px 22px; display: grid; gap: 8px; }
+.conv h2 { margin: 0; font: 600 13px/1 var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.conv ul { margin: 0; padding-left: 20px; display: grid; gap: 5px; font-size: 15px; color: var(--ink-2); max-width: 80ch; }
+
+.chap { display: grid; gap: 18px; }
+.chap > h2 { margin: 0; font: 600 22px/1.2 var(--serif); padding-bottom: 8px; border-bottom: 1px solid var(--rule-strong); }
+
+.plate { display: grid; gap: 10px; scroll-margin-top: 16px; }
+.wrap > *, .chap > *, .plate > *, .sheet > *, .reg > * { min-width: 0; }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; font-size: 13.5px; color: var(--muted); }
+.meta .num { font: 700 14px/1 var(--sans); color: var(--ink); }
+.actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+button { font: 600 13px/1 var(--sans); color: var(--mark); background: var(--sheet); border: 1px solid var(--rule); padding: 8px 12px; cursor: pointer; }
+button:hover { border-color: var(--mark); }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--mark); outline-offset: 2px; }
+.sheet { margin: 0; background: var(--sheet); border: 1px solid var(--rule); padding: 28px 28px 22px; display: grid; gap: 14px; min-width: 0; }
+.sheet svg { width: 100%; height: auto; display: block; max-width: 760px; margin: 0 auto; }
+.cap { font: 400 14px/1.5 var(--thesis); color: var(--ink); max-width: 760px; margin: 0 auto; width: 100%; }
+.cap b { font-weight: 600; }
+.note { margin: 0; font-size: 13.5px; color: var(--muted); max-width: 80ch; }
+.note code { font: 12.5px/1.4 ui-monospace, Menlo, Consolas, monospace; background: var(--desk); padding: 1px 4px; }
+.flash { font-size: 13px; color: var(--ok); min-height: 1em; }
+
+.tscroll { overflow-x: auto; }
+table.acad { border-collapse: collapse; width: 100%; min-width: 720px; font: 400 13px/1.4 var(--thesis); color: var(--ink); }
+table.acad thead th { font-weight: 600; text-align: left; vertical-align: bottom; padding: 8px 8px; border-top: 1.5px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
+table.acad tbody td { padding: 7px 8px; vertical-align: top; }
+table.acad tbody tr:last-child td { border-bottom: 1.5px solid var(--rule-strong); }
+table.acad td.sym { text-align: center; }
+table.acad td.sym .cn { display: block; font-size: 11.5px; color: var(--ink-2); font-style: italic; line-height: 1.25; margin-top: 2px; }
+table.acad thead th:nth-child(n+3) { text-align: center; }
+table.acad tr.ours td { border-top: 1px solid var(--rule); }
+table.acad td.work { font-weight: 600; white-space: nowrap; }
+table.acad.wide thead th { text-align: left !important; }
+table.acad.wide td.work { white-space: normal; min-width: 9em; }
+table.acad td.numc { text-align: right; font-variant-numeric: tabular-nums; }
+table.acad tr.tsec td { font-style: italic; font-weight: 600; background: #faf9f6; text-align: center; }
+table.acad tr.ttot td { border-top: 1px solid var(--rule-strong); font-weight: 600; }
+table.acad.wide { min-width: 860px; }
+table.acad.t2col { min-width: 560px; }
+table.acad.t2col td.work { white-space: normal; width: 34%; }
+table.acad.t2col thead th { text-align: left; }
+table.acad.grid { border: 1.5px solid var(--rule-strong); }
+table.acad.grid th, table.acad.grid td { border: 1px solid #8f8d87; }
+table.acad.grid thead th { border-bottom: 1.5px solid var(--rule-strong); background: #f6f5f1; }
+
+.reg { background: var(--sheet); border: 1px solid var(--rule); }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 16px; border-bottom: 1px solid var(--rule); }
+.filters button[aria-pressed="true"] { background: var(--mark); color: #fff; border-color: var(--mark); }
+table.list { border-collapse: collapse; width: 100%; min-width: 760px; font-size: 14px; }
+table.list th, table.list td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+table.list thead th { font: 600 12px/1.2 var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); background: #f7f6f3; }
+table.list tr.chrow th { font: 600 14px/1.2 var(--serif); color: var(--ink); background: #faf9f6; letter-spacing: 0; text-transform: none; padding-top: 14px; }
+td.rnum { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+td.src { color: var(--ink-2); font-size: 13.5px; }
+a { color: var(--mark); text-underline-offset: 2px; }
+.chip { display: inline-block; font: 600 11.5px/1 var(--sans); padding: 5px 8px; white-space: nowrap; }
+.chip.drawn { background: var(--ok-soft); color: var(--ok); }
+.chip.draft { background: var(--draft-soft); color: var(--draft); }
+.chip.todo { background: var(--mark-soft); color: var(--mark); }
+.chip.wait { background: var(--wait-soft); color: var(--wait); }
+footer { font-size: 13.5px; color: var(--muted); }
+@media (max-width: 640px) { .sheet { padding: 18px 14px 16px; } .actions { margin-left: 0; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="kicker">EM Fusion · MSc thesis</div>
+    <h1>Thesis figures and tables</h1>
+    <p class="dek">Every figure and table planned for the thesis, numbered and captioned as it will appear in print. Items are drawn here first, then exported for Word. Numbers are provisional until each chapter is final.</p>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <section class="conv" aria-labelledby="conv-h">
+    <h2 id="conv-h">Conventions used</h2>
+    <ul>
+      <li>Numbered by chapter: Figure 2.1, Table 2.1. Figure captions sit below the figure; table captions sit above the table.</li>
+      <li>Every item ends with its source: "Source: author" for new work, "Adapted from …" when redrawn from someone else's figure.</li>
+      <li>Figures are black and grey on white, so they print and photocopy cleanly.</li>
+      <li>One font, Arial, for every figure label, table and caption, so nothing changes style between items. To match a thesis template in another font, change one setting.</li>
+      <li>Tables are fully ruled: a line around every cell, with a heavier outer border and header rule. In the thesis, rebuild them as real Word tables rather than pasting images; "Copy table" pastes as an editable, ruled table.</li>
+      <li>Refer to every item in the text before it appears, and say what the reader should take from it.</li>
+    </ul>
+  </section>
+
+  <section class="chap" aria-labelledby="ch2">
+    <h2 id="ch2">Chapter 2 · Literature review</h2>
+
+    <article class="plate" id="figure-2-1">
+      <div class="meta">
+        <span class="num">Figure 2.1</span><span class="chip drawn">Drawn</span><span>Introduce in 2.1, return to it in 2.6</span>
+        <div class="actions"><button type="button" data-copy-svg="f21">Copy SVG</button><button type="button" data-copy-cap="c21" data-flash="f21">Copy caption</button></div>
+      </div>
+      <figure class="sheet" id="f21">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 540" width="760" height="540" font-family="Arial, Helvetica, sans-serif" role="img" aria-label="EM Fusion's eight processing stages in a central column, with Endsley's levels of situation awareness bracketed on the left and the JDL data fusion levels bracketed on the right.">
+  <defs>
+    <marker id="ah21" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#333333"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="760" height="540" fill="#ffffff"/>
+
+  <!-- column headers -->
+  <text x="200" y="24" text-anchor="end" font-size="12.5" font-weight="bold" fill="#111111">Situation awareness</text>
+  <text x="200" y="40" text-anchor="end" font-size="11" fill="#444444">(Endsley, 1995)</text>
+  <text x="380" y="24" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#111111">EM Fusion pipeline</text>
+  <text x="560" y="24" text-anchor="start" font-size="12.5" font-weight="bold" fill="#111111">Data fusion levels</text>
+  <text x="560" y="40" text-anchor="start" font-size="11" fill="#444444">(JDL model)</text>
+
+  <!-- pipeline boxes -->
+  <g stroke="#333333" stroke-width="1" fill="#ffffff">
+    <rect x="230" y="56" width="300" height="40"/>
+    <rect x="230" y="110" width="300" height="40"/>
+    <rect x="230" y="164" width="300" height="40"/>
+    <rect x="230" y="218" width="300" height="40"/>
+    <rect x="230" y="272" width="300" height="40"/>
+    <rect x="230" y="326" width="300" height="40"/>
+    <rect x="230" y="380" width="300" height="40"/>
+    <rect x="230" y="434" width="300" height="40" fill="#ececec"/>
+  </g>
+  <g text-anchor="middle" fill="#111111">
+    <text x="380" y="73" font-size="12.5" font-weight="bold">Sources</text>
+    <text x="380" y="88" font-size="11" fill="#444444">OpenSky replay · synthetic RF · receiver health</text>
+    <text x="380" y="127" font-size="12.5" font-weight="bold">Source adapters</text>
+    <text x="380" y="142" font-size="11" fill="#444444">one per source; translate, never judge</text>
+    <text x="380" y="181" font-size="12.5" font-weight="bold">Data Abstraction Layer</text>
+    <text x="380" y="196" font-size="11" fill="#444444">validate · quarantine · provenance · pseudonymise</text>
+    <text x="380" y="235" font-size="12.5" font-weight="bold">Store</text>
+    <text x="380" y="250" font-size="11" fill="#444444">canonical observations in PostgreSQL + PostGIS</text>
+    <text x="380" y="289" font-size="12.5" font-weight="bold">Baselines and rule ladder</text>
+    <text x="380" y="304" font-size="11" fill="#444444">deterministic detection, stored as findings</text>
+    <text x="380" y="343" font-size="12.5" font-weight="bold">Evidence bundles</text>
+    <text x="380" y="358" font-size="11" fill="#444444">every citation resolves to a stored row</text>
+    <text x="380" y="397" font-size="12.5" font-weight="bold">Hypothesis generation</text>
+    <text x="380" y="412" font-size="11" fill="#444444">template or hosted model; schema and grounding checks</text>
+    <text x="380" y="451" font-size="12.5" font-weight="bold">Analyst verdict</text>
+    <text x="380" y="466" font-size="11" fill="#444444">confirm · reject · needs more evidence · false positive</text>
+  </g>
+
+  <!-- arrows between stages -->
+  <g stroke="#333333" stroke-width="1.2" marker-end="url(#ah21)">
+    <line x1="380" y1="96" x2="380" y2="109"/>
+    <line x1="380" y1="150" x2="380" y2="163"/>
+    <line x1="380" y1="204" x2="380" y2="217"/>
+    <line x1="380" y1="258" x2="380" y2="271"/>
+    <line x1="380" y1="312" x2="380" y2="325"/>
+    <line x1="380" y1="366" x2="380" y2="379"/>
+    <line x1="380" y1="420" x2="380" y2="433"/>
+  </g>
+
+  <!-- left brackets: Endsley -->
+  <g fill="none" stroke="#555555" stroke-width="1.2">
+    <path d="M222,58 H212 V256 H222"/>
+    <path d="M222,274 H212 V418 H222"/>
+    <path d="M222,436 H212 V472 H222" stroke-dasharray="4 3"/>
+  </g>
+  <g text-anchor="end" fill="#111111">
+    <text x="200" y="152" font-size="12" font-weight="bold">Level 1</text>
+    <text x="200" y="168" font-size="11.5">Perception</text>
+    <text x="200" y="341" font-size="12" font-weight="bold">Level 2</text>
+    <text x="200" y="357" font-size="11.5">Comprehension</text>
+    <text x="200" y="449" font-size="12" font-weight="bold">Level 3</text>
+    <text x="200" y="465" font-size="11.5">Projection, by the analyst</text>
+  </g>
+
+  <!-- right brackets: JDL -->
+  <g fill="none" stroke="#555555" stroke-width="1.2">
+    <path d="M538,58 H548 V148 H538"/>
+    <path d="M538,166 H548 V256 H538"/>
+    <path d="M538,274 H548 V418 H538"/>
+    <path d="M538,436 H548 V472 H538"/>
+  </g>
+  <g text-anchor="start" fill="#111111">
+    <text x="560" y="98" font-size="12" font-weight="bold">Level 0</text>
+    <text x="560" y="114" font-size="11.5">Sub-object (signal) assessment</text>
+    <text x="560" y="206" font-size="12" font-weight="bold">Level 1</text>
+    <text x="560" y="222" font-size="11.5">Object assessment</text>
+    <text x="560" y="341" font-size="12" font-weight="bold">Level 2</text>
+    <text x="560" y="357" font-size="11.5">Situation assessment</text>
+    <text x="560" y="449" font-size="12" font-weight="bold">Level 5</text>
+    <text x="560" y="465" font-size="11.5">User refinement</text>
+  </g>
+
+  <!-- out of scope note -->
+  <rect x="548" y="494" width="200" height="38" fill="none" stroke="#777777" stroke-width="1" stroke-dasharray="4 3"/>
+  <text x="558" y="510" font-size="11" fill="#444444">Levels 3–4 (impact assessment,</text>
+  <text x="558" y="525" font-size="11" fill="#444444">process refinement): out of scope</text>
+</svg>
+        <figcaption class="cap" id="c21"><b>Figure 2.1:</b> EM Fusion's processing stages set against Endsley's (1995) levels of situation awareness and the JDL data fusion levels (Steinberg, Bowman and White, 1999; Blasch and Plano, 2002). The correspondence is approximate, because JDL levels are functional categories rather than processing stages. EM Fusion automates perception and comprehension; projection and the final verdict remain with the analyst. Source: author.</figcaption>
+      </figure>
+      <p class="note">Exported to <code>docs/thesis_figures/fig-2-1.png</code> (print resolution) and <code>fig-2-1.svg</code>. Insert the PNG in Word at full text width.</p>
+      <p class="flash" aria-live="polite" data-flash="f21"></p>
+    </article>
+
+    <article class="plate" id="table-2-1">
+      <div class="meta">
+        <span class="num">Table 2.1</span><span class="chip draft">Draft</span><span>Section 2.6, beside the gap statement</span>
+        <div class="actions"><button type="button" data-copy-table="t21" data-cap="ct21">Copy table</button><button type="button" data-copy-cap="ct21" data-flash="t21">Copy caption</button></div>
+      </div>
+      <div class="sheet">
+        <div class="cap" id="ct21"><b>Table 2.1:</b> How representative prior work covers the concerns EM Fusion combines. A dash means the concern does not apply to that work. Source: author.</div>
+        <div class="tscroll"><table class="acad grid" id="t21">
+<thead><tr><th>Work</th><th>Data</th><th>Combines sources</th><th>Detection against known ground truth</th><th>Generates explanation</th><th>Checks explanation against evidence</th><th>Human makes final call</th><th>Analyst utility measured</th></tr></thead>
+<tbody>
+<tr><td class="work">Liu, Lo and Walter (2022)</td><td class="data">ADS-B integrity (NIC)</td><td class="sym">No<span class="cn">one source</span></td><td class="sym">To confirm</td><td class="sym">No</td><td class="sym">—</td><td class="sym">—</td><td class="sym">—</td></tr>
+<tr><td class="work">Felux et al. (2023)</td><td class="data">Crowdsourced ADS-B</td><td class="sym">No</td><td class="sym">To confirm</td><td class="sym">No</td><td class="sym">—</td><td class="sym">—</td><td class="sym">—</td></tr>
+<tr><td class="work">Rashkin et al. (2023)</td><td class="data">Outputs of generation models</td><td class="sym">—</td><td class="sym">—</td><td class="sym">—</td><td class="sym">Yes<span class="cn">sentence level, human-judged</span></td><td class="sym">—</td><td class="sym">—</td></tr>
+<tr><td class="work">Gao et al. (2023)</td><td class="data">Open-domain question answering</td><td class="sym">—</td><td class="sym">—</td><td class="sym">Yes</td><td class="sym">Yes<span class="cn">sentence level, automatic</span></td><td class="sym">—</td><td class="sym">—</td></tr>
+<tr><td class="work">Bansal et al. (2021)</td><td class="data">Laboratory decision tasks</td><td class="sym">—</td><td class="sym">—</td><td class="sym">Yes</td><td class="sym">No</td><td class="sym">Yes</td><td class="sym">Yes<span class="cn">team performance</span></td></tr>
+<tr class="ours"><td class="work">EM Fusion (this thesis)</td><td class="data">Replayed ADS-B and synthetic RF</td><td class="sym">Yes</td><td class="sym">Yes<span class="cn">synthetic, generator-side</span></td><td class="sym">Yes</td><td class="sym">Partly<span class="cn">identifiers, not sentences</span></td><td class="sym">Yes</td><td class="sym">No<span class="cn">user study withdrawn</span></td></tr>
+</tbody></table></div>
+      </div>
+      <p class="note">Draft: replace the two <b>To confirm</b> cells after reading Liu, Lo and Walter (2022) and Felux et al. (2023). Keep EM Fusion's <b>Partly</b> and <b>No</b>. They are what make the table honest, and an examiner will trust its <b>Yes</b> cells more because of them.</p>
+      <p class="flash" aria-live="polite" data-flash="t21"></p>
+    </article>
+  </section>
+
+  <section class="chap" aria-labelledby="ch3">
+    <h2 id="ch3">Chapter 3 · Requirements and methodology</h2>
+
+    <article class="plate" id="table-3-1">
+      <div class="meta">
+        <span class="num">Table 3.1</span><span class="chip drawn">Drawn</span><span>Section 3.2, Requirements</span>
+        <div class="actions"><button type="button" data-copy-table="t31">Copy table</button><button type="button" data-copy-cap="ct31" data-flash="t31">Copy caption</button></div>
+      </div>
+      <div class="sheet">
+        <div class="cap" id="ct31"><b>Table 3.1:</b> The requirements by group, with one representative requirement from each. The full list is given in Appendix A. Source: author.</div>
+        <div class="tscroll"><table class="acad t2col grid" id="t31">
+<thead><tr><th>Group</th><th>Representative requirement</th></tr></thead>
+<tbody>
+<tr class="tsec"><td colspan="2">Functional requirements</td></tr>
+<tr><td class="work">Source adapters and Data Abstraction Layer</td><td>The DAL shall normalise every incoming record into a single canonical observation model regardless of source.</td></tr>
+<tr><td class="work">Scenario generator</td><td>Every scenario run shall be defined by a scenario type, a parameter set, and a random seed, and shall be fully reproducible from those three values alone.</td></tr>
+<tr><td class="work">Baseline and anomaly detection</td><td>Detection shall use deterministic methods only.</td></tr>
+<tr><td class="work">Evidence bundles</td><td>An evidence bundle builder shall group related anomalies into a single structured bundle.</td></tr>
+<tr><td class="work">Constrained AI hypothesis layer</td><td>An automated grounding check shall verify that every supporting-evidence item traces back to the bundle.</td></tr>
+<tr><td class="work">Human-in-the-loop validation</td><td>An analyst shall be able to submit one of four verdicts on any hypothesis.</td></tr>
+<tr><td class="work">Dashboard</td><td>No confidence, severity, or score shall be rendered as a percentage or decimal anywhere in the UI.</td></tr>
+<tr><td class="work">API</td><td>The frontend shall obtain all data by polling over HTTP.</td></tr>
+<tr><td class="work">Persistence</td><td>A derived-data stage shall not replace a stored row that another row cites.</td></tr>
+<tr><td class="work">Evaluation harness</td><td>The harness shall compute precision, recall, F1, false positive rate, false negative rate, and detection latency in simulated time.</td></tr>
+<tr><td class="work">Build and delivery</td><td>Docker Compose shall run frontend, backend, and database together on one machine.</td></tr>
+<tr class="tsec"><td colspan="2">Non-functional requirements</td></tr>
+<tr><td class="work">Reliability</td><td>The backend shall handle missing or malformed data by quarantining, never by crashing.</td></tr>
+<tr><td class="work">Explainability</td><td>Every supporting-evidence item shall be machine-traceable to its bundle.</td></tr>
+<tr><td class="work">Safety</td><td>Analyst judgement shall be final. No hypothesis shall be auto-actioned.</td></tr>
+<tr><td class="work">Security</td><td>No real aircraft identifier shall leave the local machine.</td></tr>
+<tr><td class="work">Performance</td><td>The system shall handle hundreds to low thousands of observations per run.</td></tr>
+<tr><td class="work">Reproducibility</td><td>No detector, API response, or analyst-visible surface shall have access to a run&#x27;s injected ground truth while that run is scorable.</td></tr>
+</tbody></table></div>
+      </div>
+      <p class="note">Group names and one representative requirement each, quoted from <code>requirements.md</code>. Identifiers and the full list, including what was descoped, belong in Appendix A; confirm the appendix letter once the appendices are ordered.</p>
+      <p class="flash" aria-live="polite" data-flash="t31"></p>
+    </article>
+
+    <article class="plate" id="figure-3-1">
+      <div class="meta">
+        <span class="num">Figure 3.1</span><span class="chip drawn">Drawn</span><span>Section 3.3, cited in the opening paragraph</span>
+        <div class="actions"><button type="button" data-copy-svg="f31">Copy SVG</button><button type="button" data-copy-cap="c31" data-flash="f31">Copy caption</button></div>
+      </div>
+      <figure class="sheet" id="f31">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 240" width="760" height="240" font-family="Arial, Helvetica, sans-serif" role="img" aria-label="Five stages in a row: readings, rules, claim, evidence package, explanation. Evaluation model 1 spans the rules and the claim and scores detection against the answer key. Evaluation model 2 spans the evidence package and the explanation and scores the hosted model against the template generator. A dashed line between the two evaluation models notes they are never scored against each other.">
+  <defs>
+    <marker id="ah31" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#333333"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="760" height="240" fill="#ffffff"/>
+
+  <!-- stages -->
+  <g stroke="#333333" stroke-width="1" fill="#ffffff">
+    <rect x="26" y="24" width="124" height="56"/>
+    <rect x="172" y="24" width="124" height="56"/>
+    <rect x="318" y="24" width="124" height="56"/>
+    <rect x="464" y="24" width="124" height="56"/>
+    <rect x="610" y="24" width="124" height="56"/>
+  </g>
+  <g text-anchor="middle" fill="#111111">
+    <text x="88" y="48" font-size="12.5" font-weight="bold">Readings</text>
+    <text x="88" y="64" font-size="11" fill="#444444">aircraft and radio</text>
+    <text x="234" y="48" font-size="12.5" font-weight="bold">Rules</text>
+    <text x="234" y="64" font-size="11" fill="#444444">the only detector</text>
+    <text x="380" y="48" font-size="12.5" font-weight="bold">Claim</text>
+    <text x="380" y="64" font-size="11" fill="#444444">what the rules found</text>
+    <text x="526" y="48" font-size="12.5" font-weight="bold">Evidence package</text>
+    <text x="526" y="64" font-size="11" fill="#444444">what the model is given</text>
+    <text x="672" y="48" font-size="12.5" font-weight="bold">Explanation</text>
+    <text x="672" y="64" font-size="11" fill="#444444">AI model or template</text>
+  </g>
+  <g stroke="#333333" stroke-width="1.2" marker-end="url(#ah31)">
+    <line x1="150" y1="52" x2="171" y2="52"/>
+    <line x1="296" y1="52" x2="317" y2="52"/>
+    <line x1="442" y1="52" x2="463" y2="52"/>
+    <line x1="588" y1="52" x2="609" y2="52"/>
+  </g>
+
+  <!-- report card brackets -->
+  <g fill="none" stroke="#555555" stroke-width="1.2">
+    <path d="M172,92 V102 H442 V92"/>
+    <path d="M464,92 V102 H734 V92"/>
+  </g>
+  <g text-anchor="middle" fill="#111111">
+    <text x="307" y="124" font-size="12.5" font-weight="bold">Evaluation model 1: detection</text>
+    <text x="307" y="141" font-size="11" fill="#333333">scored against the answer key</text>
+    <text x="307" y="156" font-size="11" fill="#333333">recorded when the incident was staged</text>
+    <text x="599" y="124" font-size="12.5" font-weight="bold">Evaluation model 2: explanation</text>
+    <text x="599" y="141" font-size="11" fill="#333333">hosted AI model scored against the template</text>
+    <text x="599" y="156" font-size="11" fill="#333333">generator, on the same evidence package</text>
+  </g>
+
+  <!-- never compared -->
+  <path d="M307,168 V186 H599 V168" fill="none" stroke="#777777" stroke-width="1.2" stroke-dasharray="4 3"/>
+  <text x="453" y="208" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#111111">Rules and AI model are never scored against each other</text>
+  <text x="453" y="225" text-anchor="middle" font-size="11" fill="#444444">the AI model sees no readings and makes no detection of its own</text>
+</svg>
+        <figcaption class="cap" id="c31"><b>Figure 3.1:</b> The evaluation as two evaluation models in series. Detection is scored against the answer key the scenario generator records when it stages an incident; explanation is scored by comparing the hosted AI model with the template generator on the same evidence package. The two are never scored against each other, because the AI model sees no readings and makes no detection of its own. Source: author.</figcaption>
+      </figure>
+      <p class="note">Exported to <code>docs/thesis_figures/fig-3-1.png</code> and <code>fig-3-1.svg</code>. Previously numbered Figure 3.2; the quiet-versus-staged figure has moved to Chapter 4.</p>
+      <p class="flash" aria-live="polite" data-flash="f31"></p>
+    </article>
+
+    <article class="plate" id="table-3-2">
+      <div class="meta">
+        <span class="num">Table 3.2</span><span class="chip draft">Draft</span><span>Section 3.3, Evaluation design</span>
+        <div class="actions"><button type="button" data-copy-table="t32">Copy table</button><button type="button" data-copy-cap="ct32" data-flash="t32">Copy caption</button></div>
+      </div>
+      <div class="sheet">
+        <div class="cap" id="ct32"><b>Table 3.2:</b> Evaluation design for each research question: what is measured, by which instrument, over which population, against what reference, and the main threat to validity. Source: author.</div>
+        <div class="tscroll"><table class="acad wide grid" id="t32">
+<thead><tr><th>Question</th><th>What is measured</th><th>Instrument</th><th>Population</th><th>Checked against</th><th>Main threat to validity</th></tr></thead>
+<tbody>
+<tr><td class="work">RQ1</td><td>Cost of adding a source: files touched, lines changed, active time</td><td>A third source (a receiver health feed) added after the Data Abstraction Layer was finished, with failure criteria declared beforehand</td><td>One added source</td><td>A declared list of components that must not change: ingest, validation, pseudonymisation, storage port, schema, detectors, API and screens</td><td>One source, added by the author, who knows the codebase</td></tr>
+<tr><td class="work">RQ2</td><td>Precision, recall, F1, false positive and false negative rates; detection delay in simulated time; counted per run and per disrupted aircraft</td><td>The deterministic detection pass, scored by the evaluation harness</td><td>300 seeded runs, 60 of each of five scenario types; quiet and coverage-gap runs act as negative controls</td><td>The answer key the generator records when it stages an incident, never visible to the detectors</td><td>One synthetic generator over one replayed hour; the RF data is synthetic</td></tr>
+<tr><td class="work">RQ3, grounding</td><td>Fabricated citations caught; honest citations wrongly flagged</td><td>The automated grounding check, itself validated against deliberately corrupted citations</td><td>Every citation in every campaign generation: 60 hosted, 20 template</td><td>The evidence bundle each hypothesis was generated from</td><td>Checks identifiers, not sentences, so it bounds ungroundedness from below</td></tr>
+<tr><td class="work">RQ3, quality</td><td>Five dimensions on an anchored 1–5 scale; cause correctness and confidence calibration; inter-rater agreement as quadratic-weighted κ</td><td>Blind, paired rubric scoring in two passes, pre-registered before any generation was scored</td><td>20 bundles, stratified by kind, × 2 arms = 40 items, of which 20 are double-scored</td><td>The pre-registered anchors; the answer sheet for pass two</td><td>The author is one of two raters; small N; imperfect blinding</td></tr>
+</tbody></table></div>
+      </div>
+      <p class="note">Draft: check each figure against <code>evaluation_harness.md</code> before submission. The table describes the design only; results go in Chapter 6. The RQ2 row's claim that the answer key is never visible to the detectors rests on <code>api-009</code> passing.</p>
+      <p class="flash" aria-live="polite" data-flash="t32"></p>
+    </article>
+
+    <article class="plate" id="table-3-3">
+      <div class="meta">
+        <span class="num">Table 3.3</span><span class="chip drawn">Drawn</span><span>Section 3.3, the RQ2 paragraph</span>
+        <div class="actions"><button type="button" data-copy-table="t33">Copy table</button><button type="button" data-copy-cap="ct33" data-flash="t33">Copy caption</button></div>
+      </div>
+      <div class="sheet">
+        <div class="cap" id="ct33"><b>Table 3.3:</b> The five scenario types, what each stages on the radio and aircraft sides, and what the detection rules must conclude. Only a run on which the rules reach a conclusion produces an evidence bundle for the AI model to explain, so the five scenario types yield two kinds of bundle, and the sample for the blind marking is stratified on bundle kind. A plain negative control has nothing happening; a discriminating negative control has something real happening that no radio claim may be made about. The ambiguous mixed-evidence run is designed so that its cause cannot be resolved; detection is scored on naming the receiver without claiming interference, and whether each explanation recognises the ambiguity is judged in the blind marking. Source: author.</div>
+        <div class="tscroll"><table class="acad wide grid" id="t33">
+<thead><tr><th>Scenario type</th><th>Radio side</th><th>Aircraft side</th><th>Detection must conclude</th><th>Evidence bundle produced</th><th>Role</th></tr></thead>
+<tbody>
+<tr><td class="work">Normal baseline</td><td>Noise floor only</td><td>Untouched</td><td>Nothing</td><td>None</td><td>Plain negative control</td></tr>
+<tr><td class="work">RF sensor fault</td><td>One receiver raised</td><td>Untouched</td><td>That receiver is faulty</td><td>Possible sensor fault</td><td>Positive control</td></tr>
+<tr><td class="work">GNSS degradation</td><td>Several receivers raised in one zone</td><td>Positions stop advancing in the same zone</td><td>Possible interference</td><td>Possible interference zone</td><td>Positive control</td></tr>
+<tr><td class="work">Aircraft coverage gap</td><td>Noise floor only</td><td>Reports stop in one zone</td><td>Nothing: no radio claim may be made</td><td>None</td><td>Discriminating negative control</td></tr>
+<tr><td class="work">Ambiguous mixed evidence</td><td>One receiver raised</td><td>Reports stop at the same place</td><td>That receiver is faulty, with no interference claim</td><td>Possible sensor fault</td><td>Positive control with a negative built in</td></tr>
+</tbody></table></div>
+      </div>
+      <p class="note">The two pages disagreed on the mixed-evidence row: the progress note gives the scenario's intended cause ("cannot be resolved"), the interactive report gives what the rules conclude. This table scores detection on the second and puts the first in the caption, so both are stated and neither is wrong.</p>
+      <p class="flash" aria-live="polite" data-flash="t33"></p>
+    </article>
+  </section>
+
+  <section class="chap" aria-labelledby="regh">
+    <h2 id="regh">Register of planned figures and tables</h2>
+    <p class="note">Candidates for Chapters 3 to 6, and the appendix, come from the <a href="https://claude.ai/artifact/EWBjmeDNmZzAVK6FaMFXph">interactive report</a> and the <a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">plain-English progress note</a>. Each is redrawn here in print style before it is used.</p>
+    <div class="reg">
+      <div class="filters" role="group" aria-label="Filter by status">
+        <button type="button" data-filter="all" aria-pressed="true">All</button>
+        <button type="button" data-filter="drawn" aria-pressed="false">Drawn</button>
+        <button type="button" data-filter="draft" aria-pressed="false">Draft</button>
+        <button type="button" data-filter="todo" aria-pressed="false">To redraw or export</button>
+        <button type="button" data-filter="wait" aria-pressed="false">Waiting on data</button>
+      </div>
+      <div class="tscroll">
+        <table class="list">
+          <thead><tr><th scope="col">No.</th><th scope="col">Figure or table</th><th scope="col">Where it is cited</th><th scope="col">Comes from</th><th scope="col">Status</th></tr></thead>
+          <tbody id="regbody">
+<tr class="chrow"><th colspan="5" scope="colgroup">Chapter 2 · Literature review</th></tr>
+<tr data-status="drawn"><td class="rnum"><a href="#figure-2-1">Figure 2.1</a></td><td>EM Fusion&#x27;s pipeline mapped to Endsley&#x27;s levels of situation awareness and the JDL fusion levels</td><td>2.1 (introduce), 2.6 (return)</td><td class="src">New for the thesis</td><td><span class="chip drawn">Drawn</span></td></tr>
+<tr data-status="draft"><td class="rnum"><a href="#table-2-1">Table 2.1</a></td><td>How representative prior work covers the concerns EM Fusion combines</td><td>2.6</td><td class="src">New for the thesis</td><td><span class="chip draft">Draft</span></td></tr>
+<tr class="chrow"><th colspan="5" scope="colgroup">Chapter 3 · Requirements and methodology</th></tr>
+<tr data-status="drawn"><td class="rnum"><a href="#table-3-1">Table 3.1</a></td><td>The requirements by group, with one representative requirement from each</td><td>3.2 Requirements</td><td class="src">docs/requirements.md</td><td><span class="chip drawn">Drawn</span></td></tr>
+<tr data-status="draft"><td class="rnum"><a href="#table-3-2">Table 3.2</a></td><td>Evaluation design for each research question</td><td>3.3 Evaluation design</td><td class="src">New for the thesis, from research_scope.md, scoring_rubric.md and evaluation_harness.md</td><td><span class="chip draft">Draft</span></td></tr>
+<tr data-status="drawn"><td class="rnum"><a href="#figure-3-1">Figure 3.1</a></td><td>Two evaluation models in series: detection scored against the answer key, explanation against the template baseline</td><td>3.3 Evaluation design</td><td class="src"><a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">Progress note, &#x27;How well it did&#x27;</a></td><td><span class="chip drawn">Drawn</span></td></tr>
+<tr data-status="drawn"><td class="rnum"><a href="#table-3-3">Table 3.3</a></td><td>The five scenario types: what each stages and what detection must conclude</td><td>3.3 Evaluation design</td><td class="src"><a href="https://claude.ai/artifact/EWBjmeDNmZzAVK6FaMFXph#scenarios">Progress note, &#x27;Positive controls, negative controls&#x27;; Interactive report §06</a></td><td><span class="chip drawn">Drawn</span></td></tr>
+<tr data-status="todo"><td class="rnum">Table 3.4</td><td>Rubric dimensions and what a 1 and a 5 mean</td><td>3.3 Evaluation design</td><td class="src"><a href="https://claude.ai/artifact/EWBjmeDNmZzAVK6FaMFXph#evaluation">Interactive report §13, &#x27;Report card two&#x27;</a></td><td><span class="chip todo">To redraw</span></td></tr>
+<tr class="chrow"><th colspan="5" scope="colgroup">Chapter 4 · System design and architecture</th></tr>
+<tr data-status="todo"><td class="rnum">Figure 4.1</td><td>System architecture: containers and backend components, redrawn from the updated C4 model</td><td>4.1 Architectural overview</td><td class="src">docs/architecture/workspace.dsl, updated 10 November 2026</td><td><span class="chip todo">To redraw</span></td></tr>
+<tr data-status="todo"><td class="rnum">Table 4.1</td><td>Design decisions: what was chosen, the alternative rejected, why, and the cost accepted</td><td>4.1, built up from 4.2 to 4.7</td><td class="src">thesis_notes.md, System Design and Architecture</td><td><span class="chip todo">To draw</span></td></tr>
+<tr data-status="todo"><td class="rnum">Figure 4.2</td><td>One OpenSky report before and after the Data Abstraction Layer</td><td>4.2 Data Abstraction Layer</td><td class="src"><a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">Progress note, &#x27;One report, all the way through&#x27;</a></td><td><span class="chip todo">To redraw (as a listing)</span></td></tr>
+<tr data-status="todo"><td class="rnum">Figure 4.3</td><td>The store: entity-relationship diagram, including the quarantine table and append-only hypotheses</td><td>4.3 Storage</td><td class="src">New: from the Alembic migrations and em_fusion_v2.md §9</td><td><span class="chip todo">To draw</span></td></tr>
+<tr data-status="todo"><td class="rnum">Figure 4.4</td><td>Eight 2 MHz channels around GPS L1, and neighbours in frequency and in distance</td><td>4.4 Scenario generator</td><td class="src"><a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">Progress note, &#x27;What a receiver actually reports&#x27;</a></td><td><span class="chip todo">To redraw</span></td></tr>
+<tr data-status="todo"><td class="rnum">Figure 4.5</td><td>The decision ladder: one decision asked in a fixed order</td><td>4.5 Detection and evidence</td><td class="src"><a href="https://claude.ai/artifact/EWBjmeDNmZzAVK6FaMFXph#ladder">Progress note, &#x27;Three rules, or one decision&#x27;; Interactive report, Figure 7</a></td><td><span class="chip todo">To redraw</span></td></tr>
+<tr data-status="todo"><td class="rnum">Table 4.2</td><td>Three kinds of absence an evidence bundle distinguishes</td><td>4.5 Detection and evidence</td><td class="src"><a href="https://claude.ai/artifact/EWBjmeDNmZzAVK6FaMFXph#bundles">Interactive report §10; Progress note, &#x27;Three ways of not knowing&#x27;</a></td><td><span class="chip todo">To redraw</span></td></tr>
+<tr data-status="todo"><td class="rnum">Figure 4.6</td><td>The hypothesis layer: from evidence bundle to stored hypothesis, with the template fallback and the unreachable-provider path drawn as separate routes</td><td>4.6 Constrained hypothesis layer</td><td class="src">New: from phase9_hypothesis_layer.md and the C4 model</td><td><span class="chip todo">To draw</span></td></tr>
+<tr data-status="todo"><td class="rnum">Figure 4.7</td><td>Operational Picture layout: where, what is exceptional, what it means</td><td>4.7 Interface design</td><td class="src"><a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">Progress note, &#x27;Where things sit&#x27;</a></td><td><span class="chip todo">To redraw</span></td></tr>
+<tr class="chrow"><th colspan="5" scope="colgroup">Chapter 5 · Implementation</th></tr>
+<tr data-status="todo"><td class="rnum">Figure 5.1</td><td>The replayed hour in twelve batches, and the completion stamp</td><td>Ingest</td><td class="src"><a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">Progress note, &#x27;Why twelve batches&#x27;</a></td><td><span class="chip todo">To redraw</span></td></tr>
+<tr data-status="todo"><td class="rnum">Figure 5.2</td><td>How an evidence window is bounded for a reporting gap and for a frozen position</td><td>Evidence bundles</td><td class="src"><a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">Progress note, &#x27;one in eleven pointed at nothing&#x27;</a></td><td><span class="chip todo">To redraw</span></td></tr>
+<tr data-status="todo"><td class="rnum">Figure 5.3</td><td>The Operational Picture with a staged hour loaded</td><td>Interface</td><td class="src">docs/screenshots/picture-staged-hour.jpg</td><td><span class="chip todo">To export</span></td></tr>
+<tr data-status="todo"><td class="rnum">Figure 5.4</td><td>The Scenario Control screen</td><td>Interface</td><td class="src"><a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">Progress note, &#x27;The control room&#x27;</a></td><td><span class="chip todo">To export</span></td></tr>
+<tr data-status="todo"><td class="rnum">Figure 5.5</td><td>Position staleness and contact staleness: why the canonical model carries both (moved from Chapter 4)</td><td>The replay adapter against the real corpus</td><td class="src"><a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">Progress note, &#x27;Two clocks, not one&#x27;</a></td><td><span class="chip todo">To redraw</span></td></tr>
+<tr class="chrow"><th colspan="5" scope="colgroup">Chapter 6 · Evaluation</th></tr>
+<tr data-status="todo"><td class="rnum">Table 6.1</td><td>What was staged against what the system concluded</td><td>RQ2 results</td><td class="src"><a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">Progress note, &#x27;Nothing was ever called by the wrong name&#x27;</a></td><td><span class="chip todo">To redraw</span></td></tr>
+<tr data-status="todo"><td class="rnum">Table 6.2</td><td>False alarms on quiet runs and coverage-gap runs</td><td>RQ2 results</td><td class="src"><a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">Progress note, &#x27;The two silences&#x27;</a></td><td><span class="chip todo">To redraw</span></td></tr>
+<tr data-status="todo"><td class="rnum">Figure 6.1</td><td>Recall counted per run against recall counted per disrupted aircraft</td><td>RQ2 results</td><td class="src"><a href="https://claude.ai/artifact/EWBjmeDNmZzAVK6FaMFXph#evaluation">Interactive report, Figure 11; Progress note, &#x27;two recalls&#x27;</a></td><td><span class="chip todo">To redraw</span></td></tr>
+<tr data-status="todo"><td class="rnum">Figure 6.2</td><td>Where every disrupted aircraft went, per 300 staged</td><td>RQ2 results</td><td class="src"><a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">Progress note, &#x27;A perfect score is a weaker result&#x27;</a></td><td><span class="chip todo">To redraw</span></td></tr>
+<tr data-status="todo"><td class="rnum">Figure 6.3</td><td>Detection delay by kind of run</td><td>RQ2 results</td><td class="src"><a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">Progress note, &#x27;How long it took to know&#x27;</a></td><td><span class="chip todo">To redraw</span></td></tr>
+<tr data-status="todo"><td class="rnum">Figure 6.4</td><td>False broken-receiver reports before and after the minimum-duration rule</td><td>RQ2 results</td><td class="src"><a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">Progress note, &#x27;The first fix&#x27;</a></td><td><span class="chip todo">To redraw</span></td></tr>
+<tr data-status="todo"><td class="rnum">Table 6.3</td><td>What adding the third source changed, and how long it took</td><td>RQ1 results</td><td class="src"><a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">Progress note, &#x27;A third source, and what it cost&#x27;</a></td><td><span class="chip todo">To redraw</span></td></tr>
+<tr data-status="todo"><td class="rnum">Table 6.4</td><td>Grounding check: corrupted citations caught, honest citations passed</td><td>RQ3 results</td><td class="src"><a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">Progress note, &#x27;Checking what it says&#x27;</a></td><td><span class="chip todo">To redraw</span></td></tr>
+<tr data-status="todo"><td class="rnum">Table 6.5</td><td>The scored campaign: generations, fallbacks and cost</td><td>RQ3 results</td><td class="src"><a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">Progress note, &#x27;Twenty questions, asked and paid for&#x27;</a></td><td><span class="chip todo">To redraw</span></td></tr>
+<tr data-status="todo"><td class="rnum">Table 6.6</td><td>Agreement across three generations per bundle</td><td>RQ3 results</td><td class="src"><a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">Progress note, &#x27;Asked three times&#x27;</a></td><td><span class="chip todo">To redraw</span></td></tr>
+<tr data-status="wait"><td class="rnum">Table 6.7</td><td>Inter-rater agreement (weighted κ) by rubric dimension</td><td>RQ3 results</td><td class="src">Second rater&#x27;s scores</td><td><span class="chip wait">Waiting on data</span></td></tr>
+<tr class="chrow"><th colspan="5" scope="colgroup">Appendix C · Figures moved out of Chapter 4 (letter provisional)</th></tr>
+<tr data-status="todo"><td class="rnum">Figure C.1</td><td>The corpus bounding box and the seven-receiver network</td><td>Cited from 4.4</td><td class="src"><a href="https://claude.ai/artifact/EWBjmeDNmZzAVK6FaMFXph#data">Interactive report, Figure 2; Progress note, &#x27;Where the data comes from&#x27;</a></td><td><span class="chip todo">Appendix candidate</span></td></tr>
+<tr data-status="todo"><td class="rnum">Figure C.2</td><td>A quiet run and a staged run from one seed; their difference is the answer key</td><td>Cited from 4.4</td><td class="src"><a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">Progress note, &#x27;What a run is actually made of&#x27;</a></td><td><span class="chip todo">Appendix candidate</span></td></tr>
+<tr data-status="todo"><td class="rnum">Figure C.3</td><td>Values computed from their own address versus values drawn in sequence</td><td>Cited from 4.4</td><td class="src"><a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">Progress note, &#x27;Where an invented number comes from&#x27;</a></td><td><span class="chip todo">Appendix candidate</span></td></tr>
+<tr data-status="todo"><td class="rnum">Figure C.4</td><td>Two aircraft disruptions: reports stop versus position freezes</td><td>Cited from 4.4</td><td class="src"><a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">Progress note, &#x27;Two ways for an aircraft to go wrong&#x27;</a></td><td><span class="chip todo">Appendix candidate</span></td></tr>
+<tr data-status="todo"><td class="rnum">Figure C.5</td><td>The repository port and its two interchangeable stores</td><td>Cited from 4.2</td><td class="src"><a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">Progress note, &#x27;A plug designed before the socket existed&#x27;</a></td><td><span class="chip todo">Appendix candidate</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <footer>Last updated 10 November 2026. Numbering will be revised once each chapter's order of figures is fixed.</footer>
+</div>
+
+<script>
+(function () {
+  function flash(key, msg) {
+    var el = document.querySelector('[data-flash="' + key + '"]');
+    if (!el) return;
+    el.textContent = msg;
+    setTimeout(function () { el.textContent = ''; }, 2600);
+  }
+  function selectText(el) {
+    try { var r = document.createRange(); r.selectNodeContents(el); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); } catch (e) {}
+  }
+  function copyText(text, key, fallbackEl) {
+    try {
+      navigator.clipboard.writeText(text).then(function () { flash(key, 'Copied.'); },
+        function () { if (fallbackEl) selectText(fallbackEl); flash(key, 'Copy was blocked here. The content is selected, so press Ctrl+C or Cmd+C.'); });
+    } catch (e) { if (fallbackEl) selectText(fallbackEl); flash(key, 'Copy was blocked here. The content is selected, so press Ctrl+C or Cmd+C.'); }
+  }
+  document.querySelectorAll('[data-copy-svg]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var fig = document.getElementById(b.getAttribute('data-copy-svg'));
+      var svg = fig && fig.querySelector('svg');
+      if (svg) copyText(svg.outerHTML, b.getAttribute('data-copy-svg'), null);
+    });
+  });
+  document.querySelectorAll('[data-copy-cap]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var id = b.getAttribute('data-copy-cap');
+      var el = document.getElementById(id);
+      var key = b.getAttribute('data-flash') || id;
+      if (el) copyText(el.textContent.replace(/\s+/g, ' ').trim(), key, el);
+    });
+  });
+  document.querySelectorAll('[data-copy-table]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var t = document.getElementById(b.getAttribute('data-copy-table'));
+      if (!t) return;
+      var rows = Array.prototype.map.call(t.rows, function (r) {
+        return Array.prototype.map.call(r.cells, function (c) { return c.innerText.replace(/\s*\n\s*/g, ' ').trim(); }).join('\t');
+      }).join('\n');
+      var clone = t.cloneNode(true);
+      clone.removeAttribute('class');
+      clone.setAttribute('style', 'border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;font-size:10pt');
+      Array.prototype.forEach.call(clone.querySelectorAll('th,td'), function (c) {
+        c.setAttribute('style', 'padding:3pt 5pt;vertical-align:top;text-align:' + (c.classList.contains('sym') || c.parentElement.classList.contains('tsec') ? 'center' : 'left'));
+      });
+      var gridded = t.classList.contains('grid');
+      if (gridded) Array.prototype.forEach.call(clone.querySelectorAll('th,td'), function (c) { c.style.border = '0.75pt solid #000'; });
+      Array.prototype.forEach.call(clone.querySelectorAll('thead th'), function (c) {
+        c.style.borderTop = '1.5pt solid #000'; c.style.borderBottom = '0.75pt solid #000';
+      });
+      var last = clone.tBodies[0] && clone.tBodies[0].rows[clone.tBodies[0].rows.length - 1];
+      if (last) Array.prototype.forEach.call(last.cells, function (c) { c.style.borderBottom = '1.5pt solid #000'; });
+      var key = b.getAttribute('data-copy-table');
+      try {
+        var item = new ClipboardItem({ 'text/html': new Blob([clone.outerHTML], { type: 'text/html' }), 'text/plain': new Blob([rows], { type: 'text/plain' }) });
+        navigator.clipboard.write([item]).then(function () { flash(key, 'Copied. Paste into Word as a table.'); },
+          function () { copyText(rows, key, t); });
+      } catch (e) { copyText(rows, key, t); }
+    });
+  });
+
+  var body = document.getElementById('regbody');
+  var rows = Array.prototype.slice.call(body.querySelectorAll('tr[data-status]'));
+  var counts = { drawn: 0, draft: 0, todo: 0, wait: 0 };
+  rows.forEach(function (r) { counts[r.getAttribute('data-status')]++; });
+  document.getElementById('stats').innerHTML =
+    '<span><b>' + rows.length + '</b> planned</span><span><b>' + counts.drawn + '</b> drawn</span><span><b>' + counts.draft +
+    '</b> in draft</span><span><b>' + counts.todo + '</b> to redraw or export</span><span><b>' + counts.wait + '</b> waiting on data</span>';
+  document.querySelectorAll('[data-filter]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var f = b.getAttribute('data-filter');
+      document.querySelectorAll('[data-filter]').forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+      rows.forEach(function (r) { r.hidden = !(f === 'all' || r.getAttribute('data-status') === f); });
+      Array.prototype.forEach.call(body.querySelectorAll('tr.chrow'), function (h) {
+        var n = h.nextElementSibling, any = false;
+        while (n && !n.classList.contains('chrow')) { if (!n.hidden) any = true; n = n.nextElementSibling; }
+        h.hidden = !any;
+      });
+    });
+  });
+})();
+</script>
+
