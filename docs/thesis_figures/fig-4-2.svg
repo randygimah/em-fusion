@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 448" width="760" height="448" font-family="Arial, Helvetica, sans-serif" role="img" aria-label="One OpenSky report mapped field by field into a canonical observation. Time becomes a UTC timestamp; latitude and longitude become one point; the aircraft address and callsign become keyed pseudonyms; altitude, speed, heading, climb rate and the on-ground flag are carried with units in their names; the two update times become two staleness values. Geometric altitude, squawk, alert and special-purpose flags are not carried. Six envelope fields have no source field and are added on the way in." xmlns:c2pa="http://c2pa.org/manifest">
+  <defs>
+    <marker id="ah42" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#333333"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="760" height="448" fill="#ffffff"/>
+  <text x="20" y="22" text-anchor="start" font-size="12" font-weight="bold" fill="#111111">As received: one OpenSky state vector</text>
+  <text x="440" y="22" text-anchor="start" font-size="12" font-weight="bold" fill="#111111">As stored: one canonical observation</text>
+  <line x1="20" y1="30" x2="290" y2="30" stroke="#333333" stroke-width="1"/>
+  <line x1="440" y1="30" x2="710" y2="30" stroke="#333333" stroke-width="1"/>
+  <text x="20" y="54" text-anchor="start" font-size="11" fill="#444444">time</text>
+  <text x="290" y="54" text-anchor="end" font-size="11" font-weight="bold" fill="#111111">1656331200</text>
+  <text x="20" y="75" text-anchor="start" font-size="11" fill="#444444">lat</text>
+  <text x="290" y="75" text-anchor="end" font-size="11" font-weight="bold" fill="#111111">51.0905</text>
+  <text x="20" y="96" text-anchor="start" font-size="11" fill="#444444">lon</text>
+  <text x="290" y="96" text-anchor="end" font-size="11" font-weight="bold" fill="#111111">7.5473</text>
+  <text x="20" y="117" text-anchor="start" font-size="11" fill="#444444">icao24</text>
+  <text x="290" y="117" text-anchor="end" font-size="11" font-weight="bold" font-style="italic" fill="#111111">withheld</text>
+  <text x="20" y="138" text-anchor="start" font-size="11" fill="#444444">callsign</text>
+  <text x="290" y="138" text-anchor="end" font-size="11" font-weight="bold" font-style="italic" fill="#111111">withheld</text>
+  <text x="20" y="159" text-anchor="start" font-size="11" fill="#444444">baroaltitude</text>
+  <text x="290" y="159" text-anchor="end" font-size="11" font-weight="bold" fill="#111111">5753.1</text>
+  <text x="20" y="180" text-anchor="start" font-size="11" fill="#444444">velocity</text>
+  <text x="290" y="180" text-anchor="end" font-size="11" font-weight="bold" fill="#111111">194.26</text>
+  <text x="20" y="201" text-anchor="start" font-size="11" fill="#444444">heading</text>
+  <text x="290" y="201" text-anchor="end" font-size="11" font-weight="bold" fill="#111111">135.64</text>
+  <text x="20" y="222" text-anchor="start" font-size="11" fill="#444444">vertrate</text>
+  <text x="290" y="222" text-anchor="end" font-size="11" font-weight="bold" fill="#111111">13.33</text>
+  <text x="20" y="243" text-anchor="start" font-size="11" fill="#444444">onground</text>
+  <text x="290" y="243" text-anchor="end" font-size="11" font-weight="bold" fill="#111111">False</text>
+  <text x="20" y="264" text-anchor="start" font-size="11" fill="#444444">lastposupdate</text>
+  <text x="290" y="264" text-anchor="end" font-size="11" font-weight="bold" fill="#111111">1656331198.94</text>
+  <text x="20" y="285" text-anchor="start" font-size="11" fill="#444444">lastcontact</text>
+  <text x="290" y="285" text-anchor="end" font-size="11" font-weight="bold" fill="#111111">1656331200.0</text>
+  <text x="20" y="306" text-anchor="start" font-size="11" fill="#8a8a8a">geoaltitude</text>
+  <text x="290" y="306" text-anchor="end" font-size="11" fill="#8a8a8a">5951.22</text>
+  <text x="20" y="327" text-anchor="start" font-size="11" fill="#8a8a8a">squawk</text>
+  <text x="290" y="327" text-anchor="end" font-size="11" font-style="italic" fill="#8a8a8a">withheld</text>
+  <text x="20" y="348" text-anchor="start" font-size="11" fill="#8a8a8a">alert</text>
+  <text x="290" y="348" text-anchor="end" font-size="11" fill="#8a8a8a">False</text>
+  <text x="20" y="369" text-anchor="start" font-size="11" fill="#8a8a8a">spi</text>
+  <text x="290" y="369" text-anchor="end" font-size="11" fill="#8a8a8a">False</text>
+  <path d="M296,50 L430,50" fill="none" stroke="#555555" stroke-width="1" marker-end="url(#ah42)"/>
+  <text x="440" y="54" text-anchor="start" font-size="11" fill="#444444">timestamp</text>
+  <text x="710" y="54" text-anchor="end" font-size="11" font-weight="bold" fill="#111111">2022-06-27 12:00:00 UTC</text>
+  <rect x="311" y="42" width="104" height="15" fill="#ffffff"/>
+  <text x="363" y="54" text-anchor="middle" font-size="10" font-style="italic" fill="#444444">converted to UTC</text>
+  <path d="M296,71 L320,71 L320,81.5" fill="none" stroke="#555555" stroke-width="1"/>
+  <path d="M296,92 L320,92 L320,81.5" fill="none" stroke="#555555" stroke-width="1"/>
+  <path d="M320,81.5 L430,81.5" fill="none" stroke="#555555" stroke-width="1" marker-end="url(#ah42)"/>
+  <text x="440" y="85.5" text-anchor="start" font-size="11" fill="#444444">location</text>
+  <text x="710" y="85.5" text-anchor="end" font-size="11" font-weight="bold" fill="#111111">point 51.0905, 7.5473</text>
+  <rect x="311" y="73.5" width="104" height="15" fill="#ffffff"/>
+  <text x="363" y="85.5" text-anchor="middle" font-size="10" font-style="italic" fill="#444444">one point, WGS 84</text>
+  <path d="M296,113 L430,113" fill="none" stroke="#555555" stroke-width="1" marker-end="url(#ah42)"/>
+  <text x="440" y="117" text-anchor="start" font-size="11" fill="#444444">aircraft_id</text>
+  <text x="710" y="117" text-anchor="end" font-size="11" font-weight="bold" fill="#111111">AC-48089ab4e5a9</text>
+  <rect x="311" y="105" width="104" height="15" fill="#ffffff"/>
+  <text x="363" y="117" text-anchor="middle" font-size="10" font-style="italic" fill="#444444">keyed pseudonym</text>
+  <path d="M296,134 L430,134" fill="none" stroke="#555555" stroke-width="1" marker-end="url(#ah42)"/>
+  <text x="440" y="138" text-anchor="start" font-size="11" fill="#444444">flight_id</text>
+  <text x="710" y="138" text-anchor="end" font-size="11" font-weight="bold" fill="#111111">FL-0c53755a34bc</text>
+  <rect x="311" y="126" width="104" height="15" fill="#ffffff"/>
+  <text x="363" y="138" text-anchor="middle" font-size="10" font-style="italic" fill="#444444">keyed pseudonym</text>
+  <path d="M296,155 L430,155" fill="none" stroke="#555555" stroke-width="1" marker-end="url(#ah42)"/>
+  <text x="440" y="159" text-anchor="start" font-size="11" fill="#444444">altitude_m</text>
+  <text x="710" y="159" text-anchor="end" font-size="11" font-weight="bold" fill="#111111">5753.1</text>
+  <path d="M296,176 L430,176" fill="none" stroke="#555555" stroke-width="1" marker-end="url(#ah42)"/>
+  <text x="440" y="180" text-anchor="start" font-size="11" fill="#444444">velocity_ms</text>
+  <text x="710" y="180" text-anchor="end" font-size="11" font-weight="bold" fill="#111111">194.26</text>
+  <path d="M296,197 L430,197" fill="none" stroke="#555555" stroke-width="1" marker-end="url(#ah42)"/>
+  <text x="440" y="201" text-anchor="start" font-size="11" fill="#444444">heading_deg</text>
+  <text x="710" y="201" text-anchor="end" font-size="11" font-weight="bold" fill="#111111">135.64</text>
+  <path d="M296,218 L430,218" fill="none" stroke="#555555" stroke-width="1" marker-end="url(#ah42)"/>
+  <text x="440" y="222" text-anchor="start" font-size="11" fill="#444444">vertical_rate_ms</text>
+  <text x="710" y="222" text-anchor="end" font-size="11" font-weight="bold" fill="#111111">13.33</text>
+  <path d="M296,239 L430,239" fill="none" stroke="#555555" stroke-width="1" marker-end="url(#ah42)"/>
+  <text x="440" y="243" text-anchor="start" font-size="11" fill="#444444">on_ground</text>
+  <text x="710" y="243" text-anchor="end" font-size="11" font-weight="bold" fill="#111111">False</text>
+  <path d="M296,260 L430,260" fill="none" stroke="#555555" stroke-width="1" marker-end="url(#ah42)"/>
+  <text x="440" y="264" text-anchor="start" font-size="11" fill="#444444">position_staleness_s</text>
+  <text x="710" y="264" text-anchor="end" font-size="11" font-weight="bold" fill="#111111">1.06</text>
+  <rect x="311" y="252" width="104" height="15" fill="#ffffff"/>
+  <text x="363" y="264" text-anchor="middle" font-size="10" font-style="italic" fill="#444444">time minus this</text>
+  <path d="M296,281 L430,281" fill="none" stroke="#555555" stroke-width="1" marker-end="url(#ah42)"/>
+  <text x="440" y="285" text-anchor="start" font-size="11" fill="#444444">contact_staleness_s</text>
+  <text x="710" y="285" text-anchor="end" font-size="11" font-weight="bold" fill="#111111">0.00</text>
+  <rect x="311" y="273" width="104" height="15" fill="#ffffff"/>
+  <text x="363" y="285" text-anchor="middle" font-size="10" font-style="italic" fill="#444444">time minus this</text>
+  <path d="M302,296 h6 V371 h-6" fill="none" stroke="#8a8a8a" stroke-width="1"/>
+  <text x="318" y="337.5" text-anchor="start" font-size="10.5" font-style="italic" fill="#6a6a6a">not carried</text>
+  <text x="440" y="306" text-anchor="start" font-size="11" fill="#444444">source_id</text>
+  <text x="710" y="306" text-anchor="end" font-size="11" font-weight="bold" fill="#111111">opensky-replay</text>
+  <text x="440" y="327" text-anchor="start" font-size="11" fill="#444444">source_type</text>
+  <text x="710" y="327" text-anchor="end" font-size="11" font-weight="bold" fill="#111111">OPENSKY</text>
+  <text x="440" y="348" text-anchor="start" font-size="11" fill="#444444">observation_type</text>
+  <text x="710" y="348" text-anchor="end" font-size="11" font-weight="bold" fill="#111111">TRACK</text>
+  <text x="440" y="369" text-anchor="start" font-size="11" fill="#444444">data_mode</text>
+  <text x="710" y="369" text-anchor="end" font-size="11" font-weight="bold" fill="#111111">REPLAYED</text>
+  <text x="440" y="390" text-anchor="start" font-size="11" fill="#444444">validation_status</text>
+  <text x="710" y="390" text-anchor="end" font-size="11" font-weight="bold" fill="#111111">VALID</text>
+  <text x="440" y="411" text-anchor="start" font-size="11" fill="#444444">provenance</text>
+  <text x="710" y="411" text-anchor="end" font-size="11" font-weight="bold" fill="#111111">scenario run 1</text>
+  <path d="M432,296 h-6 V413 h6" fill="none" stroke="#555555" stroke-width="1"/>
+  <text x="420" y="385" text-anchor="end" font-size="10.5" font-style="italic" fill="#444444">no source field:</text>
+  <text x="420" y="399" text-anchor="end" font-size="10.5" font-style="italic" fill="#444444">added on the way in</text>
+  <path d="M720,43 h5 V88.5 h-5" fill="none" stroke="#777777" stroke-width="1"/>
+  <text x="736" y="65.75" text-anchor="middle" font-size="10" fill="#555555" transform="rotate(90 736 65.75)">envelope</text>
+  <path d="M720,106 h5 V288 h-5" fill="none" stroke="#777777" stroke-width="1"/>
+  <text x="736" y="197.0" text-anchor="middle" font-size="10" fill="#555555" transform="rotate(90 736 197.0)">track payload</text>
+  <path d="M720,295 h5 V414 h-5" fill="none" stroke="#777777" stroke-width="1"/>
+  <text x="736" y="354.5" text-anchor="middle" font-size="10" fill="#555555" transform="rotate(90 736 354.5)">envelope</text>
+<metadata><c2pa:manifest>AAAWgmp1bWIAAAAeanVtZGMycGEAEQAQgAAAqgA4m3EDYzJwYQAAABZcanVtYgAAAEdqdW1kYzJtYQARABCAAACqADibcQN1cm46YzJwYToyODdmZDNkNy0xZjNlLTRhZmUtYWUyMy1lMTcwNjUxZjVlMWQAAAADl2p1bWIAAAApanVtZGMyYXMAEQAQgAAAqgA4m3EDYzJwYS5hc3NlcnRpb25zAAAAALxqdW1iAAAARGp1bWRjYm9yABEAEIAAAKoAOJtxE2MycGEuaW5ncmVkaWVudC52MwAAAAAYYzJzaFrczfq2AnAg3+YCDdx0ri4AAABwY2JvcqNpZGM6Zm9ybWF0bWltYWdlL3N2Zyt4bWxqaW5zdGFuY2VJRHgseG1wOmlpZDpjZDQ4NzVlMi1hMDVlLTQ3MmYtYmY5Yy04MzBmYmNhZWFkM2VscmVsYXRpb25zaGlwaHBhcmVudE9mAAAB4mp1bWIAAABBanVtZGNib3IAEQAQgAAAqgA4m3ETYzJwYS5hY3Rpb25zLnYyAAAAABhjMnNon6MZX6C+M2WKlJROm5cGOwAAAZljYm9yomdhY3Rpb25zgqJmYWN0aW9ua2MycGEub3BlbmVkanBhcmFtZXRlcnOha2luZ3JlZGllbnRzgaJjdXJseC1zZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmluZ3JlZGllbnQudjNkaGFzaFggjkXjCcscu4TzANIl5d8WAoeHs3mZ5ZS1OAquFzChkbCkZmFjdGlvbngdY29tLmFudGhyb3BpYy5jbGF1ZGUucHJvdmlkZWRqcGFyYW1ldGVyc6F4H2NvbS5hbnRocm9waWMub3JpZ2luLWNvbmZpZGVuY2VndW5rbm93bmtkZXNjcmlwdGlvbnhmQ2xhdWRlIHByb3ZpZGVkIHRoaXMgZmlsZSBhdCB0aGUgcmVxdWVzdCBvZiBhIHVzZXIgYW5kIG1heSBoYXZlIGNyZWF0ZWQgb3IgbW9kaWZpZWQgdGhlIGZpbGUgY29udGVudHMubXNvZnR3YXJlQWdlbnShZG5hbWVmQ2xhdWRlcmFsbEFjdGlvbnNJbmNsdWRlZPUAAADIanVtYgAAAEBqdW1kY2JvcgARABCAAACqADibcRNjMnBhLmhhc2guZGF0YQAAAAAYYzJzaGsxsVMzm2n0cfAfxSpjU1wAAACAY2JvcqVjYWxnZnNoYTI1NmNwYWRMAAAAAAAAAAAAAAAAZGhhc2hYIADFeo/dBQKRigfvGVR0oYo3Ivqyvqmy9qkt1bCwXoSlZG5hbWVuanVtYmYgbWFuaWZlc3RqZXhjbHVzaW9uc4GiZXN0YXJ0GSzeZmxlbmd0aBkeBAAAAj5qdW1iAAAAJ2p1bWRjMmNsABEAEIAAAKoAOJtxA2MycGEuY2xhaW0udjIAAAACD2Nib3KlY2FsZ2ZzaGEyNTZpc2lnbmF0dXJleE1zZWxmI2p1bWJmPS9jMnBhL3VybjpjMnBhOjI4N2ZkM2Q3LTFmM2UtNGFmZS1hZTIzLWUxNzA2NTFmNWUxZC9jMnBhLnNpZ25hdHVyZWppbnN0YW5jZUlEeCx4bXA6aWlkOjhhMTU5ZTY5LTVmODEtNGVmMy1iY2NhLWQ1YjA0MGU3NGQ4NHJjcmVhdGVkX2Fzc2VydGlvbnODomN1cmx4LXNlbGYjanVtYmY9YzJwYS5hc3NlcnRpb25zL2MycGEuaW5ncmVkaWVudC52M2RoYXNoWCCOReMJyxy7hPMA0iXl3xYCh4ezeZnllLU4Cq4XMKGRsKJjdXJseCpzZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmFjdGlvbnMudjJkaGFzaFggklV1zRRH9aqHPKg4r2cZglUbjPWhuy7w8aHO1eCQ4nKiY3VybHgpc2VsZiNqdW1iZj1jMnBhLmFzc2VydGlvbnMvYzJwYS5oYXNoLmRhdGFkaGFzaFgg2Aju0dSuOGK28RmP5AAKLasvYI97jmFFhIwwbezphM50Y2xhaW1fZ2VuZXJhdG9yX2luZm+jZG5hbWVvQW50aHJvcGljIEZpbGVzZ3ZlcnNpb25lMS4wLjBrc3BlY1ZlcnNpb25lMi40LjAAABA4anVtYgAAAChqdW1kYzJjcwARABCAAACqADibcQNjMnBhLnNpZ25hdHVyZQAAABAIY2JvctKEWQISogEmGCFZAgowggIGMIIBjaADAgECAhRA5aAK7sI50L64g/oGQgU9Z1UTADAKBggqhkjOPQQDAzBJMRcwFQYDVQQKEw5BbnRocm9waWMsIFBCQzEuMCwGA1UEAxMlQW50aHJvcGljIENvbnRlbnQgQ3JlZGVudGlhbHMgUm9vdCBDQTAeFw0yNjA4MDcxODQzNTZaFw0yODA4MDYxOTQzNTZaMEQxFzAVBgNVBAoTDkFudGhyb3BpYywgUEJDMSkwJwYDVQQDEyBBbnRocm9waWMgQ2xhdWRlIENvbnRlbnQgU2lnbmluZzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABJh6CmvLUBgFFNU0vUKlOVtE6djd17L5SuwX0LemFisBM3dkd/3cyjxFA3Qo5S46fX0/ihY0VZ7mfb9KF703t5OjWDBWMA4GA1UdDwEB/wQEAwIHgDAVBgNVHSUEDjAMBgorBgEEAYPoXgIBMAwGA1UdEwEB/wQCMAAwHwYDVR0jBBgwFoAUzlHiBIFOZFsj+OPEz5o+nMHXXMIwCgYIKoZIzj0EAwMDZwAwZAIwMXMdFJ4BetLLVY7ORuE9noqbbAZOZn/aArXyTwFAZfKrPzxF2vPoJNf1+UCdg1XGAjBwX1zd9WGqYkqmL5SFqw1QySjr1zJfpJM9+1rdDwSPLMOPOjKuiXjoU/pUUeG9RwmhY3BhZFkNngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPZYQKzBAQg9Ghn1zJvj/SEDth2DkcqDrlv9Xu+B8PEqUI3PdaJllqeyS94NxFLs5hMjnlvMUucKUBfBP0dYbg7y4dE=</c2pa:manifest></metadata></svg>

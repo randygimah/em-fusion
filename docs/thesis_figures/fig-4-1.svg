@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 512" width="760" height="512" font-family="Arial, Helvetica, sans-serif" role="img" aria-label="Architecture of EM Fusion. The analyst uses a React dashboard, which reads map tiles from an offline archive and polls the API service for JSON. The API service is one Python process. Inside it, a scenario generator feeds source adapters, which pass records to the Data Abstraction Layer. The Data Abstraction Layer, baseline engine, anomaly engine, bundle builder, hypothesis service and routes all reach the observation store only through the repositories. The evaluation harness drives runs and campaigns. Two things sit outside EM Fusion: the archived OpenSky hour, read by the aviation adapter, and the hosted AI provider, called only by the hypothesis service." xmlns:c2pa="http://c2pa.org/manifest">
+  <defs>
+    <marker id="ah41" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#333333"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="760" height="512" fill="#ffffff"/>
+  <rect x="40" y="16" width="146" height="48" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="113" y="36.25" text-anchor="middle" font-size="12" font-weight="bold" fill="#111111">Analyst</text>
+  <text x="113" y="52.75" text-anchor="middle" font-size="10.5" fill="#444444">reads, records verdicts</text>
+  <rect x="246" y="16" width="140" height="48" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="316" y="36.25" text-anchor="middle" font-size="12" font-weight="bold" fill="#111111">Dashboard</text>
+  <text x="316" y="52.75" text-anchor="middle" font-size="10.5" fill="#444444">React, served by nginx</text>
+  <rect x="446" y="16" width="160" height="48" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="526" y="36.25" text-anchor="middle" font-size="12" font-weight="bold" fill="#111111">Basemap tile archive</text>
+  <text x="526" y="52.75" text-anchor="middle" font-size="10.5" fill="#444444">PMTiles, read offline</text>
+  <path d="M186,40 L245,40" fill="none" stroke="#333333" stroke-width="1.2" marker-end="url(#ah41)"/>
+  <path d="M386,40 L445,40" fill="none" stroke="#333333" stroke-width="1.2" marker-end="url(#ah41)"/>
+  <rect x="20" y="96" width="720" height="260" fill="none" stroke="#555555" stroke-width="1.2" stroke-dasharray="6 4"/>
+  <text x="728" y="113" text-anchor="end" font-size="11.5" font-weight="bold" fill="#333333">API service: one Python process (FastAPI), a modular monolith</text>
+  <path d="M316,64 L316,123" fill="none" stroke="#333333" stroke-width="1.2" marker-end="url(#ah41)"/>
+  <text x="324" y="84" text-anchor="start" font-size="10.5" fill="#444444">JSON over HTTP, polled</text>
+  <rect x="30" y="124" width="140" height="38" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="100" y="139.25" text-anchor="middle" font-size="12" font-weight="bold" fill="#111111">Scenario generator</text>
+  <text x="100" y="155.75" text-anchor="middle" font-size="10" fill="#444444">seeded; records the answer key</text>
+  <rect x="256" y="124" width="120" height="38" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="316" y="139.25" text-anchor="middle" font-size="12" font-weight="bold" fill="#111111">Routes</text>
+  <text x="316" y="155.75" text-anchor="middle" font-size="10.5" fill="#444444">the HTTP surface</text>
+  <rect x="30" y="190" width="136" height="82" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="98" y="213.75" text-anchor="middle" font-size="12" font-weight="bold" fill="#111111">Source adapters</text>
+  <text x="98" y="230.25" text-anchor="middle" font-size="10.5" fill="#444444">OpenSky replay</text>
+  <text x="98" y="243.75" text-anchor="middle" font-size="10.5" fill="#444444">synthetic RF</text>
+  <text x="98" y="257.25" text-anchor="middle" font-size="10.5" fill="#444444">receiver health</text>
+  <path d="M100,162 L100,189" fill="none" stroke="#333333" stroke-width="1.2" marker-end="url(#ah41)"/>
+  <rect x="186" y="190" width="120" height="82" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="246" y="207.75" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#111111">Data Abstraction</text>
+  <text x="246" y="221.75" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#111111">Layer</text>
+  <text x="246" y="237.25" text-anchor="middle" font-size="10" fill="#444444">validate, quarantine,</text>
+  <text x="246" y="249.75" text-anchor="middle" font-size="10" fill="#444444">pseudonymise, record</text>
+  <text x="246" y="262.25" text-anchor="middle" font-size="10" fill="#444444">provenance</text>
+  <path d="M166,231 L185,231" fill="none" stroke="#333333" stroke-width="1.2" marker-end="url(#ah41)"/>
+  <rect x="326" y="190" width="86" height="82" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="369" y="214" text-anchor="middle" font-size="12" font-weight="bold" fill="#111111">Baseline</text>
+  <text x="369" y="229" text-anchor="middle" font-size="12" font-weight="bold" fill="#111111">engine</text>
+  <text x="369" y="244.5" text-anchor="middle" font-size="10" fill="#444444">per receiver,</text>
+  <text x="369" y="257" text-anchor="middle" font-size="10" fill="#444444">per channel</text>
+  <rect x="432" y="190" width="86" height="82" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="475" y="214" text-anchor="middle" font-size="12" font-weight="bold" fill="#111111">Anomaly</text>
+  <text x="475" y="229" text-anchor="middle" font-size="12" font-weight="bold" fill="#111111">engine</text>
+  <text x="475" y="244.5" text-anchor="middle" font-size="10" fill="#444444">rules and the</text>
+  <text x="475" y="257" text-anchor="middle" font-size="10" fill="#444444">decision ladder</text>
+  <rect x="538" y="190" width="86" height="82" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="581" y="214" text-anchor="middle" font-size="12" font-weight="bold" fill="#111111">Bundle</text>
+  <text x="581" y="229" text-anchor="middle" font-size="12" font-weight="bold" fill="#111111">builder</text>
+  <text x="581" y="244.5" text-anchor="middle" font-size="10" fill="#444444">evidence and</text>
+  <text x="581" y="257" text-anchor="middle" font-size="10" fill="#444444">typed absences</text>
+  <rect x="644" y="190" width="86" height="82" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="687" y="214" text-anchor="middle" font-size="12" font-weight="bold" fill="#111111">Hypothesis</text>
+  <text x="687" y="229" text-anchor="middle" font-size="12" font-weight="bold" fill="#111111">service</text>
+  <text x="687" y="244.5" text-anchor="middle" font-size="10" fill="#444444">detail in</text>
+  <text x="687" y="257" text-anchor="middle" font-size="10" fill="#444444">Figure 4.6</text>
+  <path d="M432,231 L413,231" fill="none" stroke="#333333" stroke-width="1.2" marker-end="url(#ah41)"/>
+  <path d="M624,231 L643,231" fill="none" stroke="#333333" stroke-width="1.2" marker-end="url(#ah41)"/>
+  <rect x="30" y="300" width="700" height="38" fill="#f0f0f0" stroke="#333333" stroke-width="1"/>
+  <text x="380" y="316" text-anchor="middle" font-size="12" font-weight="bold" fill="#111111">Repositories: the storage port</text>
+  <text x="380" y="331" text-anchor="middle" font-size="10.5" fill="#444444">the only code that reaches the database</text>
+  <path d="M246,272 L246,299" fill="none" stroke="#333333" stroke-width="1.2" marker-end="url(#ah41)"/>
+  <path d="M369,272 L369,299" fill="none" stroke="#333333" stroke-width="1.2" marker-end="url(#ah41)"/>
+  <path d="M475,272 L475,299" fill="none" stroke="#333333" stroke-width="1.2" marker-end="url(#ah41)"/>
+  <path d="M581,272 L581,299" fill="none" stroke="#333333" stroke-width="1.2" marker-end="url(#ah41)"/>
+  <path d="M687,272 L687,299" fill="none" stroke="#333333" stroke-width="1.2" marker-end="url(#ah41)"/>
+  <path d="M316,162 L316,299" fill="none" stroke="#333333" stroke-width="1.2" marker-end="url(#ah41)"/>
+  <rect x="30" y="404" width="150" height="48" fill="#f0f0f0" stroke="#333333" stroke-width="1"/>
+  <text x="105" y="424.25" text-anchor="middle" font-size="12" font-weight="bold" fill="#111111">OpenSky archive</text>
+  <text x="105" y="440.75" text-anchor="middle" font-size="10.5" fill="#444444">one hour, replayed</text>
+  <rect x="205" y="404" width="160" height="48" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="285" y="425" text-anchor="middle" font-size="12" font-weight="bold" fill="#111111">Scenario runner and</text>
+  <text x="285" y="440" text-anchor="middle" font-size="12" font-weight="bold" fill="#111111">evaluation harness</text>
+  <rect x="390" y="404" width="160" height="48" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="470" y="424.25" text-anchor="middle" font-size="12" font-weight="bold" fill="#111111">Observation store</text>
+  <text x="470" y="440.75" text-anchor="middle" font-size="10.5" fill="#444444">PostgreSQL with PostGIS</text>
+  <rect x="590" y="404" width="140" height="48" fill="#f0f0f0" stroke="#333333" stroke-width="1"/>
+  <text x="660" y="424.25" text-anchor="middle" font-size="12" font-weight="bold" fill="#111111">Hosted AI provider</text>
+  <text x="660" y="440.75" text-anchor="middle" font-size="10.5" fill="#444444">dated GPT-4.1 snapshot</text>
+  <path d="M470,338 L470,403" fill="none" stroke="#333333" stroke-width="1.2" marker-end="url(#ah41)"/>
+  <text x="478" y="376" text-anchor="start" font-size="10.5" fill="#444444">SQL and spatial queries</text>
+  <path d="M285,404 L285,339" fill="none" stroke="#333333" stroke-width="1.2" marker-end="url(#ah41)"/>
+  <text x="293" y="376" text-anchor="start" font-size="10.5" fill="#444444">drives runs and campaigns</text>
+  <path d="M30,428 L10,428 L10,231 L29,231" fill="none" stroke="#333333" stroke-width="1.2" marker-end="url(#ah41)"/>
+  <path d="M730,231 L750,231 L750,428 L731,428" fill="none" stroke="#333333" stroke-width="1.2" marker-end="url(#ah41)"/>
+  <text x="660" y="468" text-anchor="middle" font-size="10.5" fill="#444444">the only call that leaves the machine</text>
+  <rect x="30" y="486" width="18" height="12" fill="#f0f0f0" stroke="#333333" stroke-width="1"/>
+  <text x="54" y="496" text-anchor="start" font-size="10.5" fill="#444444">outside EM Fusion</text>
+  <rect x="170" y="486" width="18" height="12" fill="none" stroke="#555555" stroke-width="1.2" stroke-dasharray="4 3"/>
+  <text x="194" y="496" text-anchor="start" font-size="10.5" fill="#444444">one deployed container</text>
+  <path d="M330,492 L362,492" fill="none" stroke="#333333" stroke-width="1.2" marker-end="url(#ah41)"/>
+  <text x="368" y="496" text-anchor="start" font-size="10.5" fill="#444444">calls; data passes between engines through the store</text>
+<metadata><c2pa:manifest>AAAWgmp1bWIAAAAeanVtZGMycGEAEQAQgAAAqgA4m3EDYzJwYQAAABZcanVtYgAAAEdqdW1kYzJtYQARABCAAACqADibcQN1cm46YzJwYTo5ZjU4YzRmMi0xMWM5LTQ4YTItYTEyMS0zNjRmMTQ5ODZjNWUAAAADl2p1bWIAAAApanVtZGMyYXMAEQAQgAAAqgA4m3EDYzJwYS5hc3NlcnRpb25zAAAAALxqdW1iAAAARGp1bWRjYm9yABEAEIAAAKoAOJtxE2MycGEuaW5ncmVkaWVudC52MwAAAAAYYzJzaKmWVohdtfpX1mSuZWc7ijYAAABwY2JvcqNpZGM6Zm9ybWF0bWltYWdlL3N2Zyt4bWxqaW5zdGFuY2VJRHgseG1wOmlpZDpiZTY3OTFlZS1lYzg5LTQ1Y2MtYmFjZS1hMDk3NTg0ZDkzMDlscmVsYXRpb25zaGlwaHBhcmVudE9mAAAB4mp1bWIAAABBanVtZGNib3IAEQAQgAAAqgA4m3ETYzJwYS5hY3Rpb25zLnYyAAAAABhjMnNomlOp6CxZsz3CuICG65emOQAAAZljYm9yomdhY3Rpb25zgqJmYWN0aW9ua2MycGEub3BlbmVkanBhcmFtZXRlcnOha2luZ3JlZGllbnRzgaJjdXJseC1zZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmluZ3JlZGllbnQudjNkaGFzaFggY5lKu6RqwEpKuR9c4DOGxAWe+HzVLuM9QpdfqSLJq/+kZmFjdGlvbngdY29tLmFudGhyb3BpYy5jbGF1ZGUucHJvdmlkZWRqcGFyYW1ldGVyc6F4H2NvbS5hbnRocm9waWMub3JpZ2luLWNvbmZpZGVuY2VndW5rbm93bmtkZXNjcmlwdGlvbnhmQ2xhdWRlIHByb3ZpZGVkIHRoaXMgZmlsZSBhdCB0aGUgcmVxdWVzdCBvZiBhIHVzZXIgYW5kIG1heSBoYXZlIGNyZWF0ZWQgb3IgbW9kaWZpZWQgdGhlIGZpbGUgY29udGVudHMubXNvZnR3YXJlQWdlbnShZG5hbWVmQ2xhdWRlcmFsbEFjdGlvbnNJbmNsdWRlZPUAAADIanVtYgAAAEBqdW1kY2JvcgARABCAAACqADibcRNjMnBhLmhhc2guZGF0YQAAAAAYYzJzaG5HsZ2FCUOtS8jLwi8d+a8AAACAY2JvcqVjYWxnZnNoYTI1NmNwYWRMAAAAAAAAAAAAAAAAZGhhc2hYIDUf4PnGQHPUGb/5TLfruQI+eU0OMAYnxTALOd4CI3X5ZG5hbWVuanVtYmYgbWFuaWZlc3RqZXhjbHVzaW9uc4GiZXN0YXJ0GSpSZmxlbmd0aBkeBAAAAj5qdW1iAAAAJ2p1bWRjMmNsABEAEIAAAKoAOJtxA2MycGEuY2xhaW0udjIAAAACD2Nib3KlY2FsZ2ZzaGEyNTZpc2lnbmF0dXJleE1zZWxmI2p1bWJmPS9jMnBhL3VybjpjMnBhOjlmNThjNGYyLTExYzktNDhhMi1hMTIxLTM2NGYxNDk4NmM1ZS9jMnBhLnNpZ25hdHVyZWppbnN0YW5jZUlEeCx4bXA6aWlkOjQyZDE0NWVjLWUyODEtNGE1Yi1hYWIxLWNkNDE1YmE5NzNmY3JjcmVhdGVkX2Fzc2VydGlvbnODomN1cmx4LXNlbGYjanVtYmY9YzJwYS5hc3NlcnRpb25zL2MycGEuaW5ncmVkaWVudC52M2RoYXNoWCBjmUq7pGrASkq5H1zgM4bEBZ74fNUu4z1Cl1+pIsmr/6JjdXJseCpzZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmFjdGlvbnMudjJkaGFzaFggCtx3+YHO7FYGWzVrvapX0Qpa4gpXtqRrzCX2ahrzEO2iY3VybHgpc2VsZiNqdW1iZj1jMnBhLmFzc2VydGlvbnMvYzJwYS5oYXNoLmRhdGFkaGFzaFggwJ4nj3uTeRTNAyi9TbRXRYZQLlCGSW0x4wznuyR3MHt0Y2xhaW1fZ2VuZXJhdG9yX2luZm+jZG5hbWVvQW50aHJvcGljIEZpbGVzZ3ZlcnNpb25lMS4wLjBrc3BlY1ZlcnNpb25lMi40LjAAABA4anVtYgAAAChqdW1kYzJjcwARABCAAACqADibcQNjMnBhLnNpZ25hdHVyZQAAABAIY2JvctKEWQISogEmGCFZAgowggIGMIIBjaADAgECAhRA5aAK7sI50L64g/oGQgU9Z1UTADAKBggqhkjOPQQDAzBJMRcwFQYDVQQKEw5BbnRocm9waWMsIFBCQzEuMCwGA1UEAxMlQW50aHJvcGljIENvbnRlbnQgQ3JlZGVudGlhbHMgUm9vdCBDQTAeFw0yNjA4MDcxODQzNTZaFw0yODA4MDYxOTQzNTZaMEQxFzAVBgNVBAoTDkFudGhyb3BpYywgUEJDMSkwJwYDVQQDEyBBbnRocm9waWMgQ2xhdWRlIENvbnRlbnQgU2lnbmluZzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABJh6CmvLUBgFFNU0vUKlOVtE6djd17L5SuwX0LemFisBM3dkd/3cyjxFA3Qo5S46fX0/ihY0VZ7mfb9KF703t5OjWDBWMA4GA1UdDwEB/wQEAwIHgDAVBgNVHSUEDjAMBgorBgEEAYPoXgIBMAwGA1UdEwEB/wQCMAAwHwYDVR0jBBgwFoAUzlHiBIFOZFsj+OPEz5o+nMHXXMIwCgYIKoZIzj0EAwMDZwAwZAIwMXMdFJ4BetLLVY7ORuE9noqbbAZOZn/aArXyTwFAZfKrPzxF2vPoJNf1+UCdg1XGAjBwX1zd9WGqYkqmL5SFqw1QySjr1zJfpJM9+1rdDwSPLMOPOjKuiXjoU/pUUeG9RwmhY3BhZFkNngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPZYQBeZM4uqFvam1QgtSOpFt4DJABUxTCYhmwt1yTMhWXxoUOruobmGy9zPpftBxMta70EhXnnZ2e0BZP5rvbijJiM=</c2pa:manifest></metadata></svg>

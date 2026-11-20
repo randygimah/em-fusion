@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 500" width="760" height="500" font-family="Arial, Helvetica, sans-serif" role="img" aria-label="Layout of the Operational Picture. A narrow navigation rail on the left holds the three screens, the data-mode badge and the system status. A top bar names the run and the data, with the hour chooser and the view switch. The offline map fills the centre and is read first; the exception panel, docked beneath it with tabs for radio, tracks and events, is read second; the right rail, holding hypothesis cards and the detection summary, is read third; the evidence panel, one scroll down, is read last." xmlns:c2pa="http://c2pa.org/manifest">
+  <defs>
+    <marker id="ah47" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#333333"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="760" height="500" fill="#ffffff"/>
+  <rect x="10" y="10" width="740" height="410" fill="#ffffff" stroke="#333333" stroke-width="1.2"/>
+  <rect x="10" y="10" width="72" height="410" fill="#f0f0f0" stroke="#333333" stroke-width="1"/>
+  <rect x="22" y="30" width="48" height="16" fill="#ffffff" stroke="#777777" stroke-width="1"/>
+  <text x="46" y="60" text-anchor="middle" font-size="9.5" fill="#444444">Picture</text>
+  <rect x="22" y="70" width="48" height="16" fill="#ffffff" stroke="#777777" stroke-width="1"/>
+  <text x="46" y="100" text-anchor="middle" font-size="9.5" fill="#444444">Hypotheses</text>
+  <rect x="22" y="110" width="48" height="16" fill="#ffffff" stroke="#777777" stroke-width="1"/>
+  <text x="46" y="140" text-anchor="middle" font-size="9.5" fill="#444444">Control</text>
+  <rect x="18" y="354" width="56" height="18" fill="#ffffff" stroke="#777777" stroke-width="1"/>
+  <text x="46" y="367" text-anchor="middle" font-size="9" fill="#444444">data mode</text>
+  <rect x="18" y="380" width="56" height="18" fill="#ffffff" stroke="#777777" stroke-width="1"/>
+  <text x="46" y="393" text-anchor="middle" font-size="9" fill="#444444">status</text>
+  <rect x="82" y="10" width="668" height="40" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="92" y="35" text-anchor="start" font-size="10.5" font-weight="bold" fill="#111111">Run 420</text>
+  <text x="150" y="35" text-anchor="start" font-size="10.5" fill="#444444">Data: synthetic RF and replayed tracks</text>
+  <text x="382" y="35" text-anchor="start" font-size="10.5" fill="#444444">Hour chooser</text>
+  <text x="482" y="35" text-anchor="start" font-size="10.5" fill="#444444">View: anomalous only, nominal only, all</text>
+  <rect x="94" y="62" width="452" height="228" fill="#f7f7f7" stroke="#333333" stroke-width="1"/>
+  <rect x="146" y="116" width="8" height="8" fill="#111111"/>
+  <rect x="196" y="156" width="8" height="8" fill="#111111"/>
+  <rect x="256" y="106" width="8" height="8" fill="#111111"/>
+  <rect x="236" y="206" width="8" height="8" fill="#111111"/>
+  <rect x="326" y="186" width="8" height="8" fill="#111111"/>
+  <rect x="376" y="236" width="8" height="8" fill="#111111"/>
+  <rect x="416" y="266" width="8" height="8" fill="#111111"/>
+  <circle cx="300" cy="185" r="55" fill="none" stroke="#555555" stroke-width="1.2" stroke-dasharray="5 3"/>
+  <path d="M130,224 L135,235 L125,235 z" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <path d="M285,144 L290,155 L280,155 z" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <path d="M320,209 L325,220 L315,220 z" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <path d="M470,114 L475,125 L465,125 z" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <path d="M500,194 L505,205 L495,205 z" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <path d="M215,122 L220,133 L210,133 z" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="104" y="80" text-anchor="start" font-size="10.5" fill="#444444">Offline map: receivers, aircraft under pseudonyms, assessed area</text>
+  <rect x="94" y="300" width="452" height="110" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <rect x="104" y="310" width="138" height="20" fill="#e6e6e6" stroke="#777777" stroke-width="1"/>
+  <text x="173" y="324" text-anchor="middle" font-size="10" font-weight="bold" fill="#111111">RF (2 anomalous)</text>
+  <rect x="252" y="310" width="138" height="20" fill="#ffffff" stroke="#777777" stroke-width="1"/>
+  <text x="321" y="324" text-anchor="middle" font-size="10" fill="#444444">Tracks (10 interrupted)</text>
+  <rect x="400" y="310" width="138" height="20" fill="#ffffff" stroke="#777777" stroke-width="1"/>
+  <text x="469" y="324" text-anchor="middle" font-size="10" fill="#444444">Events (1)</text>
+  <line x1="104" y1="344" x2="536" y2="344" stroke="#c8c8c8" stroke-width="1"/>
+  <line x1="104" y1="360" x2="536" y2="360" stroke="#c8c8c8" stroke-width="1"/>
+  <line x1="104" y1="376" x2="536" y2="376" stroke="#c8c8c8" stroke-width="1"/>
+  <text x="104" y="400" text-anchor="start" font-size="10" font-style="italic" fill="#444444">+5 nominal hidden by this view</text>
+  <text x="536" y="400" text-anchor="end" font-size="10" font-weight="bold" fill="#444444">View all</text>
+  <rect x="558" y="62" width="182" height="348" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="568" y="82" text-anchor="start" font-size="11" font-weight="bold" fill="#111111">Hypotheses</text>
+  <rect x="568" y="94" width="162" height="64" fill="#f7f7f7" stroke="#777777" stroke-width="1"/>
+  <line x1="578" y1="110" x2="684" y2="110" stroke="#b0b0b0" stroke-width="5"/>
+  <line x1="578" y1="126" x2="706" y2="126" stroke="#b0b0b0" stroke-width="5"/>
+  <line x1="578" y1="142" x2="656" y2="142" stroke="#b0b0b0" stroke-width="5"/>
+  <rect x="568" y="168" width="162" height="64" fill="#f7f7f7" stroke="#777777" stroke-width="1"/>
+  <line x1="578" y1="184" x2="684" y2="184" stroke="#b0b0b0" stroke-width="5"/>
+  <line x1="578" y1="200" x2="706" y2="200" stroke="#b0b0b0" stroke-width="5"/>
+  <line x1="578" y1="216" x2="656" y2="216" stroke="#b0b0b0" stroke-width="5"/>
+  <text x="568" y="284" text-anchor="start" font-size="11" font-weight="bold" fill="#111111">Detection summary</text>
+  <text x="568" y="304" text-anchor="start" font-size="10" fill="#444444">Low, Medium, High</text>
+  <text x="568" y="320" text-anchor="start" font-size="10" fill="#444444">counts per rule</text>
+  <text x="568" y="336" text-anchor="start" font-size="10" fill="#444444">dash where not reportable</text>
+  <rect x="94" y="438" width="644" height="56" fill="#ffffff" stroke="#555555" stroke-width="1.1" stroke-dasharray="5 3"/>
+  <text x="106" y="462" text-anchor="start" font-size="10.5" fill="#444444">Evidence panel: the bundle behind the selected hypothesis, item by item</text>
+  <text x="106" y="478" text-anchor="start" font-size="10.5" font-style="italic" fill="#444444">one scroll down, below the first screen</text>
+  <circle cx="116" cy="102" r="11" fill="#111111"/>
+  <text x="116" y="106.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">1</text>
+  <rect x="131" y="93" width="41" height="18" fill="#ffffff" stroke="#111111" stroke-width="1"/>
+  <text x="135" y="106.5" text-anchor="start" font-size="11" font-weight="bold" fill="#111111">Where</text>
+  <circle cx="275" cy="396" r="11" fill="#111111"/>
+  <text x="275" y="400.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">2</text>
+  <rect x="290" y="387" width="133" height="18" fill="#ffffff" stroke="#111111" stroke-width="1"/>
+  <text x="294" y="400.5" text-anchor="start" font-size="11" font-weight="bold" fill="#111111">What is exceptional</text>
+  <circle cx="578" cy="254" r="11" fill="#111111"/>
+  <text x="578" y="258.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">3</text>
+  <rect x="593" y="245" width="94" height="18" fill="#ffffff" stroke="#111111" stroke-width="1"/>
+  <text x="597" y="258.5" text-anchor="start" font-size="11" font-weight="bold" fill="#111111">What it means</text>
+  <circle cx="580" cy="466" r="11" fill="#111111"/>
+  <text x="580" y="470.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">4</text>
+  <rect x="595" y="457" width="28" height="18" fill="#ffffff" stroke="#111111" stroke-width="1"/>
+  <text x="599" y="470.5" text-anchor="start" font-size="11" font-weight="bold" fill="#111111">Why</text>
+<metadata><c2pa:manifest>AAAWgmp1bWIAAAAeanVtZGMycGEAEQAQgAAAqgA4m3EDYzJwYQAAABZcanVtYgAAAEdqdW1kYzJtYQARABCAAACqADibcQN1cm46YzJwYTowMjZiMzg5Zi02ZjBjLTQ4ZGUtYjUxOC1jNzdlMGUxNTk4YzIAAAADl2p1bWIAAAApanVtZGMyYXMAEQAQgAAAqgA4m3EDYzJwYS5hc3NlcnRpb25zAAAAALxqdW1iAAAARGp1bWRjYm9yABEAEIAAAKoAOJtxE2MycGEuaW5ncmVkaWVudC52MwAAAAAYYzJzaEQuAr5W5mEBCcOFxqKQINIAAABwY2JvcqNpZGM6Zm9ybWF0bWltYWdlL3N2Zyt4bWxqaW5zdGFuY2VJRHgseG1wOmlpZDowZjQ2YTYzZC1iMzkwLTRiN2MtOWJjNC05ZDJiNDczNDRiMzFscmVsYXRpb25zaGlwaHBhcmVudE9mAAAB4mp1bWIAAABBanVtZGNib3IAEQAQgAAAqgA4m3ETYzJwYS5hY3Rpb25zLnYyAAAAABhjMnNorJtzVZCjnLEbZGRRT5JtIAAAAZljYm9yomdhY3Rpb25zgqJmYWN0aW9ua2MycGEub3BlbmVkanBhcmFtZXRlcnOha2luZ3JlZGllbnRzgaJjdXJseC1zZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmluZ3JlZGllbnQudjNkaGFzaFggq1yA2/KyerE6e/Hex0RoE3MQ0smLUFLgU+0KKUv5RmekZmFjdGlvbngdY29tLmFudGhyb3BpYy5jbGF1ZGUucHJvdmlkZWRqcGFyYW1ldGVyc6F4H2NvbS5hbnRocm9waWMub3JpZ2luLWNvbmZpZGVuY2VndW5rbm93bmtkZXNjcmlwdGlvbnhmQ2xhdWRlIHByb3ZpZGVkIHRoaXMgZmlsZSBhdCB0aGUgcmVxdWVzdCBvZiBhIHVzZXIgYW5kIG1heSBoYXZlIGNyZWF0ZWQgb3IgbW9kaWZpZWQgdGhlIGZpbGUgY29udGVudHMubXNvZnR3YXJlQWdlbnShZG5hbWVmQ2xhdWRlcmFsbEFjdGlvbnNJbmNsdWRlZPUAAADIanVtYgAAAEBqdW1kY2JvcgARABCAAACqADibcRNjMnBhLmhhc2guZGF0YQAAAAAYYzJzaIwAbB1JOii1H4RjdthBN5IAAACAY2JvcqVjYWxnZnNoYTI1NmNwYWRMAAAAAAAAAAAAAAAAZGhhc2hYINElxM0uCHWfGLae36g90F1Yu98O8JuG+4WyhTDM0/YPZG5hbWVuanVtYmYgbWFuaWZlc3RqZXhjbHVzaW9uc4GiZXN0YXJ0GSDIZmxlbmd0aBkeBAAAAj5qdW1iAAAAJ2p1bWRjMmNsABEAEIAAAKoAOJtxA2MycGEuY2xhaW0udjIAAAACD2Nib3KlY2FsZ2ZzaGEyNTZpc2lnbmF0dXJleE1zZWxmI2p1bWJmPS9jMnBhL3VybjpjMnBhOjAyNmIzODlmLTZmMGMtNDhkZS1iNTE4LWM3N2UwZTE1OThjMi9jMnBhLnNpZ25hdHVyZWppbnN0YW5jZUlEeCx4bXA6aWlkOmI1MGE1Yjg5LTk2MGQtNGUyYi1iMmMxLWFlNGE2NjczYjc1NHJjcmVhdGVkX2Fzc2VydGlvbnODomN1cmx4LXNlbGYjanVtYmY9YzJwYS5hc3NlcnRpb25zL2MycGEuaW5ncmVkaWVudC52M2RoYXNoWCCrXIDb8rJ6sTp78d7HRGgTcxDSyYtQUuBT7QopS/lGZ6JjdXJseCpzZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmFjdGlvbnMudjJkaGFzaFggfNGepLmBp1xBoh0jq92WyKvWi/MycvSn2GfHvWSZkv6iY3VybHgpc2VsZiNqdW1iZj1jMnBhLmFzc2VydGlvbnMvYzJwYS5oYXNoLmRhdGFkaGFzaFggPncC1J9jWkXT/oNXidwdix4ii/3vn22hbjYaOOdlIcZ0Y2xhaW1fZ2VuZXJhdG9yX2luZm+jZG5hbWVvQW50aHJvcGljIEZpbGVzZ3ZlcnNpb25lMS4wLjBrc3BlY1ZlcnNpb25lMi40LjAAABA4anVtYgAAAChqdW1kYzJjcwARABCAAACqADibcQNjMnBhLnNpZ25hdHVyZQAAABAIY2JvctKEWQISogEmGCFZAgowggIGMIIBjaADAgECAhRA5aAK7sI50L64g/oGQgU9Z1UTADAKBggqhkjOPQQDAzBJMRcwFQYDVQQKEw5BbnRocm9waWMsIFBCQzEuMCwGA1UEAxMlQW50aHJvcGljIENvbnRlbnQgQ3JlZGVudGlhbHMgUm9vdCBDQTAeFw0yNjA4MDcxODQzNTZaFw0yODA4MDYxOTQzNTZaMEQxFzAVBgNVBAoTDkFudGhyb3BpYywgUEJDMSkwJwYDVQQDEyBBbnRocm9waWMgQ2xhdWRlIENvbnRlbnQgU2lnbmluZzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABJh6CmvLUBgFFNU0vUKlOVtE6djd17L5SuwX0LemFisBM3dkd/3cyjxFA3Qo5S46fX0/ihY0VZ7mfb9KF703t5OjWDBWMA4GA1UdDwEB/wQEAwIHgDAVBgNVHSUEDjAMBgorBgEEAYPoXgIBMAwGA1UdEwEB/wQCMAAwHwYDVR0jBBgwFoAUzlHiBIFOZFsj+OPEz5o+nMHXXMIwCgYIKoZIzj0EAwMDZwAwZAIwMXMdFJ4BetLLVY7ORuE9noqbbAZOZn/aArXyTwFAZfKrPzxF2vPoJNf1+UCdg1XGAjBwX1zd9WGqYkqmL5SFqw1QySjr1zJfpJM9+1rdDwSPLMOPOjKuiXjoU/pUUeG9RwmhY3BhZFkNngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPZYQHplvXyhi0ql6NXzkyS1hhD9bLHjdcD25vgYiDfE8IfWCn0JI8smLkuzgKUIzVHwa+nez6KVO0FF87yu8WFzp2k=</c2pa:manifest></metadata></svg>

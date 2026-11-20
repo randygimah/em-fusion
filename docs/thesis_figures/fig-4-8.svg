@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 468" width="760" height="468" font-family="Arial, Helvetica, sans-serif" role="img" aria-label="Two rows of three small bar charts. Row a shows the eight channels of one receiver: all quiet; channel 4 raised alone, which points to the receiver; and channel 4 raised with channels 2, 3, 5 and 6 tapering either side, which points to a real emission. Row b shows four receivers on one channel: all quiet; one receiver raised alone, which points to that receiver; and three neighbouring receivers raised together while a fourth beyond them stays quiet, which points to a real emission." xmlns:c2pa="http://c2pa.org/manifest">
+  <defs>
+    <marker id="ah48" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#333333"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="760" height="468" fill="#ffffff"/>
+  <text x="20" y="22" text-anchor="start" font-size="12" font-weight="bold" fill="#111111">(a) Across the channels of one receiver</text>
+  <text x="140" y="48" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#111111">Quiet</text>
+  <rect x="40.0" y="134" width="19.8" height="22" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="49.9" y="170" text-anchor="middle" font-size="10" fill="#444444">0</text>
+  <rect x="65.8" y="130" width="19.8" height="26" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="75.6" y="170" text-anchor="middle" font-size="10" fill="#444444">1</text>
+  <rect x="91.5" y="135" width="19.8" height="21" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="101.4" y="170" text-anchor="middle" font-size="10" fill="#444444">2</text>
+  <rect x="117.2" y="131" width="19.8" height="25" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="127.1" y="170" text-anchor="middle" font-size="10" fill="#444444">3</text>
+  <rect x="143.0" y="132" width="19.8" height="24" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="152.9" y="170" text-anchor="middle" font-size="10" fill="#444444">4</text>
+  <rect x="168.8" y="134" width="19.8" height="22" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="178.6" y="170" text-anchor="middle" font-size="10" fill="#444444">5</text>
+  <rect x="194.5" y="129" width="19.8" height="27" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="204.4" y="170" text-anchor="middle" font-size="10" fill="#444444">6</text>
+  <rect x="220.2" y="133" width="19.8" height="23" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="230.1" y="170" text-anchor="middle" font-size="10" fill="#444444">7</text>
+  <line x1="34" y1="156" x2="246" y2="156" stroke="#333333" stroke-width="1"/>
+  <line x1="34" y1="120" x2="246" y2="120" stroke="#888888" stroke-width="1" stroke-dasharray="4 3"/>
+  <text x="140" y="190" text-anchor="middle" font-size="10.5" font-style="italic" fill="#444444">nothing above the threshold</text>
+  <text x="140" y="206" text-anchor="middle" font-size="11" font-weight="bold" fill="#111111">Nothing to report</text>
+  <text x="380" y="48" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#111111">One channel raised, alone</text>
+  <rect x="280.0" y="134" width="19.8" height="22" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="289.9" y="170" text-anchor="middle" font-size="10" fill="#444444">0</text>
+  <rect x="305.8" y="130" width="19.8" height="26" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="315.6" y="170" text-anchor="middle" font-size="10" fill="#444444">1</text>
+  <rect x="331.5" y="135" width="19.8" height="21" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="341.4" y="170" text-anchor="middle" font-size="10" fill="#444444">2</text>
+  <rect x="357.2" y="131" width="19.8" height="25" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="367.1" y="170" text-anchor="middle" font-size="10" fill="#444444">3</text>
+  <rect x="383.0" y="72" width="19.8" height="84" fill="#5a5a5a" stroke="#333333" stroke-width="1"/>
+  <text x="392.9" y="170" text-anchor="middle" font-size="10" fill="#444444">4</text>
+  <rect x="408.8" y="134" width="19.8" height="22" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="418.6" y="170" text-anchor="middle" font-size="10" fill="#444444">5</text>
+  <rect x="434.5" y="129" width="19.8" height="27" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="444.4" y="170" text-anchor="middle" font-size="10" fill="#444444">6</text>
+  <rect x="460.2" y="133" width="19.8" height="23" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="470.1" y="170" text-anchor="middle" font-size="10" fill="#444444">7</text>
+  <line x1="274" y1="156" x2="486" y2="156" stroke="#333333" stroke-width="1"/>
+  <line x1="274" y1="120" x2="486" y2="120" stroke="#888888" stroke-width="1" stroke-dasharray="4 3"/>
+  <text x="380" y="190" text-anchor="middle" font-size="10.5" font-style="italic" fill="#444444">the channels either side stayed quiet</text>
+  <text x="380" y="206" text-anchor="middle" font-size="11" font-weight="bold" fill="#111111">Suspect the receiver</text>
+  <text x="620" y="48" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#111111">A channel and its neighbours</text>
+  <rect x="520.0" y="134" width="19.8" height="22" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="529.9" y="170" text-anchor="middle" font-size="10" fill="#444444">0</text>
+  <rect x="545.8" y="130" width="19.8" height="26" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="555.6" y="170" text-anchor="middle" font-size="10" fill="#444444">1</text>
+  <rect x="571.5" y="112" width="19.8" height="44" fill="#5a5a5a" stroke="#333333" stroke-width="1"/>
+  <text x="581.4" y="170" text-anchor="middle" font-size="10" fill="#444444">2</text>
+  <rect x="597.2" y="90" width="19.8" height="66" fill="#5a5a5a" stroke="#333333" stroke-width="1"/>
+  <text x="607.1" y="170" text-anchor="middle" font-size="10" fill="#444444">3</text>
+  <rect x="623.0" y="72" width="19.8" height="84" fill="#5a5a5a" stroke="#333333" stroke-width="1"/>
+  <text x="632.9" y="170" text-anchor="middle" font-size="10" fill="#444444">4</text>
+  <rect x="648.8" y="93" width="19.8" height="63" fill="#5a5a5a" stroke="#333333" stroke-width="1"/>
+  <text x="658.6" y="170" text-anchor="middle" font-size="10" fill="#444444">5</text>
+  <rect x="674.5" y="114" width="19.8" height="42" fill="#5a5a5a" stroke="#333333" stroke-width="1"/>
+  <text x="684.4" y="170" text-anchor="middle" font-size="10" fill="#444444">6</text>
+  <rect x="700.2" y="133" width="19.8" height="23" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="710.1" y="170" text-anchor="middle" font-size="10" fill="#444444">7</text>
+  <line x1="514" y1="156" x2="726" y2="156" stroke="#333333" stroke-width="1"/>
+  <line x1="514" y1="120" x2="726" y2="120" stroke="#888888" stroke-width="1" stroke-dasharray="4 3"/>
+  <text x="620" y="190" text-anchor="middle" font-size="10.5" font-style="italic" fill="#444444">the energy spread into adjacent channels</text>
+  <text x="620" y="206" text-anchor="middle" font-size="11" font-weight="bold" fill="#111111">Suspect a real emission</text>
+  <text x="20" y="248" text-anchor="start" font-size="12" font-weight="bold" fill="#111111">(b) Across neighbouring receivers, on one channel</text>
+  <text x="140" y="274" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#111111">Quiet</text>
+  <rect x="40.0" y="358" width="38.0" height="24" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="59" y="396" text-anchor="middle" font-size="10" fill="#444444">RF-04</text>
+  <rect x="94.0" y="360" width="38.0" height="22" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="113" y="396" text-anchor="middle" font-size="10" fill="#444444">RF-05</text>
+  <rect x="148.0" y="356" width="38.0" height="26" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="167" y="396" text-anchor="middle" font-size="10" fill="#444444">RF-06</text>
+  <rect x="202.0" y="359" width="38.0" height="23" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="221" y="396" text-anchor="middle" font-size="10" fill="#444444">RF-07</text>
+  <line x1="34" y1="382" x2="246" y2="382" stroke="#333333" stroke-width="1"/>
+  <line x1="34" y1="346" x2="246" y2="346" stroke="#888888" stroke-width="1" stroke-dasharray="4 3"/>
+  <text x="140" y="416" text-anchor="middle" font-size="10.5" font-style="italic" fill="#444444">nothing above the threshold</text>
+  <text x="140" y="432" text-anchor="middle" font-size="11" font-weight="bold" fill="#111111">Nothing to report</text>
+  <text x="380" y="274" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#111111">One receiver raised, alone</text>
+  <rect x="280.0" y="358" width="38.0" height="24" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="299" y="396" text-anchor="middle" font-size="10" fill="#444444">RF-04</text>
+  <rect x="334.0" y="298" width="38.0" height="84" fill="#5a5a5a" stroke="#333333" stroke-width="1"/>
+  <text x="353" y="396" text-anchor="middle" font-size="10" fill="#444444">RF-05</text>
+  <rect x="388.0" y="356" width="38.0" height="26" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="407" y="396" text-anchor="middle" font-size="10" fill="#444444">RF-06</text>
+  <rect x="442.0" y="359" width="38.0" height="23" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="461" y="396" text-anchor="middle" font-size="10" fill="#444444">RF-07</text>
+  <line x1="274" y1="382" x2="486" y2="382" stroke="#333333" stroke-width="1"/>
+  <line x1="274" y1="346" x2="486" y2="346" stroke="#888888" stroke-width="1" stroke-dasharray="4 3"/>
+  <text x="380" y="416" text-anchor="middle" font-size="10.5" font-style="italic" fill="#444444">its neighbours stayed quiet</text>
+  <text x="380" y="432" text-anchor="middle" font-size="11" font-weight="bold" fill="#111111">Suspect the receiver</text>
+  <text x="620" y="274" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#111111">A receiver and its neighbours</text>
+  <rect x="520.0" y="320" width="38.0" height="62" fill="#5a5a5a" stroke="#333333" stroke-width="1"/>
+  <text x="539" y="396" text-anchor="middle" font-size="10" fill="#444444">RF-04</text>
+  <rect x="574.0" y="298" width="38.0" height="84" fill="#5a5a5a" stroke="#333333" stroke-width="1"/>
+  <text x="593" y="396" text-anchor="middle" font-size="10" fill="#444444">RF-05</text>
+  <rect x="628.0" y="316" width="38.0" height="66" fill="#5a5a5a" stroke="#333333" stroke-width="1"/>
+  <text x="647" y="396" text-anchor="middle" font-size="10" fill="#444444">RF-06</text>
+  <rect x="682.0" y="359" width="38.0" height="23" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="701" y="396" text-anchor="middle" font-size="10" fill="#444444">RF-07</text>
+  <line x1="514" y1="382" x2="726" y2="382" stroke="#333333" stroke-width="1"/>
+  <line x1="514" y1="346" x2="726" y2="346" stroke="#888888" stroke-width="1" stroke-dasharray="4 3"/>
+  <text x="620" y="416" text-anchor="middle" font-size="10.5" font-style="italic" fill="#444444">raised together; a receiver beyond stayed quiet</text>
+  <text x="620" y="432" text-anchor="middle" font-size="11" font-weight="bold" fill="#111111">Suspect a real emission</text>
+  <line x1="20" y1="456" x2="44" y2="456" stroke="#888888" stroke-width="1" stroke-dasharray="4 3"/>
+  <text x="50" y="460" text-anchor="start" font-size="10" font-style="italic" fill="#444444">threshold above the baseline; bar heights are illustrative</text>
+<metadata><c2pa:manifest>AAAWgmp1bWIAAAAeanVtZGMycGEAEQAQgAAAqgA4m3EDYzJwYQAAABZcanVtYgAAAEdqdW1kYzJtYQARABCAAACqADibcQN1cm46YzJwYTo3ZDY0MzcyNy04YWRmLTQ0MjctOTAzMS1lMzkyZTJlNzI4NWMAAAADl2p1bWIAAAApanVtZGMyYXMAEQAQgAAAqgA4m3EDYzJwYS5hc3NlcnRpb25zAAAAALxqdW1iAAAARGp1bWRjYm9yABEAEIAAAKoAOJtxE2MycGEuaW5ncmVkaWVudC52MwAAAAAYYzJzaKsc1RSkTbm+e3DzSN1BtWUAAABwY2JvcqNpZGM6Zm9ybWF0bWltYWdlL3N2Zyt4bWxqaW5zdGFuY2VJRHgseG1wOmlpZDo5YTZkOWZiZC0wOTVkLTQyZGUtYTYwOC02Y2E2OTA2ZjE5ODJscmVsYXRpb25zaGlwaHBhcmVudE9mAAAB4mp1bWIAAABBanVtZGNib3IAEQAQgAAAqgA4m3ETYzJwYS5hY3Rpb25zLnYyAAAAABhjMnNolciKJ9soPzbfA/lFUB3wHQAAAZljYm9yomdhY3Rpb25zgqJmYWN0aW9ua2MycGEub3BlbmVkanBhcmFtZXRlcnOha2luZ3JlZGllbnRzgaJjdXJseC1zZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmluZ3JlZGllbnQudjNkaGFzaFggCi1al3k9c3C3o3GpkKVeJVPP80aMSxVwZLW/m8C+QQGkZmFjdGlvbngdY29tLmFudGhyb3BpYy5jbGF1ZGUucHJvdmlkZWRqcGFyYW1ldGVyc6F4H2NvbS5hbnRocm9waWMub3JpZ2luLWNvbmZpZGVuY2VndW5rbm93bmtkZXNjcmlwdGlvbnhmQ2xhdWRlIHByb3ZpZGVkIHRoaXMgZmlsZSBhdCB0aGUgcmVxdWVzdCBvZiBhIHVzZXIgYW5kIG1heSBoYXZlIGNyZWF0ZWQgb3IgbW9kaWZpZWQgdGhlIGZpbGUgY29udGVudHMubXNvZnR3YXJlQWdlbnShZG5hbWVmQ2xhdWRlcmFsbEFjdGlvbnNJbmNsdWRlZPUAAADIanVtYgAAAEBqdW1kY2JvcgARABCAAACqADibcRNjMnBhLmhhc2guZGF0YQAAAAAYYzJzaFfZiJ0va0gjGI1ExwpZPTAAAACAY2JvcqVjYWxnZnNoYTI1NmNwYWRMAAAAAAAAAAAAAAAAZGhhc2hYIJ6ciquM3/dAkW89S2T9+8HMK9yUQC6lKGOVDwnomdJ8ZG5hbWVuanVtYmYgbWFuaWZlc3RqZXhjbHVzaW9uc4GiZXN0YXJ0GS21Zmxlbmd0aBkeBAAAAj5qdW1iAAAAJ2p1bWRjMmNsABEAEIAAAKoAOJtxA2MycGEuY2xhaW0udjIAAAACD2Nib3KlY2FsZ2ZzaGEyNTZpc2lnbmF0dXJleE1zZWxmI2p1bWJmPS9jMnBhL3VybjpjMnBhOjdkNjQzNzI3LThhZGYtNDQyNy05MDMxLWUzOTJlMmU3Mjg1Yy9jMnBhLnNpZ25hdHVyZWppbnN0YW5jZUlEeCx4bXA6aWlkOjhiNDFmZDJmLWQ1MzEtNGQ0MS1hYTE4LTM1MmMwYWM3OTkyOHJjcmVhdGVkX2Fzc2VydGlvbnODomN1cmx4LXNlbGYjanVtYmY9YzJwYS5hc3NlcnRpb25zL2MycGEuaW5ncmVkaWVudC52M2RoYXNoWCAKLVqXeT1zcLejcamQpV4lU8/zRoxLFXBktb+bwL5BAaJjdXJseCpzZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmFjdGlvbnMudjJkaGFzaFggiwlxbS8K1hFTSycqok4nIEDeH60cSGw7wO51YbY4f+CiY3VybHgpc2VsZiNqdW1iZj1jMnBhLmFzc2VydGlvbnMvYzJwYS5oYXNoLmRhdGFkaGFzaFggYwzQsBmIkFRUVEC7PU5ml1omRcvPpDvuqx+KI1shk5J0Y2xhaW1fZ2VuZXJhdG9yX2luZm+jZG5hbWVvQW50aHJvcGljIEZpbGVzZ3ZlcnNpb25lMS4wLjBrc3BlY1ZlcnNpb25lMi40LjAAABA4anVtYgAAAChqdW1kYzJjcwARABCAAACqADibcQNjMnBhLnNpZ25hdHVyZQAAABAIY2JvctKEWQISogEmGCFZAgowggIGMIIBjaADAgECAhRA5aAK7sI50L64g/oGQgU9Z1UTADAKBggqhkjOPQQDAzBJMRcwFQYDVQQKEw5BbnRocm9waWMsIFBCQzEuMCwGA1UEAxMlQW50aHJvcGljIENvbnRlbnQgQ3JlZGVudGlhbHMgUm9vdCBDQTAeFw0yNjA4MDcxODQzNTZaFw0yODA4MDYxOTQzNTZaMEQxFzAVBgNVBAoTDkFudGhyb3BpYywgUEJDMSkwJwYDVQQDEyBBbnRocm9waWMgQ2xhdWRlIENvbnRlbnQgU2lnbmluZzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABJh6CmvLUBgFFNU0vUKlOVtE6djd17L5SuwX0LemFisBM3dkd/3cyjxFA3Qo5S46fX0/ihY0VZ7mfb9KF703t5OjWDBWMA4GA1UdDwEB/wQEAwIHgDAVBgNVHSUEDjAMBgorBgEEAYPoXgIBMAwGA1UdEwEB/wQCMAAwHwYDVR0jBBgwFoAUzlHiBIFOZFsj+OPEz5o+nMHXXMIwCgYIKoZIzj0EAwMDZwAwZAIwMXMdFJ4BetLLVY7ORuE9noqbbAZOZn/aArXyTwFAZfKrPzxF2vPoJNf1+UCdg1XGAjBwX1zd9WGqYkqmL5SFqw1QySjr1zJfpJM9+1rdDwSPLMOPOjKuiXjoU/pUUeG9RwmhY3BhZFkNngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPZYQCZn52vQaN+q7qFEs7PZOtRZp4p6bsWHEJlQEJXYLa4qGbTACXU2YoxEgwWXY/vkuhS9ZVavRjD89W4TDefOrFM=</c2pa:manifest></metadata></svg>

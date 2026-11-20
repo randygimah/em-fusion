@@ -1,0 +1,142 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 600" width="760" height="600" font-family="Arial, Helvetica, sans-serif" role="img" aria-label="Entity-relationship diagram of the store. One scenario run owns many observations, quarantined records, detection findings, evidence bundles and anomalies; the anomalies table was created in the first migration and is never written. One evidence bundle has many hypotheses, which are appended and never replaced; one hypothesis has many analyst verdicts. A bundle&#x27;s evidence cites observation rows by identifier, resolved before the bundle is stored, without a foreign key." xmlns:c2pa="http://c2pa.org/manifest">
+  <defs>
+    <marker id="ah43" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#333333"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="760" height="600" fill="#ffffff"/>
+  <rect x="290" y="12" width="180" height="117.0" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <rect x="290" y="12" width="180" height="22" fill="#e9e9e9" stroke="#333333" stroke-width="1"/>
+  <text x="297" y="27" text-anchor="start" font-size="11.5" font-weight="bold" fill="#111111">scenario_runs</text>
+  <text x="297" y="49" text-anchor="start" font-size="10.5" fill="#222222">id</text>
+  <text x="464" y="49" text-anchor="end" font-size="9.5" font-weight="bold" fill="#555555">PK</text>
+  <text x="297" y="63.5" text-anchor="start" font-size="10.5" fill="#222222">scenario_type</text>
+  <text x="297" y="78" text-anchor="start" font-size="10.5" fill="#222222">seed, parameters</text>
+  <text x="297" y="92.5" text-anchor="start" font-size="10.5" fill="#222222">ground_truth (answer key)</text>
+  <text x="297" y="107" text-anchor="start" font-size="10.5" fill="#222222">detection_policy</text>
+  <text x="297" y="121.5" text-anchor="start" font-size="10.5" fill="#222222">started_at, completed_at</text>
+  <rect x="10" y="186" width="140" height="175.0" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <rect x="10" y="186" width="140" height="22" fill="#e9e9e9" stroke="#333333" stroke-width="1"/>
+  <text x="17" y="201" text-anchor="start" font-size="11.5" font-weight="bold" fill="#111111">observations</text>
+  <text x="17" y="223" text-anchor="start" font-size="10.5" fill="#222222">id</text>
+  <text x="144" y="223" text-anchor="end" font-size="9.5" font-weight="bold" fill="#555555">PK</text>
+  <text x="17" y="237.5" text-anchor="start" font-size="10.5" fill="#222222">scenario_run_id</text>
+  <text x="144" y="237.5" text-anchor="end" font-size="9.5" font-weight="bold" fill="#555555">FK</text>
+  <text x="17" y="252" text-anchor="start" font-size="10.5" fill="#222222">source_id, source_type</text>
+  <text x="17" y="266.5" text-anchor="start" font-size="10.5" fill="#222222">observation_type</text>
+  <text x="17" y="281" text-anchor="start" font-size="10.5" fill="#222222">data_mode</text>
+  <text x="17" y="295.5" text-anchor="start" font-size="10.5" fill="#222222">timestamp</text>
+  <text x="17" y="310" text-anchor="start" font-size="10.5" fill="#222222">validation_status</text>
+  <text x="17" y="324.5" text-anchor="start" font-size="10.5" fill="#222222">provenance</text>
+  <text x="17" y="339" text-anchor="start" font-size="10.5" fill="#222222">payload (typed)</text>
+  <text x="17" y="353.5" text-anchor="start" font-size="10.5" fill="#222222">location (point)</text>
+  <rect x="160" y="186" width="140" height="131.5" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <rect x="160" y="186" width="140" height="22" fill="#e9e9e9" stroke="#333333" stroke-width="1"/>
+  <text x="167" y="201" text-anchor="start" font-size="11.5" font-weight="bold" fill="#111111">quarantined_records</text>
+  <text x="167" y="223" text-anchor="start" font-size="10.5" fill="#222222">id</text>
+  <text x="294" y="223" text-anchor="end" font-size="9.5" font-weight="bold" fill="#555555">PK</text>
+  <text x="167" y="237.5" text-anchor="start" font-size="10.5" fill="#222222">scenario_run_id</text>
+  <text x="294" y="237.5" text-anchor="end" font-size="9.5" font-weight="bold" fill="#555555">FK</text>
+  <text x="167" y="252" text-anchor="start" font-size="10.5" fill="#222222">source_id, source_type</text>
+  <text x="167" y="266.5" text-anchor="start" font-size="10.5" fill="#222222">observation_type</text>
+  <text x="167" y="281" text-anchor="start" font-size="10.5" fill="#222222">field</text>
+  <text x="167" y="295.5" text-anchor="start" font-size="10.5" fill="#222222">reason</text>
+  <text x="167" y="310" text-anchor="start" font-size="10.5" fill="#222222">created_at</text>
+  <rect x="310" y="186" width="140" height="146.0" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <rect x="310" y="186" width="140" height="22" fill="#e9e9e9" stroke="#333333" stroke-width="1"/>
+  <text x="317" y="201" text-anchor="start" font-size="11.5" font-weight="bold" fill="#111111">detection_findings</text>
+  <text x="317" y="223" text-anchor="start" font-size="10.5" fill="#222222">id</text>
+  <text x="444" y="223" text-anchor="end" font-size="9.5" font-weight="bold" fill="#555555">PK</text>
+  <text x="317" y="237.5" text-anchor="start" font-size="10.5" fill="#222222">scenario_run_id</text>
+  <text x="444" y="237.5" text-anchor="end" font-size="9.5" font-weight="bold" fill="#555555">FK</text>
+  <text x="317" y="252" text-anchor="start" font-size="10.5" fill="#222222">rule_id, finding_type</text>
+  <text x="317" y="266.5" text-anchor="start" font-size="10.5" fill="#222222">subject</text>
+  <text x="317" y="281" text-anchor="start" font-size="10.5" fill="#222222">started_at, ended_at</text>
+  <text x="317" y="295.5" text-anchor="start" font-size="10.5" fill="#222222">evidence_refs</text>
+  <text x="317" y="310" text-anchor="start" font-size="10.5" fill="#222222">details, policy</text>
+  <text x="317" y="324.5" text-anchor="start" font-size="10.5" fill="#222222">location (point)</text>
+  <rect x="460" y="186" width="140" height="160.5" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <rect x="460" y="186" width="140" height="22" fill="#e9e9e9" stroke="#333333" stroke-width="1"/>
+  <text x="467" y="201" text-anchor="start" font-size="11.5" font-weight="bold" fill="#111111">evidence_bundles</text>
+  <text x="467" y="223" text-anchor="start" font-size="10.5" fill="#222222">id</text>
+  <text x="594" y="223" text-anchor="end" font-size="9.5" font-weight="bold" fill="#555555">PK</text>
+  <text x="467" y="237.5" text-anchor="start" font-size="10.5" fill="#222222">scenario_run_id</text>
+  <text x="594" y="237.5" text-anchor="end" font-size="9.5" font-weight="bold" fill="#555555">FK</text>
+  <text x="467" y="252" text-anchor="start" font-size="10.5" fill="#222222">rule_id, subject</text>
+  <text x="467" y="266.5" text-anchor="start" font-size="10.5" fill="#222222">started_at, ended_at</text>
+  <text x="467" y="281" text-anchor="start" font-size="10.5" fill="#222222">evidence</text>
+  <text x="467" y="295.5" text-anchor="start" font-size="10.5" fill="#222222">known_uncertainties</text>
+  <text x="467" y="310" text-anchor="start" font-size="10.5" fill="#222222">superseded</text>
+  <text x="467" y="324.5" text-anchor="start" font-size="10.5" fill="#222222">affected_channels</text>
+  <text x="467" y="339" text-anchor="start" font-size="10.5" fill="#222222">affected_area (point)</text>
+  <rect x="610" y="186" width="140" height="117.0" fill="#ffffff" stroke="#8a8a8a" stroke-width="1" stroke-dasharray="5 3"/>
+  <rect x="610" y="186" width="140" height="22" fill="#f7f7f7" stroke="#8a8a8a" stroke-width="1" stroke-dasharray="5 3"/>
+  <text x="617" y="201" text-anchor="start" font-size="11.5" font-weight="bold" fill="#777777">anomalies</text>
+  <text x="617" y="223" text-anchor="start" font-size="10.5" fill="#777777">id</text>
+  <text x="744" y="223" text-anchor="end" font-size="9.5" font-weight="bold" fill="#777777">PK</text>
+  <text x="617" y="237.5" text-anchor="start" font-size="10.5" fill="#777777">scenario_run_id</text>
+  <text x="744" y="237.5" text-anchor="end" font-size="9.5" font-weight="bold" fill="#777777">FK</text>
+  <text x="617" y="252" text-anchor="start" font-size="10.5" fill="#777777">bundle_id</text>
+  <text x="744" y="252" text-anchor="end" font-size="9.5" font-weight="bold" fill="#777777">FK</text>
+  <text x="617" y="266.5" text-anchor="start" font-size="10.5" fill="#777777">anomaly_type, severity</text>
+  <text x="617" y="281" text-anchor="start" font-size="10.5" fill="#777777">affected_area (polygon)</text>
+  <text x="617" y="295.5" text-anchor="start" font-size="10.5" font-style="italic" fill="#777777">(never written)</text>
+  <path d="M380,129.0 V158 M80,158 H680" fill="none" stroke="#333333" stroke-width="1.1"/>
+  <line x1="374" y1="138.0" x2="386" y2="138.0" stroke="#333333" stroke-width="1.1"/>
+  <line x1="80" y1="158" x2="80" y2="186" stroke="#333333" stroke-width="1.1"/>
+  <path d="M74,186 L80,176 L86,186 M80,186 V176" fill="none" stroke="#333333" stroke-width="1.1"/>
+  <line x1="230" y1="158" x2="230" y2="186" stroke="#333333" stroke-width="1.1"/>
+  <path d="M224,186 L230,176 L236,186 M230,186 V176" fill="none" stroke="#333333" stroke-width="1.1"/>
+  <line x1="380" y1="158" x2="380" y2="186" stroke="#333333" stroke-width="1.1"/>
+  <path d="M374,186 L380,176 L386,186 M380,186 V176" fill="none" stroke="#333333" stroke-width="1.1"/>
+  <line x1="530" y1="158" x2="530" y2="186" stroke="#333333" stroke-width="1.1"/>
+  <path d="M524,186 L530,176 L536,186 M530,186 V176" fill="none" stroke="#333333" stroke-width="1.1"/>
+  <line x1="680" y1="158" x2="680" y2="186" stroke="#8a8a8a" stroke-width="1.1" stroke-dasharray="4 3"/>
+  <path d="M674,186 L680,176 L686,186 M680,186 V176" fill="none" stroke="#333333" stroke-width="1.1"/>
+  <text x="388" y="150" text-anchor="start" font-size="10" font-style="italic" fill="#444444">one run, many rows; deleting a run deletes its rows</text>
+  <path d="M50,361.0 V383.0 H490 V346.5" fill="none" stroke="#555555" stroke-width="1.1" stroke-dasharray="4 3"/>
+  <text x="60" y="397" text-anchor="start" font-size="10" font-style="italic" fill="#444444">evidence cites observation rows by id, resolved before the bundle is stored; no foreign key</text>
+  <line x1="550" y1="346.5" x2="550" y2="410" stroke="#333333" stroke-width="1.1"/>
+  <line x1="544" y1="355.5" x2="556" y2="355.5" stroke="#333333" stroke-width="1.1"/>
+  <path d="M544,410 L550,400 L556,410 M550,410 V400" fill="none" stroke="#333333" stroke-width="1.1"/>
+  <text x="560" y="376.5" text-anchor="start" font-size="10" font-style="italic" fill="#444444">appended, never replaced</text>
+  <rect x="460" y="410" width="180" height="175.0" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <rect x="460" y="410" width="180" height="22" fill="#e9e9e9" stroke="#333333" stroke-width="1"/>
+  <text x="467" y="425" text-anchor="start" font-size="11.5" font-weight="bold" fill="#111111">hypotheses</text>
+  <text x="467" y="447" text-anchor="start" font-size="10.5" fill="#222222">id</text>
+  <text x="634" y="447" text-anchor="end" font-size="9.5" font-weight="bold" fill="#555555">PK</text>
+  <text x="467" y="461.5" text-anchor="start" font-size="10.5" fill="#222222">bundle_id</text>
+  <text x="634" y="461.5" text-anchor="end" font-size="9.5" font-weight="bold" fill="#555555">FK</text>
+  <text x="467" y="476" text-anchor="start" font-size="10.5" fill="#222222">generator, requested_generator</text>
+  <text x="467" y="490.5" text-anchor="start" font-size="10.5" fill="#222222">model_id, generation_params</text>
+  <text x="467" y="505" text-anchor="start" font-size="10.5" fill="#222222">raw_response</text>
+  <text x="467" y="519.5" text-anchor="start" font-size="10.5" fill="#222222">title, summary, confidence</text>
+  <text x="467" y="534" text-anchor="start" font-size="10.5" fill="#222222">supporting_evidence</text>
+  <text x="467" y="548.5" text-anchor="start" font-size="10.5" fill="#222222">uncertainty, alternatives</text>
+  <text x="467" y="563" text-anchor="start" font-size="10.5" fill="#222222">grounding_passed</text>
+  <text x="467" y="577.5" text-anchor="start" font-size="10.5" fill="#222222">status</text>
+  <rect x="250" y="450" width="150" height="102.5" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <rect x="250" y="450" width="150" height="22" fill="#e9e9e9" stroke="#333333" stroke-width="1"/>
+  <text x="257" y="465" text-anchor="start" font-size="11.5" font-weight="bold" fill="#111111">analyst_feedback</text>
+  <text x="257" y="487" text-anchor="start" font-size="10.5" fill="#222222">id</text>
+  <text x="394" y="487" text-anchor="end" font-size="9.5" font-weight="bold" fill="#555555">PK</text>
+  <text x="257" y="501.5" text-anchor="start" font-size="10.5" fill="#222222">hypothesis_id</text>
+  <text x="394" y="501.5" text-anchor="end" font-size="9.5" font-weight="bold" fill="#555555">FK</text>
+  <text x="257" y="516" text-anchor="start" font-size="10.5" fill="#222222">verdict (one of four)</text>
+  <text x="257" y="530.5" text-anchor="start" font-size="10.5" fill="#222222">note</text>
+  <text x="257" y="545" text-anchor="start" font-size="10.5" fill="#222222">created_at</text>
+  <line x1="400" y1="501.0" x2="460" y2="501.0" stroke="#333333" stroke-width="1.1"/>
+  <line x1="450" y1="495.0" x2="450" y2="507.0" stroke="#333333" stroke-width="1.1"/>
+  <path d="M400,495.0 L410,501.0 L400,507.0 M400,501.0 H410" fill="none" stroke="#333333" stroke-width="1.1"/>
+  <text x="14" y="454" text-anchor="start" font-size="11" font-weight="bold" fill="#111111">Key</text>
+  <line x1="14" y1="470" x2="54" y2="470" stroke="#333333" stroke-width="1.1"/>
+  <line x1="22" y1="464" x2="22" y2="476" stroke="#333333" stroke-width="1.1"/>
+  <path d="M54,464 L44,470 L54,476" fill="none" stroke="#333333" stroke-width="1.1"/>
+  <text x="64" y="474" text-anchor="start" font-size="10.5" fill="#444444">one to many</text>
+  <line x1="14" y1="492" x2="54" y2="492" stroke="#555555" stroke-width="1.1" stroke-dasharray="4 3"/>
+  <text x="64" y="496" text-anchor="start" font-size="10.5" fill="#444444">cited by id, no key</text>
+  <text x="14" y="518" text-anchor="start" font-size="10.5" fill="#444444">PK primary key; FK foreign key</text>
+  <text x="14" y="536" text-anchor="start" font-size="10.5" fill="#444444">point, polygon: PostGIS geometry,</text>
+  <text x="14" y="550" text-anchor="start" font-size="10.5" fill="#444444">WGS 84, spatially indexed</text>
+  <text x="14" y="568" text-anchor="start" font-size="10.5" fill="#444444">dashed table: never written</text>
+<metadata><c2pa:manifest>AAAWgmp1bWIAAAAeanVtZGMycGEAEQAQgAAAqgA4m3EDYzJwYQAAABZcanVtYgAAAEdqdW1kYzJtYQARABCAAACqADibcQN1cm46YzJwYToxYTkwMmZhZi00MmUzLTRjM2UtYTE1ZC1lNjBhNDI2YmU5OTcAAAADl2p1bWIAAAApanVtZGMyYXMAEQAQgAAAqgA4m3EDYzJwYS5hc3NlcnRpb25zAAAAALxqdW1iAAAARGp1bWRjYm9yABEAEIAAAKoAOJtxE2MycGEuaW5ncmVkaWVudC52MwAAAAAYYzJzaFGaC/4Xix+g73Niwt/972sAAABwY2JvcqNpZGM6Zm9ybWF0bWltYWdlL3N2Zyt4bWxqaW5zdGFuY2VJRHgseG1wOmlpZDo1NDBmNDg4MS1mMGU1LTQ2YzUtYmI4Yi05YjFmNDE4NzRkNGFscmVsYXRpb25zaGlwaHBhcmVudE9mAAAB4mp1bWIAAABBanVtZGNib3IAEQAQgAAAqgA4m3ETYzJwYS5hY3Rpb25zLnYyAAAAABhjMnNoenvSm01KlARsuTK4JeNBaAAAAZljYm9yomdhY3Rpb25zgqJmYWN0aW9ua2MycGEub3BlbmVkanBhcmFtZXRlcnOha2luZ3JlZGllbnRzgaJjdXJseC1zZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmluZ3JlZGllbnQudjNkaGFzaFggceTe+qrbZhpNoSW1UPjMWIzdLujRYFRxYVRzC0dMntekZmFjdGlvbngdY29tLmFudGhyb3BpYy5jbGF1ZGUucHJvdmlkZWRqcGFyYW1ldGVyc6F4H2NvbS5hbnRocm9waWMub3JpZ2luLWNvbmZpZGVuY2VndW5rbm93bmtkZXNjcmlwdGlvbnhmQ2xhdWRlIHByb3ZpZGVkIHRoaXMgZmlsZSBhdCB0aGUgcmVxdWVzdCBvZiBhIHVzZXIgYW5kIG1heSBoYXZlIGNyZWF0ZWQgb3IgbW9kaWZpZWQgdGhlIGZpbGUgY29udGVudHMubXNvZnR3YXJlQWdlbnShZG5hbWVmQ2xhdWRlcmFsbEFjdGlvbnNJbmNsdWRlZPUAAADIanVtYgAAAEBqdW1kY2JvcgARABCAAACqADibcRNjMnBhLmhhc2guZGF0YQAAAAAYYzJzaLXndvAlkxrBx7Ol2a5uDdMAAACAY2JvcqVjYWxnZnNoYTI1NmNwYWRMAAAAAAAAAAAAAAAAZGhhc2hYICSxOJEvwhw1f+e+Z/UbvK/kxRKbz1vqPciMqQKUogngZG5hbWVuanVtYmYgbWFuaWZlc3RqZXhjbHVzaW9uc4GiZXN0YXJ0GTj9Zmxlbmd0aBkeBAAAAj5qdW1iAAAAJ2p1bWRjMmNsABEAEIAAAKoAOJtxA2MycGEuY2xhaW0udjIAAAACD2Nib3KlY2FsZ2ZzaGEyNTZpc2lnbmF0dXJleE1zZWxmI2p1bWJmPS9jMnBhL3VybjpjMnBhOjFhOTAyZmFmLTQyZTMtNGMzZS1hMTVkLWU2MGE0MjZiZTk5Ny9jMnBhLnNpZ25hdHVyZWppbnN0YW5jZUlEeCx4bXA6aWlkOjI1MjMyMDBjLTdmY2UtNDQ1Mi1hZDAzLTk1Y2JjZWJhNzQ1MHJjcmVhdGVkX2Fzc2VydGlvbnODomN1cmx4LXNlbGYjanVtYmY9YzJwYS5hc3NlcnRpb25zL2MycGEuaW5ncmVkaWVudC52M2RoYXNoWCBx5N76qttmGk2hJbVQ+MxYjN0u6NFgVHFhVHMLR0ye16JjdXJseCpzZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmFjdGlvbnMudjJkaGFzaFggszJ+dsrf8WKWVitbfQn1RwrAhUwWuxiOhtEdsSi6PXeiY3VybHgpc2VsZiNqdW1iZj1jMnBhLmFzc2VydGlvbnMvYzJwYS5oYXNoLmRhdGFkaGFzaFggQNAyu0Uw+9SSj8FBJLTixYpua3B2Ozw6Ifvzz5Zsoql0Y2xhaW1fZ2VuZXJhdG9yX2luZm+jZG5hbWVvQW50aHJvcGljIEZpbGVzZ3ZlcnNpb25lMS4wLjBrc3BlY1ZlcnNpb25lMi40LjAAABA4anVtYgAAAChqdW1kYzJjcwARABCAAACqADibcQNjMnBhLnNpZ25hdHVyZQAAABAIY2JvctKEWQISogEmGCFZAgowggIGMIIBjaADAgECAhRA5aAK7sI50L64g/oGQgU9Z1UTADAKBggqhkjOPQQDAzBJMRcwFQYDVQQKEw5BbnRocm9waWMsIFBCQzEuMCwGA1UEAxMlQW50aHJvcGljIENvbnRlbnQgQ3JlZGVudGlhbHMgUm9vdCBDQTAeFw0yNjA4MDcxODQzNTZaFw0yODA4MDYxOTQzNTZaMEQxFzAVBgNVBAoTDkFudGhyb3BpYywgUEJDMSkwJwYDVQQDEyBBbnRocm9waWMgQ2xhdWRlIENvbnRlbnQgU2lnbmluZzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABJh6CmvLUBgFFNU0vUKlOVtE6djd17L5SuwX0LemFisBM3dkd/3cyjxFA3Qo5S46fX0/ihY0VZ7mfb9KF703t5OjWDBWMA4GA1UdDwEB/wQEAwIHgDAVBgNVHSUEDjAMBgorBgEEAYPoXgIBMAwGA1UdEwEB/wQCMAAwHwYDVR0jBBgwFoAUzlHiBIFOZFsj+OPEz5o+nMHXXMIwCgYIKoZIzj0EAwMDZwAwZAIwMXMdFJ4BetLLVY7ORuE9noqbbAZOZn/aArXyTwFAZfKrPzxF2vPoJNf1+UCdg1XGAjBwX1zd9WGqYkqmL5SFqw1QySjr1zJfpJM9+1rdDwSPLMOPOjKuiXjoU/pUUeG9RwmhY3BhZFkNngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPZYQF/drXkANBpxgA4qhZw8agAeASuJkgg7KFSDRRm+bru+SLlKevREIfkH2MsI5Boo4+7IzMoesceG8cqhoS8N+ns=</c2pa:manifest></metadata></svg>

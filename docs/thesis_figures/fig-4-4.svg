@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 520" width="760" height="520" font-family="Arial, Helvetica, sans-serif" role="img" aria-label="Two panels. Panel a: eight adjacent channels, each 2 MHz wide, centred from 1567.42 to 1581.42 MHz; channel 4 is centred on GPS L1 at 1575.42 MHz, with four channels below it and three above; channels 3 and 5 are its frequency neighbours. Panel b: the seven receivers on a schematic map, with lines joining pairs within 70 km of each other: Schiphol with Rotterdam and Lelystad; Eindhoven with Weeze; Weeze with Dusseldorf; Dusseldorf with Koln-Bonn. A dashed circle of 70 km is drawn around Weeze." xmlns:c2pa="http://c2pa.org/manifest">
+  <defs>
+    <marker id="ah44" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#333333"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="760" height="520" fill="#ffffff"/>
+  <text x="20" y="22" text-anchor="start" font-size="12" font-weight="bold" fill="#111111">(a) Eight 2 MHz channels around GPS L1</text>
+  <rect x="60" y="60" width="80" height="48" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="100" y="80" text-anchor="middle" font-size="11" fill="#111111">Channel 0</text>
+  <text x="100" y="97" text-anchor="middle" font-size="10.5" fill="#444444">1567.42</text>
+  <rect x="140" y="60" width="80" height="48" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="180" y="80" text-anchor="middle" font-size="11" fill="#111111">Channel 1</text>
+  <text x="180" y="97" text-anchor="middle" font-size="10.5" fill="#444444">1569.42</text>
+  <rect x="220" y="60" width="80" height="48" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="260" y="80" text-anchor="middle" font-size="11" fill="#111111">Channel 2</text>
+  <text x="260" y="97" text-anchor="middle" font-size="10.5" fill="#444444">1571.42</text>
+  <rect x="300" y="60" width="80" height="48" fill="#eeeeee" stroke="#333333" stroke-width="1"/>
+  <text x="340" y="80" text-anchor="middle" font-size="11" fill="#111111">Channel 3</text>
+  <text x="340" y="97" text-anchor="middle" font-size="10.5" fill="#444444">1573.42</text>
+  <rect x="380" y="60" width="80" height="48" fill="#cfcfcf" stroke="#333333" stroke-width="1.6"/>
+  <text x="420" y="80" text-anchor="middle" font-size="11" font-weight="bold" fill="#111111">Channel 4</text>
+  <text x="420" y="97" text-anchor="middle" font-size="10.5" fill="#444444">1575.42</text>
+  <rect x="460" y="60" width="80" height="48" fill="#eeeeee" stroke="#333333" stroke-width="1"/>
+  <text x="500" y="80" text-anchor="middle" font-size="11" fill="#111111">Channel 5</text>
+  <text x="500" y="97" text-anchor="middle" font-size="10.5" fill="#444444">1577.42</text>
+  <rect x="540" y="60" width="80" height="48" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="580" y="80" text-anchor="middle" font-size="11" fill="#111111">Channel 6</text>
+  <text x="580" y="97" text-anchor="middle" font-size="10.5" fill="#444444">1579.42</text>
+  <rect x="620" y="60" width="80" height="48" fill="#ffffff" stroke="#333333" stroke-width="1"/>
+  <text x="660" y="80" text-anchor="middle" font-size="11" fill="#111111">Channel 7</text>
+  <text x="660" y="97" text-anchor="middle" font-size="10.5" fill="#444444">1581.42</text>
+  <text x="420" y="52" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#111111">GPS L1</text>
+  <text x="340" y="52" text-anchor="middle" font-size="10.5" font-style="italic" fill="#444444">neighbour</text>
+  <text x="500" y="52" text-anchor="middle" font-size="10.5" font-style="italic" fill="#444444">neighbour</text>
+  <line x1="60" y1="118" x2="700" y2="118" stroke="#333333" stroke-width="1"/>
+  <line x1="60" y1="118" x2="60" y2="123" stroke="#333333" stroke-width="1"/>
+  <text x="60" y="136" text-anchor="middle" font-size="10" fill="#444444">1566.42</text>
+  <line x1="140" y1="118" x2="140" y2="123" stroke="#333333" stroke-width="1"/>
+  <text x="140" y="136" text-anchor="middle" font-size="10" fill="#444444">1568.42</text>
+  <line x1="220" y1="118" x2="220" y2="123" stroke="#333333" stroke-width="1"/>
+  <text x="220" y="136" text-anchor="middle" font-size="10" fill="#444444">1570.42</text>
+  <line x1="300" y1="118" x2="300" y2="123" stroke="#333333" stroke-width="1"/>
+  <text x="300" y="136" text-anchor="middle" font-size="10" fill="#444444">1572.42</text>
+  <line x1="380" y1="118" x2="380" y2="123" stroke="#333333" stroke-width="1"/>
+  <text x="380" y="136" text-anchor="middle" font-size="10" fill="#444444">1574.42</text>
+  <line x1="460" y1="118" x2="460" y2="123" stroke="#333333" stroke-width="1"/>
+  <text x="460" y="136" text-anchor="middle" font-size="10" fill="#444444">1576.42</text>
+  <line x1="540" y1="118" x2="540" y2="123" stroke="#333333" stroke-width="1"/>
+  <text x="540" y="136" text-anchor="middle" font-size="10" fill="#444444">1578.42</text>
+  <line x1="620" y1="118" x2="620" y2="123" stroke="#333333" stroke-width="1"/>
+  <text x="620" y="136" text-anchor="middle" font-size="10" fill="#444444">1580.42</text>
+  <line x1="700" y1="118" x2="700" y2="123" stroke="#333333" stroke-width="1"/>
+  <text x="700" y="136" text-anchor="middle" font-size="10" fill="#444444">1582.42</text>
+  <text x="380" y="154" text-anchor="middle" font-size="10.5" fill="#444444">Frequency (MHz); centre frequency inside each channel</text>
+  <path d="M60,170 v4 H378 v-4" fill="none" stroke="#777777" stroke-width="1"/>
+  <text x="220" y="188" text-anchor="middle" font-size="10.5" font-style="italic" fill="#444444">four channels below L1</text>
+  <path d="M462,170 v4 H700 v-4" fill="none" stroke="#777777" stroke-width="1"/>
+  <text x="580" y="188" text-anchor="middle" font-size="10.5" font-style="italic" fill="#444444">three above</text>
+  <text x="20" y="222" text-anchor="start" font-size="12" font-weight="bold" fill="#111111">(b) Neighbours in distance: receivers within 70 km of each other</text>
+  <line x1="138.3" y1="282.7" x2="109.8" y2="331.5" stroke="#333333" stroke-width="1.4"/>
+  <rect x="109.1" y="300.1" width="30" height="13" fill="#ffffff"/>
+  <text x="124.1" y="311.1" text-anchor="middle" font-size="9.5" fill="#444444">45 km</text>
+  <line x1="138.3" y1="282.7" x2="203.8" y2="262.0" stroke="#333333" stroke-width="1.4"/>
+  <rect x="156.1" y="265.3" width="30" height="13" fill="#ffffff"/>
+  <text x="171.1" y="276.3" text-anchor="middle" font-size="9.5" fill="#444444">54 km</text>
+  <line x1="190.7" y1="401.6" x2="256.9" y2="380.5" stroke="#333333" stroke-width="1.4"/>
+  <rect x="208.8" y="384.1" width="30" height="13" fill="#ffffff"/>
+  <text x="223.8" y="395.1" text-anchor="middle" font-size="9.5" fill="#444444">56 km</text>
+  <line x1="256.9" y1="380.5" x2="310.8" y2="423.8" stroke="#333333" stroke-width="1.4"/>
+  <rect x="268.9" y="395.2" width="30" height="13" fill="#ffffff"/>
+  <text x="283.9" y="406.2" text-anchor="middle" font-size="9.5" fill="#444444">56 km</text>
+  <line x1="310.8" y1="423.8" x2="343.3" y2="482.3" stroke="#333333" stroke-width="1.4"/>
+  <rect x="312.1" y="446.1" width="30" height="13" fill="#ffffff"/>
+  <text x="327.1" y="457.1" text-anchor="middle" font-size="9.5" fill="#444444">54 km</text>
+  <circle cx="256.9" cy="380.5" r="87.5" fill="none" stroke="#777777" stroke-width="1.1" stroke-dasharray="5 3"/>
+  <text x="319.9" y="313.5" text-anchor="start" font-size="10" font-style="italic" fill="#444444">70 km</text>
+  <circle cx="138.3" cy="282.7" r="4.5" fill="#111111"/>
+  <text x="129.3" y="286.7" text-anchor="end" font-size="10.5" fill="#111111">RF-01 Schiphol</text>
+  <circle cx="109.8" cy="331.5" r="4.5" fill="#111111"/>
+  <text x="100.8" y="335.5" text-anchor="end" font-size="10.5" fill="#111111">RF-02 Rotterdam</text>
+  <circle cx="203.8" cy="262.0" r="4.5" fill="#111111"/>
+  <text x="212.8" y="266" text-anchor="start" font-size="10.5" fill="#111111">RF-03 Lelystad</text>
+  <circle cx="190.7" cy="401.6" r="4.5" fill="#111111"/>
+  <text x="181.7" y="405.6" text-anchor="end" font-size="10.5" fill="#111111">RF-04 Eindhoven</text>
+  <circle cx="256.9" cy="380.5" r="4.5" fill="#111111"/>
+  <text x="265.9" y="374.5" text-anchor="start" font-size="10.5" fill="#111111">RF-05 Weeze</text>
+  <circle cx="310.8" cy="423.8" r="4.5" fill="#111111"/>
+  <text x="319.8" y="427.8" text-anchor="start" font-size="10.5" fill="#111111">RF-06 Dusseldorf</text>
+  <circle cx="343.3" cy="482.3" r="4.5" fill="#111111"/>
+  <text x="352.3" y="486.3" text-anchor="start" font-size="10.5" fill="#111111">RF-07 Koln-Bonn</text>
+  <text x="480" y="262" text-anchor="start" font-size="11" font-weight="bold" fill="#111111">Neighbours of each receiver</text>
+  <text x="480" y="280" text-anchor="start" font-size="10.5" fill="#222222">RF-01: RF-02, RF-03</text>
+  <text x="480" y="298" text-anchor="start" font-size="10.5" fill="#222222">RF-02: RF-01</text>
+  <text x="480" y="316" text-anchor="start" font-size="10.5" fill="#222222">RF-03: RF-01</text>
+  <text x="480" y="334" text-anchor="start" font-size="10.5" fill="#222222">RF-04: RF-05</text>
+  <text x="480" y="352" text-anchor="start" font-size="10.5" fill="#222222">RF-05: RF-04, RF-06</text>
+  <text x="480" y="370" text-anchor="start" font-size="10.5" fill="#222222">RF-06: RF-05, RF-07</text>
+  <text x="480" y="388" text-anchor="start" font-size="10.5" fill="#222222">RF-07: RF-06</text>
+  <text x="20" y="508" text-anchor="start" font-size="10" font-style="italic" fill="#444444">North up, to scale.</text>
+  <text x="480" y="416" text-anchor="start" font-size="10.5" font-style="italic" fill="#444444">Every receiver has a neighbour and a</text>
+  <text x="480" y="434" text-anchor="start" font-size="10.5" font-style="italic" fill="#444444">receiver beyond 70 km; a layout that</text>
+  <text x="480" y="452" text-anchor="start" font-size="10.5" font-style="italic" fill="#444444">breaks either is rejected at load.</text>
+<metadata><c2pa:manifest>AAAWgmp1bWIAAAAeanVtZGMycGEAEQAQgAAAqgA4m3EDYzJwYQAAABZcanVtYgAAAEdqdW1kYzJtYQARABCAAACqADibcQN1cm46YzJwYTplMDg2MzM0Yy0xYzBhLTQxYTUtYjA0NS02M2U3YzA2YzA3MDIAAAADl2p1bWIAAAApanVtZGMyYXMAEQAQgAAAqgA4m3EDYzJwYS5hc3NlcnRpb25zAAAAALxqdW1iAAAARGp1bWRjYm9yABEAEIAAAKoAOJtxE2MycGEuaW5ncmVkaWVudC52MwAAAAAYYzJzaCDczwsoVTAtuPMbFNsMvSUAAABwY2JvcqNpZGM6Zm9ybWF0bWltYWdlL3N2Zyt4bWxqaW5zdGFuY2VJRHgseG1wOmlpZDo3YzBkNTE0Yy03MmQxLTRlMTYtODRiNi01NDNiMDA2NGM0OWZscmVsYXRpb25zaGlwaHBhcmVudE9mAAAB4mp1bWIAAABBanVtZGNib3IAEQAQgAAAqgA4m3ETYzJwYS5hY3Rpb25zLnYyAAAAABhjMnNoQTFmMVP7u7Qh7Q4dIfd0+QAAAZljYm9yomdhY3Rpb25zgqJmYWN0aW9ua2MycGEub3BlbmVkanBhcmFtZXRlcnOha2luZ3JlZGllbnRzgaJjdXJseC1zZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmluZ3JlZGllbnQudjNkaGFzaFggzRr5XN8MKWqxNUcjp5PY9EXOE41bfBb8Urw3dtqKuAqkZmFjdGlvbngdY29tLmFudGhyb3BpYy5jbGF1ZGUucHJvdmlkZWRqcGFyYW1ldGVyc6F4H2NvbS5hbnRocm9waWMub3JpZ2luLWNvbmZpZGVuY2VndW5rbm93bmtkZXNjcmlwdGlvbnhmQ2xhdWRlIHByb3ZpZGVkIHRoaXMgZmlsZSBhdCB0aGUgcmVxdWVzdCBvZiBhIHVzZXIgYW5kIG1heSBoYXZlIGNyZWF0ZWQgb3IgbW9kaWZpZWQgdGhlIGZpbGUgY29udGVudHMubXNvZnR3YXJlQWdlbnShZG5hbWVmQ2xhdWRlcmFsbEFjdGlvbnNJbmNsdWRlZPUAAADIanVtYgAAAEBqdW1kY2JvcgARABCAAACqADibcRNjMnBhLmhhc2guZGF0YQAAAAAYYzJzaLbrqeFttpyktT6F8vQ09I0AAACAY2JvcqVjYWxnZnNoYTI1NmNwYWRMAAAAAAAAAAAAAAAAZGhhc2hYIHOQWirx/lryyfQTAXhqvH/eYV9AkwbBfauR7uVFfXAtZG5hbWVuanVtYmYgbWFuaWZlc3RqZXhjbHVzaW9uc4GiZXN0YXJ0GSbwZmxlbmd0aBkeBAAAAj5qdW1iAAAAJ2p1bWRjMmNsABEAEIAAAKoAOJtxA2MycGEuY2xhaW0udjIAAAACD2Nib3KlY2FsZ2ZzaGEyNTZpc2lnbmF0dXJleE1zZWxmI2p1bWJmPS9jMnBhL3VybjpjMnBhOmUwODYzMzRjLTFjMGEtNDFhNS1iMDQ1LTYzZTdjMDZjMDcwMi9jMnBhLnNpZ25hdHVyZWppbnN0YW5jZUlEeCx4bXA6aWlkOjc2ZmRlZjc1LTE4MTktNDFiZS1iOGQxLWI0ZmViNmJjZWRiZnJjcmVhdGVkX2Fzc2VydGlvbnODomN1cmx4LXNlbGYjanVtYmY9YzJwYS5hc3NlcnRpb25zL2MycGEuaW5ncmVkaWVudC52M2RoYXNoWCDNGvlc3wwparE1RyOnk9j0Rc4TjVt8FvxSvDd22oq4CqJjdXJseCpzZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmFjdGlvbnMudjJkaGFzaFggiPp7u9OvX3x/p8PzbJzaLvcriexV3RUooykYB5ZEvYCiY3VybHgpc2VsZiNqdW1iZj1jMnBhLmFzc2VydGlvbnMvYzJwYS5oYXNoLmRhdGFkaGFzaFgg2BvPplmE7FsbpkeBVefUwXvo1mccIh3O8It6pWc0TTd0Y2xhaW1fZ2VuZXJhdG9yX2luZm+jZG5hbWVvQW50aHJvcGljIEZpbGVzZ3ZlcnNpb25lMS4wLjBrc3BlY1ZlcnNpb25lMi40LjAAABA4anVtYgAAAChqdW1kYzJjcwARABCAAACqADibcQNjMnBhLnNpZ25hdHVyZQAAABAIY2JvctKEWQISogEmGCFZAgowggIGMIIBjaADAgECAhRA5aAK7sI50L64g/oGQgU9Z1UTADAKBggqhkjOPQQDAzBJMRcwFQYDVQQKEw5BbnRocm9waWMsIFBCQzEuMCwGA1UEAxMlQW50aHJvcGljIENvbnRlbnQgQ3JlZGVudGlhbHMgUm9vdCBDQTAeFw0yNjA4MDcxODQzNTZaFw0yODA4MDYxOTQzNTZaMEQxFzAVBgNVBAoTDkFudGhyb3BpYywgUEJDMSkwJwYDVQQDEyBBbnRocm9waWMgQ2xhdWRlIENvbnRlbnQgU2lnbmluZzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABJh6CmvLUBgFFNU0vUKlOVtE6djd17L5SuwX0LemFisBM3dkd/3cyjxFA3Qo5S46fX0/ihY0VZ7mfb9KF703t5OjWDBWMA4GA1UdDwEB/wQEAwIHgDAVBgNVHSUEDjAMBgorBgEEAYPoXgIBMAwGA1UdEwEB/wQCMAAwHwYDVR0jBBgwFoAUzlHiBIFOZFsj+OPEz5o+nMHXXMIwCgYIKoZIzj0EAwMDZwAwZAIwMXMdFJ4BetLLVY7ORuE9noqbbAZOZn/aArXyTwFAZfKrPzxF2vPoJNf1+UCdg1XGAjBwX1zd9WGqYkqmL5SFqw1QySjr1zJfpJM9+1rdDwSPLMOPOjKuiXjoU/pUUeG9RwmhY3BhZFkNngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPZYQJbyCdCpJCwWhmXBbWbnjHUuUGlLvBU3AXWfWItgm1ozFdd+5J6j4Ac673z1cvmPG6Iqbz/tPc+IGI7f2yyt7RY=</c2pa:manifest></metadata></svg>
