@@ -152,7 +152,7 @@ workspace "EM Fusion" "Explainable electromagnetic situational awareness: a huma
 
         component api "L3_BackendComponents" "Level 3 — backend only. The highlighted seams carry the RQ1 extensibility argument: any source reaches the canonical model through the DAL, and any generator reaches the analyst through the hypothesis service and the two guards behind it." {
             include *
-            autoLayout lr
+            autoLayout tb
         }
 
         deployment emFusion "Local Docker Compose" "Deployment" "What comes up with `make demo`: every container EM Fusion runs. The hosted AI provider is the one external dependency." {
