@@ -1,0 +1,127 @@
+first rater  score_sheet1.xlsx  40 items  sha256 eed3b6cf92fb651a (unchanged)
+second rater score_sheet2_answered.xlsx  20 items
+double-scored 20 items over 10 packs; single-rated 20 (first rater only, never in kappa)
+
+Agreement, pre-discussion: quadratic-weighted kappa, 95% interval resampling packs
+  seed 20261122, 10000 resamples
+  dimension              n  kappa         interval  undef  exact  within 1
+  evidence_use          20   0.08  [-0.01,  0.17]      0    1/20     3/20
+  uncertainty           20   0.08  [-0.07,  0.24]      0    3/20    13/20
+  alternatives          20  -0.30  [-0.60, -0.04]      0    2/20    12/20
+  actionability         20  -0.03  [-0.28,  0.17]      0    4/20    15/20
+  overall_usefulness    20   0.21  [ 0.05,  0.46]      0    3/20    11/20
+
+Flagged for discussion (scores 2 or more apart): 46 of 100 values
+  00248-A  evidence_use         first 4  second 1
+  00248-B  evidence_use         first 5  second 3
+  00250-A  evidence_use         first 5  second 2
+  00250-A  uncertainty          first 5  second 2
+  00250-A  alternatives         first 5  second 3
+  00250-A  overall_usefulness   first 5  second 2
+  00250-B  evidence_use         first 4  second 2
+  00250-B  uncertainty          first 3  second 1
+  00250-B  overall_usefulness   first 4  second 2
+  00254-A  evidence_use         first 4  second 1
+  00254-B  evidence_use         first 5  second 3
+  00254-B  alternatives         first 5  second 3
+  00254-B  actionability        first 5  second 3
+  00254-B  overall_usefulness   first 5  second 2
+  00262-A  evidence_use         first 5  second 3
+  00262-A  alternatives         first 5  second 3
+  00262-A  actionability        first 5  second 3
+  00262-B  evidence_use         first 3  second 1
+  00264-A  evidence_use         first 4  second 1
+  00264-A  alternatives         first 3  second 5
+  00264-B  evidence_use         first 5  second 2
+  00264-B  alternatives         first 5  second 3
+  00264-B  actionability        first 5  second 3
+  00264-B  overall_usefulness   first 5  second 3
+  00273-A  evidence_use         first 5  second 2
+  00273-A  actionability        first 5  second 3
+  00273-A  overall_usefulness   first 4  second 2
+  00273-B  evidence_use         first 5  second 3
+  00273-B  uncertainty          first 5  second 2
+  00273-B  alternatives         first 5  second 2
+  00273-B  overall_usefulness   first 5  second 3
+  00279-A  evidence_use         first 4  second 2
+  00279-A  overall_usefulness   first 4  second 2
+  00279-B  evidence_use         first 5  second 3
+  00279-B  uncertainty          first 5  second 3
+  00279-B  alternatives         first 5  second 3
+  00279-B  actionability        first 5  second 3
+  00279-B  overall_usefulness   first 5  second 3
+  00280-A  uncertainty          first 5  second 3
+  00280-A  alternatives         first 5  second 3
+  00280-B  evidence_use         first 4  second 2
+  00289-A  evidence_use         first 5  second 2
+  00289-A  overall_usefulness   first 4  second 2
+  00289-B  uncertainty          first 5  second 3
+  00302-A  evidence_use         first 5  second 2
+  00302-B  uncertainty          first 5  second 2
+
+Double-scored items, the two raters averaged (pre-discussion)
+  dimension                  hosted     template  hosted - template
+  evidence_use           3.90 (n=10)   2.90 (n=10)         1.00
+  uncertainty            3.95 (n=10)   3.30 (n=10)         0.65
+  alternatives           4.10 (n=10)   3.95 (n=10)         0.15
+  actionability          4.40 (n=10)   3.85 (n=10)         0.55
+  overall_usefulness     4.25 (n=10)   3.05 (n=10)         1.20
+  distribution, count at each point (averaged scores fall on half points):
+    evidence_use         hosted   3.5:3  4:6  4.5:1
+    evidence_use         template 2:1  2.5:3  3:3  3.5:3
+    uncertainty          hosted   3.5:4  4:3  4.5:3
+    uncertainty          template 2:1  3:2  3.5:6  4:1
+    alternatives         hosted   3.5:1  4:6  4.5:3
+    alternatives         template 3.5:4  4:3  4.5:3
+    actionability        hosted   4:4  4.5:4  5:2
+    actionability        template 3.5:5  4:3  4.5:2
+    overall_usefulness   hosted   3.5:2  4:3  4.5:3  5:2
+    overall_usefulness   template 2.5:2  3:5  3.5:3
+
+First rater, every item scored
+  dimension                  hosted     template  hosted - template
+  evidence_use           4.80 (n=20)   4.30 (n=20)         0.50
+  uncertainty            4.95 (n=20)   3.70 (n=20)         1.25
+  alternatives           5.00 (n=20)   3.95 (n=20)         1.05
+  actionability          4.95 (n=20)   4.10 (n=20)         0.85
+  overall_usefulness     5.00 (n=20)   3.80 (n=20)         1.20
+  distribution, count at each point (averaged scores fall on half points):
+    evidence_use         hosted   4:4  5:16
+    evidence_use         template 3:2  4:10  5:8
+    uncertainty          hosted   4:1  5:19
+    uncertainty          template 3:7  4:12  5:1
+    alternatives         hosted   5:20
+    alternatives         template 3:4  4:13  5:3
+    actionability        hosted   4:1  5:19
+    actionability        template 3:5  4:8  5:7
+    overall_usefulness   hosted   5:20
+    overall_usefulness   template 3:4  4:16
+
+Second rater, every item scored
+  dimension                  hosted     template  hosted - template
+  evidence_use           3.00 (n=10)   1.60 (n=10)         1.40
+  uncertainty            3.00 (n=10)   2.90 (n=10)         0.10
+  alternatives           3.20 (n=10)   4.00 (n=10)        -0.80
+  actionability          3.80 (n=10)   3.70 (n=10)         0.10
+  overall_usefulness     3.50 (n=10)   2.40 (n=10)         1.10
+  distribution, count at each point (averaged scores fall on half points):
+    evidence_use         hosted   2:2  3:6  4:2
+    evidence_use         template 1:4  2:6
+    uncertainty          hosted   2:3  3:4  4:3
+    uncertainty          template 1:1  3:8  4:1
+    alternatives         hosted   2:1  3:6  4:3
+    alternatives         template 3:3  4:4  5:3
+    actionability        hosted   3:4  4:4  5:2
+    actionability        template 3:3  4:7
+    overall_usefulness   hosted   2:2  3:3  4:3  5:2
+    overall_usefulness   template 2:6  3:4
+
+Pass two, counts
+  first  hosted   cause_correctness      Correct 7, Partly correct 13, Incorrect 0
+  first  hosted   confidence_calibration Too low 9, About right 6, Too high 5
+  first  template cause_correctness      Correct 7, Partly correct 13, Incorrect 0
+  first  template confidence_calibration Too low 9, About right 6, Too high 5
+  second hosted   cause_correctness      Correct 8, Partly correct 2, Incorrect 0
+  second hosted   confidence_calibration Too low 0, About right 6, Too high 4
+  second template cause_correctness      Correct 8, Partly correct 2, Incorrect 0
+  second template confidence_calibration Too low 0, About right 6, Too high 4
