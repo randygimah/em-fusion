@@ -317,7 +317,7 @@ footer p { max-width: 80ch; }
   <div class="rqgrid">
     <div class="rqc"><span class="id">RQ1 · DATA</span><h4>Can different sources share one data model?</h4><p>Real aircraft reports and invented radio readings go through one data layer. Is it extensible in a way you can measure, not just claim?</p><span class="pill ok">Answered</span></div>
     <div class="rqc"><span class="id">RQ2 · DETECTION</span><h4>Do written rules find what was staged?</h4><p>Baseline comparison and deterministic rules, scored against an answer key written when each incident was staged.</p><span class="pill ok">Answered on 300 runs</span></div>
-    <div class="rqc"><span class="id">RQ3 · EXPLANATION</span><h4>Can an AI explain without inventing?</h4><p>A constrained model and a template baseline explain the same evidence. Citations are checked automatically; quality is marked blind by two people.</p><span class="pill warn">Built; blind marking in progress</span></div>
+    <div class="rqc"><span class="id">RQ3 · EXPLANATION</span><h4>Can an AI explain without inventing?</h4><p>A constrained model and a template baseline explain the same evidence. Citations are checked automatically; quality is marked blind by two people.</p><span class="pill warn">Marked; the two markers disagree</span></div>
   </div>
 </section>
 
@@ -793,7 +793,7 @@ flowchart TB
       <div><div class="plot small" style="padding:0"><svg id="kSvg" viewBox="0 0 300 300" role="img" aria-label="Agreement matrix"></svg></div></div>
       <div class="stack" id="kStats"></div>
     </div>
-    <figcaption>Each column is an item; set marker A's score on top and marker B's below. The matrix shows where the pairs fall, shaded by their penalty. These are made-up scores to show the arithmetic. The study's agreement has not been computed, because the second marker has not finished. Where two scores differ by 2 or more the item is flagged and discussed, with κ reported on the scores from before the discussion, a rule fixed in advance.</figcaption>
+    <figcaption>Each column is an item; set marker A's score on top and marker B's below. The matrix shows where the pairs fall, shaded by their penalty. These are made-up scores to show the arithmetic; the study's own agreement is in section 14. Where two scores differ by 2 or more the item is flagged and discussed, with κ reported on the scores from before the discussion, a rule fixed in advance.</figcaption>
   </figure>
 </section>
 
@@ -825,7 +825,7 @@ flowchart TB
     </tbody>
   </table></div>
   <p>A perfect score is a weaker result than it looks. It shows the machinery is wired correctly and consistent with itself, not that it would detect real interference. The radio data is invented by the same project, the staged rise sits well above the threshold by construction, and the corpus holds no near-misses.</p>
-  <h3>RQ3 · explanations <span class="pill warn">Built; blind marking in progress</span></h3>
+  <h3>RQ3 · explanations <span class="pill warn">Marked; the two markers disagree</span></h3>
   <div class="tw"><table>
     <thead><tr><th>Measurement</th><th>Result</th></tr></thead>
     <tbody>
@@ -837,7 +837,52 @@ flowchart TB
       <tr><td>Campaign cost</td><td class="mono">£0.85</td></tr>
     </tbody>
   </table></div>
-  <p>The quality comparison waits for the second marker, by design. No figure comparing the two generators is reported until both markers are done.</p>
+  <h3 id="agreement">Did the two markers agree?</h3>
+  <p>Before the two generators can be compared, the two markers have to mean the same thing by a 3 or a 5. Cohen's κ measures how often they agree, after taking away the agreement two people would reach by chance. The quadratic weights make a near-miss (4 against 5) cheap and a far-miss (1 against 5) sixteen times as costly. The same formula as in section 13, written per item:</p>
+  <div class="math">
+    <math display="block"><mrow><msub><mi>κ</mi><mi>w</mi></msub><mo>=</mo><mn>1</mn><mo>−</mo><mfrac><mrow><mfrac><mn>1</mn><mi>n</mi></mfrac><msubsup><mo>∑</mo><mrow><mi>t</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></msubsup><msup><mrow><mo>(</mo><msub><mi>a</mi><mi>t</mi></msub><mo>−</mo><msub><mi>b</mi><mi>t</mi></msub><mo>)</mo></mrow><mn>2</mn></msup></mrow><mrow><msubsup><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mn>5</mn></msubsup><msubsup><mo>∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mn>5</mn></msubsup><msub><mi>p</mi><mi>i</mi></msub><msub><mi>q</mi><mi>j</mi></msub><msup><mrow><mo>(</mo><mi>i</mi><mo>−</mo><mi>j</mi><mo>)</mo></mrow><mn>2</mn></msup></mrow></mfrac></mrow></math>
+    <dl>
+      <dt>a<sub>t</sub>, b<sub>t</sub></dt><dd>The first and second marker's scores for item t, on one dimension.</dd>
+      <dt>n</dt><dd>The items both marked: 20, from ten packages.</dd>
+      <dt>Top line</dt><dd>How far apart the markers actually were: the average squared gap.</dd>
+      <dt>p<sub>i</sub>, q<sub>j</sub></dt><dd>The share of items the first marker scored i, and the second marker scored j.</dd>
+      <dt>Bottom line</dt><dd>How far apart they would be if each scored at random with their own habits.</dd>
+      <dt>Reading it</dt><dd>1 is perfect agreement, 0 is no better than chance, below 0 is worse than chance.</dd>
+    </dl>
+  </div>
+  <p>The range beside each value is a 95% interval found by resampling whole packages 10,000 times. Packages, not items, because both explanations of a package were marked against the same evidence in the same sitting, so they are not independent.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Dimension</th><th class="num">κ</th><th class="num">95% interval</th><th class="num">Same score</th><th class="num">Within one point</th><th>Conventional reading</th></tr></thead>
+    <tbody>
+      <tr><td>Evidence use</td><td class="num">0.08</td><td class="num">−0.01 to 0.17</td><td class="num">1 / 20</td><td class="num">3 / 20</td><td>Slight</td></tr>
+      <tr><td>Uncertainty</td><td class="num">0.08</td><td class="num">−0.07 to 0.24</td><td class="num">3 / 20</td><td class="num">13 / 20</td><td>Slight</td></tr>
+      <tr><td>Alternatives</td><td class="num">−0.30</td><td class="num">−0.60 to −0.04</td><td class="num">2 / 20</td><td class="num">12 / 20</td><td>Worse than chance</td></tr>
+      <tr><td>Recommended action</td><td class="num">−0.03</td><td class="num">−0.28 to 0.17</td><td class="num">4 / 20</td><td class="num">15 / 20</td><td>None</td></tr>
+      <tr><td>Overall usefulness</td><td class="num">0.21</td><td class="num">0.05 to 0.46</td><td class="num">3 / 20</td><td class="num">11 / 20</td><td>Fair</td></tr>
+    </tbody>
+  </table></div>
+  <p>These are the scores as each marker entered them, before any discussion, which is where the rule fixed in advance says κ is reported. 46 of the 100 paired scores are two or more points apart.</p>
+  <div class="callout"><div class="eyebrow">Why it is so low</div>
+    <p><strong>Mostly a difference in level.</strong> On the same 20 items the first marker, the author, averaged 4.3 to 4.5 on every dimension and the second marker 2.3 to 3.75. The first marker gave every one of the model's explanations a 5 for alternatives and for usefulness, which leaves almost no spread for agreement to show up in, and quadratic κ counts a steady one- or two-point offset as full disagreement. It is not only level: the markers also ranked the items differently on three of the five dimensions.</p>
+  </div>
+  <h3>What survives: which generator came out ahead</h3>
+  <p>The comparison the study is about is the difference between the two generators on the same package. On the ten packages both marked, each marker's own difference, model minus template:</p>
+  <div class="tw"><table>
+    <thead><tr><th>Dimension</th><th class="num">First marker</th><th class="num">Second marker</th><th>Same direction?</th></tr></thead>
+    <tbody>
+      <tr><td>Evidence use</td><td class="num">+0.60</td><td class="num">+1.40</td><td>Yes, clearly</td></tr>
+      <tr><td>Overall usefulness</td><td class="num">+1.30</td><td class="num">+1.10</td><td>Yes, clearly</td></tr>
+      <tr><td>Uncertainty</td><td class="num">+1.20</td><td class="num">+0.10</td><td>Yes, barely for the second</td></tr>
+      <tr><td>Recommended action</td><td class="num">+1.00</td><td class="num">+0.10</td><td>Yes, barely for the second</td></tr>
+      <tr><td>Alternatives</td><td class="num">+1.10</td><td class="num">−0.80</td><td>No: opposite directions</td></tr>
+    </tbody>
+  </table></div>
+  <p>With the two markers' scores averaged, as the rule fixed in advance says, the model is ahead on every dimension: evidence use +1.00, uncertainty +0.65, alternatives +0.15, recommended action +0.55 and overall usefulness +1.20 points on a five-point scale (ten packages; these may move after the discussion). On the second pass, neither marker judged any explanation's cause incorrect.</p>
+  <div class="callout"><div class="eyebrow">What this does to the results</div>
+    <p><strong>A direction, not a size.</strong> Both markers put the model above the template on evidence use and overall usefulness, so that is the claim RQ3 can carry. How much better is not supported: the markers' differences range from 0.1 to 1.4 points on the same dimension.</p>
+    <p><strong>Alternatives is unresolved.</strong> One marker scored the model's alternatives far higher, the other the template's. No conclusion is drawn on that dimension.</p>
+    <p><strong>The disagreement is itself a result.</strong> The author being a marker was named as a risk before marking began; this measures it. The marker who built the system scored it near the top of the scale. The thesis reports that, and does not drop the second marker, swap the statistic, or recompute κ after discussion, because each of those would be choosing the method after seeing the answer.</p>
+  </div>
 </section>
 
 <section id="limits">
@@ -850,9 +895,10 @@ flowchart TB
     <li><strong>Weak aircraft corroboration.</strong> In 41 of 60 interference zones the aircraft side could not be measured. This is radio evidence with an occasional corroborating note, not two sources agreeing.</li>
     <li><strong>Grounding checks names, not truth.</strong> A model can cite a real finding and say something false about it.</li>
     <li><strong>Imperfect blinding and small numbers.</strong> The template's style is recognisable, the author is one marker, and 20 packages support a direction, not a precise effect size.</li>
+    <li><strong>The two markers agreed poorly.</strong> Weighted κ is between −0.30 and 0.21 across the five dimensions, so only the direction of the generator comparison is reported, on the dimensions where both markers agree.</li>
     <li><strong>Not live.</strong> Replayed and synthetic data only, polled every 5 s.</li>
   </ul>
-  <p>Next: finish the blind marking and compute agreement; then report the generator comparison per dimension. Beyond the thesis: near-threshold incidents, a coverage gap that has a place, and a learned detector run beside the rules.</p>
+  <p>Next: discuss the 46 widely separated scores with the second marker, as the rule fixed in advance requires, and report the averages after that discussion beside the κ from before it. Beyond the thesis: near-threshold incidents, a coverage gap that has a place, and a learned detector run beside the rules.</p>
   <footer>
     <p>The longer story, with every decision and correction along the way, is the progress note, <a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">EM Fusion in Plain English</a>. Source: <a href="https://github.com/randygimah/em-fusion">github.com/randygimah/em-fusion</a> (private). Every figure quoted here has a script and a committed log in the repository's measurements folder. OpenSky data: Schäfer et al., “Bringing up OpenSky”, IPSN 2014; used under the OpenSky licence and not redistributed.</p>
   </footer>
