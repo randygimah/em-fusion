@@ -10689,3 +10689,47 @@ equivalent mutant inflates the apparent gap; a mutant nobody wrote hides a real 
 existing position — that only measurements over the corpus can say a rule is *right* — extends to
 this: the score says the tests notice the changes in the table, and no more.
 
+### Inter-rater agreement is low, and most of it is a difference in level rather than in ranking
+
+*Recorded 2026-11-22, the day the second rater's sheet came in. Pre-discussion figures; the
+adjudication discussion has not happened yet.* `measurements/corpus/inter_rater_agreement.log`.
+
+Quadratic-weighted kappa over the 20 double-scored items (10 packs), with 95% intervals from a
+bootstrap that resamples whole packs:
+
+| Dimension | Kappa | 95% interval | Exact | Within one |
+|---|---|---|---|---|
+| Evidence use | 0.08 | -0.01 to 0.17 | 1/20 | 3/20 |
+| Uncertainty | 0.08 | -0.07 to 0.24 | 3/20 | 13/20 |
+| Alternatives | -0.30 | -0.60 to -0.04 | 2/20 | 12/20 |
+| Recommended action | -0.03 | -0.28 to 0.17 | 4/20 | 15/20 |
+| Overall usefulness | 0.21 | 0.05 to 0.46 | 3/20 | 11/20 |
+
+46 of the 100 double-scored values are two or more points apart, which under the pre-registered
+rule means 46 discussions, not a handful. By the conventional reading of kappa (Landis and Koch,
+1977) every dimension is slight or worse, and alternatives is significantly *below* chance.
+
+**Most of the disagreement is level.** On the same 20 items the first rater (the author) averages
+4.30 to 4.50 per dimension and the second rater 2.30 to 3.75. The first rater gave the hosted arm a
+5 on every one of its 20 items for alternatives and for usefulness. A ceiling like that leaves
+almost no variance for kappa to find agreement in, and quadratic weights charge a consistent
+one-or-two-point offset in full, so low kappa here is partly a property of the statistic meeting a
+lenient rater. It is not *only* level: an exploratory Spearman correlation, not pre-registered and
+to be reported as such if at all, is about 0.5 on evidence use and usefulness and near zero or
+negative on the other three.
+
+**The arm comparison survives the disagreement on four dimensions of five.** On the ten packs both
+raters scored, both put the hosted arm above the template on evidence use, uncertainty, recommended
+action and usefulness, by very different amounts. On alternatives they disagree in sign: the first
+rater +1.10, the second -0.80. The second rater scored the template's alternatives higher than the
+model's, which is the dimension the first rater was most certain about.
+
+**What this means for the write-up.** The pre-registered claim was that two independent raters
+would agree well enough for the scores to stand; they did not, and that is a result, reported as
+one. The defensible statements are about direction, where both raters agree, and not about the size
+of the difference, where they do not. The author being one of the two raters was named in advance as
+a threat to validity (`scoring_rubric.md`), and this is that threat measured: the rater who built the
+system scored it near the ceiling. Do not drop the second rater's scores, re-run kappa after the
+discussion, or choose another statistic because this one came out low; each of those would be the
+post-hoc choice the pre-registration exists to prevent.
+

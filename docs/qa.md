@@ -9702,6 +9702,30 @@ kept from the detectors, which is what makes every detection figure meaningful (
 "Ground truth is generator-side only"). Until its own spec item passes, that claim rests on design
 rather than a test, and the thesis should either close it first or say so.
 
+
+## 168. Out of the five open specification items, which are definitely needed for Chapter 5? For eval-006, the second rater's completed sheet is in, so can we work on Cohen's kappa?
+
+**Two are needed and three should be closed rather than built.** Answered 22 November 2026.
+
+| Item | Needed for the thesis? | Why |
+|---|---|---|
+| `eval-006` | **Yes, done 22 November** | Table 6.7 and the RQ3 results rest on it. Built and measured the same day (below). |
+| `api-009` | **Yes, fix before writing** | Sections 3.2, 4.4 and Table 3.2 say the answer key never reaches the detection rules. Until the item passes, that claim rests on design, not a test (see the trap in §167). |
+| `anom-006` | No: close as descoped | Deliberately not built after measurement (amended 2026-09-17); Figure 4.5 already draws the rung as not built. Left *open* it reads as unfinished work in Table 5.1. |
+| `anom-003` | No: close as descoped | The z-score detector was never needed: the threshold against each channel's own baseline separates an 8 dB elevation from a 1.5 dB spread. Record the reason and date. |
+| `op-006` | No: close | The timeline strip moved into the exception panel's Events tab (amended 2026-10-06), which Figure 4.7 shows working. Either mark it passing against that tab or close it as merged. |
+
+**What the kappa measurement found, pre-discussion.** Quadratic-weighted kappa over the 20 double-scored
+items is low on every dimension (from -0.30 to 0.21), and 46 of 100 values are two or more points apart and
+flagged for discussion. Much of the gap is a level difference: on the same 20 items the first rater's
+mean per dimension is 4.30 to 4.50 against the second rater's 2.30 to 3.75, and the first rater gave the
+hosted arm a 5 on every item for alternatives and usefulness, a ceiling that leaves kappa little variance
+to work with. It is not only level: an exploratory rank correlation (not pre-registered) is about 0.5 on
+evidence use and usefulness and near zero or negative on the other three. On the same ten packs the
+hosted-minus-template difference has the same sign for both raters on four of five dimensions; on
+*alternatives* it reverses.
+See `backend/measurements/corpus/inter_rater_agreement.log` and `thesis_notes.md`.
+
 ---
 
 | **Composing copy** | Turning a finding type the backend sends verbatim into a sentence an analyst reads. Done on the screen by design, so prose never arrives from a detector — and in one module, because two panels carry the same type. See §148. |
@@ -9733,3 +9757,6 @@ rather than a test, and the thesis should either close it first or say so.
 
 | **Artificial versus naturalistic evaluation** | Design-science terms (Venable, Pries-Heje and Baskerville, 2016): artificial evaluation tests an artefact in controlled conditions, such as staged scenarios with an answer key; naturalistic evaluation tests it with real users on real problems. EM Fusion's evaluation is artificial; the withdrawn task study was the naturalistic part. See §167. |
 | **Descoped versus unmet** | A descoped requirement is amended with a reason and a date, so the baseline no longer asks for it; an unmet one still stands and is reported as not achieved. The local model arm is one or the other, and the thesis must say which. See §167. |
+
+| **Pre-discussion versus adjudicated** | Pre-discussion scores are what each rater entered independently; kappa is always reported on these. Adjudicated scores follow the pre-registered discussion of values two or more apart, and only the averaged means may use them. See §168. |
+| **Level disagreement versus ranking disagreement** | Two raters can order the items the same way while one scores everything higher. Quadratic-weighted kappa counts both as disagreement, so a low kappa alone does not say which happened. See §168. |
