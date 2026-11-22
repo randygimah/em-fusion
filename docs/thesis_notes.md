@@ -10761,3 +10761,40 @@ argued in the open is defensible; one left implied reads as the post-hoc choice 
 exists to prevent. The honest cost: the planned mechanism for resolving disagreement was not used, so
 the means carry the full disagreement rather than a reduced one.
 
+### The answer key is proved absent once, across the whole surface, after a year of piecewise guarantees
+
+*Recorded 2026-11-22. Chapter 5 material; Sections 3.2 and 4.4 rest on it.*
+
+The claim that detection is scored against an answer key no detector and no analyst can see had been
+true for most of the project, but it was never proved as a claim. It was the sum of separate
+guarantees: a run record with no field for the key, tests that evidence bundles and the model's
+payload carry no scenario type, and the heading fix. The heading fix is the reason that was not
+enough: the Operational Picture's heading had served the scenario type (`gnss-degradation`) while
+every one of the other guarantees passed, because each checked the part it was written for.
+
+**What closed it.** One test file, two halves. A static half parses every module in the detection
+layer, the AI layer, the Data Abstraction Layer, the adapters and the API, and fails on any read of
+a run's scenario type or of the answer-key column; a second check fails if the column is named
+anywhere outside the three modules that build, record and write the key. A live half stages a run
+of each of the five scenario types with an answer key made of canary values, calls every route an
+analyst's screen uses (the picture in both views, the hour list, the evidence, the tracks, the
+receiver states, the hypothesis list and every hypothesis), and fails if any response contains a
+scenario-type name, an answer-key field name or a canary.
+
+**The one declared exception, and why it is legitimate.** Scenario Control shows each run's type,
+because it is the experimenter's console and the operator chose that type to start the batch. It
+is checked to show the type and never the key's content. The rule protects the two readers whose
+knowledge would invalidate the figures, the detectors and the analyst, and the console is neither.
+
+**Every test passed first time, and that is not a defect here.** The item proves a property the
+code already had, so there was nothing to implement. Each test was shown to be capable of failing
+by planting the violation it exists to catch: the type added to the picture's run name, a detector
+branching on the type, a query naming the column in a findings module, and the console serving an
+answer-key field. All four were caught. A guard that has never been seen to fail is the gap this
+project has recorded several times; planting the failure is how that gap was closed for this one.
+
+**What it does not cover.** The analyst could still infer a run's kind from what the detectors
+legitimately concluded, which is the point of detecting it. And the false-alarm control runs are
+probably among the quiet runs the baseline was built from, which is a separate in-sample question,
+not an answer-key leak, and is still to be checked against the store.
+
