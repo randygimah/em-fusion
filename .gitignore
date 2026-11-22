@@ -47,3 +47,6 @@ frontend/public/basemap/*
 
 # Office lock files: written while a workbook is open, and they record the account that opened it
 ~$*
+
+# The second rater's completed sheet stays local: its file properties carry the participant's name.
+backend/measurements/corpus/scoring_pack_rater2/score_sheet2_answered.xlsx
