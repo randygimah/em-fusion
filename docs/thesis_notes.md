@@ -10691,8 +10691,8 @@ this: the score says the tests notice the changes in the table, and no more.
 
 ### Inter-rater agreement is low, and most of it is a difference in level rather than in ranking
 
-*Recorded 2026-11-22, the day the second rater's sheet came in. Pre-discussion figures; the
-adjudication discussion has not happened yet.* `measurements/corpus/inter_rater_agreement.log`.
+*Recorded 2026-11-22, the day the second rater's sheet came in. Scores as first entered; the
+adjudication discussion was then dropped (next entry), so these are the figures of record.* `measurements/corpus/inter_rater_agreement.log`.
 
 Quadratic-weighted kappa over the 20 double-scored items (10 packs), with 95% intervals from a
 bootstrap that resamples whole packs:
@@ -10732,4 +10732,32 @@ a threat to validity (`scoring_rubric.md`), and this is that threat measured: th
 system scored it near the ceiling. Do not drop the second rater's scores, re-run kappa after the
 discussion, or choose another statistic because this one came out low; each of those would be the
 post-hoc choice the pre-registration exists to prevent.
+
+### Dropping the adjudication discussion: a stated departure from the pre-registration
+
+*Decided 2026-11-22, after kappa had been computed. Recorded in `scoring_rubric.md`'s change log the
+same day.*
+
+The rubric's adjudication rule, fixed before marking: scores are averaged for analysis; where two
+differ by two or more points the item is flagged and discussed, either rater may revise, and kappa is
+reported on the pre-discussion set. The rule was written for a handful of borderline cases. It met
+46 of 100 double-scored values.
+
+**Why it is not held.** At 46 values the discussion is a second round of marking, not adjudication.
+More importantly, it would be led by the first rater, who is the author, and the colleague asked to
+revise is the independent second opinion the design depends on. The threat named in advance was
+that the author is not blind to the project's hypotheses; a discussion in which the author explains
+their scores to a colleague is the mechanism by which that threat would pull the second score towards
+the first, and the means would then move in the direction that flatters the system.
+
+**What it changes, and what it does not.** Kappa was always to be reported on the pre-discussion
+scores, so nothing already reported moves. The averaged per-arm means are fixed at their
+pre-discussion values instead of being allowed to move. The second rater's scores are kept in full,
+the statistic is the one pre-registered, and nothing is recomputed.
+
+**How to write it.** As a departure, in the Evaluation chapter's account of the procedure, with the
+two reasons above, the date, and the fact that it was decided after the result was seen. A departure
+argued in the open is defensible; one left implied reads as the post-hoc choice the pre-registration
+exists to prevent. The honest cost: the planned mechanism for resolving disagreement was not used, so
+the means carry the full disagreement rather than a reduced one.
 
