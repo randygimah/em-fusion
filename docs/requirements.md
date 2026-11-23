@@ -16,6 +16,8 @@ the database, in API responses, and on every screen.
 
 **Amendments, 30 October 2026.** The local model arm and continuous integration were descoped. Their requirements keep their IDs, struck through and marked *Descoped*, so traceability is not broken; requirements that described behaviour depending on them are reworded and marked *Reworded*. Reasons are recorded in `thesis_notes.md`, "Descoping the local model arm and continuous integration".
 
+**Amendments, 23 November 2026.** Before the implementation chapter: FR-306 (the data-source rule) is descoped and FR-301 reworded to drop z-score deviation, both never built. Reasons are in `spec.jsonl` under `anom-006` and `anom-003`.
+
 ---
 
 ## 1. Personas
@@ -124,12 +126,12 @@ the database, in API responses, and on every screen.
 
 | ID | Requirement |
 |---|---|
-| FR-301 | Detection shall use deterministic methods only: threshold rules, rolling averages, z-score deviation, and PostGIS spatial clustering. No ML detectors in v1. |
+| FR-301 | Detection shall use deterministic methods only: threshold rules against per-channel baselines, rolling averages, and PostGIS spatial clustering. No ML detectors in v1. *(Reworded 2026-11-23: z-score deviation removed; the threshold against each receiver's own baseline already decides the same deviation.)* |
 | FR-302 | A baseline engine shall compute rolling averages over normal-scenario runs, against which deviations are measured. |
 | FR-303 | Rule RF-NOISE: RF power or SNR beyond baseline threshold shall raise an anomaly. |
 | FR-304 | Rule TRACK-GAP: aircraft position staleness beyond threshold shall raise a track-continuity anomaly. |
 | FR-305 | Rule FUSION-SPATIAL: RF noise anomalies and clustered track gaps in the same time window and area shall raise a possible-interference-zone anomaly. |
-| FR-306 | Rule SOURCE-GAP: track dropouts with no co-located RF anomaly shall raise a possible data-source issue. |
+| FR-306 | ~~Rule SOURCE-GAP: track dropouts with no co-located RF anomaly shall raise a possible data-source issue.~~ **Descoped 2026-11-23**: not supportable on this corpus; the rung is shown as not built and the gap is reported in the evaluation. |
 | FR-307 | Rule SENSOR-FAULT: one RF sensor abnormal while spatial neighbours are nominal shall raise a possible sensor fault. |
 | FR-308 | A normal-baseline run shall raise zero anomalies. Correct non-detection is a required behaviour, not an absence of behaviour. |
 | FR-309 | Detection latency shall be measured in simulated scenario time from event onset to anomaly emission, never in wall-clock time. |
