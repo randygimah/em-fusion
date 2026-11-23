@@ -10798,3 +10798,31 @@ legitimately concluded, which is the point of detecting it. And the false-alarm 
 probably among the quiet runs the baseline was built from, which is a separate in-sample question,
 not an answer-key leak, and is still to be checked against the store.
 
+### The quiet-run false-alarm control is in-sample; the coverage-gap control is not
+
+*Checked 2026-11-23, before Chapter 5 is written.*
+
+**The fact.** The 60 `normal-baseline` runs scored as the silent control in the detection figures
+are all among the 100 quiet runs the baseline is built from. Checked by seed, not by id: each of the
+three corpus base seeds (1412660662, 965530111, 655209063) derives exactly the twenty run seeds
+pinned for it in the baseline (runs 81-100, 181-200, 281-300). The other forty baseline runs come
+from two further base seeds and are never scored. The detection pass refuses to run unless the store
+holds every pinned run as a completed quiet run with its pinned seed, so this is the baseline every
+reported figure was measured under.
+
+**What it means.** "0 false alarms in 60 quiet runs" is measured on runs whose own readings helped
+define normal, so it is an optimistic estimate of the false-alarm rate on unseen quiet data. Each
+run is one hundredth of the baseline, and the staged elevation sits far above the threshold, so the
+effect is probably small, but it is not measured and the thesis cannot claim it is zero.
+
+**What rescues the claim.** Two other populations are out of sample for the radio side. The 60
+coverage-gap runs stage nothing on the radio grid, were not in the baseline, and also produced no
+false alarm, so 0/60 there is a genuine out-of-sample false-alarm figure for the radio rules. And in
+every sensor-fault run the six receivers that were not broken are quiet readings the baseline never
+saw. Chapter 6 should lead with the coverage-gap figure as the out-of-sample one and report the
+quiet-run figure with this caveat beside it, not the other way round.
+
+**What would close it, if wanted.** Re-score the 60 quiet runs with each one's own hour left out of
+the baseline (leave-one-out), or with the baseline restricted to the forty runs from the two
+unscored seeds. Either is a measurement, not a redesign; neither has been run.
+

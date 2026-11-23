@@ -9726,6 +9726,19 @@ hosted-minus-template difference has the same sign for both raters on four of fi
 *alternatives* it reverses.
 See `backend/measurements/corpus/inter_rater_agreement.log` and `thesis_notes.md`.
 
+
+## 169. I think the 60 quiet runs are among the 100 baseline runs, but check before we start writing.
+
+**Confirmed, by seed.** Answered 23 November 2026. All 60 quiet runs scored as the false-alarm control
+are in the 100-run baseline: each of the three corpus base seeds derives exactly the twenty run seeds
+pinned for it. The other 40 baseline runs are never scored.
+
+So the quiet-run false-alarm figure (0 of 60) is **in-sample**: those runs helped define normal. The
+coverage-gap runs (also 0 of 60) were never in the baseline and stage nothing on the radio grid, so
+they are the honest out-of-sample false-alarm figure for the radio rules, and Chapter 6 should lead
+with them. A leave-one-out re-score would measure the in-sample effect if it is ever needed. See
+`thesis_notes.md`.
+
 ---
 
 | **Composing copy** | Turning a finding type the backend sends verbatim into a sentence an analyst reads. Done on the screen by design, so prose never arrives from a detector — and in one module, because two panels carry the same type. See §148. |
@@ -9760,3 +9773,4 @@ See `backend/measurements/corpus/inter_rater_agreement.log` and `thesis_notes.md
 
 | **Pre-discussion versus adjudicated** | Pre-discussion scores are what each rater entered independently; kappa is always reported on these. Adjudicated scores follow the pre-registered discussion of values two or more apart, and only the averaged means may use them. See §168. |
 | **Level disagreement versus ranking disagreement** | Two raters can order the items the same way while one scores everything higher. Quadratic-weighted kappa counts both as disagreement, so a low kappa alone does not say which happened. See §168. |
+| **In-sample versus out-of-sample control** | An in-sample control is scored on data the system was tuned or calibrated on, so it flatters the system; an out-of-sample one is scored on data it never saw. The quiet runs are in-sample for the baseline; the coverage-gap runs are not. See §169. |
