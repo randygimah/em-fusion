@@ -1157,6 +1157,60 @@ footer { font-size: 13.5px; color: var(--muted); }
     <!-- f48:end -->
   </section>
   <!-- ch4:end -->
+  <!-- ch5:start -->
+  <section class="chap" aria-labelledby="ch5">
+    <h2 id="ch5">Chapter 5 · Implementation</h2>
+
+    <article class="plate" id="table-5-1">
+      <div class="meta">
+        <span class="num">Table 5.1</span><span class="chip drawn">Drawn</span><span>Section 5.1, How it was built</span>
+        <div class="actions"><button type="button" data-copy-table="t51">Copy table</button><button type="button" data-copy-cap="ct51" data-flash="t51">Copy caption</button></div>
+      </div>
+      <div class="sheet">
+        <div class="cap" id="ct51"><b>Table 5.1:</b> Specification items by area at the end of the build: how many were specified, how many pass their tests, and what was descoped. Source: author.</div>
+        <div class="tscroll"><table class="acad wide grid" id="t51">
+<thead><tr><th>Area</th><th>Specified</th><th>Passing</th><th>Descoped</th></tr></thead>
+<tbody>
+<tr><td class="work">Data Abstraction Layer and adapters</td><td>12</td><td>12</td><td>None</td></tr>
+<tr><td class="work">Storage</td><td>12</td><td>12</td><td>None</td></tr>
+<tr><td class="work">Scenario generator</td><td>8</td><td>8</td><td>None</td></tr>
+<tr><td class="work">Detection</td><td>17</td><td>15</td><td>The z-score detector; the data-source rule</td></tr>
+<tr><td class="work">Evidence bundles</td><td>3</td><td>3</td><td>None</td></tr>
+<tr><td class="work">Hypothesis layer</td><td>12</td><td>10</td><td>The local model arm and its fallback</td></tr>
+<tr><td class="work">API</td><td>20</td><td>20</td><td>None</td></tr>
+<tr><td class="work">Interface</td><td>28</td><td>28</td><td>None</td></tr>
+<tr><td class="work">Evaluation harness</td><td>11</td><td>11</td><td>None</td></tr>
+<tr><td class="work">Operations</td><td>6</td><td>5</td><td>Continuous integration</td></tr>
+<tr><td class="work"><b>Total</b></td><td><b>129</b></td><td><b>124</b></td><td><b>5 items</b></td></tr>
+</tbody></table></div>
+      </div>
+      <p class="note">From <code>docs/spec.jsonl</code> on 23 November 2026, after <code>op-006</code> was closed against the Events tab and <code>anom-003</code> and <code>anom-006</code> were descoped. Nothing is open: every item either passes or is descoped with a reason and a date. Interface counts the navigation, Operational Picture, map, Hypotheses and feedback items together.</p>
+      <p class="flash" aria-live="polite" data-flash="t51"></p>
+    </article>
+    <article class="plate" id="table-5-2">
+      <div class="meta">
+        <span class="num">Table 5.2</span><span class="chip draft">Draft</span><span>Sections 5.2 to 5.4</span>
+        <div class="actions"><button type="button" data-copy-table="t52">Copy table</button><button type="button" data-copy-cap="ct52" data-flash="t52">Copy caption</button></div>
+      </div>
+      <div class="sheet">
+        <div class="cap" id="ct52"><b>Table 5.2:</b> Defects found during the build that changed the design: what was wrong, how it was found, and what changed as a result. Source: author.</div>
+        <div class="tscroll"><table class="acad wide grid" id="t52">
+<thead><tr><th>What was wrong</th><th>How it was found</th><th>What changed</th><th>Section</th></tr></thead>
+<tbody>
+<tr><td class="work">A detection rule passed all of its tests, and a deliberate-mutation pass, and was still wrong about the corpus</td><td>Running the whole pipeline over stored hours: background aircraft dropouts near the fusion radius let a weaker rule claim most broken-receiver runs</td><td>The rules became one decision asked in a fixed order over competing claims (Figure 4.5)</td><td>5.3</td></tr>
+<tr><td class="work">One citation in eleven pointed at nothing: 91 of 1,021 across 24 packages</td><td>Resolving every citation to a stored row for the first time</td><td>A frozen-position window cites its first stale report, not a reconstructed start, and every citation must resolve to exactly one row before a bundle is stored (Figure 5.3)</td><td>5.3</td></tr>
+<tr><td class="work">The canonical record kept one staleness value, so a silent aircraft and a frozen one looked alike</td><td>Writing test data with deliberately different values for the two source fields</td><td>The record was reopened for a second staleness value, reverting an item that already passed (Figure 5.2)</td><td>5.2</td></tr>
+<tr><td class="work">The baseline depended on how many quiet runs the database held when detection ran</td><td>The same hour, code and thresholds put one claim's window 20 seconds apart under two baselines</td><td>The baseline is a declared list of 100 runs, and detection refuses to run against a store that does not hold them</td><td>5.2</td></tr>
+<tr><td class="work">The model's answers were not repeatable at temperature 0 with a fixed seed</td><td>The first real requests: 4 of 5 repeated pairs differed</td><td>Three generations per bundle, the first scored, fixed in advance; the other two measure variation</td><td>5.3</td></tr>
+<tr><td class="work">The Operational Picture's heading named the scenario type, which is the answer key</td><td>Wiring the detection summary to that screen, while every existing guarantee passed</td><td>Runs are named by number; the answer key is now proved absent from every analyst screen in one test</td><td>5.4</td></tr>
+<tr><td class="work">The marking sheet offered only 1, 3 and 5, though the rubric invites 2 and 4</td><td>Review against the rubric before any marking, with its unit test green throughout</td><td>The full 1-to-5 scale, tested against the rubric's wording, not the author's memory of it</td><td>5.4</td></tr>
+</tbody></table></div>
+      </div>
+      <p class="note">Draft: the seven rows are a selection, every fact checked against <code>thesis_notes.md</code>, the progress note and the scoring rubric's change log. Each row is a design change, not a bug fix, which is why it belongs in Chapter 5. Drop or merge rows as the sections take shape; the prose should cite a row rather than retell it.</p>
+      <p class="flash" aria-live="polite" data-flash="t52"></p>
+    </article>
+  </section>
+  <!-- ch5:end -->
 
   <!-- appc:start -->
   <section class="chap" aria-labelledby="appc">
@@ -1797,11 +1851,11 @@ footer { font-size: 13.5px; color: var(--muted); }
 <tr data-status="drawn"><td class="rnum"><a href="#figure-4-7">Figure 4.7</a></td><td>The three screens, as four screenshots: Operational Picture explained and unexplained, Hypotheses, Scenario Control</td><td>4.7 Interface design</td><td class="src">Screenshots of the running system, 15 November 2026</td><td><span class="chip drawn">Drawn</span></td></tr>
 <tr data-status="drawn"><td class="rnum"><a href="#figure-4-8">Figure 4.8</a></td><td>How comparison separates a faulty receiver from a real emission, across channels and across receivers</td><td>4.4 Scenario generator</td><td class="src"><a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">Progress note, three-pattern panel</a></td><td><span class="chip drawn">Drawn</span></td></tr>
 <tr class="chrow"><th colspan="5" scope="colgroup">Chapter 5 · Implementation</th></tr>
-<tr data-status="todo"><td class="rnum">Figure 5.1</td><td>The replayed hour in twelve batches, and the completion stamp</td><td>Ingest</td><td class="src"><a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">Progress note, &#x27;Why twelve batches&#x27;</a></td><td><span class="chip todo">To redraw</span></td></tr>
-<tr data-status="todo"><td class="rnum">Figure 5.2</td><td>How an evidence window is bounded for a reporting gap and for a frozen position</td><td>Evidence bundles</td><td class="src"><a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">Progress note, &#x27;one in eleven pointed at nothing&#x27;</a></td><td><span class="chip todo">To redraw</span></td></tr>
-<tr data-status="todo"><td class="rnum">Figure 5.3</td><td>The Operational Picture with a staged hour loaded</td><td>Interface</td><td class="src">docs/screenshots/picture-staged-hour.jpg</td><td><span class="chip todo">Superseded by Figure 4.7?</span></td></tr>
-<tr data-status="todo"><td class="rnum">Figure 5.4</td><td>The Scenario Control screen</td><td>Interface</td><td class="src"><a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">Progress note, &#x27;The control room&#x27;</a></td><td><span class="chip todo">Superseded by Figure 4.7?</span></td></tr>
-<tr data-status="todo"><td class="rnum">Figure 5.5</td><td>Position staleness and contact staleness: why the canonical model carries both (moved from Chapter 4)</td><td>The replay adapter against the real corpus</td><td class="src"><a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">Progress note, &#x27;Two clocks, not one&#x27;</a></td><td><span class="chip todo">To redraw</span></td></tr>
+<tr data-status="drawn"><td class="rnum"><a href="#table-5-1">Table 5.1</a></td><td>Specification items by area: specified, passing, descoped</td><td>5.1 How it was built</td><td class="src"><code>docs/spec.jsonl</code></td><td><span class="chip drawn">Drawn</span></td></tr>
+<tr data-status="draft"><td class="rnum"><a href="#table-5-2">Table 5.2</a></td><td>Defects found during the build that changed the design</td><td>5.2 to 5.4</td><td class="src">Thesis notes; progress note; rubric change log</td><td><span class="chip draft">Draft</span></td></tr>
+<tr data-status="todo"><td class="rnum">Figure 5.1</td><td>The replayed hour in twelve batches, and the completion stamp</td><td>5.2 Data in</td><td class="src">Progress note, &#x27;Why twelve batches&#x27;</td><td><span class="chip todo">To redraw</span></td></tr>
+<tr data-status="todo"><td class="rnum">Figure 5.2</td><td>Position staleness and contact staleness: why the canonical record carries both</td><td>5.2 Data in</td><td class="src">Progress note, &#x27;Two clocks, not one&#x27;</td><td><span class="chip todo">To redraw</span></td></tr>
+<tr data-status="todo"><td class="rnum">Figure 5.3</td><td>How an evidence window is bounded for a reporting gap and for a frozen position</td><td>5.3 Detection, evidence and explanation</td><td class="src">Progress note, &#x27;one in eleven pointed at nothing&#x27;</td><td><span class="chip todo">To redraw</span></td></tr>
 <tr class="chrow"><th colspan="5" scope="colgroup">Chapter 6 · Evaluation</th></tr>
 <tr data-status="todo"><td class="rnum">Table 6.1</td><td>What was staged against what the system concluded</td><td>RQ2 results</td><td class="src"><a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">Progress note, &#x27;Nothing was ever called by the wrong name&#x27;</a></td><td><span class="chip todo">To redraw</span></td></tr>
 <tr data-status="todo"><td class="rnum">Table 6.2</td><td>False alarms on quiet runs and coverage-gap runs</td><td>RQ2 results</td><td class="src"><a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">Progress note, &#x27;The two silences&#x27;</a></td><td><span class="chip todo">To redraw</span></td></tr>
@@ -1826,7 +1880,7 @@ footer { font-size: 13.5px; color: var(--muted); }
     </div>
   </section>
 
-  <footer>Last updated 20 November 2026. Numbering will be revised once each chapter's order of figures is fixed.</footer>
+  <footer>Last updated 23 November 2026. Numbering will be revised once each chapter's order of figures is fixed.</footer>
 </div>
 
 <script>
