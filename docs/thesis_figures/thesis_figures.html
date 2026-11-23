@@ -1198,7 +1198,7 @@ footer { font-size: 13.5px; color: var(--muted); }
 <thead><tr><th>What was wrong</th><th>How it was found</th><th>What changed</th><th>Section</th></tr></thead>
 <tbody>
 <tr><td class="work">A detection rule passed all of its tests, and a deliberate-mutation pass, and was still wrong about the corpus</td><td>Running the whole pipeline over stored hours: background aircraft dropouts near the fusion radius let a weaker rule claim most broken-receiver runs</td><td>The rules became one decision asked in a fixed order over competing claims (Figure 4.5)</td><td>5.3</td></tr>
-<tr><td class="work">One citation in eleven pointed at nothing: 91 of 1,021 across 24 packages</td><td>Resolving every citation to a stored row for the first time</td><td>A frozen-position window cites its first stale report, not a reconstructed start, and every citation must resolve to exactly one row before a bundle is stored (Figure 5.3)</td><td>5.3</td></tr>
+<tr><td class="work">One citation in eleven pointed at nothing: 91 of 1,021 across 24 packages</td><td>Resolving every citation to a stored row for the first time</td><td>A frozen-position finding keeps its window and cites the first and last reports the rule read, and every citation must resolve to exactly one stored row before a bundle is stored (Figure 5.3)</td><td>5.3</td></tr>
 <tr><td class="work">The canonical record kept one staleness value, so a silent aircraft and a frozen one looked alike</td><td>Writing test data with deliberately different values for the two source fields</td><td>The record was reopened for a second staleness value, reverting an item that already passed (Figure 5.2)</td><td>5.2</td></tr>
 <tr><td class="work">The baseline depended on how many quiet runs the database held when detection ran</td><td>The same hour, code and thresholds put one claim's window 20 seconds apart under two baselines</td><td>The baseline is a declared list of 100 runs, and detection refuses to run against a store that does not hold them</td><td>5.2</td></tr>
 <tr><td class="work">The model's answers were not repeatable at temperature 0 with a fixed seed</td><td>The first real requests: 4 of 5 repeated pairs differed</td><td>Three generations per bundle, the first scored, fixed in advance; the other two measure variation</td><td>5.3</td></tr>
@@ -1208,6 +1208,223 @@ footer { font-size: 13.5px; color: var(--muted); }
       </div>
       <p class="note">Draft: the seven rows are a selection, every fact checked against <code>thesis_notes.md</code>, the progress note and the scoring rubric's change log. Each row is a design change, not a bug fix, which is why it belongs in Chapter 5. Drop or merge rows as the sections take shape; the prose should cite a row rather than retell it.</p>
       <p class="flash" aria-live="polite" data-flash="t52"></p>
+    </article>
+    <article class="plate" id="figure-5-1">
+      <div class="meta">
+        <span class="num">Figure 5.1</span><span class="chip drawn">Drawn</span><span>Section 5.2, Data in</span>
+        <div class="actions"><button type="button" data-copy-svg="f51">Copy SVG</button><button type="button" data-copy-cap="c51" data-flash="f51">Copy caption</button></div>
+      </div>
+      <figure class="sheet" id="f51">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 330" width="760" height="330" font-family="Arial, Helvetica, sans-serif" role="img" aria-label="Two runs of the replayed hour, each drawn as twelve five-minute batches. In a completed run all twelve batches are stored and a completion stamp is written after the last one. In an interrupted run the first six batches are stored, the seventh fails, the remaining five never run, and no completion stamp is written, so the six stored batches stay in the store and the run reads as unfinished.">
+  <defs>
+    <marker id="ah51" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#333333"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="760" height="330" fill="#ffffff"/>
+  <text x="20" y="58" text-anchor="start" font-size="12" font-weight="bold" fill="#111111">Completed run</text>
+  <text x="20" y="73" text-anchor="start" font-size="10.5" fill="#444444">every batch stored</text>
+  <rect x="120" y="40" width="38" height="40" fill="#d9d9d9" stroke="#333333" stroke-width="1"/>
+  <text x="139" y="95" text-anchor="middle" font-size="10" fill="#444444">1</text>
+  <rect x="162" y="40" width="38" height="40" fill="#d9d9d9" stroke="#333333" stroke-width="1"/>
+  <text x="181" y="95" text-anchor="middle" font-size="10" fill="#444444">2</text>
+  <rect x="204" y="40" width="38" height="40" fill="#d9d9d9" stroke="#333333" stroke-width="1"/>
+  <text x="223" y="95" text-anchor="middle" font-size="10" fill="#444444">3</text>
+  <rect x="246" y="40" width="38" height="40" fill="#d9d9d9" stroke="#333333" stroke-width="1"/>
+  <text x="265" y="95" text-anchor="middle" font-size="10" fill="#444444">4</text>
+  <rect x="288" y="40" width="38" height="40" fill="#d9d9d9" stroke="#333333" stroke-width="1"/>
+  <text x="307" y="95" text-anchor="middle" font-size="10" fill="#444444">5</text>
+  <rect x="330" y="40" width="38" height="40" fill="#d9d9d9" stroke="#333333" stroke-width="1"/>
+  <text x="349" y="95" text-anchor="middle" font-size="10" fill="#444444">6</text>
+  <rect x="372" y="40" width="38" height="40" fill="#d9d9d9" stroke="#333333" stroke-width="1"/>
+  <text x="391" y="95" text-anchor="middle" font-size="10" fill="#444444">7</text>
+  <rect x="414" y="40" width="38" height="40" fill="#d9d9d9" stroke="#333333" stroke-width="1"/>
+  <text x="433" y="95" text-anchor="middle" font-size="10" fill="#444444">8</text>
+  <rect x="456" y="40" width="38" height="40" fill="#d9d9d9" stroke="#333333" stroke-width="1"/>
+  <text x="475" y="95" text-anchor="middle" font-size="10" fill="#444444">9</text>
+  <rect x="498" y="40" width="38" height="40" fill="#d9d9d9" stroke="#333333" stroke-width="1"/>
+  <text x="517" y="95" text-anchor="middle" font-size="10" fill="#444444">10</text>
+  <rect x="540" y="40" width="38" height="40" fill="#d9d9d9" stroke="#333333" stroke-width="1"/>
+  <text x="559" y="95" text-anchor="middle" font-size="10" fill="#444444">11</text>
+  <rect x="582" y="40" width="38" height="40" fill="#d9d9d9" stroke="#333333" stroke-width="1"/>
+  <text x="601" y="95" text-anchor="middle" font-size="10" fill="#444444">12</text>
+  <rect x="634" y="44" width="16" height="32" fill="#111111"/>
+  <text x="656" y="58" text-anchor="start" font-size="10.5" font-weight="bold" fill="#111111">completion</text>
+  <text x="656" y="72" text-anchor="start" font-size="10.5" fill="#444444">stamp written</text>
+  <text x="20" y="158" text-anchor="start" font-size="12" font-weight="bold" fill="#111111">Interrupted run</text>
+  <text x="20" y="173" text-anchor="start" font-size="10.5" fill="#444444">stored batches stay</text>
+  <rect x="120" y="140" width="38" height="40" fill="#d9d9d9" stroke="#333333" stroke-width="1"/>
+  <text x="139" y="195" text-anchor="middle" font-size="10" fill="#444444">1</text>
+  <rect x="162" y="140" width="38" height="40" fill="#d9d9d9" stroke="#333333" stroke-width="1"/>
+  <text x="181" y="195" text-anchor="middle" font-size="10" fill="#444444">2</text>
+  <rect x="204" y="140" width="38" height="40" fill="#d9d9d9" stroke="#333333" stroke-width="1"/>
+  <text x="223" y="195" text-anchor="middle" font-size="10" fill="#444444">3</text>
+  <rect x="246" y="140" width="38" height="40" fill="#d9d9d9" stroke="#333333" stroke-width="1"/>
+  <text x="265" y="195" text-anchor="middle" font-size="10" fill="#444444">4</text>
+  <rect x="288" y="140" width="38" height="40" fill="#d9d9d9" stroke="#333333" stroke-width="1"/>
+  <text x="307" y="195" text-anchor="middle" font-size="10" fill="#444444">5</text>
+  <rect x="330" y="140" width="38" height="40" fill="#d9d9d9" stroke="#333333" stroke-width="1"/>
+  <text x="349" y="195" text-anchor="middle" font-size="10" fill="#444444">6</text>
+  <rect x="372" y="140" width="38" height="40" fill="#ffffff" stroke="#111111" stroke-width="1.6"/>
+  <path d="M382,150 L400,170 M400,150 L382,170" stroke="#111111" stroke-width="1.6"/>
+  <text x="391" y="195" text-anchor="middle" font-size="10" fill="#444444">7</text>
+  <rect x="414" y="140" width="38" height="40" fill="#ffffff" stroke="#9a9a9a" stroke-width="1" stroke-dasharray="4 3"/>
+  <text x="433" y="195" text-anchor="middle" font-size="10" fill="#444444">8</text>
+  <rect x="456" y="140" width="38" height="40" fill="#ffffff" stroke="#9a9a9a" stroke-width="1" stroke-dasharray="4 3"/>
+  <text x="475" y="195" text-anchor="middle" font-size="10" fill="#444444">9</text>
+  <rect x="498" y="140" width="38" height="40" fill="#ffffff" stroke="#9a9a9a" stroke-width="1" stroke-dasharray="4 3"/>
+  <text x="517" y="195" text-anchor="middle" font-size="10" fill="#444444">10</text>
+  <rect x="540" y="140" width="38" height="40" fill="#ffffff" stroke="#9a9a9a" stroke-width="1" stroke-dasharray="4 3"/>
+  <text x="559" y="195" text-anchor="middle" font-size="10" fill="#444444">11</text>
+  <rect x="582" y="140" width="38" height="40" fill="#ffffff" stroke="#9a9a9a" stroke-width="1" stroke-dasharray="4 3"/>
+  <text x="601" y="195" text-anchor="middle" font-size="10" fill="#444444">12</text>
+  <rect x="634" y="144" width="16" height="32" fill="#ffffff" stroke="#9a9a9a" stroke-width="1" stroke-dasharray="4 3"/>
+  <text x="656" y="158" text-anchor="start" font-size="10.5" font-weight="bold" fill="#111111">no stamp:</text>
+  <text x="656" y="172" text-anchor="start" font-size="10.5" fill="#444444">reads as unfinished</text>
+  <line x1="120" y1="222" x2="620" y2="222" stroke="#333333" stroke-width="1"/>
+  <line x1="120" y1="222" x2="120" y2="227" stroke="#333333" stroke-width="1"/>
+  <text x="120" y="241" text-anchor="middle" font-size="10" fill="#444444">0 min</text>
+  <line x1="244" y1="222" x2="244" y2="227" stroke="#333333" stroke-width="1"/>
+  <text x="244" y="241" text-anchor="middle" font-size="10" fill="#444444">15 min</text>
+  <line x1="370" y1="222" x2="370" y2="227" stroke="#333333" stroke-width="1"/>
+  <text x="370" y="241" text-anchor="middle" font-size="10" fill="#444444">30 min</text>
+  <line x1="496" y1="222" x2="496" y2="227" stroke="#333333" stroke-width="1"/>
+  <text x="496" y="241" text-anchor="middle" font-size="10" fill="#444444">45 min</text>
+  <line x1="620" y1="222" x2="620" y2="227" stroke="#333333" stroke-width="1"/>
+  <text x="620" y="241" text-anchor="middle" font-size="10" fill="#444444">60 min</text>
+  <text x="370" y="262" text-anchor="middle" font-size="10.5" fill="#444444">The replayed hour, in five-minute batches, each stored all or nothing</text>
+  <rect x="20" y="282" width="18" height="12" fill="#d9d9d9" stroke="#333333" stroke-width="1"/>
+  <text x="44" y="292" text-anchor="start" font-size="10.5" fill="#444444">stored</text>
+  <rect x="110" y="282" width="18" height="12" fill="#ffffff" stroke="#111111" stroke-width="1.6"/>
+  <path d="M113,284 L125,292 M125,284 L113,292" stroke="#111111" stroke-width="1.3"/>
+  <text x="134" y="292" text-anchor="start" font-size="10.5" fill="#444444">failed, nothing from it stored</text>
+  <rect x="330" y="282" width="18" height="12" fill="#ffffff" stroke="#9a9a9a" stroke-width="1" stroke-dasharray="4 3"/>
+  <text x="354" y="292" text-anchor="start" font-size="10.5" fill="#444444">never run</text>
+  <text x="20" y="318" text-anchor="start" font-size="10" font-style="italic" fill="#444444">One batch is one database transaction. The run as a whole is not: a reader must check the stamp, not assume a failed run wrote nothing.</text>
+</svg>
+        <figcaption class="cap" id="c51"><b>Figure 5.1:</b> The replayed hour is stored in twelve five-minute batches, each written all or nothing, and the run is stamped complete only after the last. An interrupted run keeps the batches it stored and carries no stamp, so it reads as unfinished, not as empty. Source: author.</figcaption>
+      </figure>
+      <p class="note">Exported to <code>docs/thesis_figures/fig-5-1.png</code> and <code>fig-5-1.svg</code>. From the progress note, 'Why twelve batches and not one'. The measured cost of the batch size (one piece 13.99 s, twelve 13.60 s, sixty 23.17 s) belongs in the text if anywhere, not on the figure.</p>
+      <p class="flash" aria-live="polite" data-flash="f51"></p>
+    </article>
+    <article class="plate" id="figure-5-2">
+      <div class="meta">
+        <span class="num">Figure 5.2</span><span class="chip drawn">Drawn</span><span>Section 5.2, Data in</span>
+        <div class="actions"><button type="button" data-copy-svg="f52">Copy SVG</button><button type="button" data-copy-cap="c52" data-flash="f52">Copy caption</button></div>
+      </div>
+      <figure class="sheet" id="f52">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 300" width="760" height="300" font-family="Arial, Helvetica, sans-serif" role="img" aria-label="Two aircraft reports from the archive drawn on a time axis ending at the moment of the report. For a nominal aircraft, the last contact and the last position update both sit at the present, so both staleness values are near zero. For the degraded record, the aircraft was heard 1.35 seconds before the report but its position was last updated 209 seconds before, so the two values diverge by more than three minutes. Carrying only one of them would make this aircraft look like one that had dropped off the network.">
+  <defs>
+    <marker id="ah52" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#333333"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="760" height="300" fill="#ffffff"/>
+  <text x="20" y="74" text-anchor="start" font-size="12" font-weight="bold" fill="#111111">Nominal report</text>
+  <text x="20" y="89" text-anchor="start" font-size="10.5" fill="#444444">both clocks at the present</text>
+  <line x1="150" y1="70" x2="700" y2="70" stroke="#bbbbbb" stroke-width="1"/>
+  <rect x="691.6" y="64" width="12" height="12" fill="#ffffff" stroke="#111111" stroke-width="1.6"/>
+  <circle cx="700.0" cy="70" r="6" fill="#111111"/>
+  <line x1="700" y1="56" x2="700" y2="84" stroke="#111111" stroke-width="1.4"/>
+  <text x="686" y="92" text-anchor="end" font-size="10.5" fill="#444444">contact 0.00 s, position 1.06 s</text>
+  <text x="20" y="174" text-anchor="start" font-size="12" font-weight="bold" fill="#111111">Degraded report</text>
+  <text x="20" y="189" text-anchor="start" font-size="10.5" fill="#444444">airborne, 10,607 m</text>
+  <line x1="150" y1="170" x2="700" y2="170" stroke="#bbbbbb" stroke-width="1"/>
+  <rect x="221.0" y="164" width="475.9" height="12" fill="#e6e6e6" stroke="none"/>
+  <text x="458.974" y="158" text-anchor="middle" font-size="10.5" font-style="italic" fill="#444444">209 s between the two clocks</text>
+  <rect x="215.0" y="164" width="12" height="12" fill="#ffffff" stroke="#111111" stroke-width="1.6"/>
+  <circle cx="696.9" cy="170" r="6" fill="#111111"/>
+  <line x1="700" y1="156" x2="700" y2="184" stroke="#111111" stroke-width="1.4"/>
+  <text x="211.042" y="196" text-anchor="start" font-size="10.5" fill="#444444">position last updated 209 s ago</text>
+  <text x="682.906" y="196" text-anchor="end" font-size="10.5" fill="#444444">heard 1.35 s ago</text>
+  <line x1="150" y1="226" x2="700" y2="226" stroke="#333333" stroke-width="1"/>
+  <line x1="150.0" y1="226" x2="150.0" y2="231" stroke="#333333" stroke-width="1"/>
+  <text x="150" y="245" text-anchor="middle" font-size="10" fill="#444444">240 s before</text>
+  <line x1="287.5" y1="226" x2="287.5" y2="231" stroke="#333333" stroke-width="1"/>
+  <text x="287.5" y="245" text-anchor="middle" font-size="10" fill="#444444">180 s before</text>
+  <line x1="425.0" y1="226" x2="425.0" y2="231" stroke="#333333" stroke-width="1"/>
+  <text x="425" y="245" text-anchor="middle" font-size="10" fill="#444444">120 s before</text>
+  <line x1="562.5" y1="226" x2="562.5" y2="231" stroke="#333333" stroke-width="1"/>
+  <text x="562.5" y="245" text-anchor="middle" font-size="10" fill="#444444">60 s before</text>
+  <line x1="700.0" y1="226" x2="700.0" y2="231" stroke="#333333" stroke-width="1"/>
+  <text x="700" y="245" text-anchor="middle" font-size="10" fill="#444444">report</text>
+  <circle cx="26" cy="276" r="6" fill="#111111"/>
+  <text x="38" y="280" text-anchor="start" font-size="10.5" fill="#444444">last contact: when the aircraft was last heard at all</text>
+  <rect x="380" y="270" width="12" height="12" fill="#ffffff" stroke="#111111" stroke-width="1.6"/>
+  <text x="398" y="280" text-anchor="start" font-size="10.5" fill="#444444">last position update: how old the coordinate is</text>
+</svg>
+        <figcaption class="cap" id="c52"><b>Figure 5.2:</b> Why the canonical record carries two staleness values. In a nominal report the aircraft was heard and its position updated moments ago. In this degraded report from the archive the aircraft was heard 1.35 seconds earlier but its position is 209 seconds old: still transmitting, position frozen. With one value it would look like an aircraft that had simply dropped off the network. Source: author.</figcaption>
+      </figure>
+      <p class="note">Exported to <code>docs/thesis_figures/fig-5-2.png</code> and <code>fig-5-2.svg</code>. Degraded record from the archive (airborne at 10,607 m), as in the progress note's 'Two clocks, not one'; the nominal values are the report in Figure 4.2. No aircraft identifier is shown.</p>
+      <p class="flash" aria-live="polite" data-flash="f52"></p>
+    </article>
+    <article class="plate" id="figure-5-3">
+      <div class="meta">
+        <span class="num">Figure 5.3</span><span class="chip drawn">Drawn</span><span>Section 5.3, Detection, evidence and explanation</span>
+        <div class="actions"><button type="button" data-copy-svg="f53">Copy SVG</button><button type="button" data-copy-cap="c53" data-flash="f53">Copy caption</button></div>
+      </div>
+      <figure class="sheet" id="f53">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 380" width="760" height="380" font-family="Arial, Helvetica, sans-serif" role="img" aria-label="Two timelines of aircraft reports. Top, a gap in reporting: reports arrive, stop, and resume; the finding&#x27;s window runs from the last report before the silence to the first report after it, and both ends are stored reports, so the window and the citation coincide. Bottom, a frozen position: reports keep arriving but the position in them stops advancing. The window starts at the moment the position was last fresh, worked out by subtracting the staleness the first stale report declares; nothing was recorded at that instant. The citation used to point there and found nothing; it now points at the first and last reports the rule read.">
+  <defs>
+    <marker id="ah53" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#333333"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="760" height="380" fill="#ffffff"/>
+  <text x="20" y="94" text-anchor="start" font-size="12" font-weight="bold" fill="#111111">Gap in reporting</text>
+  <text x="20" y="109" text-anchor="start" font-size="10.5" fill="#444444">the aircraft goes silent</text>
+  <line x1="150" y1="90" x2="720" y2="90" stroke="#bbbbbb" stroke-width="1"/>
+  <rect x="175" y="85" width="10" height="10" fill="#111111"/>
+  <rect x="215" y="85" width="10" height="10" fill="#111111"/>
+  <rect x="255" y="85" width="10" height="10" fill="#111111"/>
+  <rect x="295" y="85" width="10" height="10" fill="#111111"/>
+  <rect x="555" y="85" width="10" height="10" fill="#111111"/>
+  <rect x="595" y="85" width="10" height="10" fill="#111111"/>
+  <rect x="635" y="85" width="10" height="10" fill="#111111"/>
+  <rect x="675" y="85" width="10" height="10" fill="#111111"/>
+  <line x1="306" y1="90" x2="554" y2="90" stroke="#777777" stroke-width="1" stroke-dasharray="5 4"/>
+  <text x="430" y="108" text-anchor="middle" font-size="10.5" font-style="italic" fill="#444444">silence: nothing received</text>
+  <path d="M300,70 V64 H560 V70" fill="none" stroke="#333333" stroke-width="1.2"/>
+  <text x="430" y="58" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#111111">window: what the rule concluded</text>
+  <path d="M300,124 L300,100" fill="none" stroke="#333333" stroke-width="1.2" marker-end="url(#ah53)"/>
+  <path d="M560,124 L560,100" fill="none" stroke="#333333" stroke-width="1.2" marker-end="url(#ah53)"/>
+  <text x="430" y="134" text-anchor="middle" font-size="10.5" fill="#444444">cited: the two reports either side, both stored</text>
+  <text x="20" y="254" text-anchor="start" font-size="12" font-weight="bold" fill="#111111">Frozen position</text>
+  <text x="20" y="269" text-anchor="start" font-size="10.5" fill="#444444">still heard, position not advancing</text>
+  <line x1="150" y1="250" x2="720" y2="250" stroke="#bbbbbb" stroke-width="1"/>
+  <rect x="175" y="245" width="10" height="10" fill="#111111"/>
+  <rect x="215" y="245" width="10" height="10" fill="#111111"/>
+  <rect x="395" y="245" width="10" height="10" fill="#9a9a9a" stroke="#333333" stroke-width="1"/>
+  <rect x="435" y="245" width="10" height="10" fill="#9a9a9a" stroke="#333333" stroke-width="1"/>
+  <rect x="475" y="245" width="10" height="10" fill="#9a9a9a" stroke="#333333" stroke-width="1"/>
+  <rect x="515" y="245" width="10" height="10" fill="#9a9a9a" stroke="#333333" stroke-width="1"/>
+  <rect x="555" y="245" width="10" height="10" fill="#9a9a9a" stroke="#333333" stroke-width="1"/>
+  <rect x="595" y="245" width="10" height="10" fill="#9a9a9a" stroke="#333333" stroke-width="1"/>
+  <rect x="645" y="245" width="10" height="10" fill="#111111"/>
+  <rect x="685" y="245" width="10" height="10" fill="#111111"/>
+  <rect x="300" y="245" width="10" height="10" fill="#ffffff" stroke="#555555" stroke-width="1.2"/>
+  <rect x="345" y="245" width="10" height="10" fill="#ffffff" stroke="#555555" stroke-width="1.2"/>
+  <circle cx="260" cy="250" r="7" fill="#ffffff" stroke="#111111" stroke-width="1.4" stroke-dasharray="3 2"/>
+  <path d="M260,262 V326 H266" fill="none" stroke="#777777" stroke-width="1"/>
+  <text x="270" y="330" text-anchor="start" font-size="10.5" font-style="italic" fill="#444444">old citation: the reconstructed start, where nothing was stored</text>
+  <path d="M400,236 L269,236" fill="none" stroke="#777777" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#ah53)"/>
+  <text x="330" y="230" text-anchor="middle" font-size="10" font-style="italic" fill="#444444">minus the declared staleness</text>
+  <path d="M260,210 V204 H600 V210" fill="none" stroke="#333333" stroke-width="1.2"/>
+  <text x="430" y="198" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#111111">window: from when the position was last fresh</text>
+  <path d="M400,284 L400,260" fill="none" stroke="#333333" stroke-width="1.2" marker-end="url(#ah53)"/>
+  <path d="M600,284 L600,260" fill="none" stroke="#333333" stroke-width="1.2" marker-end="url(#ah53)"/>
+  <text x="500" y="300" text-anchor="middle" font-size="10.5" fill="#444444">cited now: the first and last stale reports read</text>
+  <rect x="20" y="358" width="10" height="10" fill="#111111"/>
+  <text x="36" y="368" text-anchor="start" font-size="10.5" fill="#444444">report, position fresh</text>
+  <rect x="190" y="358" width="10" height="10" fill="#9a9a9a" stroke="#333333" stroke-width="1"/>
+  <text x="206" y="368" text-anchor="start" font-size="10.5" fill="#444444">position stale past 100 s, contact fresh</text>
+  <rect x="460" y="358" width="10" height="10" fill="#ffffff" stroke="#555555" stroke-width="1.2"/>
+  <text x="476" y="368" text-anchor="start" font-size="10.5" fill="#444444">position stopped, not yet past 100 s</text>
+</svg>
+        <figcaption class="cap" id="c53"><b>Figure 5.3:</b> What a track finding concludes and what it cites. For a gap in reporting the window's two ends are stored reports, so the window and the citation coincide. For a frozen position the window starts when the position was last fresh, worked out from the staleness the first stale report declares, an instant at which nothing was stored. Citations used to point there and found nothing; they now point at the first and last reports the rule read. Source: author.</figcaption>
+      </figure>
+      <p class="note">Exported to <code>docs/thesis_figures/fig-5-3.png</code> and <code>fig-5-3.svg</code>. From the track-gap rule's code and the progress note, 'one in eleven pointed at nothing': 91 of 1,021 citations across 24 packages, every miss the start of a frozen-position window. Spacing is schematic, not to scale.</p>
+      <p class="flash" aria-live="polite" data-flash="f53"></p>
     </article>
   </section>
   <!-- ch5:end -->
@@ -1853,9 +2070,9 @@ footer { font-size: 13.5px; color: var(--muted); }
 <tr class="chrow"><th colspan="5" scope="colgroup">Chapter 5 · Implementation</th></tr>
 <tr data-status="drawn"><td class="rnum"><a href="#table-5-1">Table 5.1</a></td><td>Specification items by area: specified, passing, descoped</td><td>5.1 How it was built</td><td class="src"><code>docs/spec.jsonl</code></td><td><span class="chip drawn">Drawn</span></td></tr>
 <tr data-status="draft"><td class="rnum"><a href="#table-5-2">Table 5.2</a></td><td>Defects found during the build that changed the design</td><td>5.2 to 5.4</td><td class="src">Thesis notes; progress note; rubric change log</td><td><span class="chip draft">Draft</span></td></tr>
-<tr data-status="todo"><td class="rnum">Figure 5.1</td><td>The replayed hour in twelve batches, and the completion stamp</td><td>5.2 Data in</td><td class="src">Progress note, &#x27;Why twelve batches&#x27;</td><td><span class="chip todo">To redraw</span></td></tr>
-<tr data-status="todo"><td class="rnum">Figure 5.2</td><td>Position staleness and contact staleness: why the canonical record carries both</td><td>5.2 Data in</td><td class="src">Progress note, &#x27;Two clocks, not one&#x27;</td><td><span class="chip todo">To redraw</span></td></tr>
-<tr data-status="todo"><td class="rnum">Figure 5.3</td><td>How an evidence window is bounded for a reporting gap and for a frozen position</td><td>5.3 Detection, evidence and explanation</td><td class="src">Progress note, &#x27;one in eleven pointed at nothing&#x27;</td><td><span class="chip todo">To redraw</span></td></tr>
+<tr data-status="drawn"><td class="rnum"><a href="#figure-5-1">Figure 5.1</a></td><td>The replayed hour in twelve batches, and the completion stamp</td><td>5.2 Data in</td><td class="src">Progress note, &#x27;Why twelve batches&#x27;</td><td><span class="chip drawn">Drawn</span></td></tr>
+<tr data-status="drawn"><td class="rnum"><a href="#figure-5-2">Figure 5.2</a></td><td>Position staleness and contact staleness: why the canonical record carries both</td><td>5.2 Data in</td><td class="src">Progress note, &#x27;Two clocks, not one&#x27;</td><td><span class="chip drawn">Drawn</span></td></tr>
+<tr data-status="drawn"><td class="rnum"><a href="#figure-5-3">Figure 5.3</a></td><td>How an evidence window is bounded for a reporting gap and for a frozen position</td><td>5.3 Detection, evidence and explanation</td><td class="src">Progress note, &#x27;one in eleven pointed at nothing&#x27;</td><td><span class="chip drawn">Drawn</span></td></tr>
 <tr class="chrow"><th colspan="5" scope="colgroup">Chapter 6 · Evaluation</th></tr>
 <tr data-status="todo"><td class="rnum">Table 6.1</td><td>What was staged against what the system concluded</td><td>RQ2 results</td><td class="src"><a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">Progress note, &#x27;Nothing was ever called by the wrong name&#x27;</a></td><td><span class="chip todo">To redraw</span></td></tr>
 <tr data-status="todo"><td class="rnum">Table 6.2</td><td>False alarms on quiet runs and coverage-gap runs</td><td>RQ2 results</td><td class="src"><a href="https://claude.ai/artifact/HmCcZVKLESSu2RQovX2gYq">Progress note, &#x27;The two silences&#x27;</a></td><td><span class="chip todo">To redraw</span></td></tr>
